@@ -1,0 +1,21 @@
+__pycache__/
+*.pyc
+*.pyo
+
+# Session archives / scratch notes — not part of the project
+vscode_claude_session_archive_*.txt
+
+# Test/scratch CSV fixtures created during development
+*_test.csv
+verify*.csv
+repro_test*.csv
+
+# Third-party reference material — not ours to publish
+gaiaviz-skill/
+
+# Editor/OS cruft
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store

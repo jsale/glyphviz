@@ -1,0 +1,36 @@
+from dataclasses import dataclass
+
+# np_node "type" values that describe scene infrastructure rather than visual
+# data glyphs (see gaiaviz-skill/references/structure/Node-Field-Descriptions.md).
+# GlyphViz doesn't yet have its own camera/grid/world handling, so these rows
+# are kept (and remain editable in the table) but skipped when drawing/picking
+# in the 3D viewport — otherwise they show up as stray wireframe-cube glyphs.
+NODE_TYPE_WORLD  = 0   # one-per-file global scene/world parameters
+NODE_TYPE_CAMERA = 1   # camera 'lookat' definitions (switchable with 'C' in ANTz/GaiaViz)
+NODE_TYPE_GRID   = 6   # world grid / subgrid definitions
+
+NON_VISUAL_TYPES = frozenset({NODE_TYPE_WORLD, NODE_TYPE_CAMERA, NODE_TYPE_GRID})
+
+
+@dataclass
+class Node:
+    id: int
+    type: int
+    parent_id: int
+    branch_level: int
+    translate_x: float
+    translate_y: float
+    translate_z: float
+    rotate_x: float
+    rotate_y: float
+    rotate_z: float
+    scale_x: float
+    scale_y: float
+    scale_z: float
+    color_r: int
+    color_g: int
+    color_b: int
+    color_a: int
+    geometry: int
+    hide: int
+    topo: int

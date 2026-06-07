@@ -1,0 +1,14 @@
+# Use the dedicated 'glyphviz' conda environment to avoid Qt5/Qt6 DLL conflicts
+# with Anaconda's base environment (which ships PyQt5/Qt5).
+#
+# Setup (one time):
+#   conda create -n glyphviz python=3.12 pip -y
+#   conda run -n glyphviz pip install -r requirements.txt
+#
+# Run:
+#   C:\Users\jsale\anaconda3\envs\glyphviz\python.exe main.py
+
+PySide6>=6.6.0
+PyOpenGL>=3.1.7
+numpy>=1.24.0
+pandas>=2.0.0
