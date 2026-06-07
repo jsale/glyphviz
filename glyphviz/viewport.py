@@ -12,6 +12,28 @@ from .topology import compute_world_positions, compute_world_scales
 _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag
 
 
+# --- rotation helpers for picking (mirror the Rx/Ry/Rz convention glRotatef
+# uses — right-hand rule about each axis — so we can invert a node's
+# rotation when transforming a pick ray into its local space) ---
+
+def _rotate_x(x, y, z, deg):
+    a = math.radians(deg)
+    c, s = math.cos(a), math.sin(a)
+    return x, c*y - s*z, s*y + c*z
+
+
+def _rotate_y(x, y, z, deg):
+    a = math.radians(deg)
+    c, s = math.cos(a), math.sin(a)
+    return c*x + s*z, y, -s*x + c*z
+
+
+def _rotate_z(x, y, z, deg):
+    a = math.radians(deg)
+    c, s = math.cos(a), math.sin(a)
+    return c*x - s*y, s*x + c*y, z
+
+
 class Viewport(QOpenGLWidget):
     # Emitted when the user clicks (not drags) on a node; carries node id
     nodeClicked = Signal(int)
@@ -25,7 +47,7 @@ class Viewport(QOpenGLWidget):
         self.base_scale = 3.0
         self.selected_node_id: int | None = None
         self._world_pos: dict[int, tuple[float, float, float]] = {}
-        self._world_scale: dict[int, float] = {}
+        self._world_scale: dict[int, tuple[float, float, float]] = {}
 
         self._cam_distance = 500.0
         self._cam_azimuth = 45.0
@@ -60,13 +82,32 @@ class Viewport(QOpenGLWidget):
             self._cam_distance = max(span * 1.5, 50.0)
         self.update()
 
-    def _radius_of(self, node: Node) -> float:
-        """Rendered surface radius, honoring scale inherited from ancestors
-        (scaling a parent up/down carries its whole subtree proportionally)."""
+    def _radius_of(self, node: Node) -> tuple[float, float, float]:
+        """Rendered per-axis surface radii (rx, ry, rz), honoring scale
+        inherited from ancestors (scaling a parent up/down carries its whole
+        subtree proportionally) and letting a node's own scale_x/y/z stretch
+        its glyph independently along each axis."""
         scale = self._world_scale.get(node.id)
         if scale is None:
-            scale = (node.scale_x + node.scale_y + node.scale_z) / 3.0
-        return max(scale * self.base_scale, 0.2)
+            scale = (node.scale_x, node.scale_y, node.scale_z)
+        sx, sy, sz = scale
+        return (
+            max(sx * self.base_scale, 0.2),
+            max(sy * self.base_scale, 0.2),
+            max(sz * self.base_scale, 0.2),
+        )
+
+    def _placement_radius_of(self, node: Node) -> float:
+        """Single effective radius used for surface-based topology placement
+        (e.g. a sphere child riding its parent's surface). Non-uniformly
+        scaled glyphs render as ellipsoids/distorted tori, but placing
+        children on their exact distorted surface is a much larger undertaking
+        than independent XYZ scaling calls for — so placement math uses the
+        average of the per-axis radii as a representative "effective" surface,
+        which matches the old (uniform-scale) behavior exactly when scale_x ==
+        scale_y == scale_z."""
+        rx, ry, rz = self._radius_of(node)
+        return (rx + ry + rz) / 3.0
 
     def _recompute_world_positions(self):
         """Resolve every node's rendered world position and size, honoring
@@ -74,11 +115,41 @@ class Viewport(QOpenGLWidget):
         and inherited scale — so that moving or resizing a parent carries its
         whole subtree along with it."""
         self._world_scale = compute_world_scales(self.nodes)
-        self._world_pos = compute_world_positions(self.nodes, self._radius_of, self._world_scale)
+        self._world_pos = compute_world_positions(self.nodes, self._placement_radius_of, self._world_scale)
 
     def world_position(self, node_id: int) -> tuple[float, float, float] | None:
         """Rendered world-space position of a node, as last computed for drawing."""
         return self._world_pos.get(node_id)
+
+    def focus_on(self, world_pos: tuple[float, float, float], min_distance: float = 1.0):
+        """Center the camera on `world_pos` and pull it in to roughly 1/10 of
+        its current distance from that point — a quick way to "jump to and
+        zoom into" a node of interest while preserving the current viewing
+        angle (azimuth/elevation). Never moves closer than `min_distance`,
+        so the camera doesn't end up embedded inside the object when it was
+        already nearby."""
+        az = math.radians(self._cam_azimuth)
+        el = math.radians(self._cam_elevation)
+        tx, ty, tz = self._cam_target
+        ex = tx + self._cam_distance * math.cos(el) * math.sin(az)
+        ey = ty + self._cam_distance * math.sin(el)
+        ez = tz + self._cam_distance * math.cos(el) * math.cos(az)
+
+        px, py, pz = world_pos
+        dist_to_obj = math.sqrt((ex - px)**2 + (ey - py)**2 + (ez - pz)**2)
+
+        self._cam_target = [px, py, pz]
+        self._cam_distance = max(dist_to_obj / 10.0, min_distance)
+        self.update()
+
+    def focus_on_node(self, node: Node):
+        """Center the camera on `node` and zoom toward it (see focus_on),
+        clamping the minimum camera distance to ~1.5x the node's largest
+        rendered radius — enough headroom to keep the whole glyph in view
+        rather than the camera ending up inside it."""
+        pos = self.world_position(node.id) or (node.translate_x, node.translate_y, node.translate_z)
+        rx, ry, rz = self._radius_of(node)
+        self.focus_on(pos, min_distance=max(rx, ry, rz) * 1.5)
 
     def initializeGL(self):
         glClearColor(0.08, 0.08, 0.12, 1.0)
@@ -151,15 +222,15 @@ class Viewport(QOpenGLWidget):
             node.color_a / 255.0,
         )
 
-        r = self._radius_of(node)
-        self._geo.draw(node.geometry, r)
+        rx, ry, rz = self._radius_of(node)
+        self._geo.draw(node.geometry, rx, ry, rz)
 
         if selected:
             glDisable(GL_LIGHTING)
             glLineWidth(2.0)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
             glColor4f(1.0, 0.95, 0.1, 1.0)
-            self._geo.draw(GEO_SPHERE, r * 1.35)
+            self._geo.draw(GEO_SPHERE, rx * 1.35, ry * 1.35, rz * 1.35)
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glLineWidth(1.0)
             glEnable(GL_LIGHTING)
@@ -196,12 +267,59 @@ class Viewport(QOpenGLWidget):
         glEnd()
         glEnable(GL_LIGHTING)
 
-    # --- picking (ray cast against bounding spheres) ---
+    # --- picking (ray cast against rotated/stretched bounding ellipsoids) ---
+
+    def _ellipsoid_hit_t(self, node, ocx, ocy, ocz, rdx, rdy, rdz, rx, ry, rz):
+        """
+        Ray-vs-glyph hit test against the actual rendered shape: an ellipsoid
+        with the node's per-axis radii (rx, ry, rz), oriented by its
+        rotate_x/y/z — matching what _draw_node renders via glRotatef +
+        glScalef. A plain bounding *sphere* over- or under-selects nodes that
+        are stretched along one or two axes (the "elongated ends are hard to
+        click / parent can't be selected" symptom): a long thin glyph either
+        gets a too-small sphere (misses its tips) or a too-large one (its
+        empty space blocks clicks meant for neighbors).
+
+        `ocx,ocy,ocz` is the eye position relative to the node's world-space
+        center; `rdx,rdy,rdz` is the (unit-length) ray direction. Returns the
+        ray parameter t (== world-space hit distance, since the ray direction
+        is unit length) of the nearest intersection, or None.
+
+        Method: transform the ray into the node's local space by undoing its
+        rotation (inverse of a rotation matrix is its transpose — rotating by
+        the same angles in reverse order, negated) and then dividing by the
+        per-axis radii. That maps the rendered ellipsoid onto a unit sphere
+        while preserving the ray's parametrization t (rotation and uniform
+        rescaling are linear maps applied identically to the ray's origin and
+        direction, so the parameter along the ray is unchanged) — so a plain
+        unit-sphere quadratic yields the correct hit distance directly.
+        """
+        # _draw_node composes world = translate * Rz * Ry * Rx * scale, so the
+        # inverse (local = scale^-1 * Rx^-1 * Ry^-1 * Rz^-1 * world_relative)
+        # undoes Z, then Y, then X — each by its negated angle.
+        ox, oy, oz = _rotate_x(*_rotate_y(*_rotate_z(ocx, ocy, ocz, -node.rotate_z), -node.rotate_y), -node.rotate_x)
+        dx, dy, dz = _rotate_x(*_rotate_y(*_rotate_z(rdx, rdy, rdz, -node.rotate_z), -node.rotate_y), -node.rotate_x)
+
+        ox, oy, oz = ox / rx, oy / ry, oz / rz
+        dx, dy, dz = dx / rx, dy / ry, dz / rz
+
+        a = dx*dx + dy*dy + dz*dz
+        b = 2.0 * (ox*dx + oy*dy + oz*dz)
+        c = ox*ox + oy*oy + oz*oz - 1.0
+        disc = b*b - 4.0*a*c
+        if disc < 0:
+            return None
+        sqrt_disc = math.sqrt(disc)
+        t = (-b - sqrt_disc) / (2.0*a)
+        if t <= 0:
+            t = (-b + sqrt_disc) / (2.0*a)
+        return t if t > 0 else None
 
     def _pick_node(self, screen_x: int, screen_y: int) -> Node | None:
         """
         Cast a ray from camera through (screen_x, screen_y) in widget coords.
-        Returns the nearest visible node whose bounding sphere is hit, or None.
+        Returns the nearest visible node whose rendered glyph (a rotated,
+        per-axis-scaled ellipsoid) is hit, or None.
         Uses camera parameters directly — no GL matrix reads required.
         """
         if not self.nodes:
@@ -255,8 +373,9 @@ class Viewport(QOpenGLWidget):
         rdn = math.sqrt(rdx*rdx + rdy*rdy + rdz*rdz)
         rdx, rdy, rdz = rdx/rdn, rdy/rdn, rdz/rdn
 
-        # ---- Ray–sphere tests -----------------------------------------------
+        # ---- Ray–glyph tests -------------------------------------------------
         best_node, best_t = None, float('inf')
+        _CLICK_MARGIN = 1.15  # slightly enlarge each axis for easier clicking
 
         for node in self.nodes:
             if node.type in NON_VISUAL_TYPES:
@@ -264,22 +383,16 @@ class Viewport(QOpenGLWidget):
             if not self.show_hidden and node.hide:
                 continue
 
-            # Use a slightly enlarged bounding sphere for easier clicking
-            r = self._radius_of(node) * 1.4
-
+            node_rx, node_ry, node_rz = self._radius_of(node)
             wx, wy, wz = self._world_pos.get(node.id, (node.translate_x, node.translate_y, node.translate_z))
             ocx = ex - wx
             ocy = ey - wy
             ocz = ez - wz
-            b = 2.0 * (ocx*rdx + ocy*rdy + ocz*rdz)
-            c = ocx*ocx + ocy*ocy + ocz*ocz - r*r
-            disc = b*b - 4.0*c
-            if disc < 0:
-                continue
-            t = (-b - math.sqrt(disc)) * 0.5
-            if t <= 0:
-                t = (-b + math.sqrt(disc)) * 0.5
-            if 0 < t < best_t:
+            t = self._ellipsoid_hit_t(
+                node, ocx, ocy, ocz, rdx, rdy, rdz,
+                node_rx * _CLICK_MARGIN, node_ry * _CLICK_MARGIN, node_rz * _CLICK_MARGIN,
+            )
+            if t is not None and t < best_t:
                 best_t, best_node = t, node
 
         return best_node
@@ -300,8 +413,19 @@ class Viewport(QOpenGLWidget):
             print(f"[pick] ({event.pos().x()},{event.pos().y()}) → {label}")
             if node is not None:
                 self.nodeClicked.emit(node.id)
+                # Shift-click: jump to and zoom in on the clicked node — an
+                # in-viewport alternative to double-clicking its table row.
+                if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                    self.focus_on_node(node)
         self._drag_button = None
         self._drag_moved = False
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            node = self._pick_node(event.pos().x(), event.pos().y())
+            if node is not None:
+                self.nodeClicked.emit(node.id)
+                self.focus_on_node(node)
 
     def mouseMoveEvent(self, event):
         if self._drag_button is None:

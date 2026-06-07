@@ -175,6 +175,11 @@ class MainWindow(QMainWindow):
             sb.valueChanged.connect(self._on_insp_scale_changed)
             scale_w_layout.addWidget(sb)
 
+        self._insp_scale_lock = QCheckBox("Lock X/Y/Z together")
+        self._insp_scale_lock.setToolTip(
+            "When checked, editing one scale axis sets all three to the same value."
+        )
+
         self._insp_geo = QComboBox()
         for geo_id in range(GEO_COUNT):
             self._insp_geo.addItem(GEO_NAMES[geo_id], geo_id)
@@ -194,6 +199,7 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Parent:",   self._insp_parent)
         insp_layout.addRow("Pos (X,Y,Z):", pos_widget)
         insp_layout.addRow("Scale (X,Y,Z):", scale_widget)
+        insp_layout.addRow("", self._insp_scale_lock)
         insp_layout.addRow("Geometry:", self._insp_geo)
         insp_layout.addRow("Topology:", self._insp_topo)
         insp_layout.addRow("Color:",    self._insp_color_btn)
@@ -344,10 +350,17 @@ class MainWindow(QMainWindow):
         self._table.refresh_node(node.id)
         self._viewport.update()
 
-    def _on_insp_scale_changed(self, _value: float):
+    def _on_insp_scale_changed(self, value: float):
         node = self._table.selected_node()
         if node is None:
             return
+        if self._insp_scale_lock.isChecked():
+            sender = self.sender()
+            for sb in (self._insp_scale_x, self._insp_scale_y, self._insp_scale_z):
+                if sb is not sender:
+                    sb.blockSignals(True)
+                    sb.setValue(value)
+                    sb.blockSignals(False)
         node.scale_x = self._insp_scale_x.value()
         node.scale_y = self._insp_scale_y.value()
         node.scale_z = self._insp_scale_z.value()
@@ -385,9 +398,7 @@ class MainWindow(QMainWindow):
         node = self._table.selected_node()
         if node is None:
             return
-        pos = self._viewport.world_position(node.id) or (node.translate_x, node.translate_y, node.translate_z)
-        self._viewport._cam_target = list(pos)
-        self._viewport.update()
+        self._viewport.focus_on_node(node)
 
     def _reset_camera(self):
         self._viewport.set_nodes(self.nodes)

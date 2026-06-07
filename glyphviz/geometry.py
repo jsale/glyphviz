@@ -2,7 +2,8 @@
 Geometry type constants, names, and a display-list renderer.
 
 All shapes are compiled at unit scale (fits within radius ~1).
-Caller applies glScalef(r, r, r) before calling draw().
+Caller applies glScalef(rx, ry, rz) before calling draw() — independent
+per-axis factors let a node's scale_x/y/z stretch its glyph non-uniformly.
 No GLUT dependency — all polyhedra built from vertex/face data.
 """
 import math
@@ -480,12 +481,14 @@ class GeoRenderer:
 
         self._ready = True
 
-    def draw(self, geo_id: int, r: float):
+    def draw(self, geo_id: int, rx: float, ry: float, rz: float):
         if not self._ready:
             return
         if geo_id == GEO_POINT:
+            # Points have no orientation/extent to stretch — fall back to
+            # an average size for the on-screen point sprite.
             glDisable(GL_LIGHTING)
-            glPointSize(max(2.0, r * 2))
+            glPointSize(max(2.0, ((rx + ry + rz) / 3.0) * 2))
             glBegin(GL_POINTS)
             glVertex3f(0.0, 0.0, 0.0)
             glEnd()
@@ -495,6 +498,6 @@ class GeoRenderer:
         dl = self._lists.get(geo_id, self._lists.get(GEO_SPHERE))
         if dl:
             glPushMatrix()
-            glScalef(r, r, r)
+            glScalef(rx, ry, rz)
             glCallList(dl)
             glPopMatrix()

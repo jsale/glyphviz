@@ -131,35 +131,42 @@ def rod_offset(axial_pos: float, angle_deg: float, elevation: float, radius: flo
     )
 
 
+def _avg3(scale: tuple[float, float, float]) -> float:
+    return (scale[0] + scale[1] + scale[2]) / 3.0
+
+
 def _cartesian_offset(tx, ty, tz, _parent_radius, parent_scale):
     """Plain Cartesian (dx, dy, dz) offset from the parent's center, expressed
-    in the parent's local space and carried along by its cumulative world
-    scale — standard scene-graph composition (world_offset = parent_scale *
-    local_offset), matching how compute_world_scales cascades sizing. This is
-    the Plane/Grid topology's coordinate system (translate_x/y position a
-    child within the parent's local plane, translate_z is elevation above it)
-    and the fallback for topologies not yet modeled.
+    in the parent's local space and carried along — per axis — by its
+    cumulative world scale: standard scene-graph composition
+    (world_offset = parent_scale * local_offset), matching how
+    compute_world_scales cascades sizing, and respecting independently
+    scaled X/Y/Z. This is the Plane/Grid topology's coordinate system
+    (translate_x/y position a child within the parent's local plane,
+    translate_z is elevation above it) and the fallback for topologies not
+    yet modeled.
     """
-    return (tx * parent_scale, ty * parent_scale, tz * parent_scale)
+    sx, sy, sz = parent_scale
+    return (tx * sx, ty * sy, tz * sz)
 
 
 def _sphere_offset(tx, ty, tz, parent_radius, parent_scale):
-    return kml_offset(tx, ty, tz, parent_radius, parent_scale)
+    return kml_offset(tx, ty, tz, parent_radius, _avg3(parent_scale))
 
 
 def _torus_offset(tx, ty, tz, parent_radius, parent_scale):
-    return torus_offset(tx, ty, tz, parent_radius, parent_scale)
+    return torus_offset(tx, ty, tz, parent_radius, _avg3(parent_scale))
 
 
 def _rod_offset(tx, ty, tz, parent_radius, parent_scale):
-    return rod_offset(tx, ty, tz, parent_radius, parent_scale)
+    return rod_offset(tx, ty, tz, parent_radius, _avg3(parent_scale))
 
 
 def _point_offset(tx, ty, tz, _parent_radius, parent_scale):
     """Point topology: the same longitude/latitude/altitude system as Sphere,
     but altitude is measured from the parent's CENTER rather than its surface
     — so children collapse toward the center as altitude approaches zero."""
-    return kml_offset(tx, ty, tz, 0.0, parent_scale)
+    return kml_offset(tx, ty, tz, 0.0, _avg3(parent_scale))
 
 
 _TOPO_OFFSET_FUNCS = {
@@ -172,7 +179,7 @@ _TOPO_OFFSET_FUNCS = {
 
 
 def compute_world_positions(
-    nodes: list[Node], radius_of, world_scale: dict[int, float]
+    nodes: list[Node], radius_of, world_scale: dict[int, tuple[float, float, float]]
 ) -> dict[int, tuple[float, float, float]]:
     """
     Resolve every node's world-space position by walking its parent chain.
@@ -206,7 +213,7 @@ def compute_world_positions(
             offset_fn = _TOPO_OFFSET_FUNCS.get(parent.topo, _cartesian_offset)
             ox, oy, oz = offset_fn(
                 node.translate_x, node.translate_y, node.translate_z,
-                radius_of(parent), world_scale.get(parent.id, 1.0),
+                radius_of(parent), world_scale.get(parent.id, (1.0, 1.0, 1.0)),
             )
             pos = (px + ox, py + oy, pz + oz)
 
@@ -219,31 +226,35 @@ def compute_world_positions(
     return resolved
 
 
-def compute_world_scales(nodes: list[Node]) -> dict[int, float]:
+def compute_world_scales(nodes: list[Node]) -> dict[int, tuple[float, float, float]]:
     """
-    Resolve every node's cumulative (world) average scale factor.
+    Resolve every node's cumulative (world) per-axis scale factor (sx, sy, sz).
 
     This is plain scene-graph inheritance, independent of topology: a child's
-    rendered size is its own scale_x/y/z multiplied by its parent's resolved
-    scale, and so on up the chain — so scaling a parent up or down carries its
-    whole subtree with it proportionally (matches ANTz/GaiaViz behavior).
+    rendered size on each axis is its own scale_x/y/z multiplied by its
+    parent's resolved scale on that same axis, and so on up the chain — so
+    scaling a parent up or down carries its whole subtree with it
+    proportionally, and X/Y/Z scaling stays independent across generations
+    (matches ANTz/GaiaViz behavior).
     """
     by_id = {n.id: n for n in nodes}
-    resolved: dict[int, float] = {}
+    resolved: dict[int, tuple[float, float, float]] = {}
 
-    def own_scale(node: Node) -> float:
-        return (node.scale_x + node.scale_y + node.scale_z) / 3.0
+    def own_scale(node: Node) -> tuple[float, float, float]:
+        return (node.scale_x, node.scale_y, node.scale_z)
 
-    def resolve(node: Node, visiting: frozenset[int]) -> float:
+    def resolve(node: Node, visiting: frozenset[int]) -> tuple[float, float, float]:
         cached = resolved.get(node.id)
         if cached is not None:
             return cached
 
         parent = by_id.get(node.parent_id)
+        os = own_scale(node)
         if parent is None or parent is node or node.id in visiting:
-            scale = own_scale(node)
+            scale = os
         else:
-            scale = own_scale(node) * resolve(parent, visiting | {node.id})
+            ps = resolve(parent, visiting | {node.id})
+            scale = (os[0] * ps[0], os[1] * ps[1], os[2] * ps[2])
 
         resolved[node.id] = scale
         return scale
