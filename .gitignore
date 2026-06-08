@@ -3,6 +3,7 @@ __pycache__/
 *.pyo
 
 # Session archives / scratch notes — not part of the project
+chat_archives/
 vscode_claude_session_archive_*.txt
 
 # Test/scratch CSV fixtures created during development
