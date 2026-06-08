@@ -5,6 +5,7 @@ from .node import Node
 def load_node_csv(path: str) -> list[Node]:
     df = pd.read_csv(path)
     has_ratio = 'ratio' in df.columns
+    has_subspace = 'subspace' in df.columns
     nodes = []
     for _, row in df.iterrows():
         nodes.append(Node(
@@ -29,5 +30,6 @@ def load_node_csv(path: str) -> list[Node]:
             hide=int(row['hide']),
             topo=int(row['topo']),
             ratio=float(row['ratio']) if has_ratio else 0.1,
+            subspace=int(row['subspace']) if has_subspace else 0,
         ))
     return nodes

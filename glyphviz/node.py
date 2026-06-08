@@ -35,3 +35,4 @@ class Node:
     hide: int
     topo: int
     ratio: float = 0.1
+    subspace: int = 0

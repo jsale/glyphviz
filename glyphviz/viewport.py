@@ -5,9 +5,9 @@ from OpenGL.GLU import *
 from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from .geometry import GeoRenderer, GEO_SPHERE
+from .geometry import GeoRenderer, GEO_SPHERE, GEO_CYLINDER, GEO_CYLINDER_WIRE, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
 from .node import Node, NON_VISUAL_TYPES
-from .topology import compute_world_positions, compute_world_rotations, compute_world_scales
+from .topology import compute_world_positions, compute_world_rotations, compute_world_scales, TOPO_ROD
 
 _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag
 
@@ -223,14 +223,24 @@ class Viewport(QOpenGLWidget):
         )
 
         rx, ry, rz = self._radius_of(node)
-        self._geo.draw(node.geometry, rx, ry, rz, ratio=node.ratio)
+        if node.topo == TOPO_ROD:
+            # Rod topology: narrow (0.25x diameter) and elongated (5x length)
+            drx = rx * ROD_RADIUS_FACTOR
+            dry = ry * ROD_RADIUS_FACTOR
+            drz = rz * ROD_HEIGHT_FACTOR
+            geo = node.geometry if node.geometry in (GEO_CYLINDER, GEO_CYLINDER_WIRE) else GEO_CYLINDER
+        else:
+            drx, dry, drz = rx, ry, rz
+            geo = node.geometry
+
+        self._geo.draw(geo, drx, dry, drz, ratio=node.ratio)
 
         if selected:
             glDisable(GL_LIGHTING)
             glLineWidth(2.0)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
             glColor4f(1.0, 0.95, 0.1, 1.0)
-            self._geo.draw(GEO_SPHERE, rx * 1.35, ry * 1.35, rz * 1.35)
+            self._geo.draw(GEO_SPHERE, drx * 1.35, dry * 1.35, drz * 1.35)
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glLineWidth(1.0)
             glEnable(GL_LIGHTING)

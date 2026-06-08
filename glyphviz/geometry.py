@@ -377,6 +377,10 @@ def _new_quadric(wire: bool):
 CYLINDER_RADIUS_RATIO = 1.0
 CYLINDER_HEIGHT_RATIO = 2.0
 
+# Rod topology scales the cylinder geometry: narrow (0.25x) and long (5x).
+ROD_RADIUS_FACTOR = 0.25
+ROD_HEIGHT_FACTOR = 5.0
+
 
 def _draw_cylinder(solid: bool, r=CYLINDER_RADIUS_RATIO, h=CYLINDER_HEIGHT_RATIO, slices=16):
     q = _new_quadric(not solid)

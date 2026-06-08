@@ -30,7 +30,9 @@ TOPO_ZCYLINDER = 12
 TOPO_ZROD      = 13
 TOPO_SPIRAL    = 14
 TOPO_VIDEO     = 15
-TOPO_COUNT     = 16
+TOPO_PLOT      = 16  # 1D/2D/3D line plot, GPS, Oscilloscope (jsale/antz extension)
+TOPO_SURFACE   = 17  # deformable grid, FFT, LIDAR, sound sphere (jsale/antz extension)
+TOPO_COUNT     = 18
 
 TOPO_NAMES = {
     TOPO_NONE:      "None",
@@ -49,6 +51,8 @@ TOPO_NAMES = {
     TOPO_ZROD:      "Zrod",
     TOPO_SPIRAL:    "Spiral",
     TOPO_VIDEO:     "Video",
+    TOPO_PLOT:      "Plot",
+    TOPO_SURFACE:   "Surface",
 }
 
 
@@ -115,26 +119,104 @@ def torus_offset(major_angle: float, minor_angle: float, elevation: float, radiu
 def rod_offset(axial_pos: float, angle_deg: float, elevation: float, radius: float, scale: float = 1.0):
     """
     Convert rod-relative coordinates into a Cartesian offset from the
-    parent's center, mirroring the sphere/torus angle+angle+elevation
-    convention:
-      translate_x -> position along the rod's length, local-space
-                     (its local Z-axis — matches _draw_cylinder's default
-                     horizontal orientation, like Pin's height but sideways)
+    parent's CENTER (not its surface), matching the rod-topology intent of
+    centering children on the cylinder axis:
+      translate_x -> position along the rod's length (local Z axis)
       translate_y -> angle around the rod's circumference
-      translate_z -> elevation, offset outward from the rod's curved surface
+      translate_z -> radial distance from the cylinder's center axis
+                     (0 = on the axis; positive = outward)
 
-    Matches _draw_cylinder's local-space orientation: the cylinder's axis
-    runs along local Z, with its circular cross-section in the local XY plane.
-
-    `axial_pos`/`elevation` are local-space, carried into world space by
-    `scale` (the parent's cumulative world scale) — see kml_offset for why.
+    Children land on the rod's center axis at elevation=0, so stacking
+    children along the rod axis with increasing translate_x fills the rod
+    evenly, which is the intended usage.
     """
     angle = math.radians(angle_deg)
-    radial = CYLINDER_RADIUS_RATIO * radius + elevation * scale
+    radial = elevation * scale   # 0 → on the cylinder axis
     return (
         radial * math.cos(angle),
         radial * math.sin(angle),
         axial_pos * scale,
+    )
+
+
+def pin_offset(tx: float, ty: float, tz: float, parent_radius: float, scale: float = 1.0):
+    """
+    Stack children vertically above the parent's top (along the Z axis):
+      translate_x -> height above the parent's topmost point
+      translate_y -> X offset from the stack axis
+      translate_z -> Y offset from the stack axis
+
+    Designed for pin-like arrangements where items hang or stack in a column
+    above a parent node.
+    """
+    s = scale
+    return (
+        ty * s,
+        tz * s,
+        parent_radius + tx * s,
+    )
+
+
+# Face data for cube topology: each entry is (normal, u, v) where
+# normal = outward face direction, u/v = right/up within the face plane
+# when viewed from outside the cube, in Z-up world coordinates.
+_CUBE_FACES = [
+    (( 1,  0,  0), ( 0,  1,  0), ( 0,  0,  1)),  # 0: +X face
+    ((-1,  0,  0), ( 0, -1,  0), ( 0,  0,  1)),  # 1: -X face
+    (( 0,  1,  0), (-1,  0,  0), ( 0,  0,  1)),  # 2: +Y face
+    (( 0, -1,  0), ( 1,  0,  0), ( 0,  0,  1)),  # 3: -Y face
+    (( 0,  0,  1), ( 1,  0,  0), ( 0,  1,  0)),  # 4: +Z face (top)
+    (( 0,  0, -1), ( 1,  0,  0), ( 0, -1,  0)),  # 5: -Z face (bottom)
+]
+
+
+def cube_offset(tx: float, ty: float, tz: float, parent_radius: float,
+                scale: float = 1.0, subspace: int = 0):
+    """
+    Place a child on one of the six faces of the parent cube:
+      child.subspace (0–5) selects the face (see _CUBE_FACES)
+      translate_x    -> "right" (u-axis) within the face plane
+      translate_y    -> "up" (v-axis) within the face plane
+      translate_z    -> elevation above the face surface (along face normal)
+
+    The face center is at parent_radius * face_normal from the parent center.
+    For a cube glyph scaled by glScalef(rx, ry, rz), each face's center is
+    exactly at radius distance along its normal, so children land on the
+    actual rendered cube face when translate_z == 0.
+    """
+    face_idx = max(0, min(5, subspace))
+    n, u, v = _CUBE_FACES[face_idx]
+    s = scale
+    dist = parent_radius + tz * s
+    return (
+        dist * n[0] + tx * s * u[0] + ty * s * v[0],
+        dist * n[1] + tx * s * u[1] + ty * s * v[1],
+        dist * n[2] + tx * s * u[2] + ty * s * v[2],
+    )
+
+
+def spiral_offset(tx: float, ty: float, tz: float, parent_radius: float, scale: float = 1.0):
+    """
+    Custom conical helix (spiral) topology — a GlyphViz-specific
+    implementation inspired by GaiaViz's description of a "conical spiral
+    with inner radius, outer radius and height":
+      translate_x -> continuous angle in degrees around the helix axis
+                     (0–360 = first turn, 360–720 = second turn, etc.)
+      translate_y -> additional height offset above the computed helix height
+      translate_z -> radial offset from the nominal helix radius
+
+    The helix rises at a pitch of one full parent_radius per complete turn
+    (360°), giving a natural stacking density. Radius stays at parent_radius
+    from the axis unless offset by translate_z.
+    """
+    s = scale
+    theta = math.radians(tx)
+    height = (tx / 360.0) * parent_radius * s
+    r = parent_radius + tz * s
+    return (
+        r * math.cos(theta),
+        r * math.sin(theta),
+        height + ty * s,
     )
 
 
@@ -225,7 +307,11 @@ def _avg3(scale: tuple[float, float, float]) -> float:
     return (scale[0] + scale[1] + scale[2]) / 3.0
 
 
-def _cartesian_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale):
+# All _*_offset wrappers share the signature:
+#   (tx, ty, tz, parent_radius, parent_ratio, parent_scale, child_subspace=0)
+# child_subspace is only used by _cube_offset; the others ignore it.
+
+def _cartesian_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
     """Plain Cartesian (dx, dy, dz) offset from the parent's center, expressed
     in the parent's local space and carried along — per axis — by its
     cumulative world scale: standard scene-graph composition
@@ -240,31 +326,65 @@ def _cartesian_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale):
     return (tx * sx, ty * sy, tz * sz)
 
 
-def _sphere_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale):
+def _sphere_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
     return kml_offset(tx, ty, tz, parent_radius, _avg3(parent_scale))
 
 
-def _torus_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale):
+def _torus_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale, _child_subspace=0):
     return torus_offset(tx, ty, tz, parent_radius, parent_ratio, _avg3(parent_scale))
 
 
-def _rod_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale):
+def _rod_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
     return rod_offset(tx, ty, tz, parent_radius, _avg3(parent_scale))
 
 
-def _point_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale):
+def _point_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
     """Point topology: the same longitude/latitude/altitude system as Sphere,
     but altitude is measured from the parent's CENTER rather than its surface
     — so children collapse toward the center as altitude approaches zero."""
     return kml_offset(tx, ty, tz, 0.0, _avg3(parent_scale))
 
 
+def _pin_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+    return pin_offset(tx, ty, tz, parent_radius, _avg3(parent_scale))
+
+
+def _cube_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, child_subspace=0):
+    return cube_offset(tx, ty, tz, parent_radius, _avg3(parent_scale), child_subspace)
+
+
+def _spiral_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+    return spiral_offset(tx, ty, tz, parent_radius, _avg3(parent_scale))
+
+
+def _plot_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+    """Plot topology (1D/2D/3D line plot, GPS, Oscilloscope): children placed
+    at their Cartesian translate_x/y/z coordinates, scaled by the parent's
+    world scale — same spatial layout as Plane, distinct semantic meaning."""
+    sx, sy, sz = parent_scale
+    return (tx * sx, ty * sy, tz * sz)
+
+
+def _surface_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+    """Surface topology (deformable grid, FFT, LIDAR, sound sphere): children
+    placed at their Cartesian translate_x/y/z coordinates, scaled by the parent's
+    world scale — translate_x/y form the grid position, translate_z is the
+    height value at that grid point."""
+    sx, sy, sz = parent_scale
+    return (tx * sx, ty * sy, tz * sz)
+
+
 _TOPO_OFFSET_FUNCS = {
-    TOPO_SPHERE: _sphere_offset,
-    TOPO_TORUS: _torus_offset,
-    TOPO_ROD: _rod_offset,
-    TOPO_POINT: _point_offset,
-    TOPO_PLANE: _cartesian_offset,
+    TOPO_CUBE:    _cube_offset,
+    TOPO_SPHERE:  _sphere_offset,
+    TOPO_TORUS:   _torus_offset,
+    TOPO_PIN:     _pin_offset,
+    TOPO_ROD:     _rod_offset,
+    TOPO_POINT:   _point_offset,
+    TOPO_PLANE:   _cartesian_offset,
+    TOPO_SPIRAL:  _spiral_offset,
+    TOPO_PLOT:    _plot_offset,
+    TOPO_SURFACE: _surface_offset,
 }
 
 
@@ -317,6 +437,7 @@ def compute_world_positions(
                 node.translate_x, node.translate_y, node.translate_z,
                 radius_of(parent), parent.ratio,
                 world_scale.get(parent.id, (1.0, 1.0, 1.0)),
+                node.subspace,
             )
             prot = world_rotation.get(parent.id, _MAT_IDENTITY)
             ox, oy, oz = _mat_vec_mul(prot, local_offset)
