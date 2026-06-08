@@ -7,31 +7,26 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from .geometry import GeoRenderer, GEO_SPHERE
 from .node import Node, NON_VISUAL_TYPES
-from .topology import compute_world_positions, compute_world_scales
+from .topology import compute_world_positions, compute_world_rotations, compute_world_scales
 
 _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag
 
-
-# --- rotation helpers for picking (mirror the Rx/Ry/Rz convention glRotatef
-# uses — right-hand rule about each axis — so we can invert a node's
-# rotation when transforming a pick ray into its local space) ---
-
-def _rotate_x(x, y, z, deg):
-    a = math.radians(deg)
-    c, s = math.cos(a), math.sin(a)
-    return x, c*y - s*z, s*y + c*z
+_MAT_IDENTITY = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
 
 
-def _rotate_y(x, y, z, deg):
-    a = math.radians(deg)
-    c, s = math.cos(a), math.sin(a)
-    return c*x + s*z, y, -s*x + c*z
-
-
-def _rotate_z(x, y, z, deg):
-    a = math.radians(deg)
-    c, s = math.cos(a), math.sin(a)
-    return c*x - s*y, s*x + c*y, z
+def _gl_matrix_from_rotation(rot):
+    """Convert a 3x3 row-major rotation matrix (as produced by
+    compute_world_rotations) into a 16-element column-major array for
+    glMultMatrixf — applies a node's cumulative world orientation (its own
+    rotation composed with everything it inherited from its parent chain),
+    mirroring how its absolute world position already cascades translation."""
+    (r00, r01, r02), (r10, r11, r12), (r20, r21, r22) = rot
+    return [
+        r00, r10, r20, 0.0,
+        r01, r11, r21, 0.0,
+        r02, r12, r22, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+    ]
 
 
 class Viewport(QOpenGLWidget):
@@ -48,6 +43,7 @@ class Viewport(QOpenGLWidget):
         self.selected_node_id: int | None = None
         self._world_pos: dict[int, tuple[float, float, float]] = {}
         self._world_scale: dict[int, tuple[float, float, float]] = {}
+        self._world_rot: dict[int, tuple] = {}
 
         self._cam_distance = 500.0
         self._cam_azimuth = 45.0
@@ -115,7 +111,10 @@ class Viewport(QOpenGLWidget):
         and inherited scale — so that moving or resizing a parent carries its
         whole subtree along with it."""
         self._world_scale = compute_world_scales(self.nodes)
-        self._world_pos = compute_world_positions(self.nodes, self._placement_radius_of, self._world_scale)
+        self._world_rot = compute_world_rotations(self.nodes)
+        self._world_pos = compute_world_positions(
+            self.nodes, self._placement_radius_of, self._world_scale, self._world_rot
+        )
 
     def world_position(self, node_id: int) -> tuple[float, float, float] | None:
         """Rendered world-space position of a node, as last computed for drawing."""
@@ -131,9 +130,9 @@ class Viewport(QOpenGLWidget):
         az = math.radians(self._cam_azimuth)
         el = math.radians(self._cam_elevation)
         tx, ty, tz = self._cam_target
-        ex = tx + self._cam_distance * math.cos(el) * math.sin(az)
-        ey = ty + self._cam_distance * math.sin(el)
-        ez = tz + self._cam_distance * math.cos(el) * math.cos(az)
+        ex = tx + self._cam_distance * math.cos(el) * math.cos(az)
+        ey = ty + self._cam_distance * math.cos(el) * math.sin(az)
+        ez = tz + self._cam_distance * math.sin(el)
 
         px, py, pz = world_pos
         dist_to_obj = math.sqrt((ex - px)**2 + (ey - py)**2 + (ez - pz)**2)
@@ -188,11 +187,11 @@ class Viewport(QOpenGLWidget):
         el = math.radians(self._cam_elevation)
         tx, ty, tz = self._cam_target
 
-        eye_x = tx + self._cam_distance * math.cos(el) * math.sin(az)
-        eye_y = ty + self._cam_distance * math.sin(el)
-        eye_z = tz + self._cam_distance * math.cos(el) * math.cos(az)
+        eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
+        eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
+        eye_z = tz + self._cam_distance * math.sin(el)
 
-        gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 1.0, 0.0)
+        gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
 
         if self.show_grid:
             self._draw_grid()
@@ -211,9 +210,10 @@ class Viewport(QOpenGLWidget):
 
         glPushMatrix()
         glTranslatef(wx, wy, wz)
-        glRotatef(node.rotate_z, 0.0, 0.0, 1.0)
-        glRotatef(node.rotate_y, 0.0, 1.0, 0.0)
-        glRotatef(node.rotate_x, 1.0, 0.0, 0.0)
+        # Cumulative world orientation — own rotation composed with everything
+        # inherited from its parent chain (compute_world_rotations) — so a
+        # rotated parent's children rotate along with it, not just translate.
+        glMultMatrixf(_gl_matrix_from_rotation(self._world_rot.get(node.id, _MAT_IDENTITY)))
 
         glColor4f(
             node.color_r / 255.0,
@@ -223,7 +223,7 @@ class Viewport(QOpenGLWidget):
         )
 
         rx, ry, rz = self._radius_of(node)
-        self._geo.draw(node.geometry, rx, ry, rz)
+        self._geo.draw(node.geometry, rx, ry, rz, ratio=node.ratio)
 
         if selected:
             glDisable(GL_LIGHTING)
@@ -256,29 +256,30 @@ class Viewport(QOpenGLWidget):
         step = max(10.0, self._cam_distance * 0.04)
         count = 20          # larger count ensures coverage after panning
         size = step * count
-        # Fixed world position (Y=0) — panning moves the camera, not the grid,
+        # Fixed world position (Z=0) — panning moves the camera, not the grid,
         # so grid and nodes shift together on screen just like any world object.
         glBegin(GL_LINES)
         for i in range(-count, count + 1):
-            glVertex3f(i * step, 0.0, -size)
-            glVertex3f(i * step, 0.0,  size)
-            glVertex3f(-size, 0.0, i * step)
-            glVertex3f( size, 0.0, i * step)
+            glVertex3f(i * step, -size, 0.0)
+            glVertex3f(i * step,  size, 0.0)
+            glVertex3f(-size, i * step, 0.0)
+            glVertex3f( size, i * step, 0.0)
         glEnd()
         glEnable(GL_LIGHTING)
 
     # --- picking (ray cast against rotated/stretched bounding ellipsoids) ---
 
-    def _ellipsoid_hit_t(self, node, ocx, ocy, ocz, rdx, rdy, rdz, rx, ry, rz):
+    def _ellipsoid_hit_t(self, rot, ocx, ocy, ocz, rdx, rdy, rdz, rx, ry, rz):
         """
         Ray-vs-glyph hit test against the actual rendered shape: an ellipsoid
         with the node's per-axis radii (rx, ry, rz), oriented by its
-        rotate_x/y/z — matching what _draw_node renders via glRotatef +
-        glScalef. A plain bounding *sphere* over- or under-selects nodes that
-        are stretched along one or two axes (the "elongated ends are hard to
-        click / parent can't be selected" symptom): a long thin glyph either
-        gets a too-small sphere (misses its tips) or a too-large one (its
-        empty space blocks clicks meant for neighbors).
+        cumulative world rotation `rot` — matching what _draw_node renders via
+        glMultMatrixf + glScalef. A plain bounding *sphere* over- or
+        under-selects nodes that are stretched along one or two axes (the
+        "elongated ends are hard to click / parent can't be selected"
+        symptom): a long thin glyph either gets a too-small sphere (misses its
+        tips) or a too-large one (its empty space blocks clicks meant for
+        neighbors).
 
         `ocx,ocy,ocz` is the eye position relative to the node's world-space
         center; `rdx,rdy,rdz` is the (unit-length) ray direction. Returns the
@@ -286,19 +287,25 @@ class Viewport(QOpenGLWidget):
         is unit length) of the nearest intersection, or None.
 
         Method: transform the ray into the node's local space by undoing its
-        rotation (inverse of a rotation matrix is its transpose — rotating by
-        the same angles in reverse order, negated) and then dividing by the
-        per-axis radii. That maps the rendered ellipsoid onto a unit sphere
-        while preserving the ray's parametrization t (rotation and uniform
-        rescaling are linear maps applied identically to the ray's origin and
-        direction, so the parameter along the ray is unchanged) — so a plain
-        unit-sphere quadratic yields the correct hit distance directly.
+        orientation — the inverse of a rotation matrix is its transpose — and
+        then dividing by the per-axis radii. That maps the rendered ellipsoid
+        onto a unit sphere while preserving the ray's parametrization t
+        (rotation and uniform rescaling are linear maps applied identically to
+        the ray's origin and direction, so the parameter along the ray is
+        unchanged) — so a plain unit-sphere quadratic yields the correct hit
+        distance directly.
         """
-        # _draw_node composes world = translate * Rz * Ry * Rx * scale, so the
-        # inverse (local = scale^-1 * Rx^-1 * Ry^-1 * Rz^-1 * world_relative)
-        # undoes Z, then Y, then X — each by its negated angle.
-        ox, oy, oz = _rotate_x(*_rotate_y(*_rotate_z(ocx, ocy, ocz, -node.rotate_z), -node.rotate_y), -node.rotate_x)
-        dx, dy, dz = _rotate_x(*_rotate_y(*_rotate_z(rdx, rdy, rdz, -node.rotate_z), -node.rotate_y), -node.rotate_x)
+        # local = R^T * world_relative  (R^T == R^-1 for an orthonormal
+        # rotation matrix) — undoes the node's cumulative world orientation
+        # (its own rotation composed with everything inherited from its
+        # parent chain, exactly what _draw_node applies via glMultMatrixf).
+        (r00, r01, r02), (r10, r11, r12), (r20, r21, r22) = rot
+        ox = r00*ocx + r10*ocy + r20*ocz
+        oy = r01*ocx + r11*ocy + r21*ocz
+        oz = r02*ocx + r12*ocy + r22*ocz
+        dx = r00*rdx + r10*rdy + r20*rdz
+        dy = r01*rdx + r11*rdy + r21*rdz
+        dz = r02*rdx + r12*rdy + r22*rdz
 
         ox, oy, oz = ox / rx, oy / ry, oz / rz
         dx, dy, dz = dx / rx, dy / ry, dz / rz
@@ -333,9 +340,9 @@ class Viewport(QOpenGLWidget):
         el = math.radians(self._cam_elevation)
         tx, ty, tz = self._cam_target
 
-        ex = tx + self._cam_distance * math.cos(el) * math.sin(az)
-        ey = ty + self._cam_distance * math.sin(el)
-        ez = tz + self._cam_distance * math.cos(el) * math.cos(az)
+        ex = tx + self._cam_distance * math.cos(el) * math.cos(az)
+        ey = ty + self._cam_distance * math.cos(el) * math.sin(az)
+        ez = tz + self._cam_distance * math.sin(el)
 
         # ---- Camera basis (forward, right, up) ------------------------------
         # forward = normalise(target - eye)
@@ -343,13 +350,13 @@ class Viewport(QOpenGLWidget):
         fd = math.sqrt(fdx*fdx + fdy*fdy + fdz*fdz)
         fdx, fdy, fdz = fdx/fd, fdy/fd, fdz/fd
 
-        # right = cross(forward, world_up)  → (-fdz, 0, fdx)
-        rx, ry, rz = -fdz, 0.0, fdx
-        rd = math.sqrt(rx*rx + rz*rz)
+        # right = cross(forward, world_up)  where world_up = (0, 0, 1) → (fdy, -fdx, 0)
+        rx, ry, rz = fdy, -fdx, 0.0
+        rd = math.sqrt(rx*rx + ry*ry)
         if rd < 1e-9:          # camera pointing straight up/down — use fallback
-            rx, rz = 1.0, 0.0
+            rx, ry = 1.0, 0.0
         else:
-            rx, rz = rx/rd, rz/rd
+            rx, ry = rx/rd, ry/rd
 
         # up = cross(right, forward)
         ux = ry*fdz - rz*fdy
@@ -388,8 +395,9 @@ class Viewport(QOpenGLWidget):
             ocx = ex - wx
             ocy = ey - wy
             ocz = ez - wz
+            rot = self._world_rot.get(node.id, _MAT_IDENTITY)
             t = self._ellipsoid_hit_t(
-                node, ocx, ocy, ocz, rdx, rdy, rdz,
+                rot, ocx, ocy, ocz, rdx, rdy, rdz,
                 node_rx * _CLICK_MARGIN, node_ry * _CLICK_MARGIN, node_rz * _CLICK_MARGIN,
             )
             if t is not None and t < best_t:
@@ -410,7 +418,7 @@ class Viewport(QOpenGLWidget):
                 and self._drag_button == Qt.MouseButton.LeftButton):
             node = self._pick_node(event.pos().x(), event.pos().y())
             label = f"Node {node.id}" if node else "miss"
-            print(f"[pick] ({event.pos().x()},{event.pos().y()}) → {label}")
+            print(f"[pick] ({event.pos().x()},{event.pos().y()}) -> {label}")
             if node is not None:
                 self.nodeClicked.emit(node.id)
                 # Shift-click: jump to and zoom in on the clicked node — an
@@ -447,15 +455,17 @@ class Viewport(QOpenGLWidget):
         elif self._drag_button == Qt.MouseButton.MiddleButton:
             az = math.radians(self._cam_azimuth)
             el = math.radians(self._cam_elevation)
-            right_x = math.cos(az)
-            right_z = -math.sin(az)
-            up_x = -math.sin(el) * math.sin(az)
-            up_y = math.cos(el)
-            up_z = -math.sin(el) * math.cos(az)
+            # Screen-aligned right/up basis for the Z-up camera (world_up = +Z):
+            # right = normalise(cross(forward, world_up)), up = cross(right, forward).
+            right_x = -math.sin(az)
+            right_y = math.cos(az)
+            up_x = -math.cos(az) * math.sin(el)
+            up_y = -math.sin(az) * math.sin(el)
+            up_z = math.cos(el)
             speed = self._cam_distance * 0.0015
             self._cam_target[0] -= (dx * right_x - dy * up_x) * speed
-            self._cam_target[1] += dy * up_y * speed
-            self._cam_target[2] -= (dx * right_z - dy * up_z) * speed
+            self._cam_target[1] -= (dx * right_y - dy * up_y) * speed
+            self._cam_target[2] += dy * up_z * speed
 
         self._last_pos = event.pos()
         self.update()

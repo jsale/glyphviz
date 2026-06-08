@@ -34,3 +34,4 @@ class Node:
     geometry: int
     hide: int
     topo: int
+    ratio: float = 0.1

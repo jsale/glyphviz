@@ -161,6 +161,21 @@ class MainWindow(QMainWindow):
             sb.valueChanged.connect(self._on_insp_pos_changed)
             pos_layout.addWidget(sb)
 
+        rot_widget = QWidget()
+        rot_layout = QHBoxLayout(rot_widget)
+        rot_layout.setContentsMargins(0, 0, 0, 0)
+        rot_layout.setSpacing(4)
+        self._insp_rot_x = QDoubleSpinBox()
+        self._insp_rot_y = QDoubleSpinBox()
+        self._insp_rot_z = QDoubleSpinBox()
+        for sb in (self._insp_rot_x, self._insp_rot_y, self._insp_rot_z):
+            sb.setRange(-360.0, 360.0)
+            sb.setDecimals(2)
+            sb.setSingleStep(1.0)
+            sb.setWrapping(True)
+            sb.valueChanged.connect(self._on_insp_rotation_changed)
+            rot_layout.addWidget(sb)
+
         scale_widget = QWidget()
         scale_w_layout = QHBoxLayout(scale_widget)
         scale_w_layout.setContentsMargins(0, 0, 0, 0)
@@ -180,6 +195,17 @@ class MainWindow(QMainWindow):
             "When checked, editing one scale axis sets all three to the same value."
         )
 
+        self._insp_ratio = QDoubleSpinBox()
+        self._insp_ratio.setRange(0.01, 1.0)
+        self._insp_ratio.setDecimals(3)
+        self._insp_ratio.setSingleStep(0.01)
+        self._insp_ratio.setToolTip(
+            "Torus minor-radius proportion (GaiaViz/ANTz 'ratio'): the tube "
+            "radius as a fraction of the torus's overall radius. Also used to "
+            "place children riding on a Torus-topology parent's surface."
+        )
+        self._insp_ratio.valueChanged.connect(self._on_insp_ratio_changed)
+
         self._insp_geo = QComboBox()
         for geo_id in range(GEO_COUNT):
             self._insp_geo.addItem(GEO_NAMES[geo_id], geo_id)
@@ -198,10 +224,12 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Type:",     self._insp_type)
         insp_layout.addRow("Parent:",   self._insp_parent)
         insp_layout.addRow("Pos (X,Y,Z):", pos_widget)
+        insp_layout.addRow("Rotate (X,Y,Z):", rot_widget)
         insp_layout.addRow("Scale (X,Y,Z):", scale_widget)
         insp_layout.addRow("", self._insp_scale_lock)
         insp_layout.addRow("Geometry:", self._insp_geo)
         insp_layout.addRow("Topology:", self._insp_topo)
+        insp_layout.addRow("Ratio:",    self._insp_ratio)
         insp_layout.addRow("Color:",    self._insp_color_btn)
 
         layout.addWidget(disp)
@@ -304,9 +332,13 @@ class MainWindow(QMainWindow):
             (self._insp_pos_x, node.translate_x),
             (self._insp_pos_y, node.translate_y),
             (self._insp_pos_z, node.translate_z),
+            (self._insp_rot_x, node.rotate_x),
+            (self._insp_rot_y, node.rotate_y),
+            (self._insp_rot_z, node.rotate_z),
             (self._insp_scale_x, node.scale_x),
             (self._insp_scale_y, node.scale_y),
             (self._insp_scale_z, node.scale_z),
+            (self._insp_ratio, node.ratio),
         ):
             sb.blockSignals(True)
             sb.setValue(val)
@@ -342,6 +374,16 @@ class MainWindow(QMainWindow):
         self._table.refresh_node(node.id)
         self._viewport.update()
 
+    def _on_insp_rotation_changed(self, _value: float):
+        node = self._table.selected_node()
+        if node is None:
+            return
+        node.rotate_x = self._insp_rot_x.value()
+        node.rotate_y = self._insp_rot_y.value()
+        node.rotate_z = self._insp_rot_z.value()
+        self._table.refresh_node(node.id)
+        self._viewport.update()
+
     def _on_insp_geo_changed(self, _idx: int):
         node = self._table.selected_node()
         if node is None:
@@ -364,6 +406,14 @@ class MainWindow(QMainWindow):
         node.scale_x = self._insp_scale_x.value()
         node.scale_y = self._insp_scale_y.value()
         node.scale_z = self._insp_scale_z.value()
+        self._table.refresh_node(node.id)
+        self._viewport.update()
+
+    def _on_insp_ratio_changed(self, value: float):
+        node = self._table.selected_node()
+        if node is None:
+            return
+        node.ratio = value
         self._table.refresh_node(node.id)
         self._viewport.update()
 

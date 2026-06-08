@@ -16,14 +16,19 @@ _COLUMNS = [
     ("X",      "translate_x"),
     ("Y",      "translate_y"),
     ("Z",      "translate_z"),
+    ("Rx",     "rotate_x"),
+    ("Ry",     "rotate_y"),
+    ("Rz",     "rotate_z"),
     ("Sx",     "scale_x"),
     ("Sy",     "scale_y"),
     ("Sz",     "scale_z"),
+    ("Ratio",  "ratio"),
     ("Color",  None),
 ]
 
 _FLOAT_ATTRS = frozenset({"translate_x", "translate_y", "translate_z",
-                           "scale_x", "scale_y", "scale_z"})
+                           "rotate_x", "rotate_y", "rotate_z",
+                           "scale_x", "scale_y", "scale_z", "ratio"})
 _COLOR_COL = len(_COLUMNS) - 1
 
 

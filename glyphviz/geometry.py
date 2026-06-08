@@ -32,8 +32,10 @@ GEO_PIN            = 16
 GEO_PIN_WIRE       = 17
 GEO_CYLINDER_WIRE  = 18
 GEO_CYLINDER       = 19
-GEO_POINT          = 20
-GEO_COUNT          = 21
+GEO_GRID_WIRE      = 20
+GEO_GRID           = 21
+GEO_POINT          = 22
+GEO_COUNT          = 23
 
 GEO_NAMES = {
     GEO_CUBE_WIRE:     "Cube Wire",
@@ -56,13 +58,15 @@ GEO_NAMES = {
     GEO_PIN_WIRE:      "Pin Wire",
     GEO_CYLINDER_WIRE: "Cylinder Wire",
     GEO_CYLINDER:      "Cylinder",
+    GEO_GRID_WIRE:     "Grid Wire",
+    GEO_GRID:          "Grid",
     GEO_POINT:         "Point",
 }
 
 _WIRE_IDS = frozenset({
     GEO_CUBE_WIRE, GEO_SPHERE_WIRE, GEO_CONE_WIRE, GEO_TORUS_WIRE,
     GEO_DODECA_WIRE, GEO_OCTA_WIRE, GEO_TETRA_WIRE, GEO_ICOSA_WIRE,
-    GEO_PIN_WIRE, GEO_CYLINDER_WIRE,
+    GEO_PIN_WIRE, GEO_CYLINDER_WIRE, GEO_GRID_WIRE,
 })
 
 
@@ -300,13 +304,27 @@ def _draw_cube(solid: bool):
         glEnable(GL_LIGHTING)
 
 
-# Torus proportions relative to the unit "size" radius passed to GeoRenderer.draw
-# — exposed so topology code can place children precisely on the rendered surface.
-TORUS_MAJOR_RATIO = 0.72
-TORUS_MINOR_RATIO = 0.28
+# A torus glyph's shape — not just its size — is governed by its per-node
+# `ratio` property (mirrors GaiaViz/ANTz: "ratio sets the inner and outer
+# radius of a torus... default ratio is 0.1 = 10% of the outer radius"):
+# the minor (tube) radius is `ratio` of the torus's overall ("outer") radius,
+# and the major (orbital) radius makes up the remainder, so the rendered
+# donut's total extent always equals the unit "size" radius passed to
+# GeoRenderer.draw — exposed so topology code can place children precisely
+# on the rendered surface.
+TORUS_DEFAULT_RATIO = 0.14  # half of the prior fixed minor-radius proportion (0.28)
 
 
-def _draw_torus(solid: bool, r_major=TORUS_MAJOR_RATIO, r_minor=TORUS_MINOR_RATIO, rings=24, sides=16):
+def torus_radii(ratio: float, size: float = 1.0) -> tuple[float, float]:
+    """Major/minor radii of a torus glyph for a given `ratio` and overall size."""
+    minor = ratio * size
+    return size - minor, minor
+
+
+_TORUS_DEFAULT_MAJOR, _TORUS_DEFAULT_MINOR = torus_radii(TORUS_DEFAULT_RATIO)
+
+
+def _draw_torus(solid: bool, r_major=_TORUS_DEFAULT_MAJOR, r_minor=_TORUS_DEFAULT_MINOR, rings=24, sides=16):
     tau = 2 * math.pi
     if not solid:
         glDisable(GL_LIGHTING)
@@ -409,21 +427,66 @@ def _draw_sphere(solid: bool, r=1.0, slices=16, stacks=12):
 
 
 def _draw_pin(solid: bool):
+    """Pushpin shape: ball "head" at the top, tapering "needle" pointing
+    down — both built along local +Z/-Z so an unrotated pin stands upright
+    in the (now Z-up, ANTz-aligned) world, matching GEO_CYLINDER/GEO_CONE's
+    own local-Z-axis convention."""
     q = _new_quadric(not solid)
     if not solid:
         glDisable(GL_LIGHTING)
     glPushMatrix()
-    glTranslatef(0.0, 0.55, 0.0)
-    gluSphere(q, 0.45, 12, 8)
+    glTranslatef(0.0, 0.0, 0.22)
+    gluSphere(q, 0.12, 12, 8)
     glPopMatrix()
     glPushMatrix()
-    glRotatef(90.0, 1.0, 0.0, 0.0)
-    glTranslatef(0.0, 0.0, -0.1)
+    glTranslatef(0.0, 0.0, 0.1)
+    glRotatef(180.0, 1.0, 0.0, 0.0)
     gluCylinder(q, 0.12, 0.03, 1.1, 8, 1)
     glPopMatrix()
     if not solid:
         glEnable(GL_LIGHTING)
     gluDeleteQuadric(q)
+
+
+# Flat square ("Grid"/"Square") glyph — lies in the local XY plane, normal
+# along +Z, matching ANTz's Grid node (topo=plane, geometry=Square) and the
+# viewport's own XY-at-Z=0 world grid orientation. Half-extent chosen so the
+# square's corners reach exactly radius 1.0, per this module's "fits within
+# radius ~1" convention.
+GRID_HALF_EXTENT = 1.0 / math.sqrt(2.0)
+
+
+def _draw_grid_wire(segments=8):
+    """Graph-paper-style lattice of lines spanning the square."""
+    glDisable(GL_LIGHTING)
+    s = GRID_HALF_EXTENT
+    glBegin(GL_LINES)
+    for i in range(segments + 1):
+        t = -s + (2.0 * s) * i / segments
+        glVertex3f(t, -s, 0.0)
+        glVertex3f(t,  s, 0.0)
+        glVertex3f(-s, t, 0.0)
+        glVertex3f( s, t, 0.0)
+    glEnd()
+    glEnable(GL_LIGHTING)
+
+
+def _draw_grid_solid():
+    """Flat square plate, drawn double-sided (opposing normals on each face)
+    so it reads correctly from either side, matching ANTz's default Grid shape."""
+    s = GRID_HALF_EXTENT
+    glBegin(GL_QUADS)
+    glNormal3f(0.0, 0.0, 1.0)
+    glVertex3f(-s, -s, 0.0)
+    glVertex3f( s, -s, 0.0)
+    glVertex3f( s,  s, 0.0)
+    glVertex3f(-s,  s, 0.0)
+    glNormal3f(0.0, 0.0, -1.0)
+    glVertex3f(-s,  s, 0.0)
+    glVertex3f( s,  s, 0.0)
+    glVertex3f( s, -s, 0.0)
+    glVertex3f(-s, -s, 0.0)
+    glEnd()
 
 
 # ---------------------------------------------------------------------------
@@ -450,8 +513,8 @@ class GeoRenderer:
             GEO_CONE_WIRE:     lambda: _draw_cone(False),
             GEO_CYLINDER:      lambda: _draw_cylinder(True),
             GEO_CYLINDER_WIRE: lambda: _draw_cylinder(False),
-            GEO_TORUS:         lambda: _draw_torus(True),
-            GEO_TORUS_WIRE:    lambda: _draw_torus(False),
+            GEO_GRID:          lambda: _draw_grid_solid(),
+            GEO_GRID_WIRE:     lambda: _draw_grid_wire(),
             GEO_PIN:           lambda: _draw_pin(True),
             GEO_PIN_WIRE:      lambda: _draw_pin(False),
             GEO_TETRA:         lambda: _draw_tri_solid(_TETRA_VERTS, _TETRA_FACES),
@@ -469,6 +532,10 @@ class GeoRenderer:
                 continue
             fn = _DISPATCH.get(geo_id)
             if fn is None:
+                # GEO_TORUS/GEO_TORUS_WIRE are deliberately absent: their
+                # shape (not just size) depends on each node's own `ratio`,
+                # so they're drawn immediately per-node in draw() instead of
+                # baked into one fixed-shape display list.
                 continue
             dl = glGenLists(1)
             glNewList(dl, GL_COMPILE)
@@ -481,7 +548,7 @@ class GeoRenderer:
 
         self._ready = True
 
-    def draw(self, geo_id: int, rx: float, ry: float, rz: float):
+    def draw(self, geo_id: int, rx: float, ry: float, rz: float, ratio: float = TORUS_DEFAULT_RATIO):
         if not self._ready:
             return
         if geo_id == GEO_POINT:
@@ -494,6 +561,17 @@ class GeoRenderer:
             glEnd()
             glPointSize(1.0)
             glEnable(GL_LIGHTING)
+            return
+        if geo_id in (GEO_TORUS, GEO_TORUS_WIRE):
+            # Each node may set its own torus `ratio` (major/minor radius
+            # proportions), so — unlike the other glyphs — its shape can't be
+            # captured by a single fixed-shape display list scaled per node;
+            # draw it immediately with radii derived from this node's ratio.
+            r_major, r_minor = torus_radii(ratio)
+            glPushMatrix()
+            glScalef(rx, ry, rz)
+            _draw_torus(geo_id == GEO_TORUS, r_major, r_minor)
+            glPopMatrix()
             return
         dl = self._lists.get(geo_id, self._lists.get(GEO_SPHERE))
         if dl:
