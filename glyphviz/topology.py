@@ -8,7 +8,7 @@ offset function and registering it in _TOPO_OFFSET_FUNCS.
 """
 import math
 
-from .geometry import CYLINDER_RADIUS_RATIO, torus_radii
+from .geometry import CYLINDER_RADIUS_RATIO, ROD_HEIGHT_FACTOR, torus_radii
 from .node import Node
 
 # np_topo_id values — full reference list from Topology-Guide.md.
@@ -119,23 +119,28 @@ def torus_offset(major_angle: float, minor_angle: float, elevation: float, radiu
 def rod_offset(axial_pos: float, angle_deg: float, elevation: float, radius: float, scale: float = 1.0):
     """
     Convert rod-relative coordinates into a Cartesian offset from the
-    parent's CENTER (not its surface), matching the rod-topology intent of
-    centering children on the cylinder axis:
-      translate_x -> position along the rod's length (local Z axis)
-      translate_y -> angle around the rod's circumference
+    parent's CENTER, matching the GlyphViz rod-topology convention:
+      translate_x -> position along the rod's length (local Z axis);
+                     0 = bottom end of cylinder, 180 = top end.
+                     (ANTz uses 0 = top, -180 = bottom; GlyphViz inverts sign.)
+      translate_y -> angle (degrees) around the rod's circumference
       translate_z -> radial distance from the cylinder's center axis
                      (0 = on the axis; positive = outward)
 
-    Children land on the rod's center axis at elevation=0, so stacking
-    children along the rod axis with increasing translate_x fills the rod
-    evenly, which is the intended usage.
+    `radius` is the parent's effective rendered radius (including base_scale).
+    The full [0, 180] axial range maps to the cylinder's actual rendered length
+    so 13 children spaced 15 units apart fill the cylinder evenly.
     """
     angle = math.radians(angle_deg)
-    radial = elevation * scale   # 0 → on the cylinder axis
+    radial = elevation * scale
+    # Map [0, 180] to [0, 2*half_length]: bottom cap of the parent cylinder
+    # sits at the parent's world origin, so tx=0 lands a child there and
+    # tx=180 lands it at the top cap — matching ANTz's one-end-at-origin convention.
+    world_z = (axial_pos / 180.0) * 2.0 * radius * ROD_HEIGHT_FACTOR
     return (
         radial * math.cos(angle),
         radial * math.sin(angle),
-        axial_pos * scale,
+        world_z,
     )
 
 
@@ -269,6 +274,45 @@ def local_rotation_matrix(rx: float, ry: float, rz: float):
     return _mat_mul(_mat_mul(_rot_z(rz), _rot_y(ry)), _rot_x(rx))
 
 
+# Precomputed per-face base rotations for Cube topology: aligns the child's
+# +Z axis with each face's outward normal (order mirrors _CUBE_FACES in this file).
+# face 0 (+X): Ry(90)   face 1 (-X): Ry(-90)  face 2 (+Y): Rx(-90)
+# face 3 (-Y): Rx(90)   face 4 (+Z): identity  face 5 (-Z): Rx(180)
+_CUBE_FACE_BASE_ROTS = (
+    _rot_y(90),    # 0: +X normal
+    _rot_y(-90),   # 1: -X normal
+    _rot_x(-90),   # 2: +Y normal
+    _rot_x(90),    # 3: -Y normal
+    _MAT_IDENTITY, # 4: +Z normal (top)
+    _rot_x(180),   # 5: -Z normal (bottom)
+)
+
+
+def _topology_base_rotation(parent_topo: int, tx: float, ty: float, tz: float,
+                              child_subspace: int = 0) -> tuple:
+    """Orientation scaffold inserted between the parent's world rotation and the
+    child's own rotate_x/y/z: makes the child 'face outward' from the parent
+    surface at its placement (tx, ty, tz) so the outward-facing side tracks the
+    surface as the child's placement coordinates change.
+
+    Rod    — Rz(ty): rotates the child around the cylinder axis by the angular
+             placement angle.  A child with Ry=90 (cylinder tilted horizontal)
+             will point radially outward like a spoke at azimuth ty.
+    Sphere/Point (KML) — Rz(tx)*Ry(90-ty): aligns the child's +Z with the
+             sphere-surface normal at (longitude=tx, latitude=ty).
+    Cube   — precomputed rotation per face (subspace), aligning +Z with face normal.
+    Pin / Cylinder and all others — identity (no placement-based rotation).
+    Torus  — deferred; its two-axis rotation will be addressed separately.
+    """
+    if parent_topo == TOPO_ROD:
+        return _rot_z(ty)
+    if parent_topo in (TOPO_SPHERE, TOPO_POINT):
+        return _mat_mul(_rot_z(tx), _rot_y(90.0 - ty))
+    if parent_topo == TOPO_CUBE:
+        return _CUBE_FACE_BASE_ROTS[max(0, min(5, child_subspace))]
+    return _MAT_IDENTITY
+
+
 def compute_world_rotations(nodes: list[Node]) -> dict[int, tuple]:
     """
     Resolve every node's cumulative (world) orientation as a 3x3 rotation
@@ -292,7 +336,11 @@ def compute_world_rotations(nodes: list[Node]) -> dict[int, tuple]:
             rot = local
         else:
             prot = resolve(parent, visiting | {node.id})
-            rot = _mat_mul(prot, local)
+            topo_rot = _topology_base_rotation(
+                parent.topo, node.translate_x, node.translate_y, node.translate_z,
+                node.subspace,
+            )
+            rot = _mat_mul(_mat_mul(prot, topo_rot), local)
 
         resolved[node.id] = rot
         return rot
@@ -335,7 +383,14 @@ def _torus_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale, _child_
 
 
 def _rod_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
-    return rod_offset(tx, ty, tz, parent_radius, _avg3(parent_scale))
+    # parent_radius = avg(sx,sy,sz) * base_scale.  The rod's axial length scales
+    # with sz only, so recover rz = parent_radius * (sz / avg_s) to avoid
+    # cross-axis coupling: changing the parent's X or Y scale must not move
+    # children along the cylinder axis (Z), and changing Z must fill the cylinder.
+    avg_s = _avg3(parent_scale)
+    sz = parent_scale[2]
+    z_radius = parent_radius * sz / avg_s if avg_s > 1e-9 else parent_radius
+    return rod_offset(tx, ty, tz, z_radius, _avg3(parent_scale))
 
 
 def _point_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):

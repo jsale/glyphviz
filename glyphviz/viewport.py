@@ -5,7 +5,7 @@ from OpenGL.GLU import *
 from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from .geometry import GeoRenderer, GEO_SPHERE, GEO_CYLINDER, GEO_CYLINDER_WIRE, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
+from .geometry import GeoRenderer, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
 from .node import Node, NON_VISUAL_TYPES
 from .topology import compute_world_positions, compute_world_rotations, compute_world_scales, TOPO_ROD
 
@@ -223,25 +223,38 @@ class Viewport(QOpenGLWidget):
         )
 
         rx, ry, rz = self._radius_of(node)
+        geo = node.geometry
         if node.topo == TOPO_ROD:
-            # Rod topology: narrow (0.25x diameter) and elongated (5x length)
+            # Rod topology: narrow (0.25x diameter) and elongated (5x length),
+            # applied to whatever geometry the node has (not forced to cylinder).
             drx = rx * ROD_RADIUS_FACTOR
             dry = ry * ROD_RADIUS_FACTOR
             drz = rz * ROD_HEIGHT_FACTOR
-            geo = node.geometry if node.geometry in (GEO_CYLINDER, GEO_CYLINDER_WIRE) else GEO_CYLINDER
+            # Shift so the bottom cap sits at the node's world origin — the
+            # geometry draws ±drz in local Z, so translating +drz here puts the
+            # bottom at 0 and the top at 2*drz, matching ANTz's convention.
+            glTranslatef(0.0, 0.0, drz)
         else:
             drx, dry, drz = rx, ry, rz
-            geo = node.geometry
 
         self._geo.draw(geo, drx, dry, drz, ratio=node.ratio)
 
         if selected:
             glDisable(GL_LIGHTING)
-            glLineWidth(2.0)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+            glLineWidth(1.5)
             glColor4f(1.0, 0.95, 0.1, 1.0)
-            self._geo.draw(GEO_SPHERE, drx * 1.35, dry * 1.35, drz * 1.35)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+            bx, by, bz = drx * 1.05, dry * 1.05, drz * 1.05
+            glBegin(GL_LINES)
+            for sx in (-bx, bx):
+                for sy in (-by, by):
+                    glVertex3f(sx, sy, -bz); glVertex3f(sx, sy, bz)
+            for sx in (-bx, bx):
+                for sz in (-bz, bz):
+                    glVertex3f(sx, -by, sz); glVertex3f(sx, by, sz)
+            for sy in (-by, by):
+                for sz in (-bz, bz):
+                    glVertex3f(-bx, sy, sz); glVertex3f(bx, sy, sz)
+            glEnd()
             glLineWidth(1.0)
             glEnable(GL_LIGHTING)
 
@@ -402,13 +415,22 @@ class Viewport(QOpenGLWidget):
 
             node_rx, node_ry, node_rz = self._radius_of(node)
             wx, wy, wz = self._world_pos.get(node.id, (node.translate_x, node.translate_y, node.translate_z))
+            rot = self._world_rot.get(node.id, _MAT_IDENTITY)
+            if node.topo == TOPO_ROD:
+                prx = node_rx * ROD_RADIUS_FACTOR
+                pry = node_ry * ROD_RADIUS_FACTOR
+                prz = node_rz * ROD_HEIGHT_FACTOR
+                # Ellipsoid center is at the visual cylinder center (+prz in local Z)
+                (r00, r01, r02), (r10, r11, r12), (r20, r21, r22) = rot
+                wx, wy, wz = wx + r02 * prz, wy + r12 * prz, wz + r22 * prz
+            else:
+                prx, pry, prz = node_rx, node_ry, node_rz
             ocx = ex - wx
             ocy = ey - wy
             ocz = ez - wz
-            rot = self._world_rot.get(node.id, _MAT_IDENTITY)
             t = self._ellipsoid_hit_t(
                 rot, ocx, ocy, ocz, rdx, rdy, rdz,
-                node_rx * _CLICK_MARGIN, node_ry * _CLICK_MARGIN, node_rz * _CLICK_MARGIN,
+                prx * _CLICK_MARGIN, pry * _CLICK_MARGIN, prz * _CLICK_MARGIN,
             )
             if t is not None and t < best_t:
                 best_t, best_node = t, node
