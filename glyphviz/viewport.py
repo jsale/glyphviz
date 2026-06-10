@@ -1,32 +1,22 @@
 import math
 
+import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from .geometry import GeoRenderer, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
+from .geometry import GeoRenderer
 from .node import Node, NON_VISUAL_TYPES
-from .topology import compute_world_positions, compute_world_rotations, compute_world_scales, TOPO_ROD
+from .scene import Scene, node_world_matrix
 
 _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag
 
-_MAT_IDENTITY = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
 
-
-def _gl_matrix_from_rotation(rot):
-    """Convert a 3x3 row-major rotation matrix (as produced by
-    compute_world_rotations) into a 16-element column-major array for
-    glMultMatrixf — applies a node's cumulative world orientation (its own
-    rotation composed with everything it inherited from its parent chain),
-    mirroring how its absolute world position already cascades translation."""
-    (r00, r01, r02), (r10, r11, r12), (r20, r21, r22) = rot
-    return [
-        r00, r10, r20, 0.0,
-        r01, r11, r21, 0.0,
-        r02, r12, r22, 0.0,
-        0.0, 0.0, 0.0, 1.0,
-    ]
+def _gl_col_major(M: np.ndarray) -> np.ndarray:
+    """Convert a 4x4 NumPy row-major matrix to a float32 column-major flat array
+    for glMultMatrixf / glLoadMatrixf (OpenGL column-major convention)."""
+    return M.astype(np.float32).T.flatten()
 
 
 class Viewport(QOpenGLWidget):
@@ -35,15 +25,12 @@ class Viewport(QOpenGLWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.nodes: list[Node] = []
+        self._scene = Scene([])
+        self._base_scale = 3.0
         self.show_axes = True
         self.show_grid = True
         self.show_hidden = False
-        self.base_scale = 3.0
         self.selected_node_id: int | None = None
-        self._world_pos: dict[int, tuple[float, float, float]] = {}
-        self._world_scale: dict[int, tuple[float, float, float]] = {}
-        self._world_rot: dict[int, tuple] = {}
 
         self._cam_distance = 500.0
         self._cam_azimuth = 45.0
@@ -54,18 +41,43 @@ class Viewport(QOpenGLWidget):
         self._press_pos = QPoint()
         self._drag_button = None
         self._drag_moved = False
-        self._quadric = None
-        self._geo = GeoRenderer()
 
+        # color-ID pick FBO resources (created lazily after GL context exists)
+        self._pick_fbo = 0
+        self._pick_tex = 0
+        self._pick_rbo = 0
+        self._pick_fbo_size = (0, 0)
+
+        self._geo = GeoRenderer()
         self.setMinimumSize(400, 300)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
+    # --- public interface ---
+
+    @property
+    def base_scale(self) -> float:
+        return self._base_scale
+
+    @base_scale.setter
+    def base_scale(self, value: float):
+        self._base_scale = value
+        self._scene.base_scale = value
+        self._scene.invalidate()
+
+    @property
+    def nodes(self) -> list[Node]:
+        """The current node list (read-only; use set_nodes to replace)."""
+        return self._scene.nodes
+
     def set_nodes(self, nodes: list[Node]):
-        self.nodes = nodes
-        self._recompute_world_positions()
+        self._scene = Scene(nodes, self._base_scale)
+        self._scene._ensure()   # pre-compute so camera init can read positions
         visible = [n for n in nodes if n.type not in NON_VISUAL_TYPES]
         if visible:
-            positions = [self._world_pos[n.id] for n in visible]
+            positions = [
+                self._scene.world_pos(n.id) or (n.translate_x, n.translate_y, n.translate_z)
+                for n in visible
+            ]
             xs = [p[0] for p in positions]
             ys = [p[1] for p in positions]
             zs = [p[2] for p in positions]
@@ -78,85 +90,45 @@ class Viewport(QOpenGLWidget):
             self._cam_distance = max(span * 1.5, 50.0)
         self.update()
 
-    def _radius_of(self, node: Node) -> tuple[float, float, float]:
-        """Rendered per-axis surface radii (rx, ry, rz), honoring scale
-        inherited from ancestors (scaling a parent up/down carries its whole
-        subtree proportionally) and letting a node's own scale_x/y/z stretch
-        its glyph independently along each axis."""
-        scale = self._world_scale.get(node.id)
-        if scale is None:
-            scale = (node.scale_x, node.scale_y, node.scale_z)
-        sx, sy, sz = scale
-        return (
-            max(sx * self.base_scale, 0.2),
-            max(sy * self.base_scale, 0.2),
-            max(sz * self.base_scale, 0.2),
-        )
-
-    def _placement_radius_of(self, node: Node) -> float:
-        """Single effective radius used for surface-based topology placement
-        (e.g. a sphere child riding its parent's surface). Non-uniformly
-        scaled glyphs render as ellipsoids/distorted tori, but placing
-        children on their exact distorted surface is a much larger undertaking
-        than independent XYZ scaling calls for — so placement math uses the
-        average of the per-axis radii as a representative "effective" surface,
-        which matches the old (uniform-scale) behavior exactly when scale_x ==
-        scale_y == scale_z."""
-        rx, ry, rz = self._radius_of(node)
-        return (rx + ry + rz) / 3.0
-
-    def _recompute_world_positions(self):
-        """Resolve every node's rendered world position and size, honoring
-        parent topology (e.g. sphere children riding their parent's surface)
-        and inherited scale — so that moving or resizing a parent carries its
-        whole subtree along with it."""
-        self._world_scale = compute_world_scales(self.nodes)
-        self._world_rot = compute_world_rotations(self.nodes)
-        self._world_pos = compute_world_positions(
-            self.nodes, self._placement_radius_of, self._world_scale, self._world_rot
-        )
-
     def world_position(self, node_id: int) -> tuple[float, float, float] | None:
-        """Rendered world-space position of a node, as last computed for drawing."""
-        return self._world_pos.get(node_id)
+        """World-space position of a node as computed for the last rendered frame."""
+        return self._scene.world_pos(node_id)
+
+    def _radius_of(self, node: Node) -> tuple[float, float, float]:
+        """Per-axis rendered radii (rx, ry, rz) for camera focus and UI hints."""
+        s = self._scene.world_scale(node.id) or (node.scale_x, node.scale_y, node.scale_z)
+        bs = self._base_scale
+        return (max(s[0]*bs, 0.2), max(s[1]*bs, 0.2), max(s[2]*bs, 0.2))
 
     def focus_on(self, world_pos: tuple[float, float, float], min_distance: float = 1.0):
-        """Center the camera on `world_pos` and pull it in to roughly 1/10 of
-        its current distance from that point — a quick way to "jump to and
-        zoom into" a node of interest while preserving the current viewing
-        angle (azimuth/elevation). Never moves closer than `min_distance`,
-        so the camera doesn't end up embedded inside the object when it was
-        already nearby."""
+        """Point camera at world_pos and pull it in to ~1/10 current distance."""
         az = math.radians(self._cam_azimuth)
         el = math.radians(self._cam_elevation)
         tx, ty, tz = self._cam_target
         ex = tx + self._cam_distance * math.cos(el) * math.cos(az)
         ey = ty + self._cam_distance * math.cos(el) * math.sin(az)
         ez = tz + self._cam_distance * math.sin(el)
-
         px, py, pz = world_pos
-        dist_to_obj = math.sqrt((ex - px)**2 + (ey - py)**2 + (ez - pz)**2)
-
+        dist_to_obj = math.sqrt((ex-px)**2 + (ey-py)**2 + (ez-pz)**2)
         self._cam_target = [px, py, pz]
         self._cam_distance = max(dist_to_obj / 10.0, min_distance)
         self.update()
 
     def focus_on_node(self, node: Node):
-        """Center the camera on `node` and zoom toward it (see focus_on),
-        clamping the minimum camera distance to ~1.5x the node's largest
-        rendered radius — enough headroom to keep the whole glyph in view
-        rather than the camera ending up inside it."""
+        """Center and zoom toward node, leaving at least 1.5× its radius of headroom."""
         pos = self.world_position(node.id) or (node.translate_x, node.translate_y, node.translate_z)
         rx, ry, rz = self._radius_of(node)
         self.focus_on(pos, min_distance=max(rx, ry, rz) * 1.5)
+
+    # --- GL lifecycle ---
 
     def initializeGL(self):
         glClearColor(0.08, 0.08, 0.12, 1.0)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
         glEnable(GL_LIGHT0)
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
-        glLightfv(GL_LIGHT0, GL_AMBIENT, [0.3, 0.3, 0.3, 1.0])
+        glLightfv(GL_LIGHT0, GL_DIFFUSE,  [1.0, 1.0, 1.0, 1.0])
+        glLightfv(GL_LIGHT0, GL_AMBIENT,  [0.3, 0.3, 0.3, 1.0])
         glLightfv(GL_LIGHT0, GL_SPECULAR, [0.5, 0.5, 0.5, 1.0])
         glLightfv(GL_LIGHT0, GL_POSITION, [1.0, 2.0, 1.0, 0.0])
         glEnable(GL_COLOR_MATERIAL)
@@ -164,8 +136,6 @@ class Viewport(QOpenGLWidget):
         glShadeModel(GL_SMOOTH)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        self._quadric = gluNewQuadric()
-        gluQuadricNormals(self._quadric, GLU_SMOOTH)
         self._geo.setup()
 
     def resizeGL(self, w, h):
@@ -176,9 +146,13 @@ class Viewport(QOpenGLWidget):
         glLoadIdentity()
         gluPerspective(45.0, w / h, 0.1, 100000.0)
         glMatrixMode(GL_MODELVIEW)
+        self._cleanup_pick_fbo()     # size changed → recreate on next pick
+
+    # --- rendering ---
 
     def paintGL(self):
-        self._recompute_world_positions()
+        # Recompute world transforms every frame so inspector edits show immediately.
+        self._scene.invalidate()
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
@@ -186,11 +160,9 @@ class Viewport(QOpenGLWidget):
         az = math.radians(self._cam_azimuth)
         el = math.radians(self._cam_elevation)
         tx, ty, tz = self._cam_target
-
         eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
         eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
         eye_z = tz + self._cam_distance * math.sin(el)
-
         gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
 
         if self.show_grid:
@@ -198,7 +170,7 @@ class Viewport(QOpenGLWidget):
         if self.show_axes:
             self._draw_axes()
 
-        for node in self.nodes:
+        for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
                 continue
             if not self.show_hidden and node.hide:
@@ -206,14 +178,12 @@ class Viewport(QOpenGLWidget):
             self._draw_node(node, selected=(node.id == self.selected_node_id))
 
     def _draw_node(self, node: Node, selected: bool = False):
-        wx, wy, wz = self._world_pos.get(node.id, (node.translate_x, node.translate_y, node.translate_z))
+        # node_world_matrix is the single source of truth — same matrix the
+        # pick pass uses, so rendering and picking are identical by construction.
+        M = node_world_matrix(node, self._scene)
 
         glPushMatrix()
-        glTranslatef(wx, wy, wz)
-        # Cumulative world orientation — own rotation composed with everything
-        # inherited from its parent chain (compute_world_rotations) — so a
-        # rotated parent's children rotate along with it, not just translate.
-        glMultMatrixf(_gl_matrix_from_rotation(self._world_rot.get(node.id, _MAT_IDENTITY)))
+        glMultMatrixf(_gl_col_major(M))
 
         glColor4f(
             node.color_r / 255.0,
@@ -222,38 +192,27 @@ class Viewport(QOpenGLWidget):
             node.color_a / 255.0,
         )
 
-        rx, ry, rz = self._radius_of(node)
-        geo = node.geometry
-        if node.topo == TOPO_ROD:
-            # Rod topology: narrow (0.25x diameter) and elongated (5x length),
-            # applied to whatever geometry the node has (not forced to cylinder).
-            drx = rx * ROD_RADIUS_FACTOR
-            dry = ry * ROD_RADIUS_FACTOR
-            drz = rz * ROD_HEIGHT_FACTOR
-            # Shift so the bottom cap sits at the node's world origin — the
-            # geometry draws ±drz in local Z, so translating +drz here puts the
-            # bottom at 0 and the top at 2*drz, matching ANTz's convention.
-            glTranslatef(0.0, 0.0, drz)
-        else:
-            drx, dry, drz = rx, ry, rz
-
-        self._geo.draw(geo, drx, dry, drz, ratio=node.ratio)
+        # M already encodes scale (column norms = rendered radii), so we draw
+        # the geometry at unit size (1,1,1) and let the matrix handle sizing.
+        self._geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio)
 
         if selected:
             glDisable(GL_LIGHTING)
             glLineWidth(1.5)
             glColor4f(1.0, 0.95, 0.1, 1.0)
-            bx, by, bz = drx * 1.05, dry * 1.05, drz * 1.05
+            # Bounding box at ±1.05 in unit local space (M's scale makes it
+            # track the node's actual rendered size).
+            b = 1.05
             glBegin(GL_LINES)
-            for sx in (-bx, bx):
-                for sy in (-by, by):
-                    glVertex3f(sx, sy, -bz); glVertex3f(sx, sy, bz)
-            for sx in (-bx, bx):
-                for sz in (-bz, bz):
-                    glVertex3f(sx, -by, sz); glVertex3f(sx, by, sz)
-            for sy in (-by, by):
-                for sz in (-bz, bz):
-                    glVertex3f(-bx, sy, sz); glVertex3f(bx, sy, sz)
+            for sx in (-b, b):
+                for sy in (-b, b):
+                    glVertex3f(sx, sy, -b); glVertex3f(sx, sy, b)
+            for sx in (-b, b):
+                for sz in (-b, b):
+                    glVertex3f(sx, -b, sz); glVertex3f(sx, b, sz)
+            for sy in (-b, b):
+                for sz in (-b, b):
+                    glVertex3f(-b, sy, sz); glVertex3f(b, sy, sz)
             glEnd()
             glLineWidth(1.0)
             glEnable(GL_LIGHTING)
@@ -277,10 +236,8 @@ class Viewport(QOpenGLWidget):
         glColor3f(0.22, 0.22, 0.28)
         glLineWidth(1.0)
         step = max(10.0, self._cam_distance * 0.04)
-        count = 20          # larger count ensures coverage after panning
+        count = 20
         size = step * count
-        # Fixed world position (Z=0) — panning moves the camera, not the grid,
-        # so grid and nodes shift together on screen just like any world object.
         glBegin(GL_LINES)
         for i in range(-count, count + 1):
             glVertex3f(i * step, -size, 0.0)
@@ -290,152 +247,144 @@ class Viewport(QOpenGLWidget):
         glEnd()
         glEnable(GL_LIGHTING)
 
-    # --- picking (ray cast against rotated/stretched bounding ellipsoids) ---
+    # --- color-ID FBO picking ---
 
-    def _ellipsoid_hit_t(self, rot, ocx, ocy, ocz, rdx, rdy, rdz, rx, ry, rz):
-        """
-        Ray-vs-glyph hit test against the actual rendered shape: an ellipsoid
-        with the node's per-axis radii (rx, ry, rz), oriented by its
-        cumulative world rotation `rot` — matching what _draw_node renders via
-        glMultMatrixf + glScalef. A plain bounding *sphere* over- or
-        under-selects nodes that are stretched along one or two axes (the
-        "elongated ends are hard to click / parent can't be selected"
-        symptom): a long thin glyph either gets a too-small sphere (misses its
-        tips) or a too-large one (its empty space blocks clicks meant for
-        neighbors).
+    def _ensure_pick_fbo(self, fb_w: int, fb_h: int):
+        """Create or recreate the pick FBO if the framebuffer size changed."""
+        if self._pick_fbo_size == (fb_w, fb_h):
+            return
+        self._cleanup_pick_fbo()
 
-        `ocx,ocy,ocz` is the eye position relative to the node's world-space
-        center; `rdx,rdy,rdz` is the (unit-length) ray direction. Returns the
-        ray parameter t (== world-space hit distance, since the ray direction
-        is unit length) of the nearest intersection, or None.
+        fbo = glGenFramebuffers(1)
+        self._pick_fbo = int(fbo) if not hasattr(fbo, '__len__') else int(fbo[0])
+        glBindFramebuffer(GL_FRAMEBUFFER, self._pick_fbo)
 
-        Method: transform the ray into the node's local space by undoing its
-        orientation — the inverse of a rotation matrix is its transpose — and
-        then dividing by the per-axis radii. That maps the rendered ellipsoid
-        onto a unit sphere while preserving the ray's parametrization t
-        (rotation and uniform rescaling are linear maps applied identically to
-        the ray's origin and direction, so the parameter along the ray is
-        unchanged) — so a plain unit-sphere quadratic yields the correct hit
-        distance directly.
-        """
-        # local = R^T * world_relative  (R^T == R^-1 for an orthonormal
-        # rotation matrix) — undoes the node's cumulative world orientation
-        # (its own rotation composed with everything inherited from its
-        # parent chain, exactly what _draw_node applies via glMultMatrixf).
-        (r00, r01, r02), (r10, r11, r12), (r20, r21, r22) = rot
-        ox = r00*ocx + r10*ocy + r20*ocz
-        oy = r01*ocx + r11*ocy + r21*ocz
-        oz = r02*ocx + r12*ocy + r22*ocz
-        dx = r00*rdx + r10*rdy + r20*rdz
-        dy = r01*rdx + r11*rdy + r21*rdz
-        dz = r02*rdx + r12*rdy + r22*rdz
+        tex = glGenTextures(1)
+        self._pick_tex = int(tex) if not hasattr(tex, '__len__') else int(tex[0])
+        glBindTexture(GL_TEXTURE_2D, self._pick_tex)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, fb_w, fb_h, 0,
+                     GL_RGB, GL_UNSIGNED_BYTE, None)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                               GL_TEXTURE_2D, self._pick_tex, 0)
 
-        ox, oy, oz = ox / rx, oy / ry, oz / rz
-        dx, dy, dz = dx / rx, dy / ry, dz / rz
+        rbo = glGenRenderbuffers(1)
+        self._pick_rbo = int(rbo) if not hasattr(rbo, '__len__') else int(rbo[0])
+        glBindRenderbuffer(GL_RENDERBUFFER, self._pick_rbo)
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, fb_w, fb_h)
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                  GL_RENDERBUFFER, self._pick_rbo)
 
-        a = dx*dx + dy*dy + dz*dz
-        b = 2.0 * (ox*dx + oy*dy + oz*dz)
-        c = ox*ox + oy*oy + oz*oz - 1.0
-        disc = b*b - 4.0*a*c
-        if disc < 0:
-            return None
-        sqrt_disc = math.sqrt(disc)
-        t = (-b - sqrt_disc) / (2.0*a)
-        if t <= 0:
-            t = (-b + sqrt_disc) / (2.0*a)
-        return t if t > 0 else None
+        status = glCheckFramebufferStatus(GL_FRAMEBUFFER)
+        if status != GL_FRAMEBUFFER_COMPLETE:
+            print(f"[pick] FBO incomplete (status={status:#x})")
+
+        # Restore Qt's own FBO
+        glBindFramebuffer(GL_FRAMEBUFFER, self.defaultFramebufferObject())
+        self._pick_fbo_size = (fb_w, fb_h)
+
+    def _cleanup_pick_fbo(self):
+        if self._pick_fbo:
+            glDeleteFramebuffers(1, [self._pick_fbo])
+            glDeleteTextures(1, [self._pick_tex])
+            glDeleteRenderbuffers(1, [self._pick_rbo])
+        self._pick_fbo = self._pick_tex = self._pick_rbo = 0
+        self._pick_fbo_size = (0, 0)
 
     def _pick_node(self, screen_x: int, screen_y: int) -> Node | None:
         """
-        Cast a ray from camera through (screen_x, screen_y) in widget coords.
-        Returns the nearest visible node whose rendered glyph (a rotated,
-        per-axis-scaled ellipsoid) is hit, or None.
-        Uses camera parameters directly — no GL matrix reads required.
+        Color-ID offscreen picking: render every glyph into an FBO with its
+        node ID encoded as RGB (r = id & 0xFF, g = id>>8 & 0xFF, b = id>>16),
+        then read the pixel under the cursor.
+
+        Uses node_world_matrix — the same matrices and the same draw calls as
+        paintGL — so the hit geometry is geometrically identical to what is
+        displayed.  The Y-flip (Qt top-left vs OpenGL bottom-left) and the
+        devicePixelRatio (HiDPI) are both handled here.
         """
-        if not self.nodes:
-            return None
-        w, h = self.width(), self.height()
-        if w <= 0 or h <= 0:
+        if not self._scene.nodes:
             return None
 
-        # ---- Camera position ------------------------------------------------
-        az = math.radians(self._cam_azimuth)
-        el = math.radians(self._cam_elevation)
-        tx, ty, tz = self._cam_target
+        self.makeCurrent()
+        try:
+            w, h = self.width(), self.height()
+            if w <= 0 or h <= 0:
+                return None
+            dpr = self.devicePixelRatio()
+            fb_w = max(1, int(w * dpr))
+            fb_h = max(1, int(h * dpr))
 
-        ex = tx + self._cam_distance * math.cos(el) * math.cos(az)
-        ey = ty + self._cam_distance * math.cos(el) * math.sin(az)
-        ez = tz + self._cam_distance * math.sin(el)
+            self._ensure_pick_fbo(fb_w, fb_h)
 
-        # ---- Camera basis (forward, right, up) ------------------------------
-        # forward = normalise(target - eye)
-        fdx, fdy, fdz = tx - ex, ty - ey, tz - ez
-        fd = math.sqrt(fdx*fdx + fdy*fdy + fdz*fdz)
-        fdx, fdy, fdz = fdx/fd, fdy/fd, fdz/fd
+            qt_fbo = self.defaultFramebufferObject()
+            glBindFramebuffer(GL_FRAMEBUFFER, self._pick_fbo)
+            glViewport(0, 0, fb_w, fb_h)
+            glClearColor(0.0, 0.0, 0.0, 0.0)
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        # right = cross(forward, world_up)  where world_up = (0, 0, 1) → (fdy, -fdx, 0)
-        rx, ry, rz = fdy, -fdx, 0.0
-        rd = math.sqrt(rx*rx + ry*ry)
-        if rd < 1e-9:          # camera pointing straight up/down — use fallback
-            rx, ry = 1.0, 0.0
-        else:
-            rx, ry = rx/rd, ry/rd
+            # Mirror paintGL's projection and camera setup exactly
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+            gluPerspective(45.0, w / h, 0.1, 100000.0)
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            glLoadIdentity()
 
-        # up = cross(right, forward)
-        ux = ry*fdz - rz*fdy
-        uy = rz*fdx - rx*fdz
-        uz = rx*fdy - ry*fdx
+            az = math.radians(self._cam_azimuth)
+            el = math.radians(self._cam_elevation)
+            tx, ty, tz = self._cam_target
+            eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
+            eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
+            eye_z = tz + self._cam_distance * math.sin(el)
+            gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
 
-        # ---- Screen → world ray direction -----------------------------------
-        # NDC: x ∈ [-1,+1] left→right, y ∈ [-1,+1] bottom→top
-        ndc_x = (2.0 * screen_x / w) - 1.0
-        ndc_y = 1.0 - (2.0 * screen_y / h)   # Qt y is top-down
+            glDisable(GL_LIGHTING)
+            glDisable(GL_BLEND)
 
-        tan_hfov = math.tan(math.radians(22.5))   # half of 45° fov
-        aspect = w / h
-        vx = ndc_x * aspect * tan_hfov
-        vy = ndc_y * tan_hfov
+            # Re-use the scene cache from the most recent paint (no invalidate here)
+            for node in self._scene.nodes:
+                if node.type in NON_VISUAL_TYPES:
+                    continue
+                if not self.show_hidden and node.hide:
+                    continue
+                r = node.id & 0xFF
+                g = (node.id >> 8) & 0xFF
+                b = (node.id >> 16) & 0xFF
+                glColor4ub(r, g, b, 255)
+                M = node_world_matrix(node, self._scene)
+                glPushMatrix()
+                glMultMatrixf(_gl_col_major(M))
+                self._geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio)
+                glPopMatrix()
 
-        # ray_dir = normalise(forward + vx*right + vy*up)
-        rdx = fdx + vx*rx + vy*ux
-        rdy = fdy + vx*ry + vy*uy
-        rdz = fdz + vx*rz + vy*uz
-        rdn = math.sqrt(rdx*rdx + rdy*rdy + rdz*rdz)
-        rdx, rdy, rdz = rdx/rdn, rdy/rdn, rdz/rdn
+            # Y-flip: Qt widget coords are top-left origin;
+            # glReadPixels uses bottom-left origin.
+            # HiDPI: multiply by devicePixelRatio to get framebuffer pixels.
+            fb_x = min(max(int(screen_x * dpr), 0), fb_w - 1)
+            fb_y = min(max(int((h - 1 - screen_y) * dpr), 0), fb_h - 1)
+            pixel = glReadPixels(fb_x, fb_y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE)
 
-        # ---- Ray–glyph tests -------------------------------------------------
-        best_node, best_t = None, float('inf')
-        _CLICK_MARGIN = 1.15  # slightly enlarge each axis for easier clicking
+            glEnable(GL_LIGHTING)
+            glEnable(GL_BLEND)
+            glMatrixMode(GL_PROJECTION)
+            glPopMatrix()
+            glMatrixMode(GL_MODELVIEW)
+            glPopMatrix()
+            glBindFramebuffer(GL_FRAMEBUFFER, qt_fbo)
+            glViewport(0, 0, fb_w, fb_h)
 
-        for node in self.nodes:
-            if node.type in NON_VISUAL_TYPES:
-                continue
-            if not self.show_hidden and node.hide:
-                continue
+        finally:
+            self.doneCurrent()
 
-            node_rx, node_ry, node_rz = self._radius_of(node)
-            wx, wy, wz = self._world_pos.get(node.id, (node.translate_x, node.translate_y, node.translate_z))
-            rot = self._world_rot.get(node.id, _MAT_IDENTITY)
-            if node.topo == TOPO_ROD:
-                prx = node_rx * ROD_RADIUS_FACTOR
-                pry = node_ry * ROD_RADIUS_FACTOR
-                prz = node_rz * ROD_HEIGHT_FACTOR
-                # Ellipsoid center is at the visual cylinder center (+prz in local Z)
-                (r00, r01, r02), (r10, r11, r12), (r20, r21, r22) = rot
-                wx, wy, wz = wx + r02 * prz, wy + r12 * prz, wz + r22 * prz
-            else:
-                prx, pry, prz = node_rx, node_ry, node_rz
-            ocx = ex - wx
-            ocy = ey - wy
-            ocz = ez - wz
-            t = self._ellipsoid_hit_t(
-                rot, ocx, ocy, ocz, rdx, rdy, rdz,
-                prx * _CLICK_MARGIN, pry * _CLICK_MARGIN, prz * _CLICK_MARGIN,
-            )
-            if t is not None and t < best_t:
-                best_t, best_node = t, node
-
-        return best_node
+        # Decode RGB → node ID
+        arr = np.asarray(pixel, dtype=np.uint8).flat
+        pr, pg, pb = int(arr[0]), int(arr[1]), int(arr[2])
+        node_id = pr | (pg << 8) | (pb << 16)
+        if node_id == 0:
+            return None
+        return self._scene.node_by_id(node_id)
 
     # --- mouse ---
 
@@ -453,8 +402,6 @@ class Viewport(QOpenGLWidget):
             print(f"[pick] ({event.pos().x()},{event.pos().y()}) -> {label}")
             if node is not None:
                 self.nodeClicked.emit(node.id)
-                # Shift-click: jump to and zoom in on the clicked node — an
-                # in-viewport alternative to double-clicking its table row.
                 if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                     self.focus_on_node(node)
         self._drag_button = None
@@ -473,7 +420,6 @@ class Viewport(QOpenGLWidget):
         dx = event.pos().x() - self._last_pos.x()
         dy = event.pos().y() - self._last_pos.y()
 
-        # Mark as a drag once the cursor has moved enough
         if not self._drag_moved:
             total_dx = event.pos().x() - self._press_pos.x()
             total_dy = event.pos().y() - self._press_pos.y()
@@ -487,13 +433,11 @@ class Viewport(QOpenGLWidget):
         elif self._drag_button == Qt.MouseButton.MiddleButton:
             az = math.radians(self._cam_azimuth)
             el = math.radians(self._cam_elevation)
-            # Screen-aligned right/up basis for the Z-up camera (world_up = +Z):
-            # right = normalise(cross(forward, world_up)), up = cross(right, forward).
             right_x = -math.sin(az)
-            right_y = math.cos(az)
+            right_y =  math.cos(az)
             up_x = -math.cos(az) * math.sin(el)
             up_y = -math.sin(az) * math.sin(el)
-            up_z = math.cos(el)
+            up_z =  math.cos(el)
             speed = self._cam_distance * 0.0015
             self._cam_target[0] -= (dx * right_x - dy * up_x) * speed
             self._cam_target[1] -= (dx * right_y - dy * up_y) * speed

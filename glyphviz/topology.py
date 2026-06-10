@@ -267,11 +267,13 @@ def _rot_z(deg):
 
 
 def local_rotation_matrix(rx: float, ry: float, rz: float):
-    """3x3 rotation matrix for a node's own rotate_x/y/z, composed in the same
-    Rz * Ry * Rx order as _draw_node's glRotatef(z) -> glRotatef(y) ->
-    glRotatef(x) calls (so undoing it in picking and cascading it to children
-    both agree with what's actually rendered)."""
-    return _mat_mul(_mat_mul(_rot_z(rz), _rot_y(ry)), _rot_x(rx))
+    """3x3 rotation matrix matching ANTz's DrawPinChild/DrawPin convention:
+      glRotatef(rotate_y,  0, 0, -1)  → Rz(-ry)   "heading"
+      glRotatef(rotate_x, -1, 0,  0)  → Rx(-rx)   "roll"
+      glRotatef(rotate_z,  0, 0, -1)  → Rz(-rz)   "tilt"
+    OpenGL right-multiplies, so the combined matrix is Rz(-ry) @ Rx(-rx) @ Rz(-rz).
+    rotate_y and rotate_z both drive Z-axis rotations (no Y-axis rotation in ANTz)."""
+    return _mat_mul(_mat_mul(_rot_z(-ry), _rot_x(-rx)), _rot_z(-rz))
 
 
 # Precomputed per-face base rotations for Cube topology: aligns the child's
