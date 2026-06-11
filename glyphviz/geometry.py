@@ -69,6 +69,23 @@ _WIRE_IDS = frozenset({
     GEO_PIN_WIRE, GEO_CYLINDER_WIRE, GEO_GRID_WIRE,
 })
 
+# Maps each wireframe geometry to its solid equivalent for FBO picking:
+# the pick pass draws solid silhouettes so any click inside the bounding
+# shape registers a hit, not just clicks that land on a visible wire.
+WIRE_TO_SOLID = {
+    GEO_CUBE_WIRE:     GEO_CUBE,
+    GEO_SPHERE_WIRE:   GEO_SPHERE,
+    GEO_CONE_WIRE:     GEO_CONE,
+    GEO_TORUS_WIRE:    GEO_TORUS,
+    GEO_DODECA_WIRE:   GEO_DODECA,
+    GEO_OCTA_WIRE:     GEO_OCTA,
+    GEO_TETRA_WIRE:    GEO_TETRA,
+    GEO_ICOSA_WIRE:    GEO_ICOSA,
+    GEO_PIN_WIRE:      GEO_PIN,
+    GEO_CYLINDER_WIRE: GEO_CYLINDER,
+    GEO_GRID_WIRE:     GEO_GRID,
+}
+
 
 # ---------------------------------------------------------------------------
 # Vector helpers (plain tuples — no numpy needed)

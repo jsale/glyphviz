@@ -6,7 +6,7 @@ from OpenGL.GLU import *
 from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from .geometry import GeoRenderer
+from .geometry import GeoRenderer, WIRE_TO_SOLID
 from .node import Node, NON_VISUAL_TYPES
 from .scene import Scene, node_world_matrix
 
@@ -356,7 +356,10 @@ class Viewport(QOpenGLWidget):
                 M = node_world_matrix(node, self._scene)
                 glPushMatrix()
                 glMultMatrixf(_gl_col_major(M))
-                self._geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio)
+                # Draw the solid equivalent for wireframe geometries so the
+                # entire silhouette is pickable, not just the visible wires.
+                pick_geo = WIRE_TO_SOLID.get(node.geometry, node.geometry)
+                self._geo.draw(pick_geo, 1.0, 1.0, 1.0, ratio=node.ratio)
                 glPopMatrix()
 
             # Y-flip: Qt widget coords are top-left origin;
@@ -379,7 +382,8 @@ class Viewport(QOpenGLWidget):
             self.doneCurrent()
 
         # Decode RGB → node ID
-        arr = np.asarray(pixel, dtype=np.uint8).flat
+        # glReadPixels returns bytes in PyOpenGL; frombuffer handles both bytes and arrays.
+        arr = np.frombuffer(pixel, dtype=np.uint8)
         pr, pg, pb = int(arr[0]), int(arr[1]), int(arr[2])
         node_id = pr | (pg << 8) | (pb << 16)
         if node_id == 0:
