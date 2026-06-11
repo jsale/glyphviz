@@ -66,3 +66,27 @@ Then use **File > Open Node CSV…** to load an ANTz/GaiaViz node export.
 - [`glyphviz/geometry.py`](glyphviz/geometry.py) — glyph geometry definitions
   and the OpenGL renderer
 - [`glyphviz/node_table.py`](glyphviz/node_table.py) — node table model/view
+
+## Acknowledgements
+
+GlyphViz would not exist without the pioneering work of the teams behind
+**ANTz** and **GaiaViz**.
+
+**ANTz** was created by **Dr. Dave Warner** and **Shane Saxon** as an open-source
+3D data visualization environment built around a structured, portable CSV
+node format. ANTz established the 94-column `np_node.csv` schema, the
+topology system, and the scene-graph conventions that GlyphViz implements
+and extends. The original source is available at
+[github.com/Vidovicarius/ANTz](https://github.com/Vidovicarius/ANTz).
+
+**GaiaViz**, developed by **Shane Saxon** and **Lukas Eriksson**, extended
+ANTz's data format and visualization concepts with new topologies, animation
+channels, and a modernized scene model. GaiaViz's reference documentation
+(bundled in `gaiaviz-skill/references/`) has been an essential guide for
+implementing GlyphViz's topology math, node field semantics, and CSV
+conventions, and is reproduced here with gratitude to its authors.
+
+GlyphViz is an independent reimplementation — written from scratch in
+Python/PySide6 — that aims to match the ANTz/GaiaViz data contract as a
+foundation, then go beyond it with new capabilities. It is not a fork of
+either codebase.
