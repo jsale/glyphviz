@@ -77,7 +77,7 @@ GlyphViz would not exist without the pioneering work of the teams behind
 node format. ANTz established the 94-column `np_node.csv` schema, the
 topology system, and the scene-graph conventions that GlyphViz implements
 and extends. The original source is available at
-[github.com/Vidovicarius/ANTz](https://github.com/Vidovicarius/ANTz).
+[github.com/openantz](https://github.com/openantz).
 
 **GaiaViz**, developed by **Shane Saxon** and **Lukas Eriksson**, extended
 ANTz's data format and visualization concepts with new topologies, animation
