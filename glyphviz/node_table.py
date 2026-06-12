@@ -1,4 +1,7 @@
-from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
+from PySide6.QtCore import (
+    Qt, QAbstractTableModel, QModelIndex, QItemSelection,
+    QItemSelectionModel, QSortFilterProxyModel,
+)
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTableView
 
@@ -91,7 +94,7 @@ class NodeTableView(QTableView):
         self.setModel(self._proxy)
 
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setSortingEnabled(True)
         self.setAlternatingRowColors(True)
         self.setShowGrid(False)
@@ -111,21 +114,68 @@ class NodeTableView(QTableView):
         self._model.set_nodes(nodes)
         self.horizontalHeader().resizeSections(QHeaderView.ResizeMode.ResizeToContents)
 
+    # --- selection helpers ---
+
     def selected_node(self) -> Node | None:
+        """Return the first (or only) selected node, or None."""
         rows = self.selectionModel().selectedRows()
         if not rows:
             return None
         src = self._proxy.mapToSource(rows[0])
         return self._model.node_at(src.row())
 
+    def selected_nodes(self) -> list[Node]:
+        """Return all currently selected nodes (order matches table display order)."""
+        rows = self.selectionModel().selectedRows()
+        result = []
+        for idx in rows:
+            src = self._proxy.mapToSource(idx)
+            result.append(self._model.node_at(src.row()))
+        return result
+
     def select_by_id(self, node_id: int):
+        """Replace the selection with exactly this one node and scroll to it."""
         for row in range(self._model.rowCount()):
             if self._model.node_at(row).id == node_id:
                 src_idx = self._model.index(row, 0)
                 proxy_idx = self._proxy.mapFromSource(src_idx)
-                self.setCurrentIndex(proxy_idx)
+                self.selectionModel().select(
+                    proxy_idx,
+                    QItemSelectionModel.SelectionFlag.ClearAndSelect
+                    | QItemSelectionModel.SelectionFlag.Rows,
+                )
                 self.scrollTo(proxy_idx)
                 return
+
+    def select_toggle_id(self, node_id: int):
+        """Toggle one node into/out of the current selection (Ctrl+click semantics)."""
+        for row in range(self._model.rowCount()):
+            if self._model.node_at(row).id == node_id:
+                src_idx = self._model.index(row, 0)
+                proxy_idx = self._proxy.mapFromSource(src_idx)
+                self.selectionModel().select(
+                    proxy_idx,
+                    QItemSelectionModel.SelectionFlag.Toggle
+                    | QItemSelectionModel.SelectionFlag.Rows,
+                )
+                self.scrollTo(proxy_idx)
+                return
+
+    def select_by_ids(self, node_ids: set[int]):
+        """Replace the selection with the given set of node IDs (one signal fired)."""
+        selection = QItemSelection()
+        for row in range(self._model.rowCount()):
+            if self._model.node_at(row).id in node_ids:
+                src_idx = self._model.index(row, 0)
+                proxy_idx = self._proxy.mapFromSource(src_idx)
+                selection.select(proxy_idx, proxy_idx)
+        self.selectionModel().select(
+            selection,
+            QItemSelectionModel.SelectionFlag.ClearAndSelect
+            | QItemSelectionModel.SelectionFlag.Rows,
+        )
+        if not selection.isEmpty():
+            self.scrollTo(selection.indexes()[0])
 
     def refresh_node(self, node_id: int):
         """Notify the model that a node's data has changed in-place."""

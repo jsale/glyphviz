@@ -3,7 +3,7 @@ import math
 import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from PySide6.QtCore import Qt, QPoint, Signal
+from PySide6.QtCore import Qt, QEvent, QPoint, QRect, Signal
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from .geometry import GeoRenderer, WIRE_TO_SOLID
@@ -20,8 +20,19 @@ def _gl_col_major(M: np.ndarray) -> np.ndarray:
 
 
 class Viewport(QOpenGLWidget):
-    # Emitted when the user clicks (not drags) on a node; carries node id
+    # Plain left-click on a node: replaces the selection
     nodeClicked = Signal(int)
+    # Ctrl+left-click on a node: toggle that node in/out of selection
+    nodeClickedAdditive = Signal(int)
+    # Rubber-band release OR click-on-empty-space: replace selection with this set
+    # (empty set = clear all).  Also used by Select-By to push a set of IDs.
+    nodesSelected = Signal(object)   # carries set[int]
+
+    # Keyboard hierarchy navigation (ANTz-style)
+    navParent = Signal()       # Up arrow  → parent node
+    navChild = Signal()        # Down arrow → first child node
+    navNextSibling = Signal()  # Tab       → next sibling at same branch level
+    navPrevSibling = Signal()  # Shift+Tab → previous sibling at same branch level
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -30,7 +41,7 @@ class Viewport(QOpenGLWidget):
         self.show_axes = True
         self.show_grid = True
         self.show_hidden = False
-        self.selected_node_id: int | None = None
+        self.selected_node_ids: set[int] = set()
 
         self._cam_distance = 500.0
         self._cam_azimuth = 45.0
@@ -41,6 +52,11 @@ class Viewport(QOpenGLWidget):
         self._press_pos = QPoint()
         self._drag_button = None
         self._drag_moved = False
+
+        # Rubber-band (Shift+drag) state
+        self._rubber_mode = False
+        self._rubber_start: QPoint | None = None
+        self._rubber_end: QPoint | None = None
 
         # color-ID pick FBO resources (created lazily after GL context exists)
         self._pick_fbo = 0
@@ -175,7 +191,10 @@ class Viewport(QOpenGLWidget):
                 continue
             if not self.show_hidden and node.hide:
                 continue
-            self._draw_node(node, selected=(node.id == self.selected_node_id))
+            self._draw_node(node, selected=(node.id in self.selected_node_ids))
+
+        if self._rubber_mode and self._rubber_start and self._rubber_end:
+            self._draw_rubber_band()
 
     def _draw_node(self, node: Node, selected: bool = False):
         # node_world_matrix is the single source of truth — same matrix the
@@ -218,6 +237,48 @@ class Viewport(QOpenGLWidget):
             glEnable(GL_LIGHTING)
 
         glPopMatrix()
+
+    def _draw_rubber_band(self):
+        """Draw a semi-transparent rectangle in 2D screen space for rubber-band select."""
+        x1 = min(self._rubber_start.x(), self._rubber_end.x())
+        y1 = min(self._rubber_start.y(), self._rubber_end.y())
+        x2 = max(self._rubber_start.x(), self._rubber_end.x())
+        y2 = max(self._rubber_start.y(), self._rubber_end.y())
+        w, h = self.width(), self.height()
+
+        glDisable(GL_DEPTH_TEST)
+        glDisable(GL_LIGHTING)
+        glMatrixMode(GL_PROJECTION)
+        glPushMatrix()
+        glLoadIdentity()
+        # Top-left origin matches Qt widget coordinates
+        glOrtho(0, w, h, 0, -1, 1)
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+
+        # Semi-transparent fill
+        glColor4f(0.2, 0.6, 1.0, 0.12)
+        glBegin(GL_QUADS)
+        glVertex2f(x1, y1); glVertex2f(x2, y1)
+        glVertex2f(x2, y2); glVertex2f(x1, y2)
+        glEnd()
+
+        # Solid border
+        glColor4f(0.3, 0.7, 1.0, 0.9)
+        glLineWidth(1.5)
+        glBegin(GL_LINE_LOOP)
+        glVertex2f(x1, y1); glVertex2f(x2, y1)
+        glVertex2f(x2, y2); glVertex2f(x1, y2)
+        glEnd()
+        glLineWidth(1.0)
+
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+        glMatrixMode(GL_MODELVIEW)
+        glPopMatrix()
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_LIGHTING)
 
     def _draw_axes(self):
         glDisable(GL_LIGHTING)
@@ -292,97 +353,109 @@ class Viewport(QOpenGLWidget):
         self._pick_fbo = self._pick_tex = self._pick_rbo = 0
         self._pick_fbo_size = (0, 0)
 
-    def _pick_node(self, screen_x: int, screen_y: int) -> Node | None:
+    def _render_pick_scene(self) -> tuple | None:
         """
-        Color-ID offscreen picking: render every glyph into an FBO with its
-        node ID encoded as RGB (r = id & 0xFF, g = id>>8 & 0xFF, b = id>>16),
-        then read the pixel under the cursor.
+        Bind the pick FBO and render all glyphs with color-ID encoding.
 
-        Uses node_world_matrix — the same matrices and the same draw calls as
-        paintGL — so the hit geometry is geometrically identical to what is
-        displayed.  The Y-flip (Qt top-left vs OpenGL bottom-left) and the
-        devicePixelRatio (HiDPI) are both handled here.
+        Returns (qt_fbo, fb_w, fb_h, dpr, w, h) with the GL state ready for
+        glReadPixels, or None if setup failed.  Caller MUST call
+        _finish_pick_scene() afterward to restore GL state.
+
+        Must be called between makeCurrent() / doneCurrent().
         """
         if not self._scene.nodes:
             return None
+        w, h = self.width(), self.height()
+        if w <= 0 or h <= 0:
+            return None
+        dpr = self.devicePixelRatio()
+        fb_w = max(1, int(w * dpr))
+        fb_h = max(1, int(h * dpr))
 
+        self._ensure_pick_fbo(fb_w, fb_h)
+        qt_fbo = self.defaultFramebufferObject()
+        glBindFramebuffer(GL_FRAMEBUFFER, self._pick_fbo)
+        glViewport(0, 0, fb_w, fb_h)
+        glClearColor(0.0, 0.0, 0.0, 0.0)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        # Mirror paintGL's projection and camera setup exactly
+        glMatrixMode(GL_PROJECTION)
+        glPushMatrix()
+        glLoadIdentity()
+        gluPerspective(45.0, w / h, 0.1, 100000.0)
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+
+        az = math.radians(self._cam_azimuth)
+        el = math.radians(self._cam_elevation)
+        tx, ty, tz = self._cam_target
+        eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
+        eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
+        eye_z = tz + self._cam_distance * math.sin(el)
+        gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
+
+        glDisable(GL_LIGHTING)
+        glDisable(GL_BLEND)
+
+        # Re-use the scene cache from the most recent paint (no invalidate here)
+        for node in self._scene.nodes:
+            if node.type in NON_VISUAL_TYPES:
+                continue
+            if not self.show_hidden and node.hide:
+                continue
+            r = node.id & 0xFF
+            g = (node.id >> 8) & 0xFF
+            b = (node.id >> 16) & 0xFF
+            glColor4ub(r, g, b, 255)
+            M = node_world_matrix(node, self._scene)
+            glPushMatrix()
+            glMultMatrixf(_gl_col_major(M))
+            # Draw the solid equivalent for wireframe geometries so the
+            # entire silhouette is pickable, not just the visible wires.
+            pick_geo = WIRE_TO_SOLID.get(node.geometry, node.geometry)
+            self._geo.draw(pick_geo, 1.0, 1.0, 1.0, ratio=node.ratio)
+            glPopMatrix()
+
+        return qt_fbo, fb_w, fb_h, dpr, w, h
+
+    def _finish_pick_scene(self, qt_fbo: int, fb_w: int, fb_h: int):
+        """Restore GL state after reading from the pick FBO."""
+        glEnable(GL_LIGHTING)
+        glEnable(GL_BLEND)
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+        glMatrixMode(GL_MODELVIEW)
+        glPopMatrix()
+        glBindFramebuffer(GL_FRAMEBUFFER, qt_fbo)
+        glViewport(0, 0, fb_w, fb_h)
+
+    def _pick_node(self, screen_x: int, screen_y: int) -> Node | None:
+        """
+        Color-ID offscreen picking: render every glyph into an FBO with its
+        node ID encoded as RGB, then read the single pixel under the cursor.
+
+        The Y-flip (Qt top-left vs OpenGL bottom-left) and devicePixelRatio
+        (HiDPI) are both handled here.
+        """
         self.makeCurrent()
         try:
-            w, h = self.width(), self.height()
-            if w <= 0 or h <= 0:
+            result = self._render_pick_scene()
+            if result is None:
                 return None
-            dpr = self.devicePixelRatio()
-            fb_w = max(1, int(w * dpr))
-            fb_h = max(1, int(h * dpr))
+            qt_fbo, fb_w, fb_h, dpr, w, h = result
 
-            self._ensure_pick_fbo(fb_w, fb_h)
-
-            qt_fbo = self.defaultFramebufferObject()
-            glBindFramebuffer(GL_FRAMEBUFFER, self._pick_fbo)
-            glViewport(0, 0, fb_w, fb_h)
-            glClearColor(0.0, 0.0, 0.0, 0.0)
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-            # Mirror paintGL's projection and camera setup exactly
-            glMatrixMode(GL_PROJECTION)
-            glPushMatrix()
-            glLoadIdentity()
-            gluPerspective(45.0, w / h, 0.1, 100000.0)
-            glMatrixMode(GL_MODELVIEW)
-            glPushMatrix()
-            glLoadIdentity()
-
-            az = math.radians(self._cam_azimuth)
-            el = math.radians(self._cam_elevation)
-            tx, ty, tz = self._cam_target
-            eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
-            eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
-            eye_z = tz + self._cam_distance * math.sin(el)
-            gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
-
-            glDisable(GL_LIGHTING)
-            glDisable(GL_BLEND)
-
-            # Re-use the scene cache from the most recent paint (no invalidate here)
-            for node in self._scene.nodes:
-                if node.type in NON_VISUAL_TYPES:
-                    continue
-                if not self.show_hidden and node.hide:
-                    continue
-                r = node.id & 0xFF
-                g = (node.id >> 8) & 0xFF
-                b = (node.id >> 16) & 0xFF
-                glColor4ub(r, g, b, 255)
-                M = node_world_matrix(node, self._scene)
-                glPushMatrix()
-                glMultMatrixf(_gl_col_major(M))
-                # Draw the solid equivalent for wireframe geometries so the
-                # entire silhouette is pickable, not just the visible wires.
-                pick_geo = WIRE_TO_SOLID.get(node.geometry, node.geometry)
-                self._geo.draw(pick_geo, 1.0, 1.0, 1.0, ratio=node.ratio)
-                glPopMatrix()
-
-            # Y-flip: Qt widget coords are top-left origin;
-            # glReadPixels uses bottom-left origin.
-            # HiDPI: multiply by devicePixelRatio to get framebuffer pixels.
+            # Y-flip + HiDPI scaling
             fb_x = min(max(int(screen_x * dpr), 0), fb_w - 1)
             fb_y = min(max(int((h - 1 - screen_y) * dpr), 0), fb_h - 1)
             pixel = glReadPixels(fb_x, fb_y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE)
 
-            glEnable(GL_LIGHTING)
-            glEnable(GL_BLEND)
-            glMatrixMode(GL_PROJECTION)
-            glPopMatrix()
-            glMatrixMode(GL_MODELVIEW)
-            glPopMatrix()
-            glBindFramebuffer(GL_FRAMEBUFFER, qt_fbo)
-            glViewport(0, 0, fb_w, fb_h)
-
+            self._finish_pick_scene(qt_fbo, fb_w, fb_h)
         finally:
             self.doneCurrent()
 
         # Decode RGB → node ID
-        # glReadPixels returns bytes in PyOpenGL; frombuffer handles both bytes and arrays.
         arr = np.frombuffer(pixel, dtype=np.uint8)
         pr, pg, pb = int(arr[0]), int(arr[1]), int(arr[2])
         node_id = pr | (pg << 8) | (pb << 16)
@@ -390,24 +463,122 @@ class Viewport(QOpenGLWidget):
             return None
         return self._scene.node_by_id(node_id)
 
+    def _pick_nodes_in_rect(self, x1: int, y1: int, x2: int, y2: int) -> set[int]:
+        """
+        Color-ID pick over a rectangular screen region; returns IDs of every
+        node whose silhouette overlaps the rectangle.  Coordinates are in Qt
+        widget space (top-left origin, no HiDPI scaling).
+        """
+        self.makeCurrent()
+        try:
+            result = self._render_pick_scene()
+            if result is None:
+                return set()
+            qt_fbo, fb_w, fb_h, dpr, w, h = result
+
+            # Map the screen rect to FBO pixels (Y-flip + HiDPI)
+            rx1 = min(x1, x2)
+            rx2 = max(x1, x2)
+            ry1 = min(y1, y2)
+            ry2 = max(y1, y2)
+
+            fb_x = max(0, int(rx1 * dpr))
+            fb_y = max(0, int((h - ry2) * dpr))
+            fw = max(1, min(int((rx2 - rx1) * dpr) + 1, fb_w - fb_x))
+            fh = max(1, min(int((ry2 - ry1) * dpr) + 1, fb_h - fb_y))
+
+            pixels = glReadPixels(fb_x, fb_y, fw, fh, GL_RGB, GL_UNSIGNED_BYTE)
+
+            self._finish_pick_scene(qt_fbo, fb_w, fb_h)
+        finally:
+            self.doneCurrent()
+
+        # Vectorised decode: r | (g<<8) | (b<<16), ignore black background (id==0)
+        arr = np.frombuffer(pixels, dtype=np.uint8).reshape(-1, 3).astype(np.int32)
+        ids_arr = arr[:, 0] | (arr[:, 1] << 8) | (arr[:, 2] << 16)
+        return set(int(i) for i in ids_arr[ids_arr != 0])
+
+    # --- keyboard hierarchy navigation ---
+
+    def event(self, event):
+        # Qt consumes Key_Tab before keyPressEvent for focus traversal.
+        # Intercept it here so we can use Tab / Shift+Tab for scene navigation.
+        if event.type() == QEvent.Type.KeyPress:
+            if event.key() == Qt.Key.Key_Tab:
+                self.navNextSibling.emit()
+                event.accept()
+                return True
+            if event.key() == Qt.Key.Key_Backtab:   # Shift+Tab
+                self.navPrevSibling.emit()
+                event.accept()
+                return True
+        return super().event(event)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Up:
+            self.navParent.emit()
+            event.accept()
+        elif event.key() == Qt.Key.Key_Down:
+            self.navChild.emit()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
     # --- mouse ---
 
     def mousePressEvent(self, event):
+        # Shift+LeftButton starts rubber-band region select
+        if (event.button() == Qt.MouseButton.LeftButton
+                and event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
+            self._rubber_mode = True
+            self._rubber_start = event.pos()
+            self._rubber_end = event.pos()
+            self.setCursor(Qt.CursorShape.CrossCursor)
+            return
+
         self._last_pos = event.pos()
         self._press_pos = event.pos()
         self._drag_button = event.button()
         self._drag_moved = False
 
     def mouseReleaseEvent(self, event):
+        # --- rubber-band release ---
+        if self._rubber_mode and event.button() == Qt.MouseButton.LeftButton:
+            self.unsetCursor()
+            self._rubber_mode = False
+            if self._rubber_start is not None and self._rubber_end is not None:
+                dx = abs(self._rubber_end.x() - self._rubber_start.x())
+                dy = abs(self._rubber_end.y() - self._rubber_start.y())
+                if dx > 2 or dy > 2:
+                    ids = self._pick_nodes_in_rect(
+                        min(self._rubber_start.x(), self._rubber_end.x()),
+                        min(self._rubber_start.y(), self._rubber_end.y()),
+                        max(self._rubber_start.x(), self._rubber_end.x()),
+                        max(self._rubber_start.y(), self._rubber_end.y()),
+                    )
+                    self.nodesSelected.emit(ids)
+            self._rubber_start = None
+            self._rubber_end = None
+            self.update()
+            return
+
+        # --- normal click ---
         if (not self._drag_moved
                 and self._drag_button == Qt.MouseButton.LeftButton):
             node = self._pick_node(event.pos().x(), event.pos().y())
             label = f"Node {node.id}" if node else "miss"
             print(f"[pick] ({event.pos().x()},{event.pos().y()}) -> {label}")
+
+            ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
             if node is not None:
-                self.nodeClicked.emit(node.id)
-                if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
-                    self.focus_on_node(node)
+                if ctrl:
+                    self.nodeClickedAdditive.emit(node.id)
+                else:
+                    self.nodeClicked.emit(node.id)
+            elif not ctrl:
+                # Click on empty space (no Ctrl) → clear the selection
+                self.nodesSelected.emit(set())
+
         self._drag_button = None
         self._drag_moved = False
 
@@ -419,6 +590,12 @@ class Viewport(QOpenGLWidget):
                 self.focus_on_node(node)
 
     def mouseMoveEvent(self, event):
+        # Rubber-band mode: just track the end corner, no camera movement
+        if self._rubber_mode:
+            self._rubber_end = event.pos()
+            self.update()
+            return
+
         if self._drag_button is None:
             return
         dx = event.pos().x() - self._last_pos.x()
