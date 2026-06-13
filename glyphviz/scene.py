@@ -53,6 +53,11 @@ class Scene:
         """Mark cached transforms stale; they will be recomputed on next access."""
         self._dirty = True
 
+    def register_node(self, node: Node):
+        """Called after a node is appended directly to self.nodes — keeps _by_id in sync."""
+        self._by_id[node.id] = node
+        self._dirty = True
+
     def _ensure(self):
         if not self._dirty:
             return

@@ -23,10 +23,10 @@ from PySide6.QtWidgets import (
 )
 
 from .csv_reader import load_node_csv
-from .geometry import GEO_NAMES, GEO_COUNT
+from .geometry import GEO_NAMES, GEO_COUNT, GEO_OCTA
 from .node import Node, NON_VISUAL_TYPES
 from .node_table import NodeTableView
-from .topology import TOPO_NAMES, TOPO_COUNT
+from .topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT
 from .viewport import Viewport
 
 
@@ -66,7 +66,11 @@ class MainWindow(QMainWindow):
         self._viewport.navChild.connect(self._nav_child)
         self._viewport.navNextSibling.connect(self._nav_next_sibling)
         self._viewport.navPrevSibling.connect(self._nav_prev_sibling)
+        self._viewport.createNode.connect(self._on_create_node)
+        self._viewport.createChildNode.connect(self._create_child_node)
         self.setCentralWidget(self._viewport)
+        # Link self.nodes into the viewport scene so appends stay in sync.
+        self._viewport.set_nodes(self.nodes)
 
     def _build_menu(self):
         mb = self.menuBar()
@@ -156,6 +160,28 @@ class MainWindow(QMainWindow):
         stats_layout.addWidget(self._lbl_file)
         stats_layout.addWidget(self._lbl_total)
         stats_layout.addWidget(self._lbl_visible)
+
+        # --- Create group ---
+        create_grp = QGroupBox("Create")
+        create_layout = QVBoxLayout(create_grp)
+
+        self._btn_new_node = QPushButton("New Node")
+        self._btn_new_node.setToolTip(
+            "Create a new octahedron at the world origin  [N]\n"
+            "Each press increments X by 10 units.  If a child-level\n"
+            "node is selected, a child is added instead."
+        )
+        self._btn_new_node.clicked.connect(self._on_create_node)
+
+        self._btn_new_child = QPushButton("New Child")
+        self._btn_new_child.setToolTip(
+            "Create a child octahedron under the selected node  [Shift+N]\n"
+            "Requires exactly one node to be selected."
+        )
+        self._btn_new_child.clicked.connect(self._create_child_node)
+
+        create_layout.addWidget(self._btn_new_node)
+        create_layout.addWidget(self._btn_new_child)
 
         # --- Select By group ---
         sel_grp = QGroupBox("Select By")
@@ -287,6 +313,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(disp)
         layout.addWidget(scale_grp)
         layout.addWidget(stats_grp)
+        layout.addWidget(create_grp)
         layout.addWidget(sel_grp)
         layout.addWidget(self._insp_grp)
         layout.addStretch()
@@ -763,6 +790,62 @@ class MainWindow(QMainWindow):
         if idx is None:
             return
         self._nav_select(siblings[(idx - 1) % len(siblings)])
+
+    # --- ANTz-style node creation ---
+
+    def _on_create_node(self):
+        """N key / New Node button: adds a child when a child-level node is selected,
+        otherwise creates a new root-level node."""
+        if len(self._selected_nodes) == 1 and self._selected_nodes[0].branch_level >= 1:
+            self._create_child_node()
+        else:
+            self._create_root_node()
+
+    def _create_root_node(self):
+        """Create a new root-level octahedron, stepping +10 along X from the last one."""
+        root_glyphs = [
+            n for n in self.nodes
+            if n.type not in NON_VISUAL_TYPES and n.branch_level == 0
+        ]
+        next_x = (max(n.translate_x for n in root_glyphs) + 10.0) if root_glyphs else 0.0
+        new_id = max((n.id for n in self.nodes), default=0) + 1
+        self._add_node_to_scene(Node(
+            id=new_id, type=5, parent_id=0, branch_level=0,
+            translate_x=next_x, translate_y=0.0, translate_z=0.0,
+            rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
+            scale_x=1.0, scale_y=1.0, scale_z=1.0,
+            color_r=200, color_g=200, color_b=200, color_a=255,
+            geometry=GEO_OCTA, hide=0, topo=TOPO_POINT,
+        ))
+
+    def _create_child_node(self):
+        """Shift+N / New Child button: create a child octahedron under the selected node."""
+        if len(self._selected_nodes) != 1:
+            self.statusBar().showMessage("Select exactly one node to add a child.")
+            return
+        parent = self._selected_nodes[0]
+        new_id = max((n.id for n in self.nodes), default=0) + 1
+        self._add_node_to_scene(Node(
+            id=new_id, type=5, parent_id=parent.id,
+            branch_level=parent.branch_level + 1,
+            translate_x=0.0, translate_y=0.0, translate_z=5.0,
+            rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
+            scale_x=1.0, scale_y=1.0, scale_z=1.0,
+            color_r=200, color_g=200, color_b=200, color_a=255,
+            geometry=GEO_OCTA, hide=0, topo=TOPO_POINT,
+        ))
+
+    def _add_node_to_scene(self, node: Node):
+        """Append a node to the live scene, table, and stats without resetting the camera."""
+        self.nodes.append(node)           # also updates _scene.nodes (same list)
+        self._viewport.register_node(node)  # syncs _by_id, invalidates, repaints
+        self._table.append_node(node)
+        self._update_stats()
+        self._table.select_by_id(node.id)
+        self.statusBar().showMessage(
+            f"Created node {node.id}  parent={node.parent_id}  "
+            f"level={node.branch_level}  geo={node.geometry}  topo={node.topo}"
+        )
 
     def _update_stats(self, filename: str = None):
         total = len(self.nodes)

@@ -34,6 +34,10 @@ class Viewport(QOpenGLWidget):
     navNextSibling = Signal()  # Tab       → next sibling at same branch level
     navPrevSibling = Signal()  # Shift+Tab → previous sibling at same branch level
 
+    # Node creation (ANTz-style)
+    createNode = Signal()       # N        → new root node (or child when context warrants)
+    createChildNode = Signal()  # Shift+N  → new child of selected node
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._scene = Scene([])
@@ -84,6 +88,11 @@ class Viewport(QOpenGLWidget):
     def nodes(self) -> list[Node]:
         """The current node list (read-only; use set_nodes to replace)."""
         return self._scene.nodes
+
+    def register_node(self, node: Node):
+        """Sync a node appended directly to self._scene.nodes into the scene's lookup cache."""
+        self._scene.register_node(node)
+        self.update()
 
     def set_nodes(self, nodes: list[Node]):
         self._scene = Scene(nodes, self._base_scale)
@@ -520,6 +529,12 @@ class Viewport(QOpenGLWidget):
             event.accept()
         elif event.key() == Qt.Key.Key_Down:
             self.navChild.emit()
+            event.accept()
+        elif event.key() == Qt.Key.Key_N:
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                self.createChildNode.emit()
+            else:
+                self.createNode.emit()
             event.accept()
         else:
             super().keyPressEvent(event)

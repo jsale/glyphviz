@@ -45,6 +45,12 @@ class NodeTableModel(QAbstractTableModel):
         self._nodes = list(nodes)
         self.endResetModel()
 
+    def append_node(self, node: Node):
+        row = len(self._nodes)
+        self.beginInsertRows(QModelIndex(), row, row)
+        self._nodes.append(node)
+        self.endInsertRows()
+
     def node_at(self, row: int) -> Node:
         return self._nodes[row]
 
@@ -113,6 +119,9 @@ class NodeTableView(QTableView):
     def set_nodes(self, nodes: list[Node]):
         self._model.set_nodes(nodes)
         self.horizontalHeader().resizeSections(QHeaderView.ResizeMode.ResizeToContents)
+
+    def append_node(self, node: Node):
+        self._model.append_node(node)
 
     # --- selection helpers ---
 
