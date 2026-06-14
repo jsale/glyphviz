@@ -1,4 +1,5 @@
 import math
+import time
 
 import numpy as np
 from OpenGL.GL import *
@@ -38,6 +39,12 @@ class Viewport(QOpenGLWidget):
     createNode = Signal()       # N        → new root node (or child when context warrants)
     createChildNode = Signal()  # Shift+N  → new child of selected node
 
+    # Draw-limit culling (ANTz \\ / Shift+\\ to halve / double visible node count)
+    drawLimitChanged = Signal(int, int)   # (visible_count, total_count)
+
+    # FPS counter — emitted once per second with the current frame rate
+    fpsUpdated = Signal(float)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._scene = Scene([])
@@ -56,6 +63,13 @@ class Viewport(QOpenGLWidget):
         self._press_pos = QPoint()
         self._drag_button = None
         self._drag_moved = False
+
+        # Draw-limit culling: None = show all; int = show first N visual nodes
+        self._draw_limit: int | None = None
+
+        # FPS tracking
+        self._fps_frames = 0
+        self._fps_t0 = time.perf_counter()
 
         # Rubber-band (Shift+drag) state
         self._rubber_mode = False
@@ -89,12 +103,19 @@ class Viewport(QOpenGLWidget):
         """The current node list (read-only; use set_nodes to replace)."""
         return self._scene.nodes
 
+    def scene_invalidate(self):
+        """Mark scene transforms stale and request a repaint.
+        Call this whenever node data (position, rotation, scale, topo) changes."""
+        self._scene.invalidate()
+        self.update()
+
     def register_node(self, node: Node):
         """Sync a node appended directly to self._scene.nodes into the scene's lookup cache."""
         self._scene.register_node(node)
         self.update()
 
     def set_nodes(self, nodes: list[Node]):
+        self._draw_limit = None   # new scene → show everything
         self._scene = Scene(nodes, self._base_scale)
         self._scene._ensure()   # pre-compute so camera init can read positions
         visible = [n for n in nodes if n.type not in NON_VISUAL_TYPES]
@@ -176,9 +197,6 @@ class Viewport(QOpenGLWidget):
     # --- rendering ---
 
     def paintGL(self):
-        # Recompute world transforms every frame so inspector edits show immediately.
-        self._scene.invalidate()
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
 
@@ -195,15 +213,28 @@ class Viewport(QOpenGLWidget):
         if self.show_axes:
             self._draw_axes()
 
+        visible_count = 0
         for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
                 continue
             if not self.show_hidden and node.hide:
                 continue
+            if self._draw_limit is not None and visible_count >= self._draw_limit:
+                break
             self._draw_node(node, selected=(node.id in self.selected_node_ids))
+            visible_count += 1
 
         if self._rubber_mode and self._rubber_start and self._rubber_end:
             self._draw_rubber_band()
+
+        # FPS: count this frame; emit once per second
+        self._fps_frames += 1
+        now = time.perf_counter()
+        elapsed = now - self._fps_t0
+        if elapsed >= 1.0:
+            self.fpsUpdated.emit(self._fps_frames / elapsed)
+            self._fps_frames = 0
+            self._fps_t0 = now
 
     def _draw_node(self, node: Node, selected: bool = False):
         # node_world_matrix is the single source of truth — same matrix the
@@ -536,8 +567,33 @@ class Viewport(QOpenGLWidget):
             else:
                 self.createNode.emit()
             event.accept()
+        elif event.key() in (Qt.Key.Key_Backslash, Qt.Key.Key_Bar):
+            # Key_Bar is what Windows sends for Shift+\ (the | character)
+            if event.key() == Qt.Key.Key_Bar or event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                self._adjust_draw_limit(2.0)   # Shift+\ or | → double (restore)
+            else:
+                self._adjust_draw_limit(0.5)   # \ → halve
+            event.accept()
         else:
             super().keyPressEvent(event)
+
+    def _adjust_draw_limit(self, factor: float):
+        """Halve or double the draw limit; emits drawLimitChanged with (visible, total)."""
+        total = sum(
+            1 for n in self._scene.nodes
+            if n.type not in NON_VISUAL_TYPES and (self.show_hidden or not n.hide)
+        )
+        if total == 0:
+            return
+        current = total if self._draw_limit is None else self._draw_limit
+        new_limit = max(1, min(total, round(current * factor)))
+        if new_limit >= total:
+            self._draw_limit = None
+        else:
+            self._draw_limit = new_limit
+        visible = total if self._draw_limit is None else self._draw_limit
+        self.drawLimitChanged.emit(visible, total)
+        self.update()
 
     # --- mouse ---
 

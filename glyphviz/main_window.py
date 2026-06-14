@@ -68,6 +68,8 @@ class MainWindow(QMainWindow):
         self._viewport.navPrevSibling.connect(self._nav_prev_sibling)
         self._viewport.createNode.connect(self._on_create_node)
         self._viewport.createChildNode.connect(self._create_child_node)
+        self._viewport.drawLimitChanged.connect(self._on_draw_limit_changed)
+        self._viewport.fpsUpdated.connect(self._on_fps_updated)
         self.setCentralWidget(self._viewport)
         # Link self.nodes into the viewport scene so appends stay in sync.
         self._viewport.set_nodes(self.nodes)
@@ -342,6 +344,10 @@ class MainWindow(QMainWindow):
         sb = QStatusBar()
         self.setStatusBar(sb)
         sb.showMessage("Ready — File > Open Node CSV to load data.")
+        self._fps_label = QLabel("-- fps")
+        self._fps_label.setMinimumWidth(70)
+        self._fps_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        sb.addPermanentWidget(self._fps_label)
 
     # --- actions ---
 
@@ -597,7 +603,7 @@ class MainWindow(QMainWindow):
                 node.translate_y += dy
                 node.translate_z += dz
                 self._table.refresh_node(node.id)
-        self._viewport.update()
+        self._viewport.scene_invalidate()
 
     def _on_insp_rotation_changed(self, _value: float):
         if not self._selected_nodes:
@@ -623,7 +629,7 @@ class MainWindow(QMainWindow):
                 node.rotate_y += dry
                 node.rotate_z += drz
                 self._table.refresh_node(node.id)
-        self._viewport.update()
+        self._viewport.scene_invalidate()
 
     def _on_insp_geo_changed(self, _idx: int):
         if not self._selected_nodes:
@@ -632,7 +638,7 @@ class MainWindow(QMainWindow):
         for node in self._selected_nodes:
             node.geometry = geo
             self._table.refresh_node(node.id)
-        self._viewport.update()
+        self._viewport.scene_invalidate()
 
     def _on_insp_scale_changed(self, value: float):
         if not self._selected_nodes:
@@ -652,7 +658,7 @@ class MainWindow(QMainWindow):
             node.scale_y = sy
             node.scale_z = sz
             self._table.refresh_node(node.id)
-        self._viewport.update()
+        self._viewport.scene_invalidate()
 
     def _on_insp_ratio_changed(self, value: float):
         if not self._selected_nodes:
@@ -660,7 +666,7 @@ class MainWindow(QMainWindow):
         for node in self._selected_nodes:
             node.ratio = value
             self._table.refresh_node(node.id)
-        self._viewport.update()
+        self._viewport.scene_invalidate()
 
     def _on_insp_topo_changed(self, _idx: int):
         if not self._selected_nodes:
@@ -669,7 +675,7 @@ class MainWindow(QMainWindow):
         for node in self._selected_nodes:
             node.topo = topo
             self._table.refresh_node(node.id)
-        self._viewport.update()
+        self._viewport.scene_invalidate()
 
     def _on_insp_color(self):
         if not self._selected_nodes:
@@ -689,7 +695,7 @@ class MainWindow(QMainWindow):
             node.color_a = color.alpha()
             self._table.refresh_node(node.id)
         self._refresh_color_btn(self._selected_nodes[0])
-        self._viewport.update()
+        self._viewport.scene_invalidate()
 
     def _on_table_double_click(self):
         node = self._table.selected_node()
@@ -718,6 +724,18 @@ class MainWindow(QMainWindow):
         if node.branch_level == 0:
             return [n for n in visual if n.branch_level == 0]
         return [n for n in visual if n.parent_id == node.parent_id]
+
+    def _on_fps_updated(self, fps: float):
+        self._fps_label.setText(f"{fps:.1f} fps")
+
+    def _on_draw_limit_changed(self, visible: int, total: int):
+        self._lbl_visible.setText(f"Visible: {visible}")
+        if visible >= total:
+            self.statusBar().showMessage(f"All {total} nodes visible  (Shift+\\ to restore)")
+        else:
+            self.statusBar().showMessage(
+                f"Draw limit: {visible} / {total} nodes  (\\ halve · Shift+\\ double)"
+            )
 
     def _nav_select(self, node: Node):
         """Select node and show a one-line status describing the move."""
