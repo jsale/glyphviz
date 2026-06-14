@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .csv_reader import load_node_csv
+from .csv_reader import load_node_csv, save_node_csv
 from .geometry import GEO_NAMES, GEO_COUNT, GEO_OCTA
 from .node import Node, NON_VISUAL_TYPES
 from .node_table import NodeTableView
@@ -36,6 +36,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("GlyphViz")
         self.resize(1280, 800)
         self.nodes: list[Node] = []
+        self._current_path: str | None = None   # path of the currently open file
 
         # Multi-select state
         self._selected_nodes: list[Node] = []
@@ -81,6 +82,16 @@ class MainWindow(QMainWindow):
         open_act = file_menu.addAction("&Open Node CSV…")
         open_act.setShortcut("Ctrl+O")
         open_act.triggered.connect(self._open_csv)
+
+        self._save_act = file_menu.addAction("&Save")
+        self._save_act.setShortcut("Ctrl+S")
+        self._save_act.setEnabled(False)
+        self._save_act.triggered.connect(self._save_csv)
+
+        save_as_act = file_menu.addAction("Save &As…")
+        save_as_act.setShortcut("Ctrl+Shift+S")
+        save_as_act.triggered.connect(self._save_csv_as)
+
         file_menu.addSeparator()
         file_menu.addAction("&Quit").triggered.connect(self.close)
 
@@ -361,6 +372,8 @@ class MainWindow(QMainWindow):
             return
         try:
             self.nodes = load_node_csv(path)
+            self._current_path = path
+            self._save_act.setEnabled(True)
             self._viewport.set_nodes(self.nodes)
             self._table.set_nodes(self.nodes)
             self._update_stats(Path(path).name)
@@ -368,6 +381,37 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Loaded {len(self.nodes)} nodes from {Path(path).name}")
         except Exception as exc:
             self.statusBar().showMessage(f"Error: {exc}")
+
+    def _save_csv(self):
+        """Ctrl+S — overwrite the currently open file."""
+        if not self._current_path:
+            self._save_csv_as()
+            return
+        self._write_csv(self._current_path)
+
+    def _save_csv_as(self):
+        """Ctrl+Shift+S — pick a new path and save."""
+        start = self._current_path or str(Path.home())
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Node CSV",
+            start,
+            "CSV Files (*.csv);;All Files (*)",
+        )
+        if not path:
+            return
+        self._write_csv(path)
+        self._current_path = path
+        self._save_act.setEnabled(True)
+        self._lbl_file.setText(f"File: {Path(path).name}")
+
+    def _write_csv(self, path: str):
+        try:
+            save_node_csv(self.nodes, path)
+            self.statusBar().showMessage(
+                f"Saved {len(self.nodes)} nodes to {Path(path).name}"
+            )
+        except Exception as exc:
+            self.statusBar().showMessage(f"Save error: {exc}")
 
     def _set_axes(self, checked: bool):
         self._viewport.show_axes = checked
