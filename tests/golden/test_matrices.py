@@ -55,20 +55,35 @@ def test_last_row_is_homogeneous(scene_name: str):
 
 @pytest.mark.parametrize("scene_name", all_scene_names())
 def test_rotation_part_is_orthonormal(scene_name: str):
-    """The 3x3 rotation sub-block of the world matrix must be orthonormal
-    (columns are unit vectors, columns are mutually orthogonal)."""
+    """The de-scaled 3x3 block is orthonormal when the parent has uniform scale.
+
+    With a non-uniform parent scale the ANTz-correct rendering matrix is
+        R_parent @ S_parent @ R_child_local @ S_child
+    which introduces genuine shear into the world matrix (a child oriented 45°
+    to a stretched parent becomes a diamond shape — exactly what ANTz does).
+    Asserting RᵀR ≈ I is only valid when the parent scale is isotropic, so
+    this test skips non-uniform-parent nodes rather than flagging them as bugs.
+    """
     import numpy as np
 
     scene = Scene.load(SCENE_DIR / f"{scene_name}.csv", base_scale=BASE_SCALE)
+    by_id = {n.id: n for n in scene.nodes}
+
     for node in scene.nodes:
+        # Skip nodes whose parent has non-uniform world scale — those intentionally
+        # produce shear and do not have an orthonormal de-scaled rotation block.
+        parent = by_id.get(node.parent_id)
+        if parent is not None and parent is not node:
+            pw = scene.world_scale(parent.id) or (1.0, 1.0, 1.0)
+            if not (abs(pw[0] - pw[1]) < 1e-9 and abs(pw[1] - pw[2]) < 1e-9):
+                continue  # non-uniform parent scale → shear is expected
+
         M = node_world_matrix(node, scene)
-        # Extract and normalize out the scale
         cols = M[:3, :3]
         col_norms = [float(np.linalg.norm(cols[:, i])) for i in range(3)]
         for norm in col_norms:
             assert norm > 0, f"Node {node.id}: zero-length column in world matrix"
         R = cols / col_norms   # de-scaled rotation
-        # RᵀR ≈ I
         RtR = R.T @ R
         np.testing.assert_allclose(
             RtR, np.eye(3), atol=1e-6,

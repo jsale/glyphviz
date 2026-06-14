@@ -48,6 +48,11 @@ class Scene:
         self._world_pos: dict[int, tuple[float, float, float]] = {}
         self._world_rot: dict[int, tuple] = {}
         self._world_scale: dict[int, tuple[float, float, float]] = {}
+        # Decomposed rotation/scale caches used by node_world_matrix to build
+        # the ANTz-correct rendering matrix (see node_world_matrix docstring).
+        self._parent_world_rot:   dict[int, tuple] = {}
+        self._child_local_rot:    dict[int, tuple] = {}
+        self._parent_world_scale: dict[int, tuple[float, float, float]] = {}
 
     def invalidate(self):
         """Mark cached transforms stale; they will be recomputed on next access."""
@@ -61,9 +66,11 @@ class Scene:
     def _ensure(self):
         if not self._dirty:
             return
-        self._world_scale = compute_world_scales(self.nodes)
-        self._world_rot   = compute_world_rotations(self.nodes)
-        self._world_pos   = compute_world_positions(
+        self._world_scale, self._parent_world_scale = compute_world_scales(self.nodes)
+        self._world_rot, self._parent_world_rot, self._child_local_rot = (
+            compute_world_rotations(self.nodes)
+        )
+        self._world_pos = compute_world_positions(
             self.nodes,
             self._placement_radius,
             self._world_scale,
@@ -108,12 +115,25 @@ def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
     """
     4x4 float64 transform placing this node's unit geometry in world space.
 
-    Layout (row-major, translation in last column):
-        T_world @ R_world @ [T_cap for TOPO_ROD] @ S_rendered
+    The rendering 3x3 is built as the ANTz-correct hierarchical product:
 
-    S_rendered = diag(rx, ry, rz) where rx/ry/rz = world_scale * base_scale,
-    with rod-factor adjustments for TOPO_ROD.  The rod cap offset T(0,0,drz)
-    shifts the cylinder so its bottom sits at the node's world origin.
+        M3 = R_parent_world @ S_parent @ R_child_local @ S_child
+
+    where R_child_local = R_topo_base @ R_own.  This means the parent's
+    non-uniform scale is sandwiched between the parent's rotation and the
+    child's local frame, so a child that is oriented 90° relative to its
+    parent sees a different axis stretched — matching ANTz's behavior where
+    a sphere stretched along X produces a diamond-shaped child at 45° and
+    a Y-elongated child at 90° (rather than always elongating along world X).
+
+    In NumPy broadcasting:
+        M3 = (R_pw * sp) @ R_lc * sc
+    where sp / sc are (3,) vectors and the * broadcasts column-wise,
+    i.e. (R_pw * sp)[i,k] = R_pw[i,k]*sp[k] (= R_pw @ diag(sp)) and
+         (... * sc)[i,j]   = ...[i,j]*sc[j]  (= ... @ diag(sc)).
+
+    For rod nodes the child-scale vector uses ROD_RADIUS/HEIGHT factors and
+    the translation gains the cap offset (bottom of cylinder at world origin).
 
     This function is the single source of truth for node transforms.
     The renderer loads it with glMultMatrixf; the FBO picker renders with it;
@@ -124,32 +144,42 @@ def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
     wx, wy, wz = scene._world_pos.get(
         node.id, (node.translate_x, node.translate_y, node.translate_z)
     )
-    rot = scene._world_rot.get(node.id, _MAT_IDENTITY_3)
-    (r00, r01, r02), (r10, r11, r12), (r20, r21, r22) = rot
 
-    ws = scene._world_scale.get(node.id, (node.scale_x, node.scale_y, node.scale_z))
+    R_pw = np.array(
+        scene._parent_world_rot.get(node.id, _MAT_IDENTITY_3), dtype=np.float64
+    )
+    sp = np.array(
+        scene._parent_world_scale.get(node.id, (1.0, 1.0, 1.0)), dtype=np.float64
+    )
+    R_lc = np.array(
+        scene._child_local_rot.get(node.id, _MAT_IDENTITY_3), dtype=np.float64
+    )
+
     bs = scene.base_scale
-    rx = max(ws[0] * bs, 0.2)
-    ry = max(ws[1] * bs, 0.2)
-    rz = max(ws[2] * bs, 0.2)
+    sc = np.array([
+        max(node.scale_x * bs, 0.2),
+        max(node.scale_y * bs, 0.2),
+        max(node.scale_z * bs, 0.2),
+    ], dtype=np.float64)
 
     if node.topo == TOPO_ROD:
-        drx = rx * ROD_RADIUS_FACTOR
-        dry = ry * ROD_RADIUS_FACTOR
-        drz = rz * ROD_HEIGHT_FACTOR
-        # T_world @ R @ T(0,0,drz) @ S(drx,dry,drz)
-        # Column 3 (translation): world_pos + R*(0,0,drz)
+        sc_rod = sc * np.array([ROD_RADIUS_FACTOR, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR])
+        M3 = (R_pw * sp) @ R_lc * sc_rod
+        # Cap offset: translate bottom of cylinder to world origin (ANTz convention).
+        # M3[:, 2] is the rendered Z-axis vector (direction + magnitude), so adding
+        # it once shifts the origin from the cylinder centre to its bottom cap.
         return np.array([
-            [r00*drx, r01*dry, r02*drz, wx + r02*drz],
-            [r10*drx, r11*dry, r12*drz, wy + r12*drz],
-            [r20*drx, r21*dry, r22*drz, wz + r22*drz],
-            [0.,      0.,      0.,      1.           ],
+            [M3[0, 0], M3[0, 1], M3[0, 2], wx + M3[0, 2]],
+            [M3[1, 0], M3[1, 1], M3[1, 2], wy + M3[1, 2]],
+            [M3[2, 0], M3[2, 1], M3[2, 2], wz + M3[2, 2]],
+            [0.,       0.,       0.,        1.             ],
         ], dtype=np.float64)
 
-    # T_world @ R @ S(rx,ry,rz)
+    # T_world @ (R_parent @ S_parent @ R_child_local @ S_child)
+    M3 = (R_pw * sp) @ R_lc * sc
     return np.array([
-        [r00*rx, r01*ry, r02*rz, wx],
-        [r10*rx, r11*ry, r12*rz, wy],
-        [r20*rx, r21*ry, r22*rz, wz],
-        [0.,     0.,     0.,     1.],
+        [M3[0, 0], M3[0, 1], M3[0, 2], wx],
+        [M3[1, 0], M3[1, 1], M3[1, 2], wy],
+        [M3[2, 0], M3[2, 1], M3[2, 2], wz],
+        [0.,       0.,       0.,        1.],
     ], dtype=np.float64)

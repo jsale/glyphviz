@@ -59,17 +59,9 @@ TOPO_NAMES = {
 def kml_offset(longitude: float, latitude: float, altitude: float, radius: float, scale: float = 1.0):
     """
     Convert KML-style longitude/latitude/altitude into a Cartesian offset from
-    the parent sphere's center. Z is treated as the polar axis (matching both
-    the viewport's Z-up world and ANTz's own convention, where translate_z is
-    the sphere's altitude/vertical axis): latitude=+90 sits at the north pole
-    (+Z), and longitude=0 faces +X.
-
-    `altitude` is a local-space measurement (like the parent's own translate/
-    scale fields) carried into world space by `scale` — the parent's
-    cumulative world scale — so that scaling a parent moves a child's surface
-    perch proportionally, the same way its rendered radius grows. At
-    scale=1.0 (the common, unscaled case) this is exactly `radius + altitude`,
-    preserving the original surface-placement behavior.
+    the parent sphere's center (uniform radius — used by Point topology and
+    as the uniform-scale degenerate case).  For sphere parents with non-uniform
+    scale use kml_ellipsoid_offset instead.
     """
     lon = math.radians(longitude)
     lat = math.radians(latitude)
@@ -79,6 +71,39 @@ def kml_offset(longitude: float, latitude: float, altitude: float, radius: float
         r * cos_lat * math.cos(lon),
         r * cos_lat * math.sin(lon),
         r * math.sin(lat),
+    )
+
+
+def kml_ellipsoid_offset(longitude: float, latitude: float, altitude: float,
+                          rx: float, ry: float, rz: float, alt_scale: float = 1.0):
+    """
+    Child offset for a sphere-topology parent whose rendered surface is an
+    ellipsoid with per-axis semi-axes (rx, ry, rz).
+
+    Uses the 'stretched-sphere' parametrisation that matches node_world_matrix:
+        surface point = (rx·cos(lat)·cos(lon),
+                         ry·cos(lat)·sin(lon),
+                         rz·sin(lat))
+    Altitude offsets further outward along the local sphere-normal direction
+    (nx, ny, nz), scaled by alt_scale:
+        final = ((rx + alt)·nx, (ry + alt)·ny, (rz + alt)·nz)
+
+    When rx == ry == rz == radius this reduces exactly to kml_offset.
+    The per-axis radii ensure that scaling the parent along X moves only
+    children whose placement longitude faces X, not all children — matching
+    ANTz's ellipsoidal parent-child placement.
+    """
+    lon = math.radians(longitude)
+    lat = math.radians(latitude)
+    alt = altitude * alt_scale
+    cos_lat = math.cos(lat)
+    nx = cos_lat * math.cos(lon)
+    ny = cos_lat * math.sin(lon)
+    nz = math.sin(lat)
+    return (
+        (rx + alt) * nx,
+        (ry + alt) * ny,
+        (rz + alt) * nz,
     )
 
 
@@ -315,42 +340,57 @@ def _topology_base_rotation(parent_topo: int, tx: float, ty: float, tz: float,
     return _MAT_IDENTITY
 
 
-def compute_world_rotations(nodes: list[Node]) -> dict[int, tuple]:
+def compute_world_rotations(
+    nodes: list[Node],
+) -> tuple[dict[int, tuple], dict[int, tuple], dict[int, tuple]]:
     """
-    Resolve every node's cumulative (world) orientation as a 3x3 rotation
-    matrix: a child's world orientation is its parent's world orientation
-    composed with its own local rotate_x/y/z, and so on up the chain — so
-    rotating a parent carries its whole subtree's orientation (and, via
-    compute_world_positions, placement) with it, matching ANTz/GaiaViz
-    scene-graph behavior. Mirrors compute_world_scales' cascading shape.
+    Resolve every node's cumulative orientation and return three dicts:
+
+    combined[id]      = R_parent_world @ R_topo_base @ R_child_local
+                        (full world rotation — used by compute_world_positions
+                        and the world_rot() accessor)
+    parent_world[id]  = parent's combined world rotation (identity for roots)
+    child_local[id]   = R_topo_base @ R_child_local
+                        (the child's own contribution, without parent)
+
+    The split is needed by node_world_matrix to build the ANTz-correct
+    rendering matrix: R_parent @ S_parent @ R_child_local @ S_child, where
+    the parent's non-uniform scale is sandwiched between the two rotation
+    halves so it distorts the child's shape relative to its orientation.
     """
     by_id = {n.id: n for n in nodes}
-    resolved: dict[int, tuple] = {}
+    combined:      dict[int, tuple] = {}
+    parent_world:  dict[int, tuple] = {}
+    child_local:   dict[int, tuple] = {}
 
     def resolve(node: Node, visiting: frozenset[int]) -> tuple:
-        cached = resolved.get(node.id)
+        cached = combined.get(node.id)
         if cached is not None:
             return cached
 
         local = local_rotation_matrix(node.rotate_x, node.rotate_y, node.rotate_z)
         parent = by_id.get(node.parent_id)
         if parent is None or parent is node or node.id in visiting:
-            rot = local
+            combined[node.id]     = local
+            parent_world[node.id] = _MAT_IDENTITY
+            child_local[node.id]  = local
         else:
             prot = resolve(parent, visiting | {node.id})
             topo_rot = _topology_base_rotation(
                 parent.topo, node.translate_x, node.translate_y, node.translate_z,
                 node.subspace,
             )
-            rot = _mat_mul(_mat_mul(prot, topo_rot), local)
+            lc = _mat_mul(topo_rot, local)
+            combined[node.id]     = _mat_mul(prot, lc)
+            parent_world[node.id] = prot
+            child_local[node.id]  = lc
 
-        resolved[node.id] = rot
-        return rot
+        return combined[node.id]
 
     for n in nodes:
         resolve(n, frozenset())
 
-    return resolved
+    return combined, parent_world, child_local
 
 
 def _avg3(scale: tuple[float, float, float]) -> float:
@@ -377,7 +417,19 @@ def _cartesian_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _
 
 
 def _sphere_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
-    return kml_offset(tx, ty, tz, parent_radius, _avg3(parent_scale))
+    # parent_radius = avg(sx,sy,sz) * base_scale, so recover per-axis radii:
+    #   per_axis_radius = per_axis_scale * base_scale
+    #                   = per_axis_scale * parent_radius / avg(parent_scale)
+    # This ensures a child at longitude=90 moves only when scale_y changes,
+    # not when scale_x or scale_z changes (ANTz ellipsoidal placement).
+    avg_s = _avg3(parent_scale)
+    if avg_s < 1e-9:
+        return (0.0, 0.0, 0.0)
+    f = parent_radius / avg_s          # = base_scale
+    rx = parent_scale[0] * f
+    ry = parent_scale[1] * f
+    rz = parent_scale[2] * f
+    return kml_ellipsoid_offset(tx, ty, tz, rx, ry, rz, avg_s)
 
 
 def _torus_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale, _child_subspace=0):
@@ -396,10 +448,18 @@ def _rod_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_s
 
 
 def _point_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
-    """Point topology: the same longitude/latitude/altitude system as Sphere,
-    but altitude is measured from the parent's CENTER rather than its surface
-    — so children collapse toward the center as altitude approaches zero."""
-    return kml_offset(tx, ty, tz, 0.0, _avg3(parent_scale))
+    """Point topology: longitude/latitude/altitude from the parent center with
+    per-axis scale — a child at lon=0, alt=5 on a parent scaled 2x along X
+    lands at world X=10, not X=6.67 (which avg-scale would give).
+    Equivalent to kml_ellipsoid_offset with rx=ry=rz=0 and per-axis alt_scale."""
+    lon = math.radians(tx)
+    lat = math.radians(ty)
+    cos_lat = math.cos(lat)
+    nx = cos_lat * math.cos(lon)
+    ny = cos_lat * math.sin(lon)
+    nz = math.sin(lat)
+    sx, sy, sz = parent_scale
+    return (tz * nx * sx, tz * ny * sy, tz * nz * sz)
 
 
 def _pin_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
@@ -509,40 +569,44 @@ def compute_world_positions(
     return resolved
 
 
-def compute_world_scales(nodes: list[Node]) -> dict[int, tuple[float, float, float]]:
+def compute_world_scales(
+    nodes: list[Node],
+) -> tuple[dict[int, tuple[float, float, float]], dict[int, tuple[float, float, float]]]:
     """
-    Resolve every node's cumulative (world) per-axis scale factor (sx, sy, sz).
+    Resolve every node's cumulative per-axis scale and return two dicts:
 
-    This is plain scene-graph inheritance, independent of topology: a child's
-    rendered size on each axis is its own scale_x/y/z multiplied by its
-    parent's resolved scale on that same axis, and so on up the chain — so
-    scaling a parent up or down carries its whole subtree with it
-    proportionally, and X/Y/Z scaling stays independent across generations
-    (matches ANTz/GaiaViz behavior).
+    world[id]        = (parent_world_sx * own_sx, …)  — full cumulative scale
+                       (used by _placement_radius, world_scale() accessor, and
+                       as the `world_scale` argument to compute_world_positions)
+    parent_world[id] = parent's cumulative scale ((1,1,1) for roots)
+
+    The split is needed by node_world_matrix: `sp = parent_world[id]` is
+    inserted between R_parent and R_child_local so a non-uniform parent scale
+    distorts the child's rendered shape relative to the child's orientation,
+    matching ANTz behavior (see compute_world_rotations docstring).
     """
     by_id = {n.id: n for n in nodes}
-    resolved: dict[int, tuple[float, float, float]] = {}
-
-    def own_scale(node: Node) -> tuple[float, float, float]:
-        return (node.scale_x, node.scale_y, node.scale_z)
+    world:        dict[int, tuple[float, float, float]] = {}
+    parent_world: dict[int, tuple[float, float, float]] = {}
 
     def resolve(node: Node, visiting: frozenset[int]) -> tuple[float, float, float]:
-        cached = resolved.get(node.id)
+        cached = world.get(node.id)
         if cached is not None:
             return cached
 
         parent = by_id.get(node.parent_id)
-        os = own_scale(node)
+        os = (node.scale_x, node.scale_y, node.scale_z)
         if parent is None or parent is node or node.id in visiting:
-            scale = os
+            world[node.id]        = os
+            parent_world[node.id] = (1.0, 1.0, 1.0)
         else:
             ps = resolve(parent, visiting | {node.id})
-            scale = (os[0] * ps[0], os[1] * ps[1], os[2] * ps[2])
+            world[node.id]        = (os[0] * ps[0], os[1] * ps[1], os[2] * ps[2])
+            parent_world[node.id] = ps
 
-        resolved[node.id] = scale
-        return scale
+        return world[node.id]
 
     for n in nodes:
         resolve(n, frozenset())
 
-    return resolved
+    return world, parent_world
