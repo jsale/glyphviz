@@ -218,6 +218,8 @@ class Viewport(QOpenGLWidget):
         glShadeModel(GL_SMOOTH)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable(GL_CULL_FACE)
+        glCullFace(GL_BACK)
         self._geo.setup()
 
     def resizeGL(self, w, h):
@@ -320,7 +322,7 @@ class Viewport(QOpenGLWidget):
             b_pos = self._scene.world_pos(b_id)
             if a_pos is None or b_pos is None:
                 continue
-            glLineWidth(max(float(link.extras.get('line_width', 1.0)), 1.0))
+            glLineWidth(max(link.ratio * 20.0, 1.0))
             glColor4f(link.color_r / 255.0, link.color_g / 255.0,
                       link.color_b / 255.0, link.color_a / 255.0)
             glBegin(GL_LINES)
@@ -339,7 +341,7 @@ class Viewport(QOpenGLWidget):
                         if self.show_hidden or not k.hide]
                 if len(kids) < 2:
                     continue
-                glLineWidth(max(float(node.extras.get('line_width', 1.0)), 1.0))
+                glLineWidth(max(node.ratio * 20.0, 1.0))
                 glBegin(GL_LINE_STRIP)
                 for kid in kids:
                     pos = self._scene.world_pos(kid.id) or (
@@ -511,6 +513,7 @@ class Viewport(QOpenGLWidget):
 
         glDisable(GL_DEPTH_TEST)
         glDisable(GL_LIGHTING)
+        glDisable(GL_CULL_FACE)
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
@@ -542,6 +545,7 @@ class Viewport(QOpenGLWidget):
         glPopMatrix()
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
+        glEnable(GL_CULL_FACE)
 
     def _draw_axes(self):
         glDisable(GL_LIGHTING)
@@ -683,30 +687,40 @@ class Viewport(QOpenGLWidget):
             self._geo.draw(pick_geo, 1.0, 1.0, 1.0, ratio=node.ratio)
             glPopMatrix()
 
-        # Draw link lines as thick colored strokes so they are click-selectable.
-        glLineWidth(5.0)
+        # Draw link nodes as pick targets.  Each link gets:
+        #   1. A thick line between its endpoints (when both endpoints resolve).
+        #   2. A small sphere at its own world position so it's always clickable
+        #      even when the B-end (child_id) is missing or 0.
         for node in self._scene.nodes:
             if node.type != NODE_TYPE_LINK:
                 continue
             if not self.show_hidden and node.hide:
                 continue
-            a_id = node.parent_id
-            b_id = int(float(node.extras.get('child_id', 0)))
-            if not a_id or not b_id:
-                continue
-            a_pos = self._scene.world_pos(a_id)
-            b_pos = self._scene.world_pos(b_id)
-            if a_pos is None or b_pos is None:
-                continue
             r = node.id & 0xFF
             g = (node.id >> 8) & 0xFF
             b_enc = (node.id >> 16) & 0xFF
             glColor4ub(r, g, b_enc, 255)
-            glBegin(GL_LINES)
-            glVertex3f(a_pos[0], a_pos[1], a_pos[2])
-            glVertex3f(b_pos[0], b_pos[1], b_pos[2])
-            glEnd()
-        glLineWidth(1.0)
+
+            a_id = node.parent_id
+            b_id = int(float(node.extras.get('child_id', 0)))
+            a_pos = self._scene.world_pos(a_id) if a_id else None
+            b_pos = self._scene.world_pos(b_id) if b_id else None
+            if a_pos is not None and b_pos is not None:
+                glLineWidth(max(node.ratio * 20.0, 5.0))
+                glBegin(GL_LINES)
+                glVertex3f(a_pos[0], a_pos[1], a_pos[2])
+                glVertex3f(b_pos[0], b_pos[1], b_pos[2])
+                glEnd()
+                glLineWidth(1.0)
+
+            # Fallback sphere at the link node's own position.
+            own_pos = self._scene.world_pos(node.id)
+            if own_pos is not None:
+                M = node_world_matrix(node, self._scene)
+                glPushMatrix()
+                glMultMatrixf(_gl_col_major(M))
+                self._geo.draw(3, 1.0, 1.0, 1.0)   # GEO_SPHERE = 3
+                glPopMatrix()
 
         return qt_fbo, fb_w, fb_h, dpr, w, h
 
