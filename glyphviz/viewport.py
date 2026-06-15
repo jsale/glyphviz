@@ -11,9 +11,10 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from pathlib import Path
 
 from .geometry import GeoRenderer, WIRE_TO_SOLID
-from .node import Node, NON_VISUAL_TYPES
+from .node import Node, NON_VISUAL_TYPES, NODE_TYPE_LINK
 from .scene import Scene, node_world_matrix
 from .texture_manager import TextureManager
+from .topology import TOPO_PLOT, TOPO_SURFACE
 
 _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag
 
@@ -262,12 +263,16 @@ class Viewport(QOpenGLWidget):
         for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
                 continue
+            if node.type == NODE_TYPE_LINK:
+                continue   # rendered as lines in _draw_topology_overlays
             if not self.show_hidden and node.hide:
                 continue
             if self._draw_limit is not None and visible_count >= self._draw_limit:
                 break
             self._draw_node(node, selected=(node.id in self.selected_node_ids))
             visible_count += 1
+
+        self._draw_topology_overlays()
 
         if self._rubber_mode and self._rubber_start and self._rubber_end:
             self._draw_rubber_band()
@@ -285,6 +290,121 @@ class Viewport(QOpenGLWidget):
             self._fps_frames = 0
             self._fps_t0 = now
 
+    def _draw_topology_overlays(self):
+        """Draw type=7 link lines, TOPO_PLOT polylines, and TOPO_SURFACE quad meshes."""
+        # Build parent→children map and collect link nodes in a single pass.
+        children_of: dict[int, list[Node]] = {}
+        link_nodes: list[Node] = []
+        for node in self._scene.nodes:
+            if node.type == NODE_TYPE_LINK:
+                link_nodes.append(node)
+            elif node.parent_id and node.parent_id != node.id:
+                children_of.setdefault(node.parent_id, []).append(node)
+
+        any_plot    = any(n.topo == TOPO_PLOT    for n in self._scene.nodes)
+        any_surface = any(n.topo == TOPO_SURFACE for n in self._scene.nodes)
+        if not link_nodes and not any_plot and not any_surface:
+            return
+
+        glDisable(GL_LIGHTING)
+
+        # ---- Type-7 link lines ----
+        for link in link_nodes:
+            if not self.show_hidden and link.hide:
+                continue
+            a_id = link.parent_id
+            b_id = int(float(link.extras.get('child_id', 0)))
+            if not a_id or not b_id:
+                continue
+            a_pos = self._scene.world_pos(a_id)
+            b_pos = self._scene.world_pos(b_id)
+            if a_pos is None or b_pos is None:
+                continue
+            glLineWidth(max(float(link.extras.get('line_width', 1.0)), 1.0))
+            glColor4f(link.color_r / 255.0, link.color_g / 255.0,
+                      link.color_b / 255.0, link.color_a / 255.0)
+            glBegin(GL_LINES)
+            glVertex3f(a_pos[0], a_pos[1], a_pos[2])
+            glVertex3f(b_pos[0], b_pos[1], b_pos[2])
+            glEnd()
+
+        # ---- TOPO_PLOT polylines ----
+        if any_plot:
+            for node in self._scene.nodes:
+                if node.topo != TOPO_PLOT:
+                    continue
+                if not self.show_hidden and node.hide:
+                    continue
+                kids = [k for k in children_of.get(node.id, [])
+                        if self.show_hidden or not k.hide]
+                if len(kids) < 2:
+                    continue
+                glLineWidth(max(float(node.extras.get('line_width', 1.0)), 1.0))
+                glBegin(GL_LINE_STRIP)
+                for kid in kids:
+                    pos = self._scene.world_pos(kid.id) or (
+                        kid.translate_x, kid.translate_y, kid.translate_z)
+                    glColor4f(kid.color_r / 255.0, kid.color_g / 255.0,
+                              kid.color_b / 255.0, kid.color_a / 255.0)
+                    glVertex3f(pos[0], pos[1], pos[2])
+                glEnd()
+
+        glLineWidth(1.0)
+
+        # ---- TOPO_SURFACE quad meshes (with lighting for 3-D shading) ----
+        if any_surface:
+            glEnable(GL_LIGHTING)
+            for node in self._scene.nodes:
+                if node.topo != TOPO_SURFACE:
+                    continue
+                if not self.show_hidden and node.hide:
+                    continue
+                kids = [k for k in children_of.get(node.id, [])
+                        if self.show_hidden or not k.hide]
+                if len(kids) < 4:
+                    continue
+
+                # Build (translate_x, translate_y) → node grid.
+                # Children use translate_z as height at that grid point.
+                grid: dict[tuple[float, float], Node] = {}
+                for kid in kids:
+                    grid[(round(kid.translate_x, 6), round(kid.translate_y, 6))] = kid
+                xs = sorted(set(k[0] for k in grid))
+                ys = sorted(set(k[1] for k in grid))
+                if len(xs) < 2 or len(ys) < 2:
+                    continue
+
+                glBegin(GL_QUADS)
+                for ri in range(len(ys) - 1):
+                    for ci in range(len(xs) - 1):
+                        n00 = grid.get((xs[ci],     ys[ri]))
+                        n10 = grid.get((xs[ci + 1], ys[ri]))
+                        n11 = grid.get((xs[ci + 1], ys[ri + 1]))
+                        n01 = grid.get((xs[ci],     ys[ri + 1]))
+                        if n00 is None or n10 is None or n11 is None or n01 is None:
+                            continue
+                        p00 = self._scene.world_pos(n00.id) or (n00.translate_x, n00.translate_y, n00.translate_z)
+                        p10 = self._scene.world_pos(n10.id) or (n10.translate_x, n10.translate_y, n10.translate_z)
+                        p11 = self._scene.world_pos(n11.id) or (n11.translate_x, n11.translate_y, n11.translate_z)
+                        p01 = self._scene.world_pos(n01.id) or (n01.translate_x, n01.translate_y, n01.translate_z)
+                        # Per-face normal from cross product (CCW winding → outward normal)
+                        ea = np.asarray(p10, dtype=np.float64) - np.asarray(p00, dtype=np.float64)
+                        eb = np.asarray(p01, dtype=np.float64) - np.asarray(p00, dtype=np.float64)
+                        norm = np.cross(ea, eb)
+                        nl = np.linalg.norm(norm)
+                        if nl > 1e-10:
+                            norm /= nl
+                        else:
+                            norm = np.array([0.0, 0.0, 1.0])
+                        glNormal3f(float(norm[0]), float(norm[1]), float(norm[2]))
+                        for nn, pp in ((n00, p00), (n10, p10), (n11, p11), (n01, p01)):
+                            glColor4f(nn.color_r / 255.0, nn.color_g / 255.0,
+                                      nn.color_b / 255.0, nn.color_a / 255.0)
+                            glVertex3f(float(pp[0]), float(pp[1]), float(pp[2]))
+                glEnd()
+
+        glEnable(GL_LIGHTING)  # restore for subsequent passes (rubber band, etc.)
+
     def _draw_tags_qpainter(self):
         """Project tagged nodes to screen space and draw text with QPainter overlay."""
         mv = self._mv_matrix
@@ -297,6 +417,8 @@ class Viewport(QOpenGLWidget):
         visible_count = 0
         for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
+                continue
+            if node.type == NODE_TYPE_LINK:
                 continue
             if not self.show_hidden and node.hide:
                 continue
@@ -544,6 +666,8 @@ class Viewport(QOpenGLWidget):
         for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
                 continue
+            if node.type == NODE_TYPE_LINK:
+                continue   # links are picked via lines below
             if not self.show_hidden and node.hide:
                 continue
             r = node.id & 0xFF
@@ -558,6 +682,31 @@ class Viewport(QOpenGLWidget):
             pick_geo = WIRE_TO_SOLID.get(node.geometry, node.geometry)
             self._geo.draw(pick_geo, 1.0, 1.0, 1.0, ratio=node.ratio)
             glPopMatrix()
+
+        # Draw link lines as thick colored strokes so they are click-selectable.
+        glLineWidth(5.0)
+        for node in self._scene.nodes:
+            if node.type != NODE_TYPE_LINK:
+                continue
+            if not self.show_hidden and node.hide:
+                continue
+            a_id = node.parent_id
+            b_id = int(float(node.extras.get('child_id', 0)))
+            if not a_id or not b_id:
+                continue
+            a_pos = self._scene.world_pos(a_id)
+            b_pos = self._scene.world_pos(b_id)
+            if a_pos is None or b_pos is None:
+                continue
+            r = node.id & 0xFF
+            g = (node.id >> 8) & 0xFF
+            b_enc = (node.id >> 16) & 0xFF
+            glColor4ub(r, g, b_enc, 255)
+            glBegin(GL_LINES)
+            glVertex3f(a_pos[0], a_pos[1], a_pos[2])
+            glVertex3f(b_pos[0], b_pos[1], b_pos[2])
+            glEnd()
+        glLineWidth(1.0)
 
         return qt_fbo, fb_w, fb_h, dpr, w, h
 

@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 NODE_TYPE_WORLD  = 0   # one-per-file global scene/world parameters
 NODE_TYPE_CAMERA = 1   # camera 'lookat' definitions (switchable with 'C' in ANTz/GaiaViz)
 NODE_TYPE_GRID   = 6   # world grid / subgrid definitions
+NODE_TYPE_LINK   = 7   # graph edge from parent_id (A-end) to child_id (B-end)
 
 NON_VISUAL_TYPES = frozenset({NODE_TYPE_WORLD, NODE_TYPE_CAMERA, NODE_TYPE_GRID})
 
