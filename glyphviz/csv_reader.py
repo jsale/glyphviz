@@ -1,4 +1,6 @@
 import csv
+import re as _re
+from pathlib import Path
 
 import pandas as pd
 
@@ -13,7 +15,11 @@ _TRACKED_COLS = frozenset({
     'scale_x', 'scale_y', 'scale_z',
     'color_r', 'color_g', 'color_b', 'color_a',
     'geometry', 'hide', 'topo', 'ratio', 'subspace', 'texture_id',
+    'text', 'link',
 })
+
+# Extra columns written as plain strings (not int/float formatted).
+_STRING_COLS = frozenset({'text', 'link'})
 
 # Canonical 94-column ANTz/GaiaViz np_node column order.
 _COL_ORDER = [
@@ -100,11 +106,75 @@ _DEFAULT_EXTRAS: dict = {
 }
 
 
+def _tag_file_path(node_csv_path: str) -> Path | None:
+    """Return the companion tag-file path for a node CSV, or None if not applicable.
+
+    Convention (ANTz): anything ending in 'node' → replace with 'tag'.
+    E.g. antz0001node.csv → antz0001tag.csv, np_node.csv → np_tag.csv.
+    Returns None if the candidate file does not exist.
+    """
+    p = Path(node_csv_path)
+    stem = p.stem
+    if stem.endswith('node'):
+        candidate = p.parent / (stem[:-4] + 'tag' + p.suffix)
+        return candidate if candidate.exists() else None
+    return None
+
+
+def _load_tag_file(tag_path: Path) -> dict[int, tuple[str, str]]:
+    """Parse an ANTz np_tag CSV.  Returns {record_id: (text, link)}.
+
+    title field parsing:
+      - HTML <a href="url">label</a> → link=url, text=label
+      - Plain URL (http/https/www) → link=url, text=url
+      - Anything else → link='', text=value
+    """
+    try:
+        df = pd.read_csv(tag_path)
+    except Exception:
+        return {}
+    result: dict[int, tuple[str, str]] = {}
+    for _, row in df.iterrows():
+        try:
+            record_id = int(row['record_id'])
+            table_id = int(row.get('table_id', 0))
+            if table_id != 0:
+                continue
+            raw = str(row.get('title', '') or '').strip().strip('"')
+            m = _re.search(
+                r'<a\s+href=["\']?([^"\'>\s]+)["\']?>([^<]*)</a>',
+                raw, _re.IGNORECASE,
+            )
+            if m:
+                link = m.group(1).strip('\'"')
+                text = m.group(2).strip() or raw
+            elif raw.startswith(('http://', 'https://', 'www.', 'ftp://')):
+                link = raw
+                text = raw
+            else:
+                link = ''
+                text = raw
+            result[record_id] = (text, link)
+        except (ValueError, KeyError):
+            continue
+    return result
+
+
 def load_node_csv(path: str) -> list[Node]:
     df = pd.read_csv(path)
     has_ratio = 'ratio' in df.columns
     has_subspace = 'subspace' in df.columns
     has_texture_id = 'texture_id' in df.columns
+    has_text = 'text' in df.columns
+    has_link = 'link' in df.columns
+
+    # Fall back to companion tag file only when neither inline column is present.
+    tag_data: dict[int, tuple[str, str]] = {}
+    if not has_text and not has_link:
+        tag_path = _tag_file_path(path)
+        if tag_path:
+            tag_data = _load_tag_file(tag_path)
+
     nodes = []
     for _, row in df.iterrows():
         node = Node(
@@ -138,6 +208,19 @@ def load_node_csv(path: str) -> list[Node]:
             for col in df.columns
             if col not in _TRACKED_COLS
         }
+        # Populate text / link from inline columns or companion tag file.
+        if has_text:
+            v = row.get('text')
+            node.text = '' if (v is None or (isinstance(v, float) and pd.isna(v))) else str(v)
+        if has_link:
+            v = row.get('link')
+            node.link = '' if (v is None or (isinstance(v, float) and pd.isna(v))) else str(v)
+        if tag_data and not has_text and not has_link:
+            # Match by record_id (column 92) if available, else fall back to id.
+            rid = int(node.extras.get('record_id', node.id))
+            entry = tag_data.get(rid) or tag_data.get(node.id)
+            if entry:
+                node.text, node.link = entry
         nodes.append(node)
     return nodes
 
@@ -149,10 +232,21 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
     reflect the current in-memory values.  All other columns are written from
     Node.extras (preserving the original file values) or from _DEFAULT_EXTRAS
     for newly-created nodes.
+
+    If any node has non-empty text or link, those columns are appended after
+    the 94-column ANTz standard set (ANTz tools ignore unknown extra columns).
     """
+    has_text = any(n.text for n in nodes)
+    has_link = any(n.link for n in nodes)
+    col_order = list(_COL_ORDER)
+    if has_text:
+        col_order.append('text')
+    if has_link:
+        col_order.append('link')
+
     with open(path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(_COL_ORDER)
+        writer.writerow(col_order)
         for node in nodes:
             # Build row: defaults → preserved extras → current tracked values.
             row: dict = dict(_DEFAULT_EXTRAS)
@@ -180,12 +274,18 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
             row['topo'] = node.topo
             row['ratio'] = node.ratio
             row['texture_id'] = node.texture_id
+            if has_text:
+                row['text'] = node.text
+            if has_link:
+                row['link'] = node.link
 
-            # Format each cell: 6 decimal places for floats, plain int for integers.
+            # Format each cell: strings as-is, floats with 6 dp, others as int.
             cells = []
-            for col in _COL_ORDER:
+            for col in col_order:
                 val = row.get(col, 0)
-                if col in _FLOAT_COLS:
+                if col in _STRING_COLS:
+                    cells.append(str(val) if val else '')
+                elif col in _FLOAT_COLS:
                     cells.append(f'{float(val):.6f}')
                 else:
                     cells.append(int(float(val)))

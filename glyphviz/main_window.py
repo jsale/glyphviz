@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QPushButton,
     QScrollArea,
@@ -57,6 +58,7 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+A"), self).activated.connect(
             self._on_select_all_toggle
         )
+        QShortcut(QKeySequence("U"), self).activated.connect(self._on_open_link)
 
     def _build_viewport(self):
         self._viewport = Viewport(self)
@@ -71,6 +73,7 @@ class MainWindow(QMainWindow):
         self._viewport.createChildNode.connect(self._create_child_node)
         self._viewport.drawLimitChanged.connect(self._on_draw_limit_changed)
         self._viewport.fpsUpdated.connect(self._on_fps_updated)
+        self._viewport.tagToggled.connect(self._on_tag_toggled)
         self.setCentralWidget(self._viewport)
         # Link self.nodes into the viewport scene so appends stay in sync.
         self._viewport.set_nodes(self.nodes)
@@ -126,6 +129,12 @@ class MainWindow(QMainWindow):
         self._hidden_act.setChecked(False)
         self._hidden_act.triggered.connect(lambda c: self._set_hidden(c))
 
+        self._tags_act = self._view_menu.addAction("Show Tag &Labels")
+        self._tags_act.setCheckable(True)
+        self._tags_act.setChecked(True)
+        self._tags_act.setToolTip("Toggle tag text display  [T]")
+        self._tags_act.triggered.connect(lambda c: self._set_tags(c))
+
         self._view_menu.addSeparator()
         self._view_menu.addAction("Reset &Camera").triggered.connect(self._reset_camera)
 
@@ -160,9 +169,15 @@ class MainWindow(QMainWindow):
         self._cb_hidden.setChecked(False)
         self._cb_hidden.toggled.connect(self._set_hidden)
 
+        self._cb_tags = QCheckBox("Show Tag Labels")
+        self._cb_tags.setChecked(True)
+        self._cb_tags.setToolTip("Toggle tag text display in 3D view  [T]")
+        self._cb_tags.toggled.connect(self._set_tags)
+
         disp_layout.addWidget(self._cb_axes)
         disp_layout.addWidget(self._cb_grid)
         disp_layout.addWidget(self._cb_hidden)
+        disp_layout.addWidget(self._cb_tags)
 
         tex_row = QWidget()
         tex_row_layout = QHBoxLayout(tex_row)
@@ -349,6 +364,19 @@ class MainWindow(QMainWindow):
         )
         self._insp_texture_id.valueChanged.connect(self._on_insp_texture_id_changed)
 
+        self._insp_text = QLineEdit()
+        self._insp_text.setPlaceholderText("Tag label text…")
+        self._insp_text.setToolTip("Text label shown near node in 3D view  [T toggles display]")
+        self._insp_text.textChanged.connect(self._on_insp_text_changed)
+
+        self._insp_link = QLineEdit()
+        self._insp_link.setPlaceholderText("URL or file path  (U key opens)")
+        self._insp_link.setToolTip(
+            "URL or file path opened when U is pressed with this node selected.\n"
+            "Supports http://, https://, and local file paths."
+        )
+        self._insp_link.textChanged.connect(self._on_insp_link_changed)
+
         insp_layout.addRow("ID:",       self._insp_id)
         insp_layout.addRow("Type:",     self._insp_type)
         insp_layout.addRow("Parent:",   self._insp_parent)
@@ -361,6 +389,8 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Ratio:",    self._insp_ratio)
         insp_layout.addRow("Texture ID:", self._insp_texture_id)
         insp_layout.addRow("Color:",    self._insp_color_btn)
+        insp_layout.addRow("Tag Text:", self._insp_text)
+        insp_layout.addRow("Link:",     self._insp_link)
 
         layout.addWidget(disp)
         layout.addWidget(scale_grp)
@@ -499,6 +529,34 @@ class MainWindow(QMainWindow):
         self._grid_act.setChecked(checked)
         self._viewport.update()
 
+    def _set_tags(self, checked: bool):
+        self._viewport.show_tags = checked
+        self._cb_tags.setChecked(checked)
+        self._tags_act.setChecked(checked)
+        self._viewport.update()
+
+    def _on_tag_toggled(self, checked: bool):
+        """Sync UI when T key toggles tags inside the viewport."""
+        self._cb_tags.setChecked(checked)
+        self._tags_act.setChecked(checked)
+
+    def _on_open_link(self):
+        """U key: open the selected node's link in the default browser/app."""
+        if len(self._selected_nodes) != 1:
+            return
+        link = self._selected_nodes[0].link.strip()
+        if not link:
+            self.statusBar().showMessage("Node has no link.")
+            return
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        if link.startswith(('http://', 'https://', 'ftp://', 'www.')):
+            url = QUrl(link if not link.startswith('www.') else 'https://' + link)
+        else:
+            url = QUrl.fromLocalFile(link)
+        QDesktopServices.openUrl(url)
+        self.statusBar().showMessage(f"Opening: {link}")
+
     def _set_hidden(self, checked: bool):
         self._viewport.show_hidden = checked
         self._cb_hidden.setChecked(checked)
@@ -634,6 +692,14 @@ class MainWindow(QMainWindow):
         self._insp_topo.blockSignals(False)
 
         self._refresh_color_btn(node)
+
+        self._insp_text.blockSignals(True)
+        self._insp_text.setText(node.text)
+        self._insp_text.blockSignals(False)
+        self._insp_link.blockSignals(True)
+        self._insp_link.setText(node.link)
+        self._insp_link.blockSignals(False)
+
         # Record anchors (used by multi-select delta logic; harmless for single)
         self._anchor_pos = (node.translate_x, node.translate_y, node.translate_z)
         self._anchor_rot = (node.rotate_x, node.rotate_y, node.rotate_z)
@@ -682,6 +748,13 @@ class MainWindow(QMainWindow):
         self._insp_topo.blockSignals(False)
 
         self._refresh_color_btn(primary)
+
+        self._insp_text.blockSignals(True)
+        self._insp_text.setText(primary.text)
+        self._insp_text.blockSignals(False)
+        self._insp_link.blockSignals(True)
+        self._insp_link.setText(primary.link)
+        self._insp_link.blockSignals(False)
 
         # Anchor for delta-based pos/rot edits
         self._anchor_pos = (primary.translate_x, primary.translate_y, primary.translate_z)
@@ -796,6 +869,19 @@ class MainWindow(QMainWindow):
             node.texture_id = tex_id
             self._table.refresh_node(node.id)
         self._viewport.scene_invalidate()
+
+    def _on_insp_text_changed(self, value: str):
+        if not self._selected_nodes:
+            return
+        for node in self._selected_nodes:
+            node.text = value
+        self._viewport.update()
+
+    def _on_insp_link_changed(self, value: str):
+        if not self._selected_nodes:
+            return
+        for node in self._selected_nodes:
+            node.link = value
 
     def _on_insp_topo_changed(self, _idx: int):
         if not self._selected_nodes:

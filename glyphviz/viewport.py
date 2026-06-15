@@ -5,6 +5,7 @@ import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from PySide6.QtCore import Qt, QEvent, QPoint, QRect, Signal
+from PySide6.QtGui import QColor, QPainter
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from pathlib import Path
@@ -48,6 +49,9 @@ class Viewport(QOpenGLWidget):
     # FPS counter — emitted once per second with the current frame rate
     fpsUpdated = Signal(float)
 
+    # Tag visibility toggled with T key
+    tagToggled = Signal(bool)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._scene = Scene([])
@@ -84,6 +88,12 @@ class Viewport(QOpenGLWidget):
         self._pick_tex = 0
         self._pick_rbo = 0
         self._pick_fbo_size = (0, 0)
+
+        self.show_tags = True
+
+        # Cached camera matrices for tag world→screen projection (updated each frame).
+        self._mv_matrix: np.ndarray | None = None
+        self._proj_matrix: np.ndarray | None = None
 
         self._geo = GeoRenderer()
         self._tex_mgr = TextureManager()
@@ -233,6 +243,16 @@ class Viewport(QOpenGLWidget):
         eye_z = tz + self._cam_distance * math.sin(el)
         gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
 
+        # Capture camera matrices for world→screen tag projection (before node transforms).
+        try:
+            mv = np.array(glGetDoublev(GL_MODELVIEW_MATRIX), dtype=np.float64)
+            pr = np.array(glGetDoublev(GL_PROJECTION_MATRIX), dtype=np.float64)
+            self._mv_matrix = mv.reshape(4, 4).T   # column-major → row-major
+            self._proj_matrix = pr.reshape(4, 4).T
+        except Exception:
+            self._mv_matrix = None
+            self._proj_matrix = None
+
         if self.show_grid:
             self._draw_grid()
         if self.show_axes:
@@ -252,6 +272,10 @@ class Viewport(QOpenGLWidget):
         if self._rubber_mode and self._rubber_start and self._rubber_end:
             self._draw_rubber_band()
 
+        # QPainter tag overlay (must come after all glBegin/glEnd blocks).
+        if self.show_tags and self._mv_matrix is not None:
+            self._draw_tags_qpainter()
+
         # FPS: count this frame; emit once per second
         self._fps_frames += 1
         now = time.perf_counter()
@@ -260,6 +284,56 @@ class Viewport(QOpenGLWidget):
             self.fpsUpdated.emit(self._fps_frames / elapsed)
             self._fps_frames = 0
             self._fps_t0 = now
+
+    def _draw_tags_qpainter(self):
+        """Project tagged nodes to screen space and draw text with QPainter overlay."""
+        mv = self._mv_matrix
+        pr = self._proj_matrix
+        w, h = self.width(), self.height()
+        if w <= 0 or h <= 0:
+            return
+
+        tagged: list[tuple[str, int, int]] = []
+        visible_count = 0
+        for node in self._scene.nodes:
+            if node.type in NON_VISUAL_TYPES:
+                continue
+            if not self.show_hidden and node.hide:
+                continue
+            if self._draw_limit is not None and visible_count >= self._draw_limit:
+                break
+            visible_count += 1
+            if not node.text:
+                continue
+            wp = self._scene.world_pos(node.id) or (node.translate_x, node.translate_y, node.translate_z)
+            try:
+                v = np.array([wp[0], wp[1], wp[2], 1.0])
+                clip = pr @ mv @ v
+                if clip[3] <= 0:
+                    continue
+                ndc = clip[:3] / clip[3]
+                if not (-1.0 <= ndc[0] <= 1.0 and -1.0 <= ndc[1] <= 1.0 and -1.0 <= ndc[2] <= 1.0):
+                    continue
+                sx = int((ndc[0] + 1.0) / 2.0 * w)
+                sy = int((1.0 - (ndc[1] + 1.0) / 2.0) * h)   # Y-flip for Qt
+                tagged.append((node.text, sx, sy))
+            except Exception:
+                continue
+
+        if not tagged:
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        font = painter.font()
+        font.setPointSize(9)
+        painter.setFont(font)
+        for text, sx, sy in tagged:
+            painter.setPen(QColor(0, 0, 0, 200))
+            painter.drawText(sx + 6, sy + 1, text)
+            painter.setPen(QColor(255, 255, 200, 230))
+            painter.drawText(sx + 5, sy, text)
+        painter.end()
 
     def _draw_node(self, node: Node, selected: bool = False):
         # node_world_matrix is the single source of truth — same matrix the
@@ -600,6 +674,11 @@ class Viewport(QOpenGLWidget):
                 self._adjust_draw_limit(2.0)   # Shift+\ or | → double (restore)
             else:
                 self._adjust_draw_limit(0.5)   # \ → halve
+            event.accept()
+        elif event.key() == Qt.Key.Key_T:
+            self.show_tags = not self.show_tags
+            self.tagToggled.emit(self.show_tags)
+            self.update()
             event.accept()
         else:
             super().keyPressEvent(event)
