@@ -104,6 +104,18 @@ def _norm(v):
     d = math.sqrt(_dot(v, v))
     return (v[0]/d, v[1]/d, v[2]/d) if d > 1e-12 else (0.0, 1.0, 0.0)
 
+def _vert_uv(v):
+    """Spherical UV from a vertex on (or near) the unit sphere.
+    u = normalised longitude, v = normalised latitude."""
+    x, y, z = v
+    L = math.sqrt(x*x + y*y + z*z)
+    if L < 1e-12:
+        return 0.5, 0.5
+    nx, ny, nz = x/L, y/L, z/L
+    u = 0.5 + math.atan2(nx, nz) / (2.0 * math.pi)
+    vt = 0.5 + math.asin(max(-1.0, min(1.0, ny))) / math.pi
+    return u, vt
+
 def _face_normal(v0, v1, v2):
     return _norm(_cross(_sub(v1, v0), _sub(v2, v0)))
 
@@ -256,18 +268,22 @@ _CUBE_QUADS = [
     ((0, 1, 5, 4), (0, 1, 0)),    # +Y
     ((2, 6, 7, 3), (0,-1, 0)),    # -Y
 ]
+# UV corners for each quad vertex (CCW order matches _CUBE_QUADS winding)
+_CUBE_UVS = ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
 
 
 # ---------------------------------------------------------------------------
 # Draw helpers (called inside glNewList / glEndList)
 # ---------------------------------------------------------------------------
 
-def _draw_tri_solid(verts, faces):
+def _draw_tri_solid(verts, faces, textured: bool = False):
     glBegin(GL_TRIANGLES)
     for f in faces:
         n = _face_normal(verts[f[0]], verts[f[1]], verts[f[2]])
         glNormal3f(*n)
         for vi in f:
+            if textured:
+                glTexCoord2f(*_vert_uv(verts[vi]))
             glVertex3f(*verts[vi])
     glEnd()
 
@@ -282,13 +298,15 @@ def _draw_tri_wire(verts, faces):
     glEnable(GL_LIGHTING)
 
 
-def _draw_poly_solid(verts, faces):
+def _draw_poly_solid(verts, faces, textured: bool = False):
     """Draw polygonal (pentagon) faces as triangle fans."""
     for f in faces:
         n = _face_normal(verts[f[0]], verts[f[1]], verts[f[2]])
         glNormal3f(*n)
         glBegin(GL_TRIANGLE_FAN)
         for vi in f:
+            if textured:
+                glTexCoord2f(*_vert_uv(verts[vi]))
             glVertex3f(*verts[vi])
         glEnd()
 
@@ -303,12 +321,14 @@ def _draw_poly_wire(verts, faces):
     glEnable(GL_LIGHTING)
 
 
-def _draw_cube(solid: bool):
+def _draw_cube(solid: bool, textured: bool = False):
     if solid:
         glBegin(GL_QUADS)
         for (quad, normal) in _CUBE_QUADS:
             glNormal3f(*normal)
-            for vi in quad:
+            for i, vi in enumerate(quad):
+                if textured:
+                    glTexCoord2f(*_CUBE_UVS[i])
                 glVertex3f(*_CUBE_VERTS[vi])
         glEnd()
     else:
@@ -341,7 +361,7 @@ def torus_radii(ratio: float, size: float = 1.0) -> tuple[float, float]:
 _TORUS_DEFAULT_MAJOR, _TORUS_DEFAULT_MINOR = torus_radii(TORUS_DEFAULT_RATIO)
 
 
-def _draw_torus(solid: bool, r_major=_TORUS_DEFAULT_MAJOR, r_minor=_TORUS_DEFAULT_MINOR, rings=24, sides=16):
+def _draw_torus(solid: bool, r_major=_TORUS_DEFAULT_MAJOR, r_minor=_TORUS_DEFAULT_MINOR, rings=24, sides=16, textured: bool = False):
     tau = 2 * math.pi
     if not solid:
         glDisable(GL_LIGHTING)
@@ -374,18 +394,22 @@ def _draw_torus(solid: bool, r_major=_TORUS_DEFAULT_MAJOR, r_minor=_TORUS_DEFAUL
         for j in range(sides + 1):
             ph = tau * j / sides
             cp, sp = math.cos(ph), math.sin(ph)
-            for th in (th0, th1):
+            for k, th in enumerate((th0, th1)):
                 ct, st = math.cos(th), math.sin(th)
+                if textured:
+                    glTexCoord2f((i + k) / rings, j / sides)
                 glNormal3f(cp*ct, cp*st, sp)
                 glVertex3f((r_major+r_minor*cp)*ct, (r_major+r_minor*cp)*st, r_minor*sp)
         glEnd()
 
 
-def _new_quadric(wire: bool):
+def _new_quadric(wire: bool, textured: bool = False):
     q = gluNewQuadric()
     gluQuadricNormals(q, GLU_SMOOTH)
     if wire:
         gluQuadricDrawStyle(q, GLU_LINE)
+    if textured and not wire:
+        gluQuadricTexture(q, GL_TRUE)
     return q
 
 
@@ -399,8 +423,8 @@ ROD_RADIUS_FACTOR = 0.25
 ROD_HEIGHT_FACTOR = 5.0
 
 
-def _draw_cylinder(solid: bool, r=CYLINDER_RADIUS_RATIO, h=CYLINDER_HEIGHT_RATIO, slices=16):
-    q = _new_quadric(not solid)
+def _draw_cylinder(solid: bool, r=CYLINDER_RADIUS_RATIO, h=CYLINDER_HEIGHT_RATIO, slices=16, textured: bool = False):
+    q = _new_quadric(not solid, textured=textured and solid)
     if not solid:
         glDisable(GL_LIGHTING)
     glPushMatrix()
@@ -419,8 +443,8 @@ def _draw_cylinder(solid: bool, r=CYLINDER_RADIUS_RATIO, h=CYLINDER_HEIGHT_RATIO
     gluDeleteQuadric(q)
 
 
-def _draw_cone(solid: bool, r=1.0, h=2.0, slices=16):
-    q = _new_quadric(not solid)
+def _draw_cone(solid: bool, r=1.0, h=2.0, slices=16, textured: bool = False):
+    q = _new_quadric(not solid, textured=textured and solid)
     if not solid:
         glDisable(GL_LIGHTING)
     glPushMatrix()
@@ -437,8 +461,8 @@ def _draw_cone(solid: bool, r=1.0, h=2.0, slices=16):
     gluDeleteQuadric(q)
 
 
-def _draw_sphere(solid: bool, r=1.0, slices=16, stacks=12):
-    q = _new_quadric(not solid)
+def _draw_sphere(solid: bool, r=1.0, slices=16, stacks=12, textured: bool = False):
+    q = _new_quadric(not solid, textured=textured and solid)
     if not solid:
         glDisable(GL_LIGHTING)
     gluSphere(q, r, slices, stacks)
@@ -447,12 +471,12 @@ def _draw_sphere(solid: bool, r=1.0, slices=16, stacks=12):
     gluDeleteQuadric(q)
 
 
-def _draw_pin(solid: bool):
+def _draw_pin(solid: bool, textured: bool = False):
     """Pushpin shape: ball "head" at the top, tapering "needle" pointing
     down — both built along local +Z/-Z so an unrotated pin stands upright
     in the (now Z-up, ANTz-aligned) world, matching GEO_CYLINDER/GEO_CONE's
     own local-Z-axis convention."""
-    q = _new_quadric(not solid)
+    q = _new_quadric(not solid, textured=textured and solid)
     if not solid:
         glDisable(GL_LIGHTING)
     glPushMatrix()
@@ -492,21 +516,27 @@ def _draw_grid_wire(segments=8):
     glEnable(GL_LIGHTING)
 
 
-def _draw_grid_solid():
+def _draw_grid_solid(textured: bool = False):
     """Flat square plate, drawn double-sided (opposing normals on each face)
     so it reads correctly from either side, matching ANTz's default Grid shape."""
     s = GRID_HALF_EXTENT
+    _corners = (
+        ((-s, -s), (0.0, 0.0)),
+        (( s, -s), (1.0, 0.0)),
+        (( s,  s), (1.0, 1.0)),
+        ((-s,  s), (0.0, 1.0)),
+    )
     glBegin(GL_QUADS)
     glNormal3f(0.0, 0.0, 1.0)
-    glVertex3f(-s, -s, 0.0)
-    glVertex3f( s, -s, 0.0)
-    glVertex3f( s,  s, 0.0)
-    glVertex3f(-s,  s, 0.0)
+    for (x, y), (u, v) in _corners:
+        if textured:
+            glTexCoord2f(u, v)
+        glVertex3f(x, y, 0.0)
     glNormal3f(0.0, 0.0, -1.0)
-    glVertex3f(-s,  s, 0.0)
-    glVertex3f( s,  s, 0.0)
-    glVertex3f( s, -s, 0.0)
-    glVertex3f(-s, -s, 0.0)
+    for (x, y), (u, v) in reversed(_corners):
+        if textured:
+            glTexCoord2f(u, v)
+        glVertex3f(x, y, 0.0)
     glEnd()
 
 
@@ -517,6 +547,7 @@ def _draw_grid_solid():
 class GeoRenderer:
     def __init__(self):
         self._lists: dict[int, int] = {}
+        self._tex_dispatch: dict[int, object] = {}
         self._ready = False
 
     def setup(self):
@@ -548,6 +579,21 @@ class GeoRenderer:
             GEO_DODECA_WIRE:   lambda: _draw_poly_wire(_DODECA_VERTS, _DODECA_FACES),
         }
 
+        # Textured variants call geometry functions directly (bypassing display
+        # lists) so that glTexCoord2f / gluQuadricTexture calls are live.
+        self._tex_dispatch = {
+            GEO_CUBE:     lambda: _draw_cube(True, True),
+            GEO_SPHERE:   lambda: _draw_sphere(True, textured=True),
+            GEO_CONE:     lambda: _draw_cone(True, textured=True),
+            GEO_CYLINDER: lambda: _draw_cylinder(True, textured=True),
+            GEO_GRID:     lambda: _draw_grid_solid(True),
+            GEO_PIN:      lambda: _draw_pin(True, True),
+            GEO_TETRA:    lambda: _draw_tri_solid(_TETRA_VERTS, _TETRA_FACES, True),
+            GEO_OCTA:     lambda: _draw_tri_solid(_OCTA_VERTS, _OCTA_FACES, True),
+            GEO_ICOSA:    lambda: _draw_tri_solid(_ICOSA_VERTS, _ICOSA_FACES, True),
+            GEO_DODECA:   lambda: _draw_poly_solid(_DODECA_VERTS, _DODECA_FACES, True),
+        }
+
         for geo_id in range(GEO_COUNT):
             if geo_id == GEO_POINT:
                 continue
@@ -569,7 +615,8 @@ class GeoRenderer:
 
         self._ready = True
 
-    def draw(self, geo_id: int, rx: float, ry: float, rz: float, ratio: float = TORUS_DEFAULT_RATIO):
+    def draw(self, geo_id: int, rx: float, ry: float, rz: float,
+             ratio: float = TORUS_DEFAULT_RATIO, gl_tex_name: int = 0):
         if not self._ready:
             return
         if geo_id == GEO_POINT:
@@ -583,17 +630,40 @@ class GeoRenderer:
             glPointSize(1.0)
             glEnable(GL_LIGHTING)
             return
+
+        textured = gl_tex_name > 0 and geo_id not in _WIRE_IDS
+
         if geo_id in (GEO_TORUS, GEO_TORUS_WIRE):
             # Each node may set its own torus `ratio` (major/minor radius
             # proportions), so — unlike the other glyphs — its shape can't be
             # captured by a single fixed-shape display list scaled per node;
             # draw it immediately with radii derived from this node's ratio.
             r_major, r_minor = torus_radii(ratio)
+            if textured:
+                glEnable(GL_TEXTURE_2D)
+                glBindTexture(GL_TEXTURE_2D, gl_tex_name)
             glPushMatrix()
             glScalef(rx, ry, rz)
-            _draw_torus(geo_id == GEO_TORUS, r_major, r_minor)
+            _draw_torus(geo_id == GEO_TORUS, r_major, r_minor, textured=textured)
             glPopMatrix()
+            if textured:
+                glBindTexture(GL_TEXTURE_2D, 0)
+                glDisable(GL_TEXTURE_2D)
             return
+
+        if textured:
+            fn = self._tex_dispatch.get(geo_id)
+            if fn is not None:
+                glEnable(GL_TEXTURE_2D)
+                glBindTexture(GL_TEXTURE_2D, gl_tex_name)
+                glPushMatrix()
+                glScalef(rx, ry, rz)
+                fn()
+                glPopMatrix()
+                glBindTexture(GL_TEXTURE_2D, 0)
+                glDisable(GL_TEXTURE_2D)
+                return
+
         dl = self._lists.get(geo_id, self._lists.get(GEO_SPHERE))
         if dl:
             glPushMatrix()

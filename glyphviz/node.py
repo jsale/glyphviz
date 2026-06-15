@@ -36,6 +36,7 @@ class Node:
     topo: int
     ratio: float = 0.1
     subspace: int = 0
+    texture_id: int = 0
     # Preserves untracked CSV columns (e.g. channel IDs, quaternion, segments)
     # so that save_node_csv can round-trip files without data loss.
     extras: dict = field(default_factory=dict)

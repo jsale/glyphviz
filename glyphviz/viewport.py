@@ -7,9 +7,12 @@ from OpenGL.GLU import *
 from PySide6.QtCore import Qt, QEvent, QPoint, QRect, Signal
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
+from pathlib import Path
+
 from .geometry import GeoRenderer, WIRE_TO_SOLID
 from .node import Node, NON_VISUAL_TYPES
 from .scene import Scene, node_world_matrix
+from .texture_manager import TextureManager
 
 _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag
 
@@ -83,6 +86,7 @@ class Viewport(QOpenGLWidget):
         self._pick_fbo_size = (0, 0)
 
         self._geo = GeoRenderer()
+        self._tex_mgr = TextureManager()
         self.setMinimumSize(400, 300)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -165,6 +169,27 @@ class Viewport(QOpenGLWidget):
         pos = self.world_position(node.id) or (node.translate_x, node.translate_y, node.translate_z)
         rx, ry, rz = self._radius_of(node)
         self.focus_on(pos, min_distance=max(rx, ry, rz) * 1.5)
+
+    # --- texture management ---
+
+    @property
+    def texture_folder(self) -> Path | None:
+        return self._tex_mgr.folder
+
+    def load_texture_folder(self, folder: Path) -> int:
+        """Load all images from *folder* as GL textures.  Must be called while
+        the OpenGL context is current (safe to call from the main thread after
+        the widget has been shown).  Returns the number of textures loaded."""
+        self.makeCurrent()
+        count = self._tex_mgr.load_folder(folder)
+        self.update()
+        return count
+
+    def clear_textures(self):
+        """Release all loaded textures and disable texture rendering."""
+        self.makeCurrent()
+        self._tex_mgr.release()
+        self.update()
 
     # --- GL lifecycle ---
 
@@ -251,9 +276,11 @@ class Viewport(QOpenGLWidget):
             node.color_a / 255.0,
         )
 
+        gl_tex = self._tex_mgr.get_gl_name(node.texture_id) if node.texture_id else 0
+
         # M already encodes scale (column norms = rendered radii), so we draw
         # the geometry at unit size (1,1,1) and let the matrix handle sizing.
-        self._geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio)
+        self._geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio, gl_tex_name=gl_tex)
 
         if selected:
             glDisable(GL_LIGHTING)

@@ -12,7 +12,7 @@ _TRACKED_COLS = frozenset({
     'rotate_x', 'rotate_y', 'rotate_z',
     'scale_x', 'scale_y', 'scale_z',
     'color_r', 'color_g', 'color_b', 'color_a',
-    'geometry', 'hide', 'topo', 'ratio', 'subspace',
+    'geometry', 'hide', 'topo', 'ratio', 'subspace', 'texture_id',
 })
 
 # Canonical 94-column ANTz/GaiaViz np_node column order.
@@ -104,6 +104,7 @@ def load_node_csv(path: str) -> list[Node]:
     df = pd.read_csv(path)
     has_ratio = 'ratio' in df.columns
     has_subspace = 'subspace' in df.columns
+    has_texture_id = 'texture_id' in df.columns
     nodes = []
     for _, row in df.iterrows():
         node = Node(
@@ -129,6 +130,7 @@ def load_node_csv(path: str) -> list[Node]:
             topo=int(row['topo']),
             ratio=float(row['ratio']) if has_ratio else 0.1,
             subspace=int(row['subspace']) if has_subspace else 0,
+            texture_id=int(row['texture_id']) if has_texture_id else 0,
         )
         # Preserve all untracked columns so save_node_csv can round-trip them.
         node.extras = {
@@ -177,6 +179,7 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
             row['hide'] = node.hide
             row['topo'] = node.topo
             row['ratio'] = node.ratio
+            row['texture_id'] = node.texture_id
 
             # Format each cell: 6 decimal places for floats, plain int for integers.
             cells = []

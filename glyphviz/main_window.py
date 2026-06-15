@@ -95,6 +95,20 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction("&Quit").triggered.connect(self.close)
 
+        tex_menu = mb.addMenu("&Textures")
+
+        set_tex_act = tex_menu.addAction("Set Texture &Folder…")
+        set_tex_act.setToolTip(
+            "Load images from a folder in alphanumeric order.\n"
+            "Texture ID 1 = first file, 2 = second, etc.\n"
+            "Matches the ANTz usr/images/ convention."
+        )
+        set_tex_act.triggered.connect(self._browse_texture_folder)
+
+        clear_tex_act = tex_menu.addAction("&Clear Textures")
+        clear_tex_act.setToolTip("Unload all textures and return to solid-color rendering.")
+        clear_tex_act.triggered.connect(self._clear_textures)
+
         self._view_menu = mb.addMenu("&View")
 
         self._axes_act = self._view_menu.addAction("Show &Axes")
@@ -149,6 +163,20 @@ class MainWindow(QMainWindow):
         disp_layout.addWidget(self._cb_axes)
         disp_layout.addWidget(self._cb_grid)
         disp_layout.addWidget(self._cb_hidden)
+
+        tex_row = QWidget()
+        tex_row_layout = QHBoxLayout(tex_row)
+        tex_row_layout.setContentsMargins(0, 0, 0, 0)
+        tex_row_layout.setSpacing(4)
+        self._lbl_tex = QLabel("No textures loaded")
+        self._lbl_tex.setWordWrap(True)
+        btn_tex = QPushButton("…")
+        btn_tex.setFixedWidth(28)
+        btn_tex.setToolTip("Set texture folder (Textures menu)")
+        btn_tex.clicked.connect(self._browse_texture_folder)
+        tex_row_layout.addWidget(self._lbl_tex, 1)
+        tex_row_layout.addWidget(btn_tex)
+        disp_layout.addWidget(tex_row)
 
         # --- Scale group ---
         scale_grp = QGroupBox("Global Scale")
@@ -311,6 +339,16 @@ class MainWindow(QMainWindow):
         self._insp_color_btn.setFixedHeight(24)
         self._insp_color_btn.clicked.connect(self._on_insp_color)
 
+        self._insp_texture_id = QDoubleSpinBox()
+        self._insp_texture_id.setDecimals(0)
+        self._insp_texture_id.setRange(0, 9999)
+        self._insp_texture_id.setSingleStep(1)
+        self._insp_texture_id.setToolTip(
+            "ANTz texture_id: 0 = none, 1 = first image in texture folder "
+            "(sorted alphanumerically), 2 = second, etc."
+        )
+        self._insp_texture_id.valueChanged.connect(self._on_insp_texture_id_changed)
+
         insp_layout.addRow("ID:",       self._insp_id)
         insp_layout.addRow("Type:",     self._insp_type)
         insp_layout.addRow("Parent:",   self._insp_parent)
@@ -321,6 +359,7 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Geometry:", self._insp_geo)
         insp_layout.addRow("Topology:", self._insp_topo)
         insp_layout.addRow("Ratio:",    self._insp_ratio)
+        insp_layout.addRow("Texture ID:", self._insp_texture_id)
         insp_layout.addRow("Color:",    self._insp_color_btn)
 
         layout.addWidget(disp)
@@ -378,9 +417,44 @@ class MainWindow(QMainWindow):
             self._table.set_nodes(self.nodes)
             self._update_stats(Path(path).name)
             self._update_sel_values()
-            self.statusBar().showMessage(f"Loaded {len(self.nodes)} nodes from {Path(path).name}")
+            msg = f"Loaded {len(self.nodes)} nodes from {Path(path).name}"
+            # Auto-load textures from usr/images/ sibling of the CSV's parent
+            # (standard ANTz layout: usr/csv/ and usr/images/ are siblings).
+            auto_tex = Path(path).parent.parent / "images"
+            if auto_tex.is_dir():
+                self._apply_texture_folder(auto_tex, silent=True)
+                msg += f" | textures: {self._viewport._tex_mgr.count()} from …/images/"
+            self.statusBar().showMessage(msg)
         except Exception as exc:
             self.statusBar().showMessage(f"Error: {exc}")
+
+    def _browse_texture_folder(self):
+        start = (
+            str(self._viewport.texture_folder)
+            if self._viewport.texture_folder
+            else str(Path.home())
+        )
+        folder = QFileDialog.getExistingDirectory(
+            self, "Select Texture Folder", start
+        )
+        if folder:
+            self._apply_texture_folder(Path(folder))
+
+    def _apply_texture_folder(self, folder: Path, silent: bool = False):
+        try:
+            count = self._viewport.load_texture_folder(folder)
+            label = f"{count} texture(s) from {folder.name}/" if count else f"0 textures found in {folder.name}/"
+            self._lbl_tex.setText(label)
+            if not silent:
+                self.statusBar().showMessage(f"Loaded {count} texture(s) from {folder}")
+        except Exception as exc:
+            self._lbl_tex.setText("Texture load failed")
+            self.statusBar().showMessage(f"Texture error: {exc}")
+
+    def _clear_textures(self):
+        self._viewport.clear_textures()
+        self._lbl_tex.setText("No textures loaded")
+        self.statusBar().showMessage("Textures cleared.")
 
     def _save_csv(self):
         """Ctrl+S — overwrite the currently open file."""
@@ -544,6 +618,7 @@ class MainWindow(QMainWindow):
             (self._insp_scale_y, node.scale_y),
             (self._insp_scale_z, node.scale_z),
             (self._insp_ratio, node.ratio),
+            (self._insp_texture_id, node.texture_id),
         ):
             sb.blockSignals(True)
             sb.setValue(val)
@@ -590,6 +665,7 @@ class MainWindow(QMainWindow):
             (self._insp_scale_y, primary.scale_y),
             (self._insp_scale_z, primary.scale_z),
             (self._insp_ratio, primary.ratio),
+            (self._insp_texture_id, primary.texture_id),
         ):
             sb.blockSignals(True)
             sb.setValue(val)
@@ -709,6 +785,15 @@ class MainWindow(QMainWindow):
             return
         for node in self._selected_nodes:
             node.ratio = value
+            self._table.refresh_node(node.id)
+        self._viewport.scene_invalidate()
+
+    def _on_insp_texture_id_changed(self, value: float):
+        if not self._selected_nodes:
+            return
+        tex_id = int(value)
+        for node in self._selected_nodes:
+            node.texture_id = tex_id
             self._table.refresh_node(node.id)
         self._viewport.scene_invalidate()
 
