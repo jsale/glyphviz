@@ -499,6 +499,7 @@ _TOPO_OFFSET_FUNCS = {
     TOPO_ROD:     _rod_offset,
     TOPO_POINT:   _point_offset,
     TOPO_PLANE:   _cartesian_offset,
+    TOPO_VIDEO:   _cartesian_offset,   # flat screen: children at Cartesian coords
     TOPO_SPIRAL:  _spiral_offset,
     TOPO_PLOT:    _plot_offset,
     TOPO_SURFACE: _surface_offset,

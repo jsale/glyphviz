@@ -14,7 +14,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo.
 echo [2/2] Building...
-conda run -n glyphviz python -m PyInstaller GlyphViz.spec --clean
+conda run -n glyphviz python -m PyInstaller GlyphViz.spec --clean -y
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo BUILD FAILED.  Check the output above.

@@ -4,7 +4,7 @@ import time
 import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from PySide6.QtCore import Qt, QEvent, QPoint, QRect, Signal
+from PySide6.QtCore import Qt, QEvent, QPoint, QRect, Signal, QTimer
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
@@ -15,6 +15,7 @@ from .node import Node, NON_VISUAL_TYPES, NODE_TYPE_LINK
 from .scene import Scene, node_world_matrix
 from .texture_manager import TextureManager
 from .topology import TOPO_PLOT, TOPO_SURFACE
+from .video_manager import VideoManager
 
 _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag
 
@@ -98,6 +99,9 @@ class Viewport(QOpenGLWidget):
 
         self._geo = GeoRenderer()
         self._tex_mgr = TextureManager()
+        self._video_mgr = VideoManager()
+        self._render_timer = QTimer(self)
+        self._render_timer.timeout.connect(self.update)
         self.setMinimumSize(400, 300)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -187,19 +191,31 @@ class Viewport(QOpenGLWidget):
     def texture_folder(self) -> Path | None:
         return self._tex_mgr.folder
 
+    @property
+    def texture_count(self) -> int:
+        """Total number of loaded textures (static images + videos)."""
+        return self._tex_mgr.count() + self._video_mgr.count()
+
     def load_texture_folder(self, folder: Path) -> int:
-        """Load all images from *folder* as GL textures.  Must be called while
-        the OpenGL context is current (safe to call from the main thread after
-        the widget has been shown).  Returns the number of textures loaded."""
+        """Load all images and videos from *folder* as GL textures.  Must be
+        called while the OpenGL context is current (safe to call from the main
+        thread after the widget has been shown).  Returns total texture count."""
         self.makeCurrent()
-        count = self._tex_mgr.load_folder(folder)
+        img_count = self._tex_mgr.load_folder(folder)
+        vid_count = self._video_mgr.load_folder(folder, img_count + 1)
+        if vid_count and not self._render_timer.isActive():
+            self._render_timer.start(33)   # ~30 fps continuous repaint for video
+        elif not vid_count:
+            self._render_timer.stop()
         self.update()
-        return count
+        return img_count + vid_count
 
     def clear_textures(self):
-        """Release all loaded textures and disable texture rendering."""
+        """Release all loaded textures and stop video playback."""
         self.makeCurrent()
         self._tex_mgr.release()
+        self._video_mgr.release()
+        self._render_timer.stop()
         self.update()
 
     # --- GL lifecycle ---
@@ -235,6 +251,7 @@ class Viewport(QOpenGLWidget):
     # --- rendering ---
 
     def paintGL(self):
+        self._video_mgr.tick()   # upload any pending decoded frames before drawing
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
 
@@ -474,7 +491,11 @@ class Viewport(QOpenGLWidget):
             node.color_a / 255.0,
         )
 
-        gl_tex = self._tex_mgr.get_gl_name(node.texture_id) if node.texture_id else 0
+        gl_tex = 0
+        if node.texture_id:
+            gl_tex = self._tex_mgr.get_gl_name(node.texture_id)
+            if not gl_tex:
+                gl_tex = self._video_mgr.get_gl_name(node.texture_id)
 
         # M already encodes scale (column norms = rendered radii), so we draw
         # the geometry at unit size (1,1,1) and let the matrix handle sizing.

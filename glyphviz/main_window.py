@@ -453,7 +453,7 @@ class MainWindow(QMainWindow):
             auto_tex = Path(path).parent.parent / "images"
             if auto_tex.is_dir():
                 self._apply_texture_folder(auto_tex, silent=True)
-                msg += f" | textures: {self._viewport._tex_mgr.count()} from …/images/"
+                msg += f" | textures: {self._viewport.texture_count} from …/images/"
             self.statusBar().showMessage(msg)
         except Exception as exc:
             self.statusBar().showMessage(f"Error: {exc}")
