@@ -35,6 +35,9 @@ class Viewport(QOpenGLWidget):
     # (empty set = clear all).  Also used by Select-By to push a set of IDs.
     nodesSelected = Signal(object)   # carries set[int]
 
+    # Emitted after a Move/Rotate/Size mouse-drag mutates node transforms.
+    nodesManipulated = Signal(object)   # carries set[int] of changed node ids
+
     # Keyboard hierarchy navigation (ANTz-style)
     navParent = Signal()       # Up arrow  → parent node
     navChild = Signal()        # Down arrow → first child node
@@ -62,6 +65,10 @@ class Viewport(QOpenGLWidget):
         self.show_grid = True
         self.show_hidden = False
         self.selected_node_ids: set[int] = set()
+
+        # Gizmo manipulation state (Move/Rotate/Size).  None = camera-only.
+        self.gizmo_mode: str | None = None
+        self.gizmo_axes = {'x': True, 'y': True, 'z': True}
 
         self._cam_distance = 500.0
         self._cam_azimuth = 45.0
@@ -252,6 +259,25 @@ class Viewport(QOpenGLWidget):
 
     def paintGL(self):
         self._video_mgr.tick()   # upload any pending decoded frames before drawing
+        # QPainter's GL paint engine (used by _draw_tags_qpainter) can leave
+        # all of this state changed after painter.end() -- restore it every
+        # frame rather than relying on the one-time initializeGL()/resizeGL()
+        # setup, since QPainter.end() doesn't guarantee restoring the exact
+        # prior fixed-function state (including which matrix is loaded).
+        glEnable(GL_DEPTH_TEST)
+        glDepthMask(GL_TRUE)
+        glEnable(GL_CULL_FACE)
+        glEnable(GL_LIGHTING)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
+        w, h = self.width(), self.height()
+        if h > 0:
+            glViewport(0, 0, int(w * self.devicePixelRatioF()), int(h * self.devicePixelRatioF()))
+            glMatrixMode(GL_PROJECTION)
+            glLoadIdentity()
+            gluPerspective(45.0, w / h, 0.1, 100000.0)
+            glMatrixMode(GL_MODELVIEW)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
 
@@ -968,9 +994,23 @@ class Viewport(QOpenGLWidget):
             if total_dx**2 + total_dy**2 >= _DRAG_THRESHOLD**2:
                 self._drag_moved = True
 
+        manipulating = self.gizmo_mode is not None and bool(self.selected_node_ids)
+        enabled_axes = [a for a in ('x', 'y', 'z') if self.gizmo_axes.get(a)]
+
         if self._drag_button == Qt.MouseButton.LeftButton:
-            self._cam_azimuth += dx * 0.4
-            self._cam_elevation = max(-89.0, min(89.0, self._cam_elevation - dy * 0.4))
+            if manipulating and enabled_axes:
+                raw_deltas = {enabled_axes[0]: dx}
+                if len(enabled_axes) >= 2:
+                    raw_deltas[enabled_axes[1]] = -dy
+                self._apply_axis_deltas(raw_deltas)
+            else:
+                self._orbit_camera(dx, dy)
+
+        elif self._drag_button == Qt.MouseButton.RightButton:
+            if manipulating and len(enabled_axes) == 3:
+                self._apply_axis_deltas({enabled_axes[2]: -dy})
+            else:
+                self._orbit_camera(dx, dy)
 
         elif self._drag_button == Qt.MouseButton.MiddleButton:
             az = math.radians(self._cam_azimuth)
@@ -987,6 +1027,42 @@ class Viewport(QOpenGLWidget):
 
         self._last_pos = event.pos()
         self.update()
+
+    def _orbit_camera(self, dx: float, dy: float):
+        self._cam_azimuth += dx * 0.4
+        self._cam_elevation = max(-89.0, min(89.0, self._cam_elevation - dy * 0.4))
+
+    def _apply_axis_deltas(self, raw_deltas: dict):
+        """Apply one drag-step of Move/Rotate/Size to every selected node.
+
+        raw_deltas maps axis letter ('x'/'y'/'z') to a raw screen-space pixel
+        delta for that axis; sign/scale conversion to world units happens here
+        based on the active gizmo_mode.
+        """
+        if not raw_deltas or not self.selected_node_ids:
+            return
+        changed = set()
+        for nid in self.selected_node_ids:
+            node = self._scene.node_by_id(nid)
+            if node is None:
+                continue
+            for axis, raw in raw_deltas.items():
+                if self.gizmo_mode == 'move':
+                    speed = self._cam_distance * 0.0015   # matches camera-pan speed
+                    attr = f'translate_{axis}'
+                    setattr(node, attr, getattr(node, attr) + raw * speed)
+                elif self.gizmo_mode == 'rotate':
+                    attr = f'rotate_{axis}'
+                    setattr(node, attr, getattr(node, attr) + raw * 0.4)  # matches orbit sensitivity
+                elif self.gizmo_mode == 'size':
+                    attr = f'scale_{axis}'
+                    factor = 1.0 + raw * 0.004
+                    setattr(node, attr, max(0.001, getattr(node, attr) * factor))
+            changed.add(nid)
+        if changed:
+            self._scene.invalidate()
+            self.update()
+            self.nodesManipulated.emit(changed)
 
     def wheelEvent(self, event):
         delta = event.angleDelta().y()

@@ -55,6 +55,23 @@ a = Analysis(
     noarchive=False,
 )
 
+# PyInstaller's automatic dependency scan picks up icuuc.dll from wherever it
+# finds a file with that name on PATH at build time -- on this machine that's
+# the base Anaconda env's Library\bin, which ships a *C++* ICU library (mangled
+# icu_73:: symbols) under that name. Qt6Core.dll's actual import is the plain
+# C API (ucnv_open etc.), which that file does not export, so bundling it
+# breaks the load with "specified procedure could not be found". The glyphviz
+# env itself has no icu*.dll at all -- Qt6Core falls back to the small
+# C-API shim Windows ships at System32\icuuc.dll, which does export the right
+# symbols. Dropping the wrongly-matched copies (and their now-unneeded
+# transitive icudt73.dll) lets that fallback happen, exactly as it already
+# does for a normal (unfrozen) run of the app.
+_BAD_BINARY_PREFIXES = ('icuuc', 'icudt', 'icuin')
+a.binaries = [
+    b for b in a.binaries
+    if not _os.path.basename(b[0]).lower().startswith(_BAD_BINARY_PREFIXES)
+]
+
 pyz = PYZ(a.pure)
 
 exe = EXE(

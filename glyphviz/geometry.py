@@ -622,13 +622,23 @@ class GeoRenderer:
         if geo_id == GEO_POINT:
             # Points have no orientation/extent to stretch — fall back to
             # an average size for the on-screen point sprite.
-            glDisable(GL_LIGHTING)
+            # Restore whatever lighting state we found (rather than forcing
+            # it back on) -- callers like the color-ID pick pass disable
+            # lighting for their whole render and rely on it staying off;
+            # GEO_POINT isn't covered by the wire->solid pick substitution,
+            # so it's the one geometry that runs during picking too, and
+            # force-enabling here was bleeding lit shading into every node
+            # drawn afterward in that pass, corrupting their flat ID colors.
+            was_lit = glIsEnabled(GL_LIGHTING)
+            if was_lit:
+                glDisable(GL_LIGHTING)
             glPointSize(max(2.0, ((rx + ry + rz) / 3.0) * 2))
             glBegin(GL_POINTS)
             glVertex3f(0.0, 0.0, 0.0)
             glEnd()
             glPointSize(1.0)
-            glEnable(GL_LIGHTING)
+            if was_lit:
+                glEnable(GL_LIGHTING)
             return
 
         textured = gl_tex_name > 0 and geo_id not in _WIRE_IDS

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSlider,
     QStatusBar,
+    QToolBar,
     QVBoxLayout,
     QWidget,
 )
@@ -56,8 +57,13 @@ class MainWindow(QMainWindow):
         self._ch_timer = QTimer(self)
         self._ch_timer.timeout.connect(self._ch_tick)
 
+        # Gizmo manipulation state (Move/Rotate/Size mode selector)
+        self._gizmo_mode: str | None = None
+        self._mode_buttons: dict[str, QPushButton] = {}
+
         self._build_viewport()
         self._build_menu()
+        self._build_manipulate_toolbar()
         self._build_panel()
         self._build_table()
         self._build_statusbar()
@@ -81,6 +87,7 @@ class MainWindow(QMainWindow):
         self._viewport.drawLimitChanged.connect(self._on_draw_limit_changed)
         self._viewport.fpsUpdated.connect(self._on_fps_updated)
         self._viewport.tagToggled.connect(self._on_tag_toggled)
+        self._viewport.nodesManipulated.connect(self._on_viewport_manipulated)
         self.setCentralWidget(self._viewport)
         # Link self.nodes into the viewport scene so appends stay in sync.
         self._viewport.set_nodes(self.nodes)
@@ -144,6 +151,71 @@ class MainWindow(QMainWindow):
 
         self._view_menu.addSeparator()
         self._view_menu.addAction("Reset &Camera").triggered.connect(self._reset_camera)
+
+    def _build_manipulate_toolbar(self):
+        """Ever-present Move/Rotate/Size mode selector + X/Y/Z axis confinement,
+        analogous to ANTz's persistent mouse-mode/tool indicator."""
+        tb = QToolBar("Manipulate", self)
+        tb.setObjectName("manipulateToolbar")
+        tb.setMovable(False)
+
+        for name, label, tip in (
+            ("move", "Move", "Drag selected node(s) (LeftButton).  Click again to return to camera-only."),
+            ("rotate", "Rotate", "Rotate selected node(s) (LeftButton).  Click again to return to camera-only."),
+            ("size", "Size", "Scale selected node(s) (LeftButton).  Click again to return to camera-only."),
+        ):
+            btn = QPushButton(label)
+            btn.setCheckable(True)
+            btn.setEnabled(False)   # enabled once there's a selection
+            btn.setToolTip(tip)
+            btn.clicked.connect(lambda _checked=False, n=name: self._on_mode_button_clicked(n))
+            self._mode_buttons[name] = btn
+            tb.addWidget(btn)
+
+        tb.addSeparator()
+
+        self._gizmo_axis_checks: dict[str, QCheckBox] = {}
+        for axis in ('x', 'y', 'z'):
+            cb = QCheckBox(axis.upper())
+            cb.setChecked(True)
+            cb.toggled.connect(lambda _checked=False, a=axis: self._on_gizmo_axis_toggled(a))
+            self._gizmo_axis_checks[axis] = cb
+            tb.addWidget(cb)
+        tb.setToolTip(
+            "Confine Move/Rotate/Size drags to these axes.\n"
+            "With all three checked: LeftButton drags the first two, "
+            "RightButton drags the third.\n"
+            "With one or two checked: LeftButton drags them directly, "
+            "RightButton always orbits the camera."
+        )
+
+        self.addToolBar(tb)
+        self._view_menu.addAction(tb.toggleViewAction())
+
+    def _on_mode_button_clicked(self, name: str):
+        new_mode = None if self._gizmo_mode == name else name
+        self._set_gizmo_mode(new_mode)
+
+    def _set_gizmo_mode(self, mode: str | None):
+        self._gizmo_mode = mode
+        for n, btn in self._mode_buttons.items():
+            btn.blockSignals(True)
+            btn.setChecked(n == mode)
+            btn.blockSignals(False)
+        self._viewport.gizmo_mode = mode
+
+    def _on_gizmo_axis_toggled(self, axis: str, _checked: bool = False):
+        self._viewport.gizmo_axes = {
+            a: cb.isChecked() for a, cb in self._gizmo_axis_checks.items()
+        }
+
+    def _on_viewport_manipulated(self, node_ids: object):
+        for nid in node_ids:
+            self._table.refresh_node(nid)
+        if len(self._selected_nodes) == 1:
+            self._refresh_inspector(self._selected_nodes[0])
+        elif len(self._selected_nodes) > 1:
+            self._refresh_inspector_multi(self._selected_nodes)
 
     def _build_panel(self):
         dock = QDockWidget("Properties", self)
@@ -700,6 +772,12 @@ class MainWindow(QMainWindow):
         self._selected_nodes = self._table.selected_nodes()
         self._viewport.selected_node_ids = {n.id for n in self._selected_nodes}
         self._viewport.update()
+
+        has_selection = bool(self._selected_nodes)
+        for btn in self._mode_buttons.values():
+            btn.setEnabled(has_selection)
+        if not has_selection and self._gizmo_mode is not None:
+            self._set_gizmo_mode(None)
 
         n = len(self._selected_nodes)
         if n == 0:
