@@ -3,17 +3,38 @@
 # PyInstaller spec for GlyphViz (Windows, one-folder output).
 #
 # Build:
-#   conda run -n glyphviz python -m PyInstaller GlyphViz.spec --clean
+#   build.bat   (or directly: C:\Users\jsale\anaconda3\envs\glyphviz\python.exe -m PyInstaller GlyphViz.spec --clean -y)
 #
 # Output: dist\GlyphViz\GlyphViz.exe
 #
 # To add a Windows icon, set:
 #   exe = EXE(..., icon='path\\to\\glyphviz.ico', ...)
 
+import shutil, os as _os
+
+_CONDA = r'C:\Users\jsale\anaconda3\envs\glyphviz\Library\bin'
+
+# pyexpat.pyd links against 'libexpat.dll' but conda ships 'expat.dll'.
+# Create an alias so PyInstaller can bundle it under the expected name.
+_expat_alias = _os.path.join(_CONDA, 'libexpat.dll')
+if not _os.path.exists(_expat_alias):
+    shutil.copy2(_os.path.join(_CONDA, 'expat.dll'), _expat_alias)
+
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
+    binaries=[
+        # DLLs that live in conda's Library\bin — PyInstaller can't find them
+        # automatically because they're not on PATH during analysis.
+        (f'{_CONDA}\\ffi.dll',             '.'),
+        (f'{_CONDA}\\ffi-8.dll',           '.'),
+        (f'{_CONDA}\\libbz2.dll',          '.'),
+        (f'{_CONDA}\\liblzma.dll',         '.'),
+        (f'{_CONDA}\\libcrypto-3-x64.dll', '.'),
+        (f'{_CONDA}\\libssl-3-x64.dll',    '.'),
+        (f'{_CONDA}\\libexpat.dll',        '.'),
+        (f'{_CONDA}\\sqlite3.dll',         '.'),
+    ],
     datas=[],
     hiddenimports=[
         # PyOpenGL selects its platform backend at runtime via os.name;
