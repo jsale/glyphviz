@@ -23,6 +23,8 @@ a = Analysis(
         'OpenGL.arrays.numpymodule',
         'OpenGL.arrays.lists',
         'OpenGL.arrays.numbers',
+        # Qt Multimedia — imported conditionally at runtime in video_manager.py
+        'PySide6.QtMultimedia',
     ],
     hookspath=[],
     hooksconfig={},

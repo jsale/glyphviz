@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -48,6 +48,13 @@ class MainWindow(QMainWindow):
         # the next edit increments correctly.
         self._anchor_pos: tuple[float, float, float] = (0.0, 0.0, 0.0)
         self._anchor_rot: tuple[float, float, float] = (0.0, 0.0, 0.0)
+
+        # Channel animation state
+        self._ch_engine = None
+        self._ch_frame = 0
+        self._ch_playing = False
+        self._ch_timer = QTimer(self)
+        self._ch_timer.timeout.connect(self._ch_tick)
 
         self._build_viewport()
         self._build_menu()
@@ -392,12 +399,64 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Tag Text:", self._insp_text)
         insp_layout.addRow("Link:",     self._insp_link)
 
+        # --- Channels / playback group ---
+        self._ch_grp = QGroupBox("Channels")
+        self._ch_grp.setVisible(False)
+        ch_layout = QVBoxLayout(self._ch_grp)
+        ch_layout.setSpacing(4)
+
+        self._ch_frame_label = QLabel("Frame: 0 / 0")
+        self._ch_slider = QSlider(Qt.Orientation.Horizontal)
+        self._ch_slider.setRange(0, 0)
+        self._ch_slider.valueChanged.connect(self._on_ch_slider)
+
+        ch_btn_row = QWidget()
+        ch_btn_layout = QHBoxLayout(ch_btn_row)
+        ch_btn_layout.setContentsMargins(0, 0, 0, 0)
+        ch_btn_layout.setSpacing(4)
+        self._ch_play_btn = QPushButton("▶")
+        self._ch_stop_btn = QPushButton("■")
+        self._ch_play_btn.setFixedWidth(36)
+        self._ch_stop_btn.setFixedWidth(36)
+        self._ch_play_btn.setToolTip("Play / Pause channel animation")
+        self._ch_stop_btn.setToolTip("Stop and reset to frame 0")
+        self._ch_play_btn.clicked.connect(self._ch_toggle_play)
+        self._ch_stop_btn.clicked.connect(self._ch_stop)
+        ch_btn_layout.addWidget(self._ch_play_btn)
+        ch_btn_layout.addWidget(self._ch_stop_btn)
+        ch_btn_layout.addStretch()
+
+        ch_fps_row = QWidget()
+        ch_fps_layout = QHBoxLayout(ch_fps_row)
+        ch_fps_layout.setContentsMargins(0, 0, 0, 0)
+        ch_fps_layout.setSpacing(4)
+        ch_fps_layout.addWidget(QLabel("FPS:"))
+        self._ch_fps = QDoubleSpinBox()
+        self._ch_fps.setRange(1, 120)
+        self._ch_fps.setValue(30)
+        self._ch_fps.setDecimals(0)
+        self._ch_fps.setFixedWidth(60)
+        self._ch_fps.setToolTip("Playback speed in frames per second")
+        self._ch_fps.valueChanged.connect(self._ch_update_fps)
+        ch_fps_layout.addWidget(self._ch_fps)
+        ch_fps_layout.addStretch()
+
+        self._ch_loop = QCheckBox("Loop")
+        self._ch_loop.setChecked(True)
+
+        ch_layout.addWidget(self._ch_frame_label)
+        ch_layout.addWidget(self._ch_slider)
+        ch_layout.addWidget(ch_btn_row)
+        ch_layout.addWidget(ch_fps_row)
+        ch_layout.addWidget(self._ch_loop)
+
         layout.addWidget(disp)
         layout.addWidget(scale_grp)
         layout.addWidget(stats_grp)
         layout.addWidget(create_grp)
         layout.addWidget(sel_grp)
         layout.addWidget(self._insp_grp)
+        layout.addWidget(self._ch_grp)
         layout.addStretch()
 
         scroll.setWidget(panel)
@@ -440,6 +499,7 @@ class MainWindow(QMainWindow):
         if not path:
             return
         try:
+            self._ch_stop()
             self.nodes = load_node_csv(path)
             self._current_path = path
             self._save_act.setEnabled(True)
@@ -454,6 +514,9 @@ class MainWindow(QMainWindow):
             if auto_tex.is_dir():
                 self._apply_texture_folder(auto_tex, silent=True)
                 msg += f" | textures: {self._viewport.texture_count} from …/images/"
+            ch_msg = self._ch_load_from_csv(path)
+            if ch_msg:
+                msg += f" | {ch_msg}"
             self.statusBar().showMessage(msg)
         except Exception as exc:
             self.statusBar().showMessage(f"Error: {exc}")
@@ -1052,33 +1115,131 @@ class MainWindow(QMainWindow):
         ))
 
     def _create_child_node(self):
-        """Shift+N / New Child button: create a child octahedron under the selected node."""
+        """Shift+N / New Child button: create a child octahedron under the selected node.
+
+        Multiple presses keep the parent selected and distribute children evenly
+        along translate_x so they don't overlap.
+        """
         if len(self._selected_nodes) != 1:
             self.statusBar().showMessage("Select exactly one node to add a child.")
             return
         parent = self._selected_nodes[0]
+        sibling_count = sum(1 for n in self.nodes if n.parent_id == parent.id)
         new_id = max((n.id for n in self.nodes), default=0) + 1
         self._add_node_to_scene(Node(
             id=new_id, type=5, parent_id=parent.id,
             branch_level=parent.branch_level + 1,
-            translate_x=0.0, translate_y=0.0, translate_z=5.0,
+            translate_x=sibling_count * 5.0, translate_y=0.0, translate_z=5.0,
             rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
             scale_x=1.0, scale_y=1.0, scale_z=1.0,
             color_r=200, color_g=200, color_b=200, color_a=255,
             geometry=GEO_OCTA, hide=0, topo=TOPO_POINT,
-        ))
+        ), select_new=False)
 
-    def _add_node_to_scene(self, node: Node):
+    def _add_node_to_scene(self, node: Node, select_new: bool = True):
         """Append a node to the live scene, table, and stats without resetting the camera."""
         self.nodes.append(node)           # also updates _scene.nodes (same list)
         self._viewport.register_node(node)  # syncs _by_id, invalidates, repaints
         self._table.append_node(node)
         self._update_stats()
-        self._table.select_by_id(node.id)
+        if select_new:
+            self._table.select_by_id(node.id)
         self.statusBar().showMessage(
             f"Created node {node.id}  parent={node.parent_id}  "
             f"level={node.branch_level}  geo={node.geometry}  topo={node.topo}"
         )
+
+    # --- Channel / animation playback ---
+
+    def _ch_load_from_csv(self, path: str) -> str | None:
+        """Detect and load companion channel files.  Returns a short status string or None."""
+        from .channel_loader import find_channel_files, load_ch_map, load_ch_tracks
+        from .channel_engine import ChannelEngine
+
+        map_path, tracks_path = find_channel_files(path)
+        if not map_path or not tracks_path:
+            self._ch_grp.setVisible(False)
+            self._ch_engine = None
+            return None
+
+        try:
+            ch_map = load_ch_map(map_path)
+            tracks, id_to_col = load_ch_tracks(tracks_path)
+            engine = ChannelEngine()
+            engine.load(ch_map, tracks, id_to_col, self.nodes)
+            if engine.frame_count == 0 or not engine.has_bindings:
+                self._ch_grp.setVisible(False)
+                self._ch_engine = None
+                return None
+            self._ch_engine = engine
+            self._ch_frame = 0
+            self._ch_slider.blockSignals(True)
+            self._ch_slider.setRange(0, engine.frame_count - 1)
+            self._ch_slider.setValue(0)
+            self._ch_slider.blockSignals(False)
+            self._ch_frame_label.setText(f"Frame: 0 / {engine.frame_count - 1}")
+            self._ch_grp.setVisible(True)
+            return f"channels: {engine.frame_count} frames"
+        except Exception as exc:
+            self._ch_grp.setVisible(False)
+            self._ch_engine = None
+            self.statusBar().showMessage(f"Channel load warning: {exc}")
+            return None
+
+    def _ch_toggle_play(self):
+        if self._ch_playing:
+            self._ch_timer.stop()
+            self._ch_playing = False
+            self._ch_play_btn.setText("▶")
+        else:
+            if self._ch_engine is None:
+                return
+            self._ch_timer.start(max(1, int(1000 / self._ch_fps.value())))
+            self._ch_playing = True
+            self._ch_play_btn.setText("⏸")
+
+    def _ch_stop(self):
+        self._ch_timer.stop()
+        self._ch_playing = False
+        self._ch_play_btn.setText("▶")
+        self._ch_frame = 0
+        if self._ch_engine:
+            self._ch_engine.reset()
+            self._ch_slider.blockSignals(True)
+            self._ch_slider.setValue(0)
+            self._ch_slider.blockSignals(False)
+            self._ch_frame_label.setText(f"Frame: 0 / {self._ch_engine.frame_count - 1}")
+            self._viewport.scene_invalidate()
+
+    def _ch_tick(self):
+        if self._ch_engine is None:
+            return
+        self._ch_frame += 1
+        if self._ch_frame >= self._ch_engine.frame_count:
+            if self._ch_loop.isChecked():
+                self._ch_frame = 0
+            else:
+                self._ch_frame = self._ch_engine.frame_count - 1
+                self._ch_timer.stop()
+                self._ch_playing = False
+                self._ch_play_btn.setText("▶")
+        self._ch_engine.apply_frame(self._ch_frame)
+        self._ch_slider.blockSignals(True)
+        self._ch_slider.setValue(self._ch_frame)
+        self._ch_slider.blockSignals(False)
+        self._ch_frame_label.setText(f"Frame: {self._ch_frame} / {self._ch_engine.frame_count - 1}")
+        self._viewport.scene_invalidate()
+
+    def _on_ch_slider(self, value: int):
+        self._ch_frame = value
+        if self._ch_engine:
+            self._ch_engine.apply_frame(value)
+            self._ch_frame_label.setText(f"Frame: {value} / {self._ch_engine.frame_count - 1}")
+            self._viewport.scene_invalidate()
+
+    def _ch_update_fps(self, _value: float):
+        if self._ch_playing:
+            self._ch_timer.start(max(1, int(1000 / self._ch_fps.value())))
 
     def _update_stats(self, filename: str = None):
         total = len(self.nodes)
