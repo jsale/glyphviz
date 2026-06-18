@@ -8,9 +8,10 @@ the output target (a swapchain framebuffer per eye, not a QOpenGLWidget) are
 different.
 
 This is a throwaway diagnostic, not the start of a "glyphviz_xr" package:
-no picking, no textures, one fixed-direction light. Touch controller
-navigation (thumbstick fly + grip-drag) is wired up via the OpenXR action
-system; see ControllerNav.
+no textures, one fixed-direction light. Touch controller navigation
+(thumbstick fly + grip-drag) and trigger-based ray picking (highlighted with
+a wireframe box) are wired up via the OpenXR action system; see
+ControllerNav.
 Run it with the Quest 3 connected and Link active (see tools/openxr_probe.py
 to confirm that part works first).
 
@@ -35,7 +36,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from glyphviz_core.geometry_data import GEO_SPHERE
+from glyphviz_core.geometry_data import GEO_CUBE_WIRE, GEO_SPHERE
 from glyphviz_core.node import NODE_TYPE_LINK, NON_VISUAL_TYPES
 from glyphviz_core.scene import Scene, node_world_matrix
 from glyphviz_gl.geometry import GeoRenderer
@@ -124,7 +125,26 @@ def _init_gl_state():
     glCullFace(GL_BACK)
 
 
-def _draw_scene(scene: Scene, geo: GeoRenderer, scale: float, forward: float, down: float):
+def _diorama_transform_matrix(scale: float, forward: float, down: float) -> np.ndarray:
+    """CPU-side (numpy) equivalent of _draw_scene's GL calls — Translate(0,
+    -down, -forward) @ RotateX(-90) @ Scale(scale) — used by ControllerNav's
+    picking ray test, which needs this transform without touching the GL
+    matrix stack."""
+    t = np.identity(4)
+    t[:3, 3] = [0.0, -down, -forward]
+    a = radians(-90.0)
+    c, s = np.cos(a), np.sin(a)
+    r = np.identity(4)
+    r[1, 1] = c
+    r[1, 2] = -s
+    r[2, 1] = s
+    r[2, 2] = c
+    sc = np.diag([scale, scale, scale, 1.0])
+    return t @ r @ sc
+
+
+def _draw_scene(scene: Scene, geo: GeoRenderer, scale: float, forward: float, down: float,
+                 selected_node=None):
     """Diorama-first placement: shrink the GlyphViz (Z-up) scene to roughly
     tabletop size, rotate Z-up into OpenXR's Y-up, and anchor it a fixed
     distance in front of / below wherever the LOCAL reference space origin
@@ -132,7 +152,7 @@ def _draw_scene(scene: Scene, geo: GeoRenderer, scale: float, forward: float, do
     room-scale, world-locked placement."""
     from OpenGL.GL import (
         glPushMatrix, glPopMatrix, glTranslatef, glRotatef, glScalef,
-        glMultMatrixf, glColor4f,
+        glMultMatrixf, glColor4f, glDisable, glEnable, GL_LIGHTING, glLineWidth,
     )
     glTranslatef(0.0, -down, -forward)
     glRotatef(-90.0, 1.0, 0.0, 0.0)  # GlyphViz +Z (up) -> OpenXR +Y (up)
@@ -148,9 +168,19 @@ def _draw_scene(scene: Scene, geo: GeoRenderer, scale: float, forward: float, do
             node.color_r / 255.0, node.color_g / 255.0,
             node.color_b / 255.0, node.color_a / 255.0,
         )
-        # Textures/picking intentionally omitted from this spike.
+        # Textures intentionally omitted from this spike.
         geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio, gl_tex_name=0)
         glPopMatrix()
+
+        if node is selected_node:
+            glPushMatrix()
+            glMultMatrixf(_gl_col_major(M))
+            glDisable(GL_LIGHTING)
+            glColor4f(1.0, 1.0, 0.2, 1.0)
+            glLineWidth(2.0)
+            geo.draw(GEO_CUBE_WIRE, 1.3, 1.3, 1.3)
+            glEnable(GL_LIGHTING)
+            glPopMatrix()
 
 
 def _rig_inverse_matrix(nav_position: np.ndarray, nav_yaw: float) -> np.ndarray:
@@ -253,6 +283,10 @@ class ControllerNav:
             action_name="squeeze", localized_action_name="Squeeze",
             action_type=xr.ActionType.FLOAT_INPUT,
             count_subaction_paths=len(sub_paths), subaction_paths=sub_paths))
+        self.trigger_action = xr.create_action(self.action_set, xr.ActionCreateInfo(
+            action_name="trigger", localized_action_name="Trigger",
+            action_type=xr.ActionType.FLOAT_INPUT,
+            count_subaction_paths=len(sub_paths), subaction_paths=sub_paths))
 
         bindings = []
         for hand in self.hand_paths:
@@ -268,6 +302,9 @@ class ControllerNav:
             bindings.append(xr.ActionSuggestedBinding(
                 action=self.squeeze_action,
                 binding=xr.string_to_path(instance, f"/user/hand/{hand}/input/squeeze/value")))
+            bindings.append(xr.ActionSuggestedBinding(
+                action=self.trigger_action,
+                binding=xr.string_to_path(instance, f"/user/hand/{hand}/input/trigger/value")))
         xr.suggest_interaction_profile_bindings(instance, xr.InteractionProfileSuggestedBinding(
             interaction_profile=xr.string_to_path(instance, self.TOUCH_CONTROLLER_PROFILE),
             count_suggested_bindings=len(bindings), suggested_bindings=bindings))
@@ -285,6 +322,9 @@ class ControllerNav:
         self._grab_anchor_nav_position = None
         self._last_time = time.perf_counter()
         self.controller_draws = []  # [(position, forward_dir, color), ...] for this frame
+        self.selected_node = None
+        self._prev_trigger = {"left": 0.0, "right": 0.0}
+        self.TRIGGER_THRESHOLD = 0.5
 
     def _thumbstick(self, hand):
         xr = self._xr
@@ -296,6 +336,12 @@ class ControllerNav:
         xr = self._xr
         state = xr.get_action_state_float(self.session, xr.ActionStateGetInfo(
             action=self.squeeze_action, subaction_path=self.hand_paths[hand]))
+        return state.current_state
+
+    def _trigger(self, hand):
+        xr = self._xr
+        state = xr.get_action_state_float(self.session, xr.ActionStateGetInfo(
+            action=self.trigger_action, subaction_path=self.hand_paths[hand]))
         return state.current_state
 
     def _locate(self, space, display_time):
@@ -313,12 +359,13 @@ class ControllerNav:
     def _aim_pose(self, hand, display_time):
         return self._locate(self.aim_spaces[hand], display_time)
 
-    def update(self, head_orientation, display_time):
+    def update(self, head_orientation, display_time, scene, diorama_transform, scale):
         """Call once per real frame (not per eye). head_orientation is any
         eye's pose.orientation for that frame — both eyes share the same
         orientation (confirmed on-headset 2026-06-18), so either works for
         deriving the head-relative forward/right directions used by the
-        left thumbstick."""
+        left thumbstick. scene/diorama_transform/scale are needed for
+        trigger-based ray picking against the actual node positions."""
         xr = self._xr
         if self.grip_spaces is None:
             self.grip_spaces = {
@@ -383,6 +430,7 @@ class ControllerNav:
             self.nav_yaw += -rx * self.TURN_SPEED * dt
 
         self.controller_draws = []
+        aim_poses = {}
         for hand, pose in grip_poses.items():
             pos = np.array([pose.position.x, pose.position.y, pose.position.z])
             # Ray direction comes from the *aim* pose, not grip: grip's local
@@ -391,11 +439,63 @@ class ControllerNav:
             # segment point up instead of forward (confirmed on-headset
             # 2026-06-18). Aim pose is OpenXR's purpose-built pointing pose.
             aim_pose = self._aim_pose(hand, display_time)
+            aim_poses[hand] = aim_pose
             ray_pose = aim_pose if aim_pose is not None else pose
             r_inv_hand = np.asarray(rotation_from_quaternionf(ray_pose.orientation), dtype=np.float64)
             hand_forward = r_inv_hand.T @ np.array([0.0, 0.0, -1.0])
             color = (0.2, 0.8, 1.0) if hand == "left" else (1.0, 0.6, 0.2)
             self.controller_draws.append((pos, hand_forward, color))
+
+        self._pick(scene, diorama_transform, scale, aim_poses)
+
+    def _pick(self, scene, diorama_transform, scale, aim_poses):
+        """Trigger rising-edge on either hand casts that hand's aim ray
+        against a bounding-sphere approximation of every visible node
+        (radius from the mean column norm of its world matrix's 3x3 part),
+        in the same real/tracked LOCAL space the controller poses live in —
+        node centers get mapped there via diorama_transform then
+        rig_inverse(), the inverse of how _draw_scene/the rig transform
+        place them for rendering. Closest hit along the ray wins."""
+        xr = self._xr
+        fired_hand = None
+        for hand in self.hand_paths:
+            trigger = self._trigger(hand)
+            prev = self._prev_trigger[hand]
+            self._prev_trigger[hand] = trigger
+            if prev < self.TRIGGER_THRESHOLD <= trigger:
+                fired_hand = hand
+        if fired_hand is None:
+            return
+        pose = aim_poses.get(fired_hand)
+        if pose is None:
+            return
+
+        from xr.utils import rotation_from_quaternionf
+        ray_origin = np.array([pose.position.x, pose.position.y, pose.position.z])
+        r_inv = np.asarray(rotation_from_quaternionf(pose.orientation), dtype=np.float64)
+        ray_dir = r_inv.T @ np.array([0.0, 0.0, -1.0])
+        ray_dir = ray_dir / max(np.linalg.norm(ray_dir), 1e-9)
+
+        rig_inv = self.rig_inverse()
+        best_node, best_dist = None, None
+        for node in scene.nodes:
+            if node.type in NON_VISUAL_TYPES or node.type == NODE_TYPE_LINK:
+                continue
+            M = node_world_matrix(node, scene)
+            center_diorama = diorama_transform @ M[:, 3]
+            center_real = (rig_inv @ center_diorama)[:3]
+            radius = (sum(np.linalg.norm(M[:3, i]) for i in range(3)) / 3.0) * scale
+
+            oc = center_real - ray_origin
+            proj_len = np.dot(oc, ray_dir)
+            if proj_len < 0:
+                continue
+            closest = ray_origin + ray_dir * proj_len
+            if np.linalg.norm(center_real - closest) <= radius:
+                if best_dist is None or proj_len < best_dist:
+                    best_dist, best_node = proj_len, node
+
+        self.selected_node = best_node
 
     def rig_inverse(self) -> np.ndarray:
         return _rig_inverse_matrix(self.nav_position, self.nav_yaw)
@@ -570,6 +670,7 @@ def main() -> int:
             geo.setup()
             _init_gl_state()
             nav = ControllerNav(ctx)
+            diorama_transform = _diorama_transform_matrix(args.scale, args.forward, args.down)
             print("Session created. Rendering — Ctrl+C here (or exit from the "
                   "Quest dashboard) to stop.")
 
@@ -595,7 +696,8 @@ def main() -> int:
                             logged_first_frame = True
                     if eye_index == 0:
                         # Once per frame, not once per eye — see ControllerNav.update.
-                        nav.update(view.pose.orientation, frame_state.predicted_display_time)
+                        nav.update(view.pose.orientation, frame_state.predicted_display_time,
+                                   scene, diorama_transform, args.scale)
                     glMatrixMode(GL_PROJECTION)
                     glLoadMatrixf(np.asarray(projection_from_fovf(view.fov), dtype=np.float32).flatten())
                     glMatrixMode(GL_MODELVIEW)
@@ -607,21 +709,19 @@ def main() -> int:
                     toe_rad = toe_sign * radians(args.toe_deg)
                     glLoadMatrixf(_gl_col_major(_view_matrix(view.pose, toe_rad)))
                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-                    # Re-assert every frame, not just once before the loop:
-                    # the same class of bug fixed in glyphviz_gl/viewport.py's
-                    # paintGL() (commit 5f16dbf) — some geometry/draw path
-                    # (not yet isolated; the small test scene never triggers
-                    # it, the larger SineWave scene does) leaves GL_DEPTH_TEST
-                    # and/or GL_CULL_FACE state clobbered, breaking depth
-                    # ordering and backface culling for the rest of the
-                    # session once that path runs once.
+                    # Re-asserted every frame rather than once before the loop
+                    # as cheap insurance against any future GL-state-clobbering
+                    # draw path (the actual cause of the depth/cull symptom
+                    # seen on the SineWave scene turned out to be the backwards
+                    # depth-func fix above, not state loss — see _init_gl_state).
                     _init_gl_state()
                     # Controllers are drawn at their real tracked position,
                     # before the virtual-navigation rig transform is applied —
                     # your hands should never appear to drift as you fly/drag.
                     nav.draw_controllers(geo)
                     glMultMatrixf(_gl_col_major(nav.rig_inverse()))
-                    _draw_scene(scene, geo, args.scale, args.forward, args.down)
+                    _draw_scene(scene, geo, args.scale, args.forward, args.down,
+                                selected_node=nav.selected_node)
                 frame_count += 1
                 if frame_count % 300 == 0:
                     print(f"...{frame_count} frames rendered")
