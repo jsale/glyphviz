@@ -8,7 +8,7 @@ offset function and registering it in _TOPO_OFFSET_FUNCS.
 """
 import math
 
-from .geometry import CYLINDER_RADIUS_RATIO, ROD_HEIGHT_FACTOR, torus_radii
+from .geometry_data import CYLINDER_RADIUS_RATIO, ROD_HEIGHT_FACTOR, torus_radii
 from .node import Node
 
 # np_topo_id values — full reference list from Topology-Guide.md.

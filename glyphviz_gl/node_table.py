@@ -5,7 +5,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTableView
 
-from .node import Node
+from glyphviz_core.node import Node
 
 # (header label, Node attribute or None for special columns)
 _COLUMNS = [

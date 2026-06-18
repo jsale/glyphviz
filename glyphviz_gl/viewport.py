@@ -10,11 +10,12 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from pathlib import Path
 
+from glyphviz_core.node import Node, NON_VISUAL_TYPES, NODE_TYPE_LINK
+from glyphviz_core.scene import Scene, node_world_matrix
+from glyphviz_core.topology import TOPO_PLOT, TOPO_SURFACE
+
 from .geometry import GeoRenderer, WIRE_TO_SOLID
-from .node import Node, NON_VISUAL_TYPES, NODE_TYPE_LINK
-from .scene import Scene, node_world_matrix
 from .texture_manager import TextureManager
-from .topology import TOPO_PLOT, TOPO_SURFACE
 from .video_manager import VideoManager
 
 _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag

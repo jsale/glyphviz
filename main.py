@@ -2,7 +2,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from glyphviz.main_window import MainWindow
+from glyphviz_gl.main_window import MainWindow
 
 
 def main():

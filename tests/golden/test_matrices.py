@@ -16,7 +16,7 @@ tests verify conformance against the ground truth.
 
 import pytest
 
-from glyphviz.scene import Scene, node_world_matrix
+from glyphviz_core.scene import Scene, node_world_matrix
 
 from .conftest import (
     SCENE_DIR,

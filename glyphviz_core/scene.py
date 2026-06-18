@@ -25,7 +25,7 @@ Design contract
 import numpy as np
 
 from .csv_reader import load_node_csv
-from .geometry import ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
+from .geometry_data import ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
 from .node import Node, NON_VISUAL_TYPES
 from .topology import (
     TOPO_ROD,

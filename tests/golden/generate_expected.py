@@ -6,7 +6,7 @@ Usage (from the repo root):
 
 Each scene CSV in tests/golden/scenes/ gets a companion JSON in
 tests/golden/expected/ containing the 4x4 world matrix for every node,
-as computed by glyphviz.scene.node_world_matrix with base_scale=3.0.
+as computed by glyphviz_core.scene.node_world_matrix with base_scale=3.0.
 
 Initially this creates a Python-computed baseline (regression protection).
 Phase A will replace these with matrices extracted from the ANTz C oracle.
@@ -22,7 +22,7 @@ from pathlib import Path
 # Allow running from repo root without installing the package.
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from glyphviz.scene import Scene, node_world_matrix
+from glyphviz_core.scene import Scene, node_world_matrix
 
 BASE_SCALE   = 3.0
 SCENE_DIR    = Path(__file__).parent / "scenes"

@@ -24,11 +24,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .csv_reader import load_node_csv, save_node_csv
-from .geometry import GEO_NAMES, GEO_COUNT, GEO_OCTA
-from .node import Node, NON_VISUAL_TYPES
+from glyphviz_core.csv_reader import load_node_csv, save_node_csv
+from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA
+from glyphviz_core.node import Node, NON_VISUAL_TYPES
+from glyphviz_core.topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT
+
 from .node_table import NodeTableView
-from .topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT
 from .viewport import Viewport
 
 
@@ -1231,8 +1232,8 @@ class MainWindow(QMainWindow):
 
     def _ch_load_from_csv(self, path: str) -> str | None:
         """Detect and load companion channel files.  Returns a short status string or None."""
-        from .channel_loader import find_channel_files, load_ch_map, load_ch_tracks
-        from .channel_engine import ChannelEngine
+        from glyphviz_core.channel_loader import find_channel_files, load_ch_map, load_ch_tracks
+        from glyphviz_core.channel_engine import ChannelEngine
 
         map_path, tracks_path = find_channel_files(path)
         if not map_path or not tracks_path:

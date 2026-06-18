@@ -54,18 +54,34 @@ Then use **File > Open Node CSV…** to load an ANTz/GaiaViz node export.
 
 ## Project layout
 
+GlyphViz is split into a presentation-independent kernel (`glyphviz_core`)
+and the desktop OpenGL/Qt renderer that consumes it (`glyphviz_gl`) — the
+boundary that lets the same topology/scene math eventually drive other
+renderers (e.g. an OpenXR VR view) without duplicating it.
+
 - [`main.py`](main.py) — application entry point
-- [`glyphviz/main_window.py`](glyphviz/main_window.py) — main window, menus,
-  property inspector, and node table wiring
-- [`glyphviz/viewport.py`](glyphviz/viewport.py) — OpenGL viewport: camera,
-  rendering, picking, and overlays
-- [`glyphviz/node.py`](glyphviz/node.py) — the `Node` data model
-- [`glyphviz/csv_reader.py`](glyphviz/csv_reader.py) — CSV loading
-- [`glyphviz/topology.py`](glyphviz/topology.py) — parent → child placement,
-  rotation, and scale cascading per topology type
-- [`glyphviz/geometry.py`](glyphviz/geometry.py) — glyph geometry definitions
-  and the OpenGL renderer
-- [`glyphviz/node_table.py`](glyphviz/node_table.py) — node table model/view
+- `glyphviz_core/` — no Qt/OpenGL dependency
+  - [`node.py`](glyphviz_core/node.py) — the `Node` data model
+  - [`csv_reader.py`](glyphviz_core/csv_reader.py) — CSV loading
+  - [`topology.py`](glyphviz_core/topology.py) — parent → child placement,
+    rotation, and scale cascading per topology type
+  - [`scene.py`](glyphviz_core/scene.py) — cached world transforms and the
+    single authoritative `node_world_matrix()` used by the renderer, the
+    picker, and the golden-master tests
+  - [`geometry_data.py`](glyphviz_core/geometry_data.py) — geometry-id enum
+    and pure glyph-shape constants/math (torus ratios, rod/cylinder
+    proportions) shared with the renderer
+  - [`channel_engine.py`](glyphviz_core/channel_engine.py),
+    [`channel_loader.py`](glyphviz_core/channel_loader.py) — channel
+    animation playback
+- `glyphviz_gl/` — the desktop OpenGL/Qt renderer
+  - [`main_window.py`](glyphviz_gl/main_window.py) — main window, menus,
+    property inspector, and node table wiring
+  - [`viewport.py`](glyphviz_gl/viewport.py) — OpenGL viewport: camera,
+    rendering, picking, and overlays
+  - [`geometry.py`](glyphviz_gl/geometry.py) — the OpenGL display-list
+    renderer for each glyph shape
+  - [`node_table.py`](glyphviz_gl/node_table.py) — node table model/view
 
 ## Acknowledgements
 
