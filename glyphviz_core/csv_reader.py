@@ -72,6 +72,18 @@ _FLOAT_COLS = frozenset({
     'proximity_x', 'proximity_y', 'proximity_z',
 })
 
+# GaiaViz np_node.csv uses different names for a handful of columns that
+# GlyphViz reads by name. Detected via the first header column ('np_node_id')
+# and remapped to the ANTz names below so the rest of the loader is unchanged.
+# Everything else (translate/rotate/scale/color/hide/ratio/subspace, plus the
+# tag and channel files) already shares column names across both formats.
+_GAIAVIZ_NODE_COL_ALIASES = {
+    'np_node_id': 'id',
+    'np_geometry_id': 'geometry',
+    'np_topo_id': 'topo',
+    'np_texture_id': 'texture_id',
+}
+
 # Defaults for untracked columns when a node has no extras (e.g. newly created).
 _DEFAULT_EXTRAS: dict = {
     'data': 0,          # overridden to node.id in save_node_csv
@@ -162,6 +174,8 @@ def _load_tag_file(tag_path: Path) -> dict[int, tuple[str, str]]:
 
 def load_node_csv(path: str) -> list[Node]:
     df = pd.read_csv(path)
+    if len(df.columns) and df.columns[0] == 'np_node_id':
+        df = df.rename(columns=_GAIAVIZ_NODE_COL_ALIASES)
     has_ratio = 'ratio' in df.columns
     has_subspace = 'subspace' in df.columns
     has_texture_id = 'texture_id' in df.columns
