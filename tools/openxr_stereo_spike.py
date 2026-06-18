@@ -14,11 +14,15 @@ tools/openxr_probe.py to confirm that part works first).
 
 Usage:
     C:\\Users\\jsale\\anaconda3\\envs\\glyphviz\\python.exe tools\\openxr_stereo_spike.py
-    C:\\Users\\jsale\\anaconda3\\envs\\glyphviz\\python.exe tools\\openxr_stereo_spike.py --csv tests\\golden\\scenes\\deep_hierarchy.csv --scale 0.03 --forward 3.0 --toe-deg 20.0
+    C:\\Users\\jsale\\anaconda3\\envs\\glyphviz\\python.exe tools\\openxr_stereo_spike.py --csv examples\\SineWave_Example\\SineWave_Example_np_node.csv
 
-Defaults (--scale 1.0 --forward 15.0 --toe-deg 20.0) are the combo confirmed
-on-headset 2026-06-18 to produce fully-overlapping, fusable stereo. Other
-scale/forward combos will likely need a re-tuned --toe-deg.
+--scale defaults to auto (scaled from the loaded scene's own bounding box —
+see --target-size), so any --csv file should just work without per-file
+tuning. --forward 15.0 and --toe-deg 20.0 are the combo confirmed
+on-headset 2026-06-18 to produce fully-overlapping, fusable stereo, and
+held across very different --scale values (1.0 and 0.05) at that same
+--forward — toe correction appears tied to viewing distance, not scale.
+Pass --scale explicitly to override auto-sizing.
 
 Controllers: left thumbstick flies relative to head-look direction, right
 thumbstick turns/moves vertically, grip-squeeze grab-drags the world, and
@@ -41,6 +45,7 @@ from glyphviz_core.scene import Scene
 from glyphviz_gl.geometry import GeoRenderer
 from glyphviz_xr.controller_nav import ControllerNav
 from glyphviz_xr.render import draw_scene, init_gl_state
+from glyphviz_xr.scene_fit import auto_scale_for_scene
 from glyphviz_xr.session import make_compat_gl_context_provider, view_loop_output_swapped
 from glyphviz_xr.transforms import diorama_transform_matrix, gl_col_major, view_matrix
 
@@ -53,8 +58,14 @@ def main() -> int:
     )
     parser.add_argument("--base-scale", type=float, default=3.0,
                          help="Scene base_scale, matches the golden-master default.")
-    parser.add_argument("--scale", type=float, default=1.0,
-                         help="Shrink factor from GlyphViz world units to meters.")
+    parser.add_argument("--scale", type=float, default=None,
+                         help="Shrink factor from GlyphViz world units to meters. Default: "
+                              "auto-computed from the loaded scene's bounding box (see "
+                              "--target-size), so any --csv file just works without per-file "
+                              "tuning.")
+    parser.add_argument("--target-size", type=float, default=20.0,
+                         help="Meters the auto-computed --scale should map the scene's "
+                              "largest bounding-box dimension to. Ignored if --scale is given.")
     parser.add_argument("--forward", type=float, default=15.0,
                          help="Meters in front of the LOCAL space origin.")
     parser.add_argument("--down", type=float, default=0.35,
@@ -85,6 +96,11 @@ def main() -> int:
 
     scene = Scene.load(args.csv, base_scale=args.base_scale)
     print(f"Loaded {len(scene.nodes)} nodes from {args.csv}")
+
+    if args.scale is None:
+        args.scale = auto_scale_for_scene(scene, args.target_size)
+        print(f"Auto-scale: {args.scale:.5f} (largest dimension -> "
+              f"~{args.target_size:.0f}m; pass --scale to override)")
 
     instance_create_info = xr.InstanceCreateInfo(
         application_info=xr.ApplicationInfo(
