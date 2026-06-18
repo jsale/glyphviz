@@ -1,0 +1,10 @@
+# Optional dependency for VR/XR exploration — not required to run the
+# desktop app. Install into the same conda env before running tools/openxr_probe.py:
+#   C:\Users\jsale\anaconda3\envs\glyphviz\python.exe -m pip install -r requirements-xr.txt
+#
+# Quest 3 path: install the Meta Quest Link app on this PC, connect the
+# headset via USB-C Link cable or Air Link, and make sure "Link" is active
+# on the headset before running the probe — that's what registers an OpenXR
+# runtime for pyopenxr to find.
+
+pyopenxr>=1.1.0
