@@ -8,6 +8,7 @@ from glyphviz_core.node import NODE_TYPE_LINK, NON_VISUAL_TYPES
 from glyphviz_core.scene import Scene, node_world_matrix
 from glyphviz_gl.geometry import GeoRenderer
 
+from .text_billboard import draw_label
 from .transforms import gl_col_major
 
 
@@ -86,6 +87,15 @@ def draw_scene(scene: Scene, geo: GeoRenderer, scale: float, forward: float, dow
             glLineWidth(2.0)
             geo.draw(GEO_CUBE_WIRE, 1.3, 1.3, 1.3)
             glEnable(GL_LIGHTING)
+            glPopMatrix()
+
+            # Label anchored at the node's plain world position (not inside
+            # the node's own R*S above) so the billboard lifts straight up
+            # in the diorama frame regardless of the node's own orientation.
+            radius = sum(np.linalg.norm(M[:3, i]) for i in range(3)) / 3.0
+            glPushMatrix()
+            glTranslatef(float(M[0, 3]), float(M[1, 3]), float(M[2, 3]))
+            draw_label(node.text, (0.0, 0.0, radius * 1.3))
             glPopMatrix()
 
 
