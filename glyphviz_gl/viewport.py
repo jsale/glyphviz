@@ -100,6 +100,7 @@ class Viewport(QOpenGLWidget):
         self._pick_fbo_size = (0, 0)
 
         self.show_tags = True
+        self.show_tags_selected_only = False
 
         # Cached camera matrices for tag world→screen projection (updated each frame).
         self._mv_matrix: np.ndarray | None = None
@@ -139,6 +140,17 @@ class Viewport(QOpenGLWidget):
     def register_node(self, node: Node):
         """Sync a node appended directly to self._scene.nodes into the scene's lookup cache."""
         self._scene.register_node(node)
+        self.update()
+
+    def remove_nodes(self, ids: set[int]):
+        """Remove nodes (by id) from the scene in place, without resetting the camera.
+        Mutates self._scene.nodes in place — MainWindow.nodes aliases the same list
+        object (see _add_node_to_scene), so this keeps both in sync."""
+        self._scene.nodes[:] = [n for n in self._scene.nodes if n.id not in ids]
+        for nid in ids:
+            self._scene._by_id.pop(nid, None)
+        self.selected_node_ids -= ids
+        self._scene.invalidate()
         self.update()
 
     def set_nodes(self, nodes: list[Node]):
@@ -472,6 +484,8 @@ class Viewport(QOpenGLWidget):
                 break
             visible_count += 1
             if not node.text:
+                continue
+            if self.show_tags_selected_only and node.id not in self.selected_node_ids:
                 continue
             wp = self._scene.world_pos(node.id) or (node.translate_x, node.translate_y, node.translate_z)
             try:

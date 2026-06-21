@@ -73,6 +73,8 @@ class MainWindow(QMainWindow):
             self._on_select_all_toggle
         )
         QShortcut(QKeySequence("U"), self).activated.connect(self._on_open_link)
+        QShortcut(QKeySequence("Delete"), self).activated.connect(self._delete_selected)
+        QShortcut(QKeySequence("Backspace"), self).activated.connect(self._delete_selected)
 
     def _build_viewport(self):
         self._viewport = Viewport(self)
@@ -254,10 +256,18 @@ class MainWindow(QMainWindow):
         self._cb_tags.setToolTip("Toggle tag text display in 3D view  [T]")
         self._cb_tags.toggled.connect(self._set_tags)
 
+        self._cb_tags_selected = QCheckBox("Show Tag Labels of Selected")
+        self._cb_tags_selected.setChecked(False)
+        self._cb_tags_selected.setToolTip(
+            "When checked, only selected nodes' tag labels are drawn."
+        )
+        self._cb_tags_selected.toggled.connect(self._set_tags_selected_only)
+
         disp_layout.addWidget(self._cb_axes)
         disp_layout.addWidget(self._cb_grid)
         disp_layout.addWidget(self._cb_hidden)
         disp_layout.addWidget(self._cb_tags)
+        disp_layout.addWidget(self._cb_tags_selected)
 
         tex_row = QWidget()
         tex_row_layout = QHBoxLayout(tex_row)
@@ -318,6 +328,21 @@ class MainWindow(QMainWindow):
 
         create_layout.addWidget(self._btn_new_node)
         create_layout.addWidget(self._btn_new_child)
+
+        # --- Delete group ---
+        delete_grp = QGroupBox("Delete")
+        delete_layout = QVBoxLayout(delete_grp)
+
+        self._btn_delete = QPushButton("Delete Selected Objects")
+        self._btn_delete.setToolTip(
+            "Delete the selected node(s)  [Delete/Backspace]\n"
+            "Any children of a deleted node are deleted too — children are\n"
+            "never reparented, since there's no well-defined place to put them."
+        )
+        self._btn_delete.setEnabled(False)   # enabled once there's a selection
+        self._btn_delete.clicked.connect(self._delete_selected)
+
+        delete_layout.addWidget(self._btn_delete)
 
         # --- Select By group ---
         sel_grp = QGroupBox("Select By")
@@ -527,6 +552,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(scale_grp)
         layout.addWidget(stats_grp)
         layout.addWidget(create_grp)
+        layout.addWidget(delete_grp)
         layout.addWidget(sel_grp)
         layout.addWidget(self._insp_grp)
         layout.addWidget(self._ch_grp)
@@ -676,6 +702,10 @@ class MainWindow(QMainWindow):
         self._cb_tags.setChecked(checked)
         self._tags_act.setChecked(checked)
 
+    def _set_tags_selected_only(self, checked: bool):
+        self._viewport.show_tags_selected_only = checked
+        self._viewport.update()
+
     def _on_open_link(self):
         """U key: open the selected node's link in the default browser/app."""
         if len(self._selected_nodes) != 1:
@@ -777,6 +807,7 @@ class MainWindow(QMainWindow):
         has_selection = bool(self._selected_nodes)
         for btn in self._mode_buttons.values():
             btn.setEnabled(has_selection)
+        self._btn_delete.setEnabled(has_selection)
         if not has_selection and self._gizmo_mode is not None:
             self._set_gizmo_mode(None)
 
@@ -1227,6 +1258,32 @@ class MainWindow(QMainWindow):
             f"Created node {node.id}  parent={node.parent_id}  "
             f"level={node.branch_level}  geo={node.geometry}  topo={node.topo}"
         )
+
+    def _descendants_of(self, root_ids: set[int]) -> set[int]:
+        """root_ids plus every descendant id, transitively (cascade-delete closure).
+        Children are never reparented onto a deleted node's parent — there's no
+        well-defined place to put them — so deleting a node always takes its
+        whole subtree with it."""
+        result = set(root_ids)
+        frontier = result
+        while frontier:
+            frontier = {n.id for n in self.nodes if n.parent_id in frontier and n.id not in result}
+            result |= frontier
+        return result
+
+    def _delete_selected(self):
+        """Delete/Backspace key or Delete button: remove the selected node(s)
+        and all of their descendants from the scene."""
+        if not self._selected_nodes:
+            return
+        ids_to_delete = self._descendants_of({n.id for n in self._selected_nodes})
+        self._viewport.remove_nodes(ids_to_delete)   # mutates self.nodes in place (shared list)
+        self._table.set_nodes(self.nodes)
+        # set_nodes()'s model reset silently drops the table's internal selection
+        # without emitting selectionChanged, so resync self._selected_nodes by hand.
+        self._on_table_selection()
+        self._update_stats()
+        self.statusBar().showMessage(f"Deleted {len(ids_to_delete)} node(s).")
 
     # --- Channel / animation playback ---
 
