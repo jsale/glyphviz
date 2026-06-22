@@ -15,7 +15,10 @@ def find_channel_files(node_csv_path: str) -> tuple[Path | None, Path | None]:
 
 
 def load_ch_map(path: Path) -> dict[int, list[tuple[int, str]]]:
-    """Parse np_ch-map.csv.  Returns {channel_id: [(track_id, attribute), ...]}."""
+    """Parse a ch-map.csv (gv_ch-map.csv or np_ch-map.csv).
+
+    Returns {channel_id: [(track_id, attribute), ...]}.
+    """
     df = pd.read_csv(path)
     ch_map: dict[int, list[tuple[int, str]]] = {}
     for _, row in df.iterrows():
@@ -30,7 +33,7 @@ def load_ch_map(path: Path) -> dict[int, list[tuple[int, str]]]:
 
 
 def load_ch_tracks(path: Path) -> tuple[np.ndarray, dict[int, int]]:
-    """Parse np_ch-tracks.csv.
+    """Parse a ch-tracks.csv (gv_ch-tracks.csv or np_ch-tracks.csv).
 
     Returns:
         tracks  — float64 array of shape (num_frames, num_tracks)

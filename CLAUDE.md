@@ -10,11 +10,15 @@ This is an open architectural question. When implementing topologies or behavior
 
 **Key constraint:** We do not have access to the GaiaViz GitHub source. Never assume undocumented GaiaViz behavior — only what the reference docs describe.
 
+## File Naming Convention
+
+GaiaViz's `np_` file/column prefix stands for "neural physics," Shane Saxon's architectural concept underpinning ANTz/GaiaViz — GlyphViz has no equivalent architecture and shouldn't claim the name. GlyphViz's own example/generated data uses a `gv_` prefix instead (`gv_node.csv`, `gv_tag.csv`, `gv_ch-map.csv`, `gv_ch-tracks.csv`). The `np_` prefix is still recognized when *reading* genuine third-party GaiaViz files — both as a filename pattern and as the handful of GaiaViz-specific column names (`np_node_id`, `np_geometry_id`, `np_topo_id`, `np_texture_id`, `np_ch_in_id`) aliased in `glyphviz_core/csv_reader.py` and `channel_engine.py`. Do not rename those aliases — they exist for interop, not branding. `gaiaviz-skill/examples/` also keeps `np_` since it demonstrates the actual GaiaViz spec.
+
 ## Pending High-Priority Features
 
-1. **Tags** — Text labels attached to nodes. Load/render `np_tag.csv`; support URL, local file, and app-launch encoding. `table_id` must be 0; `record_id` matches `np_node_id`. Spec: `gaiaviz-skill/references/format/Tag-Format.md` and `Text-Tags-Usage.md`.
+1. **Tags** — Text labels attached to nodes. Load/render the tag CSV (`gv_tag.csv` for GlyphViz-native data, `np_tag.csv` for GaiaViz-format data); support URL, local file, and app-launch encoding. `table_id` must be 0; `record_id` matches the node CSV's id column. Spec: `gaiaviz-skill/references/format/Tag-Format.md` and `Text-Tags-Usage.md`.
 
-2. **Channels (animation)** — Time-series animation of node attributes via `np_ch-map.csv` + `np_ch-tracks.csv`. Enables EEG, GPS, IoT, and biometric visualizations. See `gaiaviz-skill/examples/Channels_Example/` and `RHR_Channel_Anim1/`.
+2. **Channels (animation)** — Time-series animation of node attributes via the `ch-map`/`ch-tracks` CSV pair (`gv_ch-map.csv`/`gv_ch-tracks.csv` for GlyphViz-native data, `np_ch-map.csv`/`np_ch-tracks.csv` for GaiaViz-format data). Enables EEG, GPS, IoT, and biometric visualizations. See `gaiaviz-skill/examples/Channels_Example/` and `RHR_Channel_Anim1/`.
 
 3. **Z-topology variants** — `TOPO_ZCUBE/ZSPHERE/ZTORUS/ZCYLINDER/ZROD` (ids 9–13) and `TOPO_VIDEO` (15) are defined in the enum but not yet implemented in `topology.py`.
 

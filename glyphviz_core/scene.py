@@ -107,7 +107,7 @@ class Scene:
 
     @classmethod
     def load(cls, path, base_scale: float = 3.0) -> 'Scene':
-        """Load a GaiaViz/ANTz np_node.csv and return a Scene."""
+        """Load a node CSV (GlyphViz gv_node.csv or GaiaViz/ANTz np_node.csv) and return a Scene."""
         return cls(load_node_csv(str(path)), base_scale)
 
 

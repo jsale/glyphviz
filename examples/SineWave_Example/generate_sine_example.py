@@ -15,16 +15,16 @@ channels of increasing frequency (track 1 = 1 Hz … track 32 = 32 Hz).
 
 Output files (written to OUTPUT_DIR)
 -------------------------------------
-  {PREFIX}_np_node.csv       node hierarchy
-  {PREFIX}_np_tag.csv        topology name labels
-  {PREFIX}_np_ch-map.csv     channel → attribute mappings
-  {PREFIX}_np_ch-tracks.csv  sinusoidal time-series values
+  {PREFIX}_gv_node.csv       node hierarchy
+  {PREFIX}_gv_tag.csv        topology name labels
+  {PREFIX}_gv_ch-map.csv     channel → attribute mappings
+  {PREFIX}_gv_ch-tracks.csv  sinusoidal time-series values
 
 Usage
 -----
   python generate_sine_example.py
 
-Load in GlyphViz: File > Open Node CSV → {PREFIX}_np_node.csv
+Load in GlyphViz: File > Open Node CSV → {PREFIX}_gv_node.csv
 The Channels panel appears automatically.  Press ▶ to animate.
 """
 
@@ -114,7 +114,7 @@ def _child_tx(tx_lo: float, tx_hi: float, periodic: bool, ci: int) -> float:
 
 
 # ===========================================================================
-# np_node.csv
+# gv_node.csv
 # ===========================================================================
 
 def write_nodes(path: Path) -> int:
@@ -169,7 +169,7 @@ def write_nodes(path: Path) -> int:
 
 
 # ===========================================================================
-# np_tag.csv
+# gv_tag.csv
 # ===========================================================================
 
 def write_tags(path: Path) -> None:
@@ -192,7 +192,7 @@ def write_tags(path: Path) -> None:
 
 
 # ===========================================================================
-# np_ch-map.csv
+# gv_ch-map.csv
 # ===========================================================================
 
 def write_ch_map(path: Path) -> None:
@@ -220,7 +220,7 @@ def write_ch_map(path: Path) -> None:
 
 
 # ===========================================================================
-# np_ch-tracks.csv
+# gv_ch-tracks.csv
 # ===========================================================================
 
 def write_ch_tracks(path: Path) -> None:
@@ -263,10 +263,10 @@ def write_ch_tracks(path: Path) -> None:
 if __name__ == "__main__":
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Writing SineWave example to {OUTPUT_DIR}/\n")
-    write_nodes    (OUTPUT_DIR / f"{PREFIX}_np_node.csv")
-    write_tags     (OUTPUT_DIR / f"{PREFIX}_np_tag.csv")
-    write_ch_map   (OUTPUT_DIR / f"{PREFIX}_np_ch-map.csv")
-    write_ch_tracks(OUTPUT_DIR / f"{PREFIX}_np_ch-tracks.csv")
+    write_nodes    (OUTPUT_DIR / f"{PREFIX}_gv_node.csv")
+    write_tags     (OUTPUT_DIR / f"{PREFIX}_gv_tag.csv")
+    write_ch_map   (OUTPUT_DIR / f"{PREFIX}_gv_ch-map.csv")
+    write_ch_tracks(OUTPUT_DIR / f"{PREFIX}_gv_ch-tracks.csv")
     print(f"\nDone.  Open GlyphViz, then:")
-    print(f"  File > Open Node CSV → {PREFIX}_np_node.csv")
+    print(f"  File > Open Node CSV → {PREFIX}_gv_node.csv")
     print(f"  The Channels panel appears automatically.  Press ▶ to animate.")

@@ -1,6 +1,7 @@
 """
 Parent-child spatial topology — converts a child's translate_x/y/z into a
-world-space offset from its parent, according to the parent's np_topo_id.
+world-space offset from its parent, according to the parent's topo id
+(np_topo_id in the GaiaViz reference docs).
 
 See gaiaviz-skill/references/structure/Topology-Guide.md for the full
 per-topology coordinate conventions. New topologies are added by writing an
@@ -11,7 +12,7 @@ import math
 from .geometry_data import CYLINDER_RADIUS_RATIO, ROD_HEIGHT_FACTOR, torus_radii
 from .node import Node
 
-# np_topo_id values — full reference list from Topology-Guide.md.
+# topo id values — full reference list from Topology-Guide.md (np_topo_id there).
 # Only a subset has dedicated offset functions below (see _TOPO_OFFSET_FUNCS);
 # the rest fall back to a plain Cartesian offset until they're modeled.
 TOPO_NONE      = 0

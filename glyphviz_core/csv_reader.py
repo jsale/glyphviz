@@ -21,7 +21,7 @@ _TRACKED_COLS = frozenset({
 # Extra columns written as plain strings (not int/float formatted).
 _STRING_COLS = frozenset({'text', 'link'})
 
-# Canonical 94-column ANTz/GaiaViz np_node column order.
+# Canonical 94-column ANTz/GaiaViz node CSV column order.
 _COL_ORDER = [
     'id', 'type', 'data', 'selected', 'parent_id', 'branch_level',
     'child_id', 'child_index', 'child_count',
@@ -122,7 +122,8 @@ def _tag_file_path(node_csv_path: str) -> Path | None:
     """Return the companion tag-file path for a node CSV, or None if not applicable.
 
     Convention (ANTz): anything ending in 'node' → replace with 'tag'.
-    E.g. antz0001node.csv → antz0001tag.csv, np_node.csv → np_tag.csv.
+    E.g. antz0001node.csv → antz0001tag.csv, gv_node.csv → gv_tag.csv,
+    np_node.csv → np_tag.csv.
     Returns None if the candidate file does not exist.
     """
     p = Path(node_csv_path)
@@ -134,7 +135,9 @@ def _tag_file_path(node_csv_path: str) -> Path | None:
 
 
 def _load_tag_file(tag_path: Path) -> dict[int, tuple[str, str]]:
-    """Parse an ANTz np_tag CSV.  Returns {record_id: (text, link)}.
+    """Parse an ANTz/GaiaViz-style tag CSV (gv_tag.csv or np_tag.csv).
+
+    Returns {record_id: (text, link)}.
 
     title field parsing:
       - HTML <a href="url">label</a> → link=url, text=label
@@ -240,7 +243,7 @@ def load_node_csv(path: str) -> list[Node]:
 
 
 def save_node_csv(nodes: list[Node], path: str) -> None:
-    """Write nodes to a GaiaViz/ANTz 94-column np_node CSV.
+    """Write nodes to a GaiaViz/ANTz-compatible 94-column node CSV.
 
     Tracked fields (position, rotation, scale, color, geo, topo, hide, ratio)
     reflect the current in-memory values.  All other columns are written from

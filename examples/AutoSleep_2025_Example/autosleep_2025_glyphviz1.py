@@ -20,16 +20,16 @@ Requires your own AutoSleep CSV export (in the app: Settings > Export CSV),
 saved next to this script as AUTOSLEEP_RAW_CSV below. Expected columns
 (fuzzy-matched, case-insensitive): a date/ISO8601 column, bedtime, waketime,
 asleep, deep, deepAvg7, quality. Personal health data isn't included in this
-repo -- the four np_*.csv files already in this folder are the output of a
+repo -- the four gv_*.csv files already in this folder are the output of a
 prior run and can be loaded into GlyphViz directly without rerunning this
 script.
 
 Output (written next to this script)
 -------------------------------------
-  autosleep_2025_np_node.csv
-  autosleep_2025_np_tag.csv
-  autosleep_2025_np_ch-tracks.csv
-  autosleep_2025_np_ch-map.csv
+  autosleep_2025_gv_node.csv
+  autosleep_2025_gv_tag.csv
+  autosleep_2025_gv_ch-tracks.csv
+  autosleep_2025_gv_ch-map.csv
 
 Usage
 -----
@@ -46,10 +46,10 @@ import numpy as np
 SCRIPT_DIR = Path(__file__).resolve().parent
 AUTOSLEEP_RAW_CSV = SCRIPT_DIR / "autosleep_2025_raw_export.csv"
 
-NODE_OUT  = SCRIPT_DIR / "autosleep_2025_np_node.csv"
-TAG_OUT   = SCRIPT_DIR / "autosleep_2025_np_tag.csv"
-CH_OUT    = SCRIPT_DIR / "autosleep_2025_np_ch-tracks.csv"
-CHMAP_OUT = SCRIPT_DIR / "autosleep_2025_np_ch-map.csv"
+NODE_OUT  = SCRIPT_DIR / "autosleep_2025_gv_node.csv"
+TAG_OUT   = SCRIPT_DIR / "autosleep_2025_gv_tag.csv"
+CH_OUT    = SCRIPT_DIR / "autosleep_2025_gv_ch-tracks.csv"
+CHMAP_OUT = SCRIPT_DIR / "autosleep_2025_gv_ch-map.csv"
 
 # 7 literal ANTz/GaiaViz node-header rows: column names + 6 default records.
 HEADER7 = [
@@ -195,7 +195,7 @@ if not AUTOSLEEP_RAW_CSV.exists():
         f"Missing input data CSV: {AUTOSLEEP_RAW_CSV}\n"
         "Export your sleep history from the AutoSleep app (Settings > Export CSV) "
         f"and save it as {AUTOSLEEP_RAW_CSV.name} next to this script.\n"
-        "The np_*.csv files already in this folder are pre-generated and can be "
+        "The gv_*.csv files already in this folder are pre-generated and can be "
         "loaded into GlyphViz directly without rerunning this script."
     )
 

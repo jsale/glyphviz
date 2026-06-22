@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-# np_node "type" values that describe scene infrastructure rather than visual
+# Node CSV "type" values that describe scene infrastructure rather than visual
 # data glyphs (see gaiaviz-skill/references/structure/Node-Field-Descriptions.md).
 # GlyphViz doesn't yet have its own camera/grid/world handling, so these rows
 # are kept (and remain editable in the table) but skipped when drawing/picking

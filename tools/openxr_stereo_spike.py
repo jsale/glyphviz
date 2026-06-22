@@ -14,7 +14,7 @@ tools/openxr_probe.py to confirm that part works first).
 
 Usage:
     C:\\Users\\jsale\\anaconda3\\envs\\glyphviz\\python.exe tools\\openxr_stereo_spike.py
-    C:\\Users\\jsale\\anaconda3\\envs\\glyphviz\\python.exe tools\\openxr_stereo_spike.py --csv examples\\SineWave_Example\\SineWave_Example_np_node.csv
+    C:\\Users\\jsale\\anaconda3\\envs\\glyphviz\\python.exe tools\\openxr_stereo_spike.py --csv examples\\SineWave_Example\\SineWave_Example_gv_node.csv
 
 --scale defaults to auto (scaled from the loaded scene's own bounding box —
 see --target-size), so any --csv file should just work without per-file
@@ -29,7 +29,7 @@ thumbstick turns/moves vertically, grip-squeeze grab-drags the world, and
 the trigger picks whatever the pointing ray hits (highlighted with a yellow
 wireframe box).
 
-If a companion np_ch-map.csv/np_ch-tracks.csv is found next to --csv, channel
+If a companion ch-map.csv/ch-tracks.csv is found next to --csv, channel
 animation auto-plays and loops from the moment the session starts (no
 in-headset playback controls yet — see --ch-fps). If a texture-driven
 channel (attribute=texture_id) is present, textures are loaded from
@@ -61,7 +61,7 @@ from glyphviz_xr.transforms import diorama_transform_matrix, gl_col_major, view_
 
 
 def _load_channel_engine(csv_path: str, nodes) -> ChannelEngine | None:
-    """Auto-detect and load companion np_ch-map.csv/np_ch-tracks.csv, if any.
+    """Auto-detect and load companion ch-map.csv/ch-tracks.csv, if any.
     Mirrors glyphviz_gl.main_window._ch_load_from_csv (desktop), minus the UI."""
     map_path, tracks_path = find_channel_files(csv_path)
     if not map_path or not tracks_path:
@@ -121,7 +121,7 @@ def main() -> int:
                               "visible effect.")
     parser.add_argument("--ch-fps", type=float, default=30.0,
                          help="Channel animation playback speed in frames per second, if a "
-                              "companion np_ch-map.csv/np_ch-tracks.csv is found next to "
+                              "companion ch-map.csv/ch-tracks.csv is found next to "
                               "--csv. Playback auto-starts and loops; there's no in-headset "
                               "control for it yet.")
     args = parser.parse_args()
