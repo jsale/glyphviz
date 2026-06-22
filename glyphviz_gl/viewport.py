@@ -109,6 +109,7 @@ class Viewport(QOpenGLWidget):
         self._geo = GeoRenderer()
         self._tex_mgr = TextureManager()
         self._video_mgr = VideoManager()
+        self._last_tex_tick = time.perf_counter()
         self._render_timer = QTimer(self)
         self._render_timer.timeout.connect(self.update)
         self.setMinimumSize(400, 300)
@@ -223,9 +224,11 @@ class Viewport(QOpenGLWidget):
         self.makeCurrent()
         img_count = self._tex_mgr.load_folder(folder)
         vid_count = self._video_mgr.load_folder(folder, img_count + 1)
-        if vid_count and not self._render_timer.isActive():
-            self._render_timer.start(33)   # ~30 fps continuous repaint for video
-        elif not vid_count:
+        needs_ticking = bool(vid_count) or self._tex_mgr.has_animated()
+        if needs_ticking and not self._render_timer.isActive():
+            self._render_timer.start(33)   # ~30 fps continuous repaint for video/GIF playback
+            self._last_tex_tick = time.perf_counter()
+        elif not needs_ticking:
             self._render_timer.stop()
         self.update()
         return img_count + vid_count
@@ -272,6 +275,10 @@ class Viewport(QOpenGLWidget):
 
     def paintGL(self):
         self._video_mgr.tick()   # upload any pending decoded frames before drawing
+        now = time.perf_counter()
+        dt_ms = (now - self._last_tex_tick) * 1000.0
+        self._last_tex_tick = now
+        self._tex_mgr.tick(dt_ms)   # advance any playing animated GIFs
         # QPainter's GL paint engine (used by _draw_tags_qpainter) can leave
         # all of this state changed after painter.end() -- restore it every
         # frame rather than relying on the one-time initializeGL()/resizeGL()
@@ -728,13 +735,24 @@ class Viewport(QOpenGLWidget):
         glDisable(GL_LIGHTING)
         glDisable(GL_BLEND)
 
-        # Re-use the scene cache from the most recent paint (no invalidate here)
+        # Re-use the scene cache from the most recent paint (no invalidate here).
+        # Mirror paintGL's _draw_limit cutoff so nodes hidden by the
+        # backslash decimation aren't pickable — except already-selected
+        # nodes, which stay pickable/modifiable even past the cutoff
+        # (matches ANTz: selecting then hiding keeps the selection live).
+        visible_count = 0
         for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
                 continue
             if node.type == NODE_TYPE_LINK:
                 continue   # links are picked via lines below
             if not self.show_hidden and node.hide:
+                continue
+            is_selected = node.id in self.selected_node_ids
+            within_limit = self._draw_limit is None or visible_count < self._draw_limit
+            if within_limit:
+                visible_count += 1
+            elif not is_selected:
                 continue
             r = node.id & 0xFF
             g = (node.id >> 8) & 0xFF

@@ -33,7 +33,7 @@ If a companion ch-map.csv/ch-tracks.csv is found next to --csv, channel
 animation auto-plays and loops from the moment the session starts (no
 in-headset playback controls yet — see --ch-fps). If a texture-driven
 channel (attribute=texture_id) is present, textures are loaded from
---images-folder, or auto-detected at usr/images next to --csv.
+--media-folder, or auto-detected at media/ next to --csv.
 
 Ctrl+C in the console (or exiting the app from the Quest dashboard) ends it.
 """
@@ -112,13 +112,13 @@ def main() -> int:
                               "2026-06-18 at --scale 1.0 --forward 15.0 to fully fix a "
                               "no-overlap/unfusable stereo image; root cause of why this "
                               "much correction is needed is not yet understood.")
-    parser.add_argument("--images-folder", default=None,
-                         help="Folder of images for texture_id (1-based, alphabetical), e.g. "
-                              "a usr/images/ dir of mapNNNNN.jpg files. Default: auto-detect "
-                              "'usr/images' next to --csv (matches the example layout under "
-                              "examples/*/usr/images). No textures are loaded if neither is "
-                              "found, and any texture-driven channel animation just has no "
-                              "visible effect.")
+    parser.add_argument("--media-folder", default=None,
+                         help="Folder of images/videos/GIFs for texture_id (1-based, "
+                              "alphabetical), e.g. a media/ dir of mapNNNNN.jpg files. "
+                              "Default: auto-detect 'media' next to --csv (matches the example "
+                              "layout under examples/*/media). No textures are loaded if "
+                              "neither is found, and any texture-driven channel animation just "
+                              "has no visible effect.")
     parser.add_argument("--ch-fps", type=float, default=30.0,
                          help="Channel animation playback speed in frames per second, if a "
                               "companion ch-map.csv/ch-tracks.csv is found next to "
@@ -142,9 +142,9 @@ def main() -> int:
 
     ch_engine = _load_channel_engine(args.csv, scene.nodes)
 
-    images_folder = (
-        Path(args.images_folder) if args.images_folder
-        else Path(args.csv).resolve().parent / "usr" / "images"
+    media_folder = (
+        Path(args.media_folder) if args.media_folder
+        else Path(args.csv).resolve().parent / "media"
     )
 
     if args.scale is None:
@@ -179,11 +179,11 @@ def main() -> int:
             init_gl_state()
 
             tex_mgr = TextureManager()
-            if images_folder.is_dir():
-                tex_count = tex_mgr.load_folder(images_folder)
-                print(f"Loaded {tex_count} texture(s) from {images_folder}")
-            elif args.images_folder:
-                print(f"--images-folder not found: {images_folder}")
+            if media_folder.is_dir():
+                tex_count = tex_mgr.load_folder(media_folder)
+                print(f"Loaded {tex_count} texture(s) from {media_folder}")
+            elif args.media_folder:
+                print(f"--media-folder not found: {media_folder}")
 
             nav = ControllerNav(ctx)
             diorama_transform = diorama_transform_matrix(args.scale, args.forward, args.down)

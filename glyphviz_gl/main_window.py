@@ -607,12 +607,11 @@ class MainWindow(QMainWindow):
             self._update_stats(Path(path).name)
             self._update_sel_values()
             msg = f"Loaded {len(self.nodes)} nodes from {Path(path).name}"
-            # Auto-load textures from usr/images/ sibling of the CSV's parent
-            # (standard ANTz layout: usr/csv/ and usr/images/ are siblings).
-            auto_tex = Path(path).parent.parent / "images"
+            # Auto-load textures/videos/GIFs from a media/ folder next to the CSV.
+            auto_tex = Path(path).parent / "media"
             if auto_tex.is_dir():
                 self._apply_texture_folder(auto_tex, silent=True)
-                msg += f" | textures: {self._viewport.texture_count} from …/images/"
+                msg += f" | textures: {self._viewport.texture_count} from …/media/"
             ch_msg = self._ch_load_from_csv(path)
             if ch_msg:
                 msg += f" | {ch_msg}"
