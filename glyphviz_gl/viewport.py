@@ -269,6 +269,14 @@ class Viewport(QOpenGLWidget):
         self._render_timer.stop()
         self.update()
 
+    def list_audio_tracks(self) -> list[tuple[int, str]]:
+        """Return (texture_id, filename) for each loaded video's audio track."""
+        return self._video_mgr.list_tracks()
+
+    def set_audio_solo(self, texture_id: int | None):
+        """Mute every video's audio except *texture_id* (None = play all)."""
+        self._video_mgr.set_solo(texture_id)
+
     # --- GL lifecycle ---
 
     def initializeGL(self):
@@ -364,6 +372,7 @@ class Viewport(QOpenGLWidget):
                 break
             self._draw_node(node, selected=(node.id in self.selected_node_ids))
             visible_count += 1
+        self._video_mgr.finalize_frame()   # pause any video no node drew this frame
 
         self._draw_topology_overlays()
 

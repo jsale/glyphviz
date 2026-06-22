@@ -283,6 +283,15 @@ class MainWindow(QMainWindow):
         tex_row_layout.addWidget(btn_tex)
         disp_layout.addWidget(tex_row)
 
+        self._audio_combo = QComboBox()
+        self._audio_combo.setToolTip(
+            "Videos play their audio all at once by default.\n"
+            "Pick one to mute the rest, or 'All Audio Tracks' to hear them together again."
+        )
+        self._audio_combo.setEnabled(False)
+        self._audio_combo.currentIndexChanged.connect(self._on_audio_track_selected)
+        disp_layout.addWidget(self._audio_combo)
+
         # --- Scale group ---
         scale_grp = QGroupBox("Global Scale")
         scale_layout = QVBoxLayout(scale_grp)
@@ -641,11 +650,30 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             self._lbl_tex.setText("Texture load failed")
             self.statusBar().showMessage(f"Texture error: {exc}")
+        self._refresh_audio_combo()
 
     def _clear_textures(self):
         self._viewport.clear_textures()
         self._lbl_tex.setText("No textures loaded")
         self.statusBar().showMessage("Textures cleared.")
+        self._refresh_audio_combo()
+
+    def _refresh_audio_combo(self):
+        """Repopulate the audio-track dropdown from the videos currently loaded
+        as textures.  Defaults to 'All Audio Tracks' (every video heard at once)."""
+        tracks = self._viewport.list_audio_tracks()
+        self._audio_combo.blockSignals(True)
+        self._audio_combo.clear()
+        self._audio_combo.addItem("All Audio Tracks", None)
+        for texture_id, name in tracks:
+            self._audio_combo.addItem(f"Only: {name}", texture_id)
+        self._audio_combo.setCurrentIndex(0)
+        self._audio_combo.setEnabled(len(tracks) > 1)
+        self._audio_combo.blockSignals(False)
+
+    def _on_audio_track_selected(self, index: int):
+        texture_id = self._audio_combo.itemData(index)
+        self._viewport.set_audio_solo(texture_id)
 
     def _save_csv(self):
         """Ctrl+S — overwrite the currently open file."""
