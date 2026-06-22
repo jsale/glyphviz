@@ -186,6 +186,34 @@ class Viewport(QOpenGLWidget):
         bs = self._base_scale
         return (max(s[0]*bs, 0.2), max(s[1]*bs, 0.2), max(s[2]*bs, 0.2))
 
+    def set_camera(self, azimuth: float = None, elevation: float = None,
+                   distance: float = None, target: tuple[float, float, float] = None):
+        """Override one or more camera parameters, leaving the rest (e.g. the
+        bounding-box auto-framing set_nodes() already computed) untouched."""
+        if azimuth is not None:
+            self._cam_azimuth = azimuth
+        if elevation is not None:
+            self._cam_elevation = elevation
+        if distance is not None:
+            self._cam_distance = distance
+        if target is not None:
+            self._cam_target = list(target)
+
+    def export_png(self, path: str, width: int, height: int) -> None:
+        """Render the current scene at an explicit pixel resolution and save
+        it as a PNG.  Works without the widget ever being shown on screen.
+        Compensates for devicePixelRatio so the saved file's actual
+        dimensions match width x height (falls back to a resample if the
+        platform's DPR rounding leaves it off by a pixel or two)."""
+        dpr = self.devicePixelRatioF() or 1.0
+        self.resize(max(1, round(width / dpr)), max(1, round(height / dpr)))
+        img = self.grabFramebuffer()
+        if img.width() != width or img.height() != height:
+            img = img.scaled(width, height, Qt.AspectRatioMode.IgnoreAspectRatio,
+                              Qt.TransformationMode.SmoothTransformation)
+        if not img.save(str(path)):
+            raise RuntimeError(f"Failed to save screenshot to {path}")
+
     def focus_on(self, world_pos: tuple[float, float, float], min_distance: float = 1.0):
         """Point camera at world_pos and pull it in to ~1/10 current distance."""
         az = math.radians(self._cam_azimuth)
