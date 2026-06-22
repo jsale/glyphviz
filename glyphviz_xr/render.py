@@ -51,7 +51,7 @@ def init_gl_state():
 
 
 def draw_scene(scene: Scene, geo: GeoRenderer, scale: float, forward: float, down: float,
-                selected_node=None):
+                selected_node=None, tex_mgr=None):
     """Diorama-first placement: shrink the GlyphViz (Z-up) scene to roughly
     tabletop size, rotate Z-up into OpenXR's Y-up, and anchor it a fixed
     distance in front of / below wherever the LOCAL reference space origin
@@ -75,8 +75,8 @@ def draw_scene(scene: Scene, geo: GeoRenderer, scale: float, forward: float, dow
             node.color_r / 255.0, node.color_g / 255.0,
             node.color_b / 255.0, node.color_a / 255.0,
         )
-        # Textures intentionally omitted from this spike.
-        geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio, gl_tex_name=0)
+        gl_tex = tex_mgr.get_gl_name(node.texture_id) if tex_mgr and node.texture_id else 0
+        geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio, gl_tex_name=gl_tex)
         glPopMatrix()
 
         if node is selected_node:

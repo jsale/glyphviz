@@ -29,10 +29,17 @@ thumbstick turns/moves vertically, grip-squeeze grab-drags the world, and
 the trigger picks whatever the pointing ray hits (highlighted with a yellow
 wireframe box).
 
+If a companion np_ch-map.csv/np_ch-tracks.csv is found next to --csv, channel
+animation auto-plays and loops from the moment the session starts (no
+in-headset playback controls yet — see --ch-fps). If a texture-driven
+channel (attribute=texture_id) is present, textures are loaded from
+--images-folder, or auto-detected at usr/images next to --csv.
+
 Ctrl+C in the console (or exiting the app from the Quest dashboard) ends it.
 """
 import argparse
 import sys
+import time
 from math import radians
 from pathlib import Path
 
@@ -41,13 +48,37 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
+from glyphviz_core.channel_engine import ChannelEngine
+from glyphviz_core.channel_loader import find_channel_files, load_ch_map, load_ch_tracks
 from glyphviz_core.scene import Scene
 from glyphviz_gl.geometry import GeoRenderer
+from glyphviz_gl.texture_manager import TextureManager
 from glyphviz_xr.controller_nav import ControllerNav
 from glyphviz_xr.render import draw_scene, init_gl_state
 from glyphviz_xr.scene_fit import auto_scale_for_scene
 from glyphviz_xr.session import make_compat_gl_context_provider, view_loop_output_swapped
 from glyphviz_xr.transforms import diorama_transform_matrix, gl_col_major, view_matrix
+
+
+def _load_channel_engine(csv_path: str, nodes) -> ChannelEngine | None:
+    """Auto-detect and load companion np_ch-map.csv/np_ch-tracks.csv, if any.
+    Mirrors glyphviz_gl.main_window._ch_load_from_csv (desktop), minus the UI."""
+    map_path, tracks_path = find_channel_files(csv_path)
+    if not map_path or not tracks_path:
+        return None
+    try:
+        ch_map = load_ch_map(map_path)
+        tracks, id_to_col = load_ch_tracks(tracks_path)
+        engine = ChannelEngine()
+        engine.load(ch_map, tracks, id_to_col, nodes)
+        if engine.frame_count == 0 or not engine.has_bindings:
+            return None
+        print(f"Loaded channel animation: {engine.frame_count} frames "
+              f"(auto-playing at --ch-fps, looping)")
+        return engine
+    except Exception as exc:
+        print(f"Channel load warning: {exc}")
+        return None
 
 
 def main() -> int:
@@ -81,6 +112,18 @@ def main() -> int:
                               "2026-06-18 at --scale 1.0 --forward 15.0 to fully fix a "
                               "no-overlap/unfusable stereo image; root cause of why this "
                               "much correction is needed is not yet understood.")
+    parser.add_argument("--images-folder", default=None,
+                         help="Folder of images for texture_id (1-based, alphabetical), e.g. "
+                              "a usr/images/ dir of mapNNNNN.jpg files. Default: auto-detect "
+                              "'usr/images' next to --csv (matches the example layout under "
+                              "examples/*/usr/images). No textures are loaded if neither is "
+                              "found, and any texture-driven channel animation just has no "
+                              "visible effect.")
+    parser.add_argument("--ch-fps", type=float, default=30.0,
+                         help="Channel animation playback speed in frames per second, if a "
+                              "companion np_ch-map.csv/np_ch-tracks.csv is found next to "
+                              "--csv. Playback auto-starts and loops; there's no in-headset "
+                              "control for it yet.")
     args = parser.parse_args()
 
     try:
@@ -96,6 +139,13 @@ def main() -> int:
 
     scene = Scene.load(args.csv, base_scale=args.base_scale)
     print(f"Loaded {len(scene.nodes)} nodes from {args.csv}")
+
+    ch_engine = _load_channel_engine(args.csv, scene.nodes)
+
+    images_folder = (
+        Path(args.images_folder) if args.images_folder
+        else Path(args.csv).resolve().parent / "usr" / "images"
+    )
 
     if args.scale is None:
         args.scale = auto_scale_for_scene(scene, args.target_size)
@@ -127,6 +177,14 @@ def main() -> int:
             ctx.graphics.make_current()
             geo.setup()
             init_gl_state()
+
+            tex_mgr = TextureManager()
+            if images_folder.is_dir():
+                tex_count = tex_mgr.load_folder(images_folder)
+                print(f"Loaded {tex_count} texture(s) from {images_folder}")
+            elif args.images_folder:
+                print(f"--images-folder not found: {images_folder}")
+
             nav = ControllerNav(ctx)
             diorama_transform = diorama_transform_matrix(args.scale, args.forward, args.down)
             print("Session created. Rendering — Ctrl+C here (or exit from the "
@@ -140,6 +198,9 @@ def main() -> int:
 
             frame_count = 0
             logged_first_frame = False
+            ch_frame = 0
+            ch_accum = 0.0
+            ch_last_time = time.perf_counter()
             for frame_state in ctx.frame_loop():
                 for eye_index, view in enumerate(view_loop_output_swapped(ctx, frame_state, args.swap_eyes)):
                     if not logged_first_frame:
@@ -156,6 +217,16 @@ def main() -> int:
                         # Once per frame, not once per eye — see ControllerNav.update.
                         nav.update(view.pose.orientation, frame_state.predicted_display_time,
                                    scene, diorama_transform, args.scale)
+                        if ch_engine is not None:
+                            now = time.perf_counter()
+                            ch_accum += now - ch_last_time
+                            ch_last_time = now
+                            step = 1.0 / args.ch_fps
+                            while ch_accum >= step:
+                                ch_accum -= step
+                                ch_frame = (ch_frame + 1) % ch_engine.frame_count
+                            ch_engine.apply_frame(ch_frame)
+                            scene.invalidate()
                     glMatrixMode(GL_PROJECTION)
                     glLoadMatrixf(np.asarray(projection_from_fovf(view.fov), dtype=np.float32).flatten())
                     glMatrixMode(GL_MODELVIEW)
@@ -180,7 +251,7 @@ def main() -> int:
                     nav.draw_controllers(geo)
                     glMultMatrixf(gl_col_major(nav.rig_inverse()))
                     draw_scene(scene, geo, args.scale, args.forward, args.down,
-                               selected_node=nav.selected_node)
+                               selected_node=nav.selected_node, tex_mgr=tex_mgr)
                 frame_count += 1
                 if frame_count % 300 == 0:
                     print(f"...{frame_count} frames rendered")

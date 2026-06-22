@@ -19,9 +19,11 @@ _ATTR_TO_FIELD: dict[str, str] = {
     'color_g': 'color_g',
     'color_b': 'color_b',
     'color_a': 'color_a',
+    'texture_id': 'texture_id',
 }
 
-_INT_FIELDS = frozenset({'color_r', 'color_g', 'color_b', 'color_a'})
+_COLOR_FIELDS = frozenset({'color_r', 'color_g', 'color_b', 'color_a'})
+_INT_FIELDS = _COLOR_FIELDS | frozenset({'texture_id'})
 
 # Old-style ANTz column name for the channel-input-id field (stored in node.extras).
 _CH_INPUT_KEYS = ('ch_input_id', 'np_ch_in_id', 'ch_input_id ')
@@ -92,8 +94,10 @@ class ChannelEngine:
         row = self._tracks[frame]
         for node, field, col, is_int in self._bindings:
             val = float(row[col])
-            if is_int:
+            if field in _COLOR_FIELDS:
                 val = max(0, min(255, round(val)))
+            elif is_int:
+                val = max(0, round(val))
             setattr(node, field, val)
 
     def reset(self) -> None:
