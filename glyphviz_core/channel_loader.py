@@ -14,6 +14,27 @@ def find_channel_files(node_csv_path: str) -> tuple[Path | None, Path | None]:
     return map_path, track_path
 
 
+def find_audio_file(node_csv_path: str) -> Path | None:
+    """Return the WAV/audio file a node CSV's Channels were derived from, if any.
+
+    Convention: a one-line manifest named "*_gv_audio.txt" sits next to the
+    node CSV, containing a path (relative to the node CSV's folder) to the
+    source audio file — see examples/Audio_Animation_Example/
+    generate_audio_example.py. This lets Channels playback play that file in
+    sync, without guessing among unrelated WAVs that might also be sitting in
+    the same media/ folder (e.g. alternate takes used to build other examples).
+    """
+    d = Path(node_csv_path).parent
+    manifests = [p for p in d.iterdir() if p.name.endswith('_gv_audio.txt')]
+    if len(manifests) != 1:
+        return None
+    rel = manifests[0].read_text(encoding='utf-8').strip()
+    if not rel:
+        return None
+    audio_path = d / rel
+    return audio_path if audio_path.is_file() else None
+
+
 def load_ch_map(path: Path) -> dict[int, list[tuple[int, str]]]:
     """Parse a ch-map.csv (gv_ch-map.csv or np_ch-map.csv).
 

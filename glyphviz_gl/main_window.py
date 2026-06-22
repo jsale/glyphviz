@@ -29,8 +29,11 @@ from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA
 from glyphviz_core.node import Node, NON_VISUAL_TYPES
 from glyphviz_core.topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT
 
+from .audio_player import AudioPlayer
 from .node_table import NodeTableView
 from .viewport import Viewport
+
+_AUDIO_TICK_MS = 33   # redraw rate while Channels playback is audio-driven (~30 Hz)
 
 
 class MainWindow(QMainWindow):
@@ -57,6 +60,11 @@ class MainWindow(QMainWindow):
         self._ch_playing = False
         self._ch_timer = QTimer(self)
         self._ch_timer.timeout.connect(self._ch_tick)
+        # Audio-synced Channels ("music synesthesia"): when a Channels example
+        # has a companion gv_audio.txt manifest, frame advance is driven by
+        # this player's real playback position instead of the fixed-FPS timer.
+        self._ch_audio = AudioPlayer()
+        self._ch_audio_loaded = False
 
         # Gizmo manipulation state (Move/Rotate/Size mode selector)
         self._gizmo_mode: str | None = None
@@ -1315,14 +1323,18 @@ class MainWindow(QMainWindow):
     # --- Channel / animation playback ---
 
     def _ch_load_from_csv(self, path: str) -> str | None:
-        """Detect and load companion channel files.  Returns a short status string or None."""
-        from glyphviz_core.channel_loader import find_channel_files, load_ch_map, load_ch_tracks
+        """Detect and load companion channel files (and a synced audio file,
+        if present).  Returns a short status string or None."""
+        from glyphviz_core.channel_loader import (
+            find_audio_file, find_channel_files, load_ch_map, load_ch_tracks,
+        )
         from glyphviz_core.channel_engine import ChannelEngine
 
         map_path, tracks_path = find_channel_files(path)
         if not map_path or not tracks_path:
             self._ch_grp.setVisible(False)
             self._ch_engine = None
+            self._ch_unload_audio()
             return None
 
         try:
@@ -1333,6 +1345,7 @@ class MainWindow(QMainWindow):
             if engine.frame_count == 0 or not engine.has_bindings:
                 self._ch_grp.setVisible(False)
                 self._ch_engine = None
+                self._ch_unload_audio()
                 return None
             self._ch_engine = engine
             self._ch_frame = 0
@@ -1342,22 +1355,47 @@ class MainWindow(QMainWindow):
             self._ch_slider.blockSignals(False)
             self._ch_frame_label.setText(f"Frame: 0 / {engine.frame_count - 1}")
             self._ch_grp.setVisible(True)
+
+            audio_path = find_audio_file(path)
+            if audio_path:
+                self._ch_audio.load(audio_path)
+                self._ch_audio_loaded = True
+                self._ch_fps.setEnabled(False)
+                self._ch_fps.setToolTip(
+                    "Disabled: this Channels animation is synced to its audio "
+                    "file's real playback position instead of a fixed rate."
+                )
+                return f"channels: {engine.frame_count} frames, synced to {audio_path.name}"
+            self._ch_unload_audio()
             return f"channels: {engine.frame_count} frames"
         except Exception as exc:
             self._ch_grp.setVisible(False)
             self._ch_engine = None
+            self._ch_unload_audio()
             self.statusBar().showMessage(f"Channel load warning: {exc}")
             return None
+
+    def _ch_unload_audio(self):
+        self._ch_audio.unload()
+        self._ch_audio_loaded = False
+        self._ch_fps.setEnabled(True)
+        self._ch_fps.setToolTip("Playback speed in frames per second")
 
     def _ch_toggle_play(self):
         if self._ch_playing:
             self._ch_timer.stop()
             self._ch_playing = False
             self._ch_play_btn.setText("▶")
+            if self._ch_audio_loaded:
+                self._ch_audio.pause()
         else:
             if self._ch_engine is None:
                 return
-            self._ch_timer.start(max(1, int(1000 / self._ch_fps.value())))
+            if self._ch_audio_loaded:
+                self._ch_timer.start(_AUDIO_TICK_MS)
+                self._ch_audio.play(loop=self._ch_loop.isChecked())
+            else:
+                self._ch_timer.start(max(1, int(1000 / self._ch_fps.value())))
             self._ch_playing = True
             self._ch_play_btn.setText("⏸")
 
@@ -1366,6 +1404,8 @@ class MainWindow(QMainWindow):
         self._ch_playing = False
         self._ch_play_btn.setText("▶")
         self._ch_frame = 0
+        if self._ch_audio_loaded:
+            self._ch_audio.stop()
         if self._ch_engine:
             self._ch_engine.reset()
             self._ch_slider.blockSignals(True)
@@ -1377,6 +1417,12 @@ class MainWindow(QMainWindow):
     def _ch_tick(self):
         if self._ch_engine is None:
             return
+        if self._ch_audio_loaded:
+            self._ch_tick_audio_synced()
+        else:
+            self._ch_tick_fixed_rate()
+
+    def _ch_tick_fixed_rate(self):
         self._ch_frame += 1
         if self._ch_frame >= self._ch_engine.frame_count:
             if self._ch_loop.isChecked():
@@ -1386,11 +1432,30 @@ class MainWindow(QMainWindow):
                 self._ch_timer.stop()
                 self._ch_playing = False
                 self._ch_play_btn.setText("▶")
-        self._ch_engine.apply_frame(self._ch_frame)
+        self._ch_apply_and_show_frame(self._ch_frame)
+
+    def _ch_tick_audio_synced(self):
+        """Drive the Channels frame index from the audio file's real playback
+        position rather than a fixed rate, so render slowdowns cost smoothness,
+        not audio sync — see [[project_audio_strategy]] in memory for why."""
+        duration_ms = self._ch_audio.duration_ms()
+        if duration_ms <= 0:
+            return   # audio hasn't finished opening yet
+        position_frac = min(1.0, self._ch_audio.position_ms() / duration_ms)
+        frame = min(self._ch_engine.frame_count - 1, int(position_frac * self._ch_engine.frame_count))
+        self._ch_frame = frame
+        self._ch_apply_and_show_frame(frame)
+        if self._ch_audio.has_ended() and not self._ch_loop.isChecked():
+            self._ch_timer.stop()
+            self._ch_playing = False
+            self._ch_play_btn.setText("▶")
+
+    def _ch_apply_and_show_frame(self, frame: int):
+        self._ch_engine.apply_frame(frame)
         self._ch_slider.blockSignals(True)
-        self._ch_slider.setValue(self._ch_frame)
+        self._ch_slider.setValue(frame)
         self._ch_slider.blockSignals(False)
-        self._ch_frame_label.setText(f"Frame: {self._ch_frame} / {self._ch_engine.frame_count - 1}")
+        self._ch_frame_label.setText(f"Frame: {frame} / {self._ch_engine.frame_count - 1}")
         self._viewport.scene_invalidate()
 
     def _on_ch_slider(self, value: int):
@@ -1399,9 +1464,12 @@ class MainWindow(QMainWindow):
             self._ch_engine.apply_frame(value)
             self._ch_frame_label.setText(f"Frame: {value} / {self._ch_engine.frame_count - 1}")
             self._viewport.scene_invalidate()
+            if self._ch_audio_loaded and self._ch_engine.frame_count > 1:
+                frac = value / (self._ch_engine.frame_count - 1)
+                self._ch_audio.seek_ms(int(frac * self._ch_audio.duration_ms()))
 
     def _ch_update_fps(self, _value: float):
-        if self._ch_playing:
+        if self._ch_playing and not self._ch_audio_loaded:
             self._ch_timer.start(max(1, int(1000 / self._ch_fps.value())))
 
     def _update_stats(self, filename: str = None):
