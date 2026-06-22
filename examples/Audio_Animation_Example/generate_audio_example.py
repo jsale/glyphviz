@@ -12,15 +12,23 @@ MainWindow._ch_tick_audio_synced.
 
 Scene layout
 ------------
-N_BANDS independent sphere nodes spread along the X axis, one per log-spaced
-frequency band (lowest frequency at -X, highest at +X). Each sphere's
-translate_z is driven by that band's normalized power over time. Color is a
-blue (low frequency) -> red (high frequency) gradient, purely so the bands
-are easy to tell apart by eye; it does not animate.
+N_BANDS independent 3-level hyperglyphs spread along the X axis, one per
+log-spaced frequency band (lowest frequency at -X, highest at +X): a root
+sphere with N_L1_CHILDREN children evenly spaced around its equator, each
+of those with N_L2_CHILDREN children evenly spaced around its own equator.
+Every level uses Sphere topology, so translate_z means "altitude above the
+parent's surface" rather than a Cartesian offset — Channels drives that
+altitude every frame for every node in a band's hierarchy (all bound to the
+same ch_input_id/channel, so the whole hyperglyph reacts together), without
+disturbing each child's structural placement around its parent. Child
+geometry is randomized from CHILD_GEOMETRIES (fixed seed, reproducible);
+color is a blue (low frequency) -> red (high frequency) gradient shared by
+a band's whole hierarchy, purely so bands are easy to tell apart by eye —
+it does not animate.
 
 Output files (written to OUTPUT_DIR)
 -------------------------------------
-  {PREFIX}_gv_node.csv       N_BANDS sphere nodes
+  {PREFIX}_gv_node.csv       hyperglyph nodes (root + L1 + L2 per band)
   {PREFIX}_gv_tag.csv        per-node frequency label ("123 Hz")
   {PREFIX}_gv_ch-map.csv     channel -> attribute mappings (-> translate_z)
   {PREFIX}_gv_ch-tracks.csv  per-band power over time, from audio_analysis.analyze()
@@ -39,6 +47,7 @@ the audio plays in sync automatically.
 import argparse
 import colorsys
 import csv
+import random
 import sys
 from pathlib import Path
 
@@ -67,16 +76,63 @@ FPS     = 30.0
 F_LO    = 20.0
 F_HI    = 16000.0
 
-# Peak translate_z displacement (scene units) at full band power.
+# Peak translate_z displacement (scene units) at full band power. Note this is
+# a *local* offset, so L1/L2 children (whose translate_z is carried by their
+# parent's cumulative world_scale, same cascading as the placement math above)
+# move less in world space than the root does for the same track value — e.g.
+# at SCALE-derived cascaded scales of ~0.12/0.10, a child's visible bounce is
+# roughly 1/8-1/10th of the root's. Bumped 4x (2.0 -> 8.0) since the prior
+# value was too small to see the children move at all.
 AMPLITUDE = 8.0
 
-# Spacing between adjacent band spheres along X (scene units).
-SPACING = 1.5
+# Spacing between adjacent band roots along X (scene units).
+SPACING = 3.0
 
-SCALE  = 0.5
 RATIO  = 0.1
-GEO_SPHERE = 3   # glyphviz_core/geometry_data.py
-TOPO_NONE  = 0   # glyphviz_core/topology.py
+GEO_SPHERE  = 3   # glyphviz_core/geometry_data.py
+TOPO_SPHERE = 2   # glyphviz_core/topology.py
+BASE_SCALE  = 3.0   # the desktop app's default Global Scale slider value
+
+# Hyperglyph validation pass: give each band root a couple of child levels,
+# all bound to the same channel (ch_input_id) as their parent, so the whole
+# 3-level hierarchy animates and colors together as one glyph.
+#
+# Every level uses Sphere topology (per Jeff, after the first TOPO_NONE
+# attempt: with topo=NONE, parent and children only had Channels' shared
+# translate_z to move by, so they all translated together as one rigid
+# block — nothing moved *relative* to its parent). Under Sphere topology,
+# a child's translate_x/y are longitude/latitude (structural placement,
+# evenly distributed around the parent's surface) while translate_z is
+# *altitude above that surface* — a completely separate axis from
+# placement, so Channels can drive altitude every frame without disturbing
+# where around the parent each child sits. At altitude=0 a child rests
+# exactly on its parent's surface; the channel pushes it outward from there.
+#
+# This also remains clear of the *other* known issue — multi-level Sphere/
+# Point/Rod/Cube nesting distorts grandchildren's shape under a non-uniform
+# ancestor scale (see memory: project_topology_nested_scaling_bug) — because
+# that bug specifically requires a non-uniform per-axis parent scale to
+# compound through the rotation cascade, and every scale below is uniform
+# (scale_x == scale_y == scale_z at every level).
+N_L1_CHILDREN = 4
+N_L2_CHILDREN = 2
+
+ROOT_RADIUS_WORLD = 0.36   # -> SCALE = 0.12, same as the original flat build
+L1_RADIUS_WORLD   = 0.30
+L2_RADIUS_WORLD   = 0.24
+
+# glyphviz_core/topology.py's compute_world_scales() cascades scale_x
+# multiplicatively down the hierarchy (world_scale = parent's *cumulative*
+# world_scale * own scale_x), so the local scale_x a child needs depends on
+# its parent's world size, not just on what that child "looks like" alone.
+SCALE    = ROOT_RADIUS_WORLD / BASE_SCALE
+L1_SCALE = L1_RADIUS_WORLD / ROOT_RADIUS_WORLD
+L2_SCALE = L2_RADIUS_WORLD / L1_RADIUS_WORLD
+
+# Grab-bag of solid geometries to randomize child shape from (GEO_SPHERE stays
+# reserved for the band roots) — glyphviz_core/geometry_data.py ids.
+CHILD_GEOMETRIES = [1, 5, 7, 9, 11, 13, 15, 16, 19]   # Cube,Cone,Torus,Dodeca,Octa,Tetra,Icosa,Pin,Cylinder
+_rng = random.Random(42)   # fixed seed: regenerating reproduces the same shapes
 
 
 def _band_color(i: int, n: int) -> tuple[int, int, int]:
@@ -85,6 +141,19 @@ def _band_color(i: int, n: int) -> tuple[int, int, int]:
     hue = 0.66 * (1.0 - i / max(n - 1, 1))   # 0.66 = blue, 0.0 = red
     r, g, b = colorsys.hsv_to_rgb(hue, 0.85, 1.0)
     return int(r * 255), int(g * 255), int(b * 255)
+
+
+def _node_row(node_id, parent_id, branch_level, tx, ty, tz, scale, color, geometry, ch_input_id):
+    r, g, b = color
+    return {
+        "id": node_id, "type": 5, "parent_id": parent_id, "branch_level": branch_level,
+        "translate_x": round(tx, 4), "translate_y": round(ty, 4), "translate_z": round(tz, 4),
+        "rotate_x": 0.0, "rotate_y": 0.0, "rotate_z": 0.0,
+        "scale_x": scale, "scale_y": scale, "scale_z": scale,
+        "color_r": r, "color_g": g, "color_b": b, "color_a": 255,
+        "geometry": geometry, "hide": 0, "topo": TOPO_SPHERE, "ratio": RATIO,
+        "ch_input_id": ch_input_id,
+    }
 
 
 def write_nodes(path: Path, band_freqs) -> int:
@@ -99,23 +168,50 @@ def write_nodes(path: Path, band_freqs) -> int:
     n = len(band_freqs)
     x0 = -(n - 1) / 2.0 * SPACING
     rows = []
+    next_id = n + 1   # band roots reserve ids 1..n (== their ch_input_id/tag record_id)
+
     for i in range(n):
-        r, g, b = _band_color(i, n)
-        rows.append({
-            "id": i + 1, "type": 5, "parent_id": 0, "branch_level": 0,
-            "translate_x": round(x0 + i * SPACING, 4),
-            "translate_y": 0.0, "translate_z": 0.0,
-            "rotate_x": 0.0, "rotate_y": 0.0, "rotate_z": 0.0,
-            "scale_x": SCALE, "scale_y": SCALE, "scale_z": SCALE,
-            "color_r": r, "color_g": g, "color_b": b, "color_a": 255,
-            "geometry": GEO_SPHERE, "hide": 0, "topo": TOPO_NONE, "ratio": RATIO,
-            "ch_input_id": i + 1,   # 1-indexed; matches channel_id in ch-map
-        })
+        color = _band_color(i, n)
+        ch_id = i + 1   # 1-indexed; matches channel_id in ch-map. Every L1/L2
+                         # descendant below reuses this same value, so the
+                         # whole band's hierarchy animates as one glyph.
+        root_id = i + 1
+        rows.append(_node_row(
+            root_id, 0, 0,
+            x0 + i * SPACING, 0.0, 0.0,
+            SCALE, color, GEO_SPHERE, ch_id,
+        ))
+
+        for j in range(N_L1_CHILDREN):
+            # Sphere-topology placement: translate_x/y = longitude/latitude
+            # (degrees), translate_z = altitude above the surface (left at 0 —
+            # Channels drives this every frame). Evenly distributed = equally
+            # spaced longitudes around the root's equator.
+            longitude = j * 360.0 / N_L1_CHILDREN
+            l1_id = next_id
+            next_id += 1
+            rows.append(_node_row(
+                l1_id, root_id, 1,
+                longitude, 0.0, 0.0,
+                L1_SCALE, color, _rng.choice(CHILD_GEOMETRIES), ch_id,
+            ))
+
+            for k in range(N_L2_CHILDREN):
+                longitude2 = k * 360.0 / N_L2_CHILDREN
+                l2_id = next_id
+                next_id += 1
+                rows.append(_node_row(
+                    l2_id, l1_id, 2,
+                    longitude2, 0.0, 0.0,
+                    L2_SCALE, color, _rng.choice(CHILD_GEOMETRIES), ch_id,
+                ))
+
     with open(path, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
         w.writerows(rows)
-    print(f"  {path.name}: {n} band-sphere nodes")
+    total_children = n * N_L1_CHILDREN * (1 + N_L2_CHILDREN)
+    print(f"  {path.name}: {len(rows)} nodes ({n} band roots + {total_children} hyperglyph children)")
     return n
 
 
