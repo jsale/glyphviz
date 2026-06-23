@@ -20,15 +20,17 @@ GaiaViz's `np_` file/column prefix stands for "neural physics," Shane Saxon's ar
 
 2. **Channels (animation)** — Time-series animation of node attributes via the `ch-map`/`ch-tracks` CSV pair (`gv_ch-map.csv`/`gv_ch-tracks.csv` for GlyphViz-native data, `np_ch-map.csv`/`np_ch-tracks.csv` for GaiaViz-format data). Enables EEG, GPS, IoT, and biometric visualizations. See `gaiaviz-skill/examples/Channels_Example/` and `RHR_Channel_Anim1/`.
 
-3. **Z-topology variants** — `TOPO_ZCUBE/ZSPHERE/ZTORUS/ZCYLINDER/ZROD` (ids 9–13) and `TOPO_VIDEO` (15) are defined in the enum but not yet implemented in `topology.py`.
+3. **Workflow polish** — Save edits back to CSV, undo/redo, multi-select, table search/filter.
 
-4. **Workflow polish** — Save edits back to CSV, undo/redo, multi-select, table search/filter.
-
-5. **VR/AR/XR** — Long-term goal: an immersive viewer. No codebase exists yet; desktop 3D is the current focus. Flag any architectural decisions that would make a future XR port harder.
+4. **VR/AR/XR** — Long-term goal: an immersive viewer. No codebase exists yet; desktop 3D is the current focus. Flag any architectural decisions that would make a future XR port harder.
 
 ## Topology Inventory
 
-18 types defined in `glyphviz/topology.py`. Implemented: None (0), Cube (1), Sphere (2), Torus (3), Cylinder (4), Pin (5), Rod (6), Point (7), Plane (8), Spiral (14), Plot (16), Surface (17). Not yet implemented: ZCube (9), ZSphere (10), ZTorus (11), ZCylinder (12), ZRod (13), Video (15).
+All 18 types defined in `glyphviz_core/topology.py` are now implemented: None (0), Cube (1), Sphere (2), Torus (3), Cylinder (4), Pin (5), Rod (6), Point (7), Plane (8), Zcube (9), Zsphere (10), Ztorus (11), Zcylinder (12), Zrod (13), Spiral (14), Video (15), Plot (16), Surface (17).
+
+The legacy ANTz/GlyphViz-native node CSV column for Cube's face selector is spelled `facet` (1-indexed: 1=+X, 2=-X, 3=+Y, 4=-Y, 5=+Z, 6=-Z — confirmed against a real ANTz session, see commit history); GaiaViz's `np_` dialect spells the same concept `subspace` (0-indexed). `glyphviz_core/csv_reader.py`'s `load_node_csv` checks for `subspace` first and falls back to `facet - 1`; `save_node_csv` always writes `facet` (the canonical ANTz column name) from `Node.subspace + 1`.
+
+Z-topology variants (9–13) are each "akin to" their non-Z counterpart with the surface/radius offset term zeroed out (children sit through the center/axis rather than on the rendered surface) — see `Topology-Guide.md`'s "Important Scale and Position Notes" section. Zrod's placement math is intentionally identical to Zcylinder's.
 
 When topology behavior is ambiguous, consult `gaiaviz-skill/references/structure/Topology-Guide.md` first. If not covered there, derive from first principles and note the choice in the commit message.
 

@@ -9,12 +9,13 @@ offset function and registering it in _TOPO_OFFSET_FUNCS.
 """
 import math
 
-from .geometry_data import CYLINDER_RADIUS_RATIO, ROD_HEIGHT_FACTOR, torus_radii
+from .geometry_data import ROD_HEIGHT_FACTOR, torus_radii
 from .node import Node
 
 # topo id values — full reference list from Topology-Guide.md (np_topo_id there).
-# Only a subset has dedicated offset functions below (see _TOPO_OFFSET_FUNCS);
-# the rest fall back to a plain Cartesian offset until they're modeled.
+# Every id except TOPO_NONE has a dedicated offset function registered in
+# _TOPO_OFFSET_FUNCS; TOPO_NONE falls back to a plain Cartesian offset (ANTz
+# convention: an untyped parent's children translate rigidly with it).
 TOPO_NONE      = 0
 TOPO_CUBE      = 1
 TOPO_SPHERE    = 2   # KML-style longitude/latitude/altitude on a globe surface
@@ -187,6 +188,12 @@ def pin_offset(tx: float, ty: float, tz: float, parent_radius: float, scale: flo
         parent_radius + tx * s,
     )
 
+
+# Subspace 0-5 -> face name, confirmed against real ANTz ground truth
+# (legacy 'facet' CSV column, 1-indexed: facet 1=+X .. 6=-Z -> subspace
+# facet-1). Exposed for GUI consumption (e.g. a Facet picker) so the
+# face-order source of truth lives in one place.
+CUBE_FACE_NAMES = ("+X", "-X", "+Y", "-Y", "+Z", "-Z")
 
 # Face data for cube topology: each entry is (normal, u, v) where
 # normal = outward face direction, u/v = right/up within the face plane
@@ -481,6 +488,38 @@ def _rod_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_s
     return _axis_scaled(local, parent_scale)
 
 
+def _cylinder_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+    """Cylinder topology (per Topology-Guide.md: 'Children on cylindrical
+    surface'):
+      translate_x -> angle (degrees) around the cylinder's axis (local Z,
+                     matching GEO_CYLINDER's own local-Z orientation)
+      translate_y -> height along the axis, literal local-Z offset from the
+                     parent's center (not normalized to the rendered length —
+                     unlike Rod, which deliberately maps [0,180] to the full
+                     physical cylinder length; Cylinder has no such
+                     documented convention, so this follows Pin's plainer
+                     'literal height value' precedent instead)
+      translate_z -> radial distance from the axis, riding on the actual
+                     rendered surface (translate_z=0 = the surface) — the
+                     Zcylinder variant (radius=0) is explicitly described as
+                     'akin to cylindrical coords but with radius=0.0',
+                     confirming base Cylinder's translate_z=0 means the
+                     surface, not the axis.
+    """
+    avg_s = _avg3(parent_scale)
+    if avg_s < 1e-9:
+        return (0.0, 0.0, 0.0)
+    base_radius = parent_radius / avg_s
+    angle = math.radians(tx)
+    radial = base_radius + tz
+    local = (
+        radial * math.cos(angle),
+        radial * math.sin(angle),
+        ty,
+    )
+    return _axis_scaled(local, parent_scale)
+
+
 def _point_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
     """Point topology: longitude/latitude/altitude from the parent center with
     per-axis scale — a child at lon=0, alt=5 on a parent scaled 2x along X
@@ -536,6 +575,86 @@ def _spiral_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _chil
     return _axis_scaled(local, parent_scale)
 
 
+# ---------------------------------------------------------------------------
+# Z-topology variants (9-13): each is "akin to" an already-implemented
+# topology with its surface/radius term zeroed out, so children sit at/through
+# the parent's center instead of on its rendered surface. Per Topology-Guide.md
+# ("Important Scale and Position Notes"), Z-types still scale their placement
+# position by the parent's cumulative world scale (same as their base
+# topology) — only the CHILD's own rendered size is exempted from inheriting
+# parent scale, which is handled separately in compute_world_scales.
+# ---------------------------------------------------------------------------
+
+def _zcube_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, child_subspace=0):
+    """Akin to Cube, but dist = tz only (no base_radius term) — a child at
+    tz=0 sits at the parent's center rather than on the cube face."""
+    face_idx = max(0, min(5, child_subspace))
+    n, u, v = _CUBE_FACES[face_idx]
+    dist = tz
+    local = (
+        dist * n[0] + tx * u[0] + ty * v[0],
+        dist * n[1] + tx * u[1] + ty * v[1],
+        dist * n[2] + tx * u[2] + ty * v[2],
+    )
+    return _axis_scaled(local, parent_scale)
+
+
+def _zsphere_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+    """Akin to KML/Sphere coords, but translate_z=0 is the center point (the
+    ellipsoid radii are forced to 0) rather than the sphere's surface."""
+    lon = math.radians(tx)
+    lat = math.radians(ty)
+    cos_lat = math.cos(lat)
+    nx = cos_lat * math.cos(lon)
+    ny = cos_lat * math.sin(lon)
+    nz = math.sin(lat)
+    local = (tz * nx, tz * ny, tz * nz)
+    return _axis_scaled(local, parent_scale)
+
+
+def _ztorus_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale, _child_subspace=0):
+    """Akin to Torus, but with zero tube thickness: the minor (tube) radius
+    is dropped, so translate_z directly offsets outward from the major
+    (orbital) ring instead of riding on a donut surface."""
+    avg_s = _avg3(parent_scale)
+    if avg_s < 1e-9:
+        return (0.0, 0.0, 0.0)
+    base_radius = parent_radius / avg_s
+    u = math.radians(tx)
+    v = math.radians(ty)
+    major_r, _minor_r = torus_radii(parent_ratio, base_radius)
+    tube_r = tz  # zero thickness: no minor-radius contribution
+    cos_v = math.cos(v)
+    radial = major_r + tube_r * cos_v
+    local = (
+        radial * math.cos(u),
+        radial * math.sin(u),
+        tube_r * math.sin(v),
+    )
+    return _axis_scaled(local, parent_scale)
+
+
+def _zcylinder_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+    """Akin to Cylinder, but with radius=0: children collapse onto the
+    central axis (translate_z directly offsets outward from the axis instead
+    of riding on the cylinder's surface)."""
+    angle = math.radians(tx)
+    radial = tz
+    local = (
+        radial * math.cos(angle),
+        radial * math.sin(angle),
+        ty,
+    )
+    return _axis_scaled(local, parent_scale)
+
+
+def _zrod_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale, child_subspace=0):
+    """Akin to Zcylinder — identical placement math; the only documented
+    difference (scale not affecting child size) is a scale-cascade rule
+    handled in compute_world_scales, not a position difference here."""
+    return _zcylinder_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale, child_subspace)
+
+
 def _plot_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
     """Plot topology (1D/2D/3D line plot, GPS, Oscilloscope): children placed
     at their Cartesian translate_x/y/z coordinates, scaled by the parent's
@@ -554,17 +673,23 @@ def _surface_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _ch
 
 
 _TOPO_OFFSET_FUNCS = {
-    TOPO_CUBE:    _cube_offset,
-    TOPO_SPHERE:  _sphere_offset,
-    TOPO_TORUS:   _torus_offset,
-    TOPO_PIN:     _pin_offset,
-    TOPO_ROD:     _rod_offset,
-    TOPO_POINT:   _point_offset,
-    TOPO_PLANE:   _cartesian_offset,
-    TOPO_VIDEO:   _cartesian_offset,   # flat screen: children at Cartesian coords
-    TOPO_SPIRAL:  _spiral_offset,
-    TOPO_PLOT:    _plot_offset,
-    TOPO_SURFACE: _surface_offset,
+    TOPO_CUBE:      _cube_offset,
+    TOPO_SPHERE:    _sphere_offset,
+    TOPO_TORUS:     _torus_offset,
+    TOPO_CYLINDER:  _cylinder_offset,
+    TOPO_PIN:       _pin_offset,
+    TOPO_ROD:       _rod_offset,
+    TOPO_POINT:     _point_offset,
+    TOPO_PLANE:     _cartesian_offset,
+    TOPO_ZCUBE:     _zcube_offset,
+    TOPO_ZSPHERE:   _zsphere_offset,
+    TOPO_ZTORUS:    _ztorus_offset,
+    TOPO_ZCYLINDER: _zcylinder_offset,
+    TOPO_ZROD:      _zrod_offset,
+    TOPO_VIDEO:     _cartesian_offset,   # flat screen: children at Cartesian coords
+    TOPO_SPIRAL:    _spiral_offset,
+    TOPO_PLOT:      _plot_offset,
+    TOPO_SURFACE:   _surface_offset,
 }
 
 

@@ -14,7 +14,7 @@ _TRACKED_COLS = frozenset({
     'rotate_x', 'rotate_y', 'rotate_z',
     'scale_x', 'scale_y', 'scale_z',
     'color_r', 'color_g', 'color_b', 'color_a',
-    'geometry', 'hide', 'topo', 'ratio', 'subspace', 'texture_id',
+    'geometry', 'hide', 'topo', 'ratio', 'subspace', 'facet', 'texture_id',
     'text', 'link',
 })
 
@@ -75,8 +75,16 @@ _FLOAT_COLS = frozenset({
 # GaiaViz np_node.csv uses different names for a handful of columns that
 # GlyphViz reads by name. Detected via the first header column ('np_node_id')
 # and remapped to the ANTz names below so the rest of the loader is unchanged.
-# Everything else (translate/rotate/scale/color/hide/ratio/subspace, plus the
-# tag and channel files) already shares column names across both formats.
+# Everything else (translate/rotate/scale/color/hide/ratio, plus the tag and
+# channel files) already shares column names across both formats. 'subspace'
+# is the one tracked field whose *name* still differs: GaiaViz's np_ dialect
+# spells it 'subspace' (0-indexed, face id matches Node.subspace directly),
+# while legacy ANTz dialect (and the canonical 94-column layout this module
+# writes — see _COL_ORDER) spells it 'facet' (1-indexed: facet 1 = +X face =
+# subspace 0, ... facet 6 = -Z face = subspace 5). load_node_csv checks for
+# 'subspace' first and falls back to 'facet' - 1 so real legacy-ANTz Cube-
+# topology files (which only ever have a 'facet' column) aren't silently
+# stuck at subspace 0 for every child.
 _GAIAVIZ_NODE_COL_ALIASES = {
     'np_node_id': 'id',
     'np_geometry_id': 'geometry',
@@ -104,7 +112,7 @@ _DEFAULT_EXTRAS: dict = {
     'shader': 0,
     'line_width': 1.0, 'point_size': 0.0,
     'color_index': 0, 'color_fade': 0, 'texture_id': 0,
-    'freeze': 0, 'facet': 0,
+    'freeze': 0,
     'auto_zoom_x': 0, 'auto_zoom_y': 0, 'auto_zoom_z': 0,
     'trigger_hi_x': 0, 'trigger_hi_y': 0, 'trigger_hi_z': 0,
     'trigger_lo_x': 0, 'trigger_lo_y': 0, 'trigger_lo_z': 0,
@@ -181,6 +189,7 @@ def load_node_csv(path: str) -> list[Node]:
         df = df.rename(columns=_GAIAVIZ_NODE_COL_ALIASES)
     has_ratio = 'ratio' in df.columns
     has_subspace = 'subspace' in df.columns
+    has_facet = 'facet' in df.columns
     has_texture_id = 'texture_id' in df.columns
     has_text = 'text' in df.columns
     has_link = 'link' in df.columns
@@ -216,7 +225,11 @@ def load_node_csv(path: str) -> list[Node]:
             hide=int(row['hide']),
             topo=int(row['topo']),
             ratio=float(row['ratio']) if has_ratio else 0.1,
-            subspace=int(row['subspace']) if has_subspace else 0,
+            subspace=(
+                int(row['subspace']) if has_subspace
+                else max(int(row['facet']) - 1, 0) if has_facet
+                else 0
+            ),
             texture_id=int(row['texture_id']) if has_texture_id else 0,
         )
         # Preserve all untracked columns so save_node_csv can round-trip them.
@@ -290,6 +303,7 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
             row['hide'] = node.hide
             row['topo'] = node.topo
             row['ratio'] = node.ratio
+            row['facet'] = node.subspace + 1
             row['texture_id'] = node.texture_id
             if has_text:
                 row['text'] = node.text
