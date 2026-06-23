@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 from glyphviz_core.csv_reader import load_node_csv, save_node_csv
 from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA
 from glyphviz_core.node import Node, NON_VISUAL_TYPES
-from glyphviz_core.topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT
+from glyphviz_core.topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT, CUBE_FACE_NAMES
 
 from .audio_player import AudioPlayer
 from .node_table import NodeTableView
@@ -478,6 +478,15 @@ class MainWindow(QMainWindow):
             self._insp_topo.addItem(TOPO_NAMES.get(topo_id, f"Topology {topo_id}"), topo_id)
         self._insp_topo.currentIndexChanged.connect(self._on_insp_topo_changed)
 
+        self._insp_subspace = QComboBox()
+        for face_id, face_name in enumerate(CUBE_FACE_NAMES):
+            self._insp_subspace.addItem(f"{face_id}: {face_name}", face_id)
+        self._insp_subspace.setToolTip(
+            "Which cube face this node sits on, when its PARENT uses the Cube "
+            "or Zcube topology (ignored otherwise)."
+        )
+        self._insp_subspace.currentIndexChanged.connect(self._on_insp_subspace_changed)
+
         self._insp_color_btn = QPushButton()
         self._insp_color_btn.setFixedHeight(24)
         self._insp_color_btn.clicked.connect(self._on_insp_color)
@@ -514,6 +523,7 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("", self._insp_scale_lock)
         insp_layout.addRow("Geometry:", self._insp_geo)
         insp_layout.addRow("Topology:", self._insp_topo)
+        insp_layout.addRow("Facet:",    self._insp_subspace)
         insp_layout.addRow("Ratio:",    self._insp_ratio)
         insp_layout.addRow("Texture ID:", self._insp_texture_id)
         insp_layout.addRow("Color:",    self._insp_color_btn)
@@ -922,6 +932,11 @@ class MainWindow(QMainWindow):
         self._insp_topo.setCurrentIndex(max(idx, 0))
         self._insp_topo.blockSignals(False)
 
+        idx = self._insp_subspace.findData(node.subspace)
+        self._insp_subspace.blockSignals(True)
+        self._insp_subspace.setCurrentIndex(max(idx, 0))
+        self._insp_subspace.blockSignals(False)
+
         self._refresh_color_btn(node)
 
         self._insp_text.blockSignals(True)
@@ -977,6 +992,11 @@ class MainWindow(QMainWindow):
         self._insp_topo.blockSignals(True)
         self._insp_topo.setCurrentIndex(max(idx, 0))
         self._insp_topo.blockSignals(False)
+
+        idx = self._insp_subspace.findData(primary.subspace)
+        self._insp_subspace.blockSignals(True)
+        self._insp_subspace.setCurrentIndex(max(idx, 0))
+        self._insp_subspace.blockSignals(False)
 
         self._refresh_color_btn(primary)
 
@@ -1120,6 +1140,15 @@ class MainWindow(QMainWindow):
         topo = self._insp_topo.currentData()
         for node in self._selected_nodes:
             node.topo = topo
+            self._table.refresh_node(node.id)
+        self._viewport.scene_invalidate()
+
+    def _on_insp_subspace_changed(self, _idx: int):
+        if not self._selected_nodes:
+            return
+        subspace = self._insp_subspace.currentData()
+        for node in self._selected_nodes:
+            node.subspace = subspace
             self._table.refresh_node(node.id)
         self._viewport.scene_invalidate()
 
