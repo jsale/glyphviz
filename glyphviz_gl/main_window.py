@@ -121,6 +121,12 @@ class MainWindow(QMainWindow):
         save_as_act.triggered.connect(self._save_csv_as)
 
         file_menu.addSeparator()
+        png_act = file_menu.addAction("Save &Scene as PNG…")
+        png_act.setShortcut("F12")
+        png_act.setToolTip("Save the current viewport as a PNG image  [F12]")
+        png_act.triggered.connect(self._save_scene_png)
+
+        file_menu.addSeparator()
         file_menu.addAction("&Quit").triggered.connect(self.close)
 
         tex_menu = mb.addMenu("&Textures")
@@ -704,6 +710,23 @@ class MainWindow(QMainWindow):
         self._current_path = path
         self._save_act.setEnabled(True)
         self._lbl_file.setText(f"File: {Path(path).name}")
+
+    def _save_scene_png(self):
+        """F12 — save the current viewport as a PNG image."""
+        start = str(Path(self._current_path).with_suffix(".png")) if self._current_path \
+            else str(Path.home() / "scene.png")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Scene as PNG",
+            start,
+            "PNG Files (*.png);;All Files (*)",
+        )
+        if not path:
+            return
+        try:
+            self._viewport.save_screenshot(path)
+            self.statusBar().showMessage(f"Saved scene to {Path(path).name}")
+        except Exception as exc:
+            self.statusBar().showMessage(f"Screenshot error: {exc}")
 
     def _write_csv(self, path: str):
         try:

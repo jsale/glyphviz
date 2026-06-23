@@ -214,6 +214,14 @@ class Viewport(QOpenGLWidget):
         if not img.save(str(path)):
             raise RuntimeError(f"Failed to save screenshot to {path}")
 
+    def save_screenshot(self, path: str) -> None:
+        """Save the scene exactly as currently displayed on screen, at the
+        widget's current size — unlike export_png(), this never resizes the
+        (visible, interactive) widget."""
+        img = self.grabFramebuffer()
+        if not img.save(str(path)):
+            raise RuntimeError(f"Failed to save screenshot to {path}")
+
     def focus_on(self, world_pos: tuple[float, float, float], min_distance: float = 1.0):
         """Point camera at world_pos and pull it in to ~1/10 current distance."""
         az = math.radians(self._cam_azimuth)
