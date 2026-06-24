@@ -16,6 +16,9 @@ _TRACKED_COLS = frozenset({
     'color_r', 'color_g', 'color_b', 'color_a',
     'geometry', 'hide', 'topo', 'ratio', 'subspace', 'facet', 'texture_id',
     'text', 'link', 'rotation_mode',
+    'translate_rate_x', 'translate_rate_y', 'translate_rate_z',
+    'rotate_rate_x', 'rotate_rate_y', 'rotate_rate_z',
+    'scale_rate_x', 'scale_rate_y', 'scale_rate_z',
 })
 
 # Extra columns written as plain strings (not int/float formatted).
@@ -105,9 +108,6 @@ _DEFAULT_EXTRAS: dict = {
     'rotate_vec_x': 0.0, 'rotate_vec_y': 0.0,
     'rotate_vec_z': 0.0, 'rotate_vec_s': 0.0,
     'tag_offset_x': 0.0, 'tag_offset_y': 0.0, 'tag_offset_z': 0.0,
-    'rotate_rate_x': 0.0, 'rotate_rate_y': 0.0, 'rotate_rate_z': 0.0,
-    'scale_rate_x': 0.0, 'scale_rate_y': 0.0, 'scale_rate_z': 0.0,
-    'translate_rate_x': 0.0, 'translate_rate_y': 0.0, 'translate_rate_z': 0.0,
     'translate_vec_x': 0.0, 'translate_vec_y': 0.0, 'translate_vec_z': 0.0,
     'shader': 0,
     'line_width': 1.0, 'point_size': 0.0,
@@ -194,6 +194,11 @@ def load_node_csv(path: str) -> list[Node]:
     has_text = 'text' in df.columns
     has_link = 'link' in df.columns
     has_rotation_mode = 'rotation_mode' in df.columns
+    rate_cols = (
+        'translate_rate_x', 'translate_rate_y', 'translate_rate_z',
+        'rotate_rate_x', 'rotate_rate_y', 'rotate_rate_z',
+        'scale_rate_x', 'scale_rate_y', 'scale_rate_z',
+    )
 
     # Fall back to companion tag file only when neither inline column is present.
     tag_data: dict[int, tuple[str, str]] = {}
@@ -240,6 +245,7 @@ def load_node_csv(path: str) -> list[Node]:
                 int(row['rotation_mode']) if has_rotation_mode
                 else ROTATION_MODE_HEADING_TILT_ROLL
             ),
+            **{col: float(row[col]) for col in rate_cols if col in df.columns},
         )
         # Preserve all untracked columns so save_node_csv can round-trip them.
         node.extras = {
@@ -321,6 +327,15 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
             row['ratio'] = node.ratio
             row['facet'] = node.subspace + 1
             row['texture_id'] = node.texture_id
+            row['translate_rate_x'] = node.translate_rate_x
+            row['translate_rate_y'] = node.translate_rate_y
+            row['translate_rate_z'] = node.translate_rate_z
+            row['rotate_rate_x'] = node.rotate_rate_x
+            row['rotate_rate_y'] = node.rotate_rate_y
+            row['rotate_rate_z'] = node.rotate_rate_z
+            row['scale_rate_x'] = node.scale_rate_x
+            row['scale_rate_y'] = node.scale_rate_y
+            row['scale_rate_z'] = node.scale_rate_z
             if has_text:
                 row['text'] = node.text
             if has_link:

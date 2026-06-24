@@ -267,6 +267,45 @@ def test_untouched_legacy_rotation_mode_omits_column_on_save(tmp_path):
     assert "rotation_mode" not in header
 
 
+def test_rate_fields_round_trip_through_save(tmp_path):
+    node = Node(
+        id=3, type=5, parent_id=0, branch_level=0,
+        translate_x=0, translate_y=0, translate_z=0,
+        rotate_x=0, rotate_y=0, rotate_z=0,
+        scale_x=1, scale_y=1, scale_z=1,
+        color_r=0, color_g=0, color_b=0, color_a=255,
+        geometry=1, hide=0, topo=topo.TOPO_NONE,
+        translate_rate_x=0.5, translate_rate_y=-0.25, translate_rate_z=0.1,
+        rotate_rate_x=1.0, rotate_rate_y=2.0, rotate_rate_z=-3.0,
+        scale_rate_x=0.01, scale_rate_y=0.0, scale_rate_z=-0.02,
+    )
+    path = tmp_path / "node.csv"
+    save_node_csv([node], str(path))
+    reloaded = load_node_csv(str(path))[0]
+    assert reloaded.translate_rate_x == pytest.approx(0.5)
+    assert reloaded.translate_rate_y == pytest.approx(-0.25)
+    assert reloaded.translate_rate_z == pytest.approx(0.1)
+    assert reloaded.rotate_rate_x == pytest.approx(1.0)
+    assert reloaded.rotate_rate_y == pytest.approx(2.0)
+    assert reloaded.rotate_rate_z == pytest.approx(-3.0)
+    assert reloaded.scale_rate_x == pytest.approx(0.01)
+    assert reloaded.scale_rate_y == pytest.approx(0.0)
+    assert reloaded.scale_rate_z == pytest.approx(-0.02)
+
+
+def test_missing_rate_columns_default_to_zero(tmp_path):
+    """A node CSV authored without the rate columns at all (pre-existing
+    minimal files) should load rates as 0.0 rather than raising a KeyError."""
+    rows = [_row(id=1, parent_id=0, topo=topo.TOPO_NONE)]
+    minimal_cols = [c for c in _COL_ORDER if 'rate' not in c]
+    path = tmp_path / "node.csv"
+    pd.DataFrame(rows)[minimal_cols].to_csv(path, index=False)
+    nodes = load_node_csv(str(path))
+    assert nodes[0].translate_rate_x == 0.0
+    assert nodes[0].rotate_rate_y == 0.0
+    assert nodes[0].scale_rate_z == 0.0
+
+
 @pytest.mark.parametrize("heading", [0.0, 60.0, 120.0, 180.0, 240.0, 300.0])
 def test_heading_tilt_roll_holds_constant_elevation_while_euler_xyz_wobbles(heading):
     """Same two numbers (rotate_x=30 fixed, rotate_y=heading swept) feed into

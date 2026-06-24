@@ -48,6 +48,20 @@ class Node:
     subspace: int = 0
     texture_id: int = 0
     rotation_mode: int = ROTATION_MODE_EULER_XYZ
+    # Per-cycle velocities (ANTz convention: added to translate/rotate/scale
+    # every cycle, nominally 60 cycles/second — see Node-Field-Descriptions.md's
+    # Translate/Rotate/Scale sections). Applied by the viewport's animation
+    # tick; a script-authored node CSV can set these directly with no GUI
+    # interaction needed. freeze (Node.extras) suspends this when nonzero.
+    translate_rate_x: float = 0.0
+    translate_rate_y: float = 0.0
+    translate_rate_z: float = 0.0
+    rotate_rate_x: float = 0.0
+    rotate_rate_y: float = 0.0
+    rotate_rate_z: float = 0.0
+    scale_rate_x: float = 0.0
+    scale_rate_y: float = 0.0
+    scale_rate_z: float = 0.0
     text: str = ""   # display label shown in 3D viewport
     link: str = ""   # URL or file path opened by U key
     # Preserves untracked CSV columns (e.g. channel IDs, quaternion, segments)

@@ -20,6 +20,11 @@ from .video_manager import VideoManager
 
 _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag
 
+# ANTz rate convention (translate_rate_x/y/z, rotate_rate_x/y/z, scale_rate_x/y/z):
+# a delta applied every cycle, nominally 60 cycles/second — see
+# Node-Field-Descriptions.md's Translate/Rotate/Scale sections.
+_RATE_CYCLE_MS = 1000.0 / 60.0
+
 
 def _gl_col_major(M: np.ndarray) -> np.ndarray:
     """Convert a 4x4 NumPy row-major matrix to a float32 column-major flat array
@@ -112,6 +117,7 @@ class Viewport(QOpenGLWidget):
         self._last_tex_tick = time.perf_counter()
         self._render_timer = QTimer(self)
         self._render_timer.timeout.connect(self.update)
+        self._needs_video_tick = False   # video/animated-GIF playback active
         self.setMinimumSize(400, 300)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -152,12 +158,14 @@ class Viewport(QOpenGLWidget):
             self._scene._by_id.pop(nid, None)
         self.selected_node_ids -= ids
         self._scene.invalidate()
+        self._update_render_timer_state()
         self.update()
 
     def set_nodes(self, nodes: list[Node]):
         self._draw_limit = None   # new scene → show everything
         self._scene = Scene(nodes, self._base_scale)
         self._scene._ensure()   # pre-compute so camera init can read positions
+        self._update_render_timer_state()
         visible = [n for n in nodes if n.type not in NON_VISUAL_TYPES]
         if visible:
             positions = [
@@ -260,12 +268,8 @@ class Viewport(QOpenGLWidget):
         self.makeCurrent()
         img_count = self._tex_mgr.load_folder(folder)
         vid_count = self._video_mgr.load_folder(folder, img_count + 1)
-        needs_ticking = bool(vid_count) or self._tex_mgr.has_animated()
-        if needs_ticking and not self._render_timer.isActive():
-            self._render_timer.start(33)   # ~30 fps continuous repaint for video/GIF playback
-            self._last_tex_tick = time.perf_counter()
-        elif not needs_ticking:
-            self._render_timer.stop()
+        self._needs_video_tick = bool(vid_count) or self._tex_mgr.has_animated()
+        self._update_render_timer_state()
         self.update()
         return img_count + vid_count
 
@@ -274,8 +278,67 @@ class Viewport(QOpenGLWidget):
         self.makeCurrent()
         self._tex_mgr.release()
         self._video_mgr.release()
-        self._render_timer.stop()
+        self._needs_video_tick = False
+        self._update_render_timer_state()
         self.update()
+
+    def _has_active_rates(self) -> bool:
+        """True if any non-frozen node has a nonzero translate/rotate/scale rate
+        (ANTz's freeze flag, preserved in Node.extras, suspends a node's own
+        rates but doesn't need to be checked against other nodes still moving)."""
+        for n in self._scene.nodes:
+            if n.extras.get('freeze', 0):
+                continue
+            if (n.translate_rate_x or n.translate_rate_y or n.translate_rate_z
+                    or n.rotate_rate_x or n.rotate_rate_y or n.rotate_rate_z
+                    or n.scale_rate_x or n.scale_rate_y or n.scale_rate_z):
+                return True
+        return False
+
+    def _update_render_timer_state(self):
+        """Start/stop the ~30fps continuous-repaint timer based on whether
+        anything needs per-frame ticking: video/GIF playback or rate-driven
+        node animation. Call after any scene or texture change that could
+        flip either condition."""
+        needs = self._needs_video_tick or self._has_active_rates()
+        if needs and not self._render_timer.isActive():
+            self._render_timer.start(33)   # ~30 fps continuous repaint
+            self._last_tex_tick = time.perf_counter()
+        elif not needs and self._render_timer.isActive():
+            self._render_timer.stop()
+
+    def refresh_animation_state(self):
+        """Public hook for callers that mutate node rate fields directly
+        (e.g. the Properties inspector) to re-evaluate continuous repaint."""
+        self._update_render_timer_state()
+
+    def _apply_rate_animation(self, dt_ms: float) -> bool:
+        """Advance translate_x/y/z, rotate_x/y/z, scale_x/y/z by their
+        *_rate_* velocities (see _RATE_CYCLE_MS). Returns True if any node
+        moved, so the caller knows to invalidate the scene's transform cache."""
+        cycles = dt_ms / _RATE_CYCLE_MS
+        if cycles <= 0:
+            return False
+        moved = False
+        for n in self._scene.nodes:
+            if n.extras.get('freeze', 0):
+                continue
+            if n.translate_rate_x or n.translate_rate_y or n.translate_rate_z:
+                n.translate_x += n.translate_rate_x * cycles
+                n.translate_y += n.translate_rate_y * cycles
+                n.translate_z += n.translate_rate_z * cycles
+                moved = True
+            if n.rotate_rate_x or n.rotate_rate_y or n.rotate_rate_z:
+                n.rotate_x += n.rotate_rate_x * cycles
+                n.rotate_y += n.rotate_rate_y * cycles
+                n.rotate_z += n.rotate_rate_z * cycles
+                moved = True
+            if n.scale_rate_x or n.scale_rate_y or n.scale_rate_z:
+                n.scale_x += n.scale_rate_x * cycles
+                n.scale_y += n.scale_rate_y * cycles
+                n.scale_z += n.scale_rate_z * cycles
+                moved = True
+        return moved
 
     def list_audio_tracks(self) -> list[tuple[int, str]]:
         """Return (texture_id, filename) for each loaded video's audio track."""
@@ -323,6 +386,8 @@ class Viewport(QOpenGLWidget):
         dt_ms = (now - self._last_tex_tick) * 1000.0
         self._last_tex_tick = now
         self._tex_mgr.tick(dt_ms)   # advance any playing animated GIFs
+        if self._apply_rate_animation(dt_ms):
+            self._scene.invalidate()
         # QPainter's GL paint engine (used by _draw_tags_qpainter) can leave
         # all of this state changed after painter.end() -- restore it every
         # frame rather than relying on the one-time initializeGL()/resizeGL()

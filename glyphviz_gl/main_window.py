@@ -472,6 +472,67 @@ class MainWindow(QMainWindow):
             "When checked, editing one scale axis sets all three to the same value."
         )
 
+        # --- Rate widgets (ANTz translate_rate/rotate_rate/scale_rate) ---
+        # Per-cycle velocities added to position/rotation/scale every cycle
+        # (nominally 60 cycles/second) by the viewport's continuous animation
+        # tick. A script-authored node CSV can set these with no GUI needed;
+        # this just exposes the same fields for hand-tuning.
+        translate_rate_widget = QWidget()
+        translate_rate_layout = QHBoxLayout(translate_rate_widget)
+        translate_rate_layout.setContentsMargins(0, 0, 0, 0)
+        translate_rate_layout.setSpacing(4)
+        self._insp_translate_rate_x = QDoubleSpinBox()
+        self._insp_translate_rate_y = QDoubleSpinBox()
+        self._insp_translate_rate_z = QDoubleSpinBox()
+        for sb in (self._insp_translate_rate_x, self._insp_translate_rate_y, self._insp_translate_rate_z):
+            sb.setRange(-1_000_000.0, 1_000_000.0)
+            sb.setDecimals(4)
+            sb.setSingleStep(0.01)
+            sb.setToolTip(
+                "Position delta applied every cycle (ANTz convention: nominally "
+                "60 cycles/second). Nonzero values keep this node moving "
+                "continuously in the viewport."
+            )
+            sb.valueChanged.connect(self._on_insp_translate_rate_changed)
+            translate_rate_layout.addWidget(sb)
+
+        rotate_rate_widget = QWidget()
+        rotate_rate_layout = QHBoxLayout(rotate_rate_widget)
+        rotate_rate_layout.setContentsMargins(0, 0, 0, 0)
+        rotate_rate_layout.setSpacing(4)
+        self._insp_rotate_rate_x = QDoubleSpinBox()
+        self._insp_rotate_rate_y = QDoubleSpinBox()
+        self._insp_rotate_rate_z = QDoubleSpinBox()
+        for sb in (self._insp_rotate_rate_x, self._insp_rotate_rate_y, self._insp_rotate_rate_z):
+            sb.setRange(-3600.0, 3600.0)
+            sb.setDecimals(4)
+            sb.setSingleStep(0.01)
+            sb.setToolTip(
+                "Degrees added every cycle (nominally 60 cycles/second). "
+                "Spins this node continuously about the corresponding axis."
+            )
+            sb.valueChanged.connect(self._on_insp_rotate_rate_changed)
+            rotate_rate_layout.addWidget(sb)
+
+        scale_rate_widget = QWidget()
+        scale_rate_layout = QHBoxLayout(scale_rate_widget)
+        scale_rate_layout.setContentsMargins(0, 0, 0, 0)
+        scale_rate_layout.setSpacing(4)
+        self._insp_scale_rate_x = QDoubleSpinBox()
+        self._insp_scale_rate_y = QDoubleSpinBox()
+        self._insp_scale_rate_z = QDoubleSpinBox()
+        for sb in (self._insp_scale_rate_x, self._insp_scale_rate_y, self._insp_scale_rate_z):
+            sb.setRange(-10_000.0, 10_000.0)
+            sb.setDecimals(4)
+            sb.setSingleStep(0.001)
+            sb.setToolTip(
+                "Scale added every cycle (nominally 60 cycles/second). Rarely "
+                "useful at nonzero values — the glyph will continuously grow "
+                "or shrink without bound."
+            )
+            sb.valueChanged.connect(self._on_insp_scale_rate_changed)
+            scale_rate_layout.addWidget(sb)
+
         self._insp_ratio = QDoubleSpinBox()
         self._insp_ratio.setRange(0.01, 1.0)
         self._insp_ratio.setDecimals(3)
@@ -533,9 +594,12 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Type:",     self._insp_type)
         insp_layout.addRow("Parent:",   self._insp_parent)
         insp_layout.addRow("Pos (X,Y,Z):", pos_widget)
+        insp_layout.addRow("Translate Rate:", translate_rate_widget)
         insp_layout.addRow("Rotate (X,Y,Z):", rot_widget)
+        insp_layout.addRow("Rotate Rate:", rotate_rate_widget)
         insp_layout.addRow("Rotation Mode:", self._insp_rotation_mode)
         insp_layout.addRow("Scale (X,Y,Z):", scale_widget)
+        insp_layout.addRow("Scale Rate:", scale_rate_widget)
         insp_layout.addRow("", self._insp_scale_lock)
         insp_layout.addRow("Geometry:", self._insp_geo)
         insp_layout.addRow("Topology:", self._insp_topo)
@@ -934,6 +998,15 @@ class MainWindow(QMainWindow):
             (self._insp_scale_z, node.scale_z),
             (self._insp_ratio, node.ratio),
             (self._insp_texture_id, node.texture_id),
+            (self._insp_translate_rate_x, node.translate_rate_x),
+            (self._insp_translate_rate_y, node.translate_rate_y),
+            (self._insp_translate_rate_z, node.translate_rate_z),
+            (self._insp_rotate_rate_x, node.rotate_rate_x),
+            (self._insp_rotate_rate_y, node.rotate_rate_y),
+            (self._insp_rotate_rate_z, node.rotate_rate_z),
+            (self._insp_scale_rate_x, node.scale_rate_x),
+            (self._insp_scale_rate_y, node.scale_rate_y),
+            (self._insp_scale_rate_z, node.scale_rate_z),
         ):
             sb.blockSignals(True)
             sb.setValue(val)
@@ -999,6 +1072,15 @@ class MainWindow(QMainWindow):
             (self._insp_scale_z, primary.scale_z),
             (self._insp_ratio, primary.ratio),
             (self._insp_texture_id, primary.texture_id),
+            (self._insp_translate_rate_x, primary.translate_rate_x),
+            (self._insp_translate_rate_y, primary.translate_rate_y),
+            (self._insp_translate_rate_z, primary.translate_rate_z),
+            (self._insp_rotate_rate_x, primary.rotate_rate_x),
+            (self._insp_rotate_rate_y, primary.rotate_rate_y),
+            (self._insp_rotate_rate_z, primary.rotate_rate_z),
+            (self._insp_scale_rate_x, primary.scale_rate_x),
+            (self._insp_scale_rate_y, primary.scale_rate_y),
+            (self._insp_scale_rate_z, primary.scale_rate_z),
         ):
             sb.blockSignals(True)
             sb.setValue(val)
@@ -1145,6 +1227,48 @@ class MainWindow(QMainWindow):
         for node in self._selected_nodes:
             node.texture_id = tex_id
             self._table.refresh_node(node.id)
+        self._viewport.scene_invalidate()
+
+    def _on_insp_translate_rate_changed(self, _value: float):
+        if not self._selected_nodes:
+            return
+        rx = self._insp_translate_rate_x.value()
+        ry = self._insp_translate_rate_y.value()
+        rz = self._insp_translate_rate_z.value()
+        for node in self._selected_nodes:
+            node.translate_rate_x = rx
+            node.translate_rate_y = ry
+            node.translate_rate_z = rz
+            self._table.refresh_node(node.id)
+        self._viewport.refresh_animation_state()
+        self._viewport.scene_invalidate()
+
+    def _on_insp_rotate_rate_changed(self, _value: float):
+        if not self._selected_nodes:
+            return
+        rx = self._insp_rotate_rate_x.value()
+        ry = self._insp_rotate_rate_y.value()
+        rz = self._insp_rotate_rate_z.value()
+        for node in self._selected_nodes:
+            node.rotate_rate_x = rx
+            node.rotate_rate_y = ry
+            node.rotate_rate_z = rz
+            self._table.refresh_node(node.id)
+        self._viewport.refresh_animation_state()
+        self._viewport.scene_invalidate()
+
+    def _on_insp_scale_rate_changed(self, _value: float):
+        if not self._selected_nodes:
+            return
+        rx = self._insp_scale_rate_x.value()
+        ry = self._insp_scale_rate_y.value()
+        rz = self._insp_scale_rate_z.value()
+        for node in self._selected_nodes:
+            node.scale_rate_x = rx
+            node.scale_rate_y = ry
+            node.scale_rate_z = rz
+            self._table.refresh_node(node.id)
+        self._viewport.refresh_animation_state()
         self._viewport.scene_invalidate()
 
     def _on_insp_text_changed(self, value: str):
