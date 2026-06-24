@@ -338,7 +338,7 @@ class MainWindow(QMainWindow):
 
         self._btn_new_node = QPushButton("New Node")
         self._btn_new_node.setToolTip(
-            "Create a new octahedron at the world origin  [N]\n"
+            "Create a new object using the defaults below, at the world origin  [N]\n"
             "Each press increments X by 10 units.  If a child-level\n"
             "node is selected, a child is added instead."
         )
@@ -346,13 +346,66 @@ class MainWindow(QMainWindow):
 
         self._btn_new_child = QPushButton("New Child")
         self._btn_new_child.setToolTip(
-            "Create a child octahedron under the selected node  [Shift+N]\n"
+            "Create a child object using the defaults below, under the\n"
+            "selected node  [Shift+N]\n"
             "Requires exactly one node to be selected."
         )
         self._btn_new_child.clicked.connect(self._create_child_node)
 
         create_layout.addWidget(self._btn_new_node)
         create_layout.addWidget(self._btn_new_child)
+
+        # --- New Object Defaults: geometry/topology/scale/color applied to
+        # nodes created via New Node, New Child, N, and Shift+N. Position and
+        # rotation for new nodes stay as the existing auto-placed defaults.
+        new_defaults_form = QFormLayout()
+        new_defaults_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+
+        self._new_geo = QComboBox()
+        for geo_id in range(GEO_COUNT):
+            self._new_geo.addItem(GEO_NAMES[geo_id], geo_id)
+        self._new_geo.setCurrentIndex(max(self._new_geo.findData(GEO_OCTA), 0))
+
+        self._new_topo = QComboBox()
+        for topo_id in range(TOPO_COUNT):
+            self._new_topo.addItem(TOPO_NAMES.get(topo_id, f"Topology {topo_id}"), topo_id)
+        self._new_topo.setCurrentIndex(max(self._new_topo.findData(TOPO_POINT), 0))
+
+        new_scale_widget = QWidget()
+        new_scale_layout = QHBoxLayout(new_scale_widget)
+        new_scale_layout.setContentsMargins(0, 0, 0, 0)
+        new_scale_layout.setSpacing(4)
+        self._new_scale_x = QDoubleSpinBox()
+        self._new_scale_y = QDoubleSpinBox()
+        self._new_scale_z = QDoubleSpinBox()
+        for sb in (self._new_scale_x, self._new_scale_y, self._new_scale_z):
+            sb.setRange(0.001, 10_000.0)
+            sb.setDecimals(3)
+            sb.setSingleStep(0.1)
+            sb.setValue(1.0)
+            sb.valueChanged.connect(self._on_new_scale_changed)
+            new_scale_layout.addWidget(sb)
+
+        self._new_scale_lock = QCheckBox("Lock X/Y/Z together")
+        self._new_scale_lock.setChecked(True)
+        self._new_scale_lock.setToolTip(
+            "When checked, editing one scale axis sets all three to the same value."
+        )
+
+        self._new_obj_color = QColor(200, 200, 200, 255)
+        self._new_color_btn = QPushButton()
+        self._new_color_btn.setFixedHeight(24)
+        self._new_color_btn.clicked.connect(self._on_new_color)
+        self._set_color_btn(self._new_color_btn, 200, 200, 200, 255)
+
+        new_defaults_form.addRow("Geometry:", self._new_geo)
+        new_defaults_form.addRow("Topology:", self._new_topo)
+        new_defaults_form.addRow("Scale (X,Y,Z):", new_scale_widget)
+        new_defaults_form.addRow("", self._new_scale_lock)
+        new_defaults_form.addRow("Color:", self._new_color_btn)
+
+        create_layout.addWidget(QLabel("New Object Defaults:"))
+        create_layout.addLayout(new_defaults_form)
 
         # --- Delete group ---
         delete_grp = QGroupBox("Delete")
@@ -887,8 +940,14 @@ class MainWindow(QMainWindow):
     # --- Select By ---
 
     def _update_sel_values(self):
-        """Repopulate the value combo for the current Select By criterion."""
+        """Repopulate the value combo for the current Select By criterion.
+
+        Called both when the criterion changes and whenever an edit could have
+        changed which geometry/topology/branch-level values exist in the scene
+        (e.g. changing selected nodes' geometry) — otherwise the combo keeps
+        showing values that no longer match any node, or hides new ones."""
         criterion = self._sel_criterion.currentText()
+        current_data = self._sel_value.currentData()
         self._sel_value.blockSignals(True)
         self._sel_value.clear()
         if self.nodes:
@@ -901,6 +960,10 @@ class MainWindow(QMainWindow):
             elif criterion == "Topology":
                 for t in sorted(set(n.topo for n in self.nodes)):
                     self._sel_value.addItem(f"{t}: {TOPO_NAMES.get(t, f'Topo {t}')}", t)
+        if current_data is not None:
+            idx = self._sel_value.findData(current_data)
+            if idx >= 0:
+                self._sel_value.setCurrentIndex(idx)
         self._sel_value.blockSignals(False)
 
     def _on_select_by(self):
@@ -1119,14 +1182,14 @@ class MainWindow(QMainWindow):
         self._anchor_pos = (primary.translate_x, primary.translate_y, primary.translate_z)
         self._anchor_rot = (primary.rotate_x, primary.rotate_y, primary.rotate_z)
 
+    def _set_color_btn(self, btn: QPushButton, r: int, g: int, b: int, a: int):
+        btn.setStyleSheet(
+            f"background-color: rgba({r},{g},{b},{a}); border: 1px solid #666;"
+        )
+        btn.setText(f"#{r:02X}{g:02X}{b:02X}")
+
     def _refresh_color_btn(self, node: Node):
-        self._insp_color_btn.setStyleSheet(
-            f"background-color: rgba({node.color_r},{node.color_g},"
-            f"{node.color_b},{node.color_a}); border: 1px solid #666;"
-        )
-        self._insp_color_btn.setText(
-            f"#{node.color_r:02X}{node.color_g:02X}{node.color_b:02X}"
-        )
+        self._set_color_btn(self._insp_color_btn, node.color_r, node.color_g, node.color_b, node.color_a)
 
     # --- inspector change handlers ---
 
@@ -1190,6 +1253,7 @@ class MainWindow(QMainWindow):
         for node in self._selected_nodes:
             node.geometry = geo
             self._table.refresh_node(node.id)
+        self._update_sel_values()
         self._viewport.scene_invalidate()
 
     def _on_insp_scale_changed(self, value: float):
@@ -1291,6 +1355,7 @@ class MainWindow(QMainWindow):
         for node in self._selected_nodes:
             node.topo = topo
             self._table.refresh_node(node.id)
+        self._update_sel_values()
         self._viewport.scene_invalidate()
 
     def _on_insp_subspace_changed(self, _idx: int):
@@ -1330,6 +1395,28 @@ class MainWindow(QMainWindow):
             self._table.refresh_node(node.id)
         self._refresh_color_btn(self._selected_nodes[0])
         self._viewport.scene_invalidate()
+
+    # --- New Object Defaults change handlers ---
+
+    def _on_new_scale_changed(self, value: float):
+        if not self._new_scale_lock.isChecked():
+            return
+        sender = self.sender()
+        for sb in (self._new_scale_x, self._new_scale_y, self._new_scale_z):
+            if sb is not sender:
+                sb.blockSignals(True)
+                sb.setValue(value)
+                sb.blockSignals(False)
+
+    def _on_new_color(self):
+        color = QColorDialog.getColor(
+            self._new_obj_color, self, "New Object Color",
+            QColorDialog.ColorDialogOption.ShowAlphaChannel,
+        )
+        if not color.isValid():
+            return
+        self._new_obj_color = color
+        self._set_color_btn(self._new_color_btn, color.red(), color.green(), color.blue(), color.alpha())
 
     def _on_table_double_click(self):
         node = self._table.selected_node()
@@ -1453,25 +1540,39 @@ class MainWindow(QMainWindow):
         else:
             self._create_root_node()
 
+    def _new_object_defaults(self):
+        """Current geometry/topology/scale/color from the New Object Defaults
+        panel, applied to every node created via New Node/New Child/N/Shift+N."""
+        return (
+            self._new_geo.currentData(),
+            self._new_topo.currentData(),
+            self._new_scale_x.value(),
+            self._new_scale_y.value(),
+            self._new_scale_z.value(),
+            self._new_obj_color,
+        )
+
     def _create_root_node(self):
-        """Create a new root-level octahedron, stepping +10 along X from the last one."""
+        """Create a new root-level node using the New Object Defaults, stepping +10 along X from the last one."""
         root_glyphs = [
             n for n in self.nodes
             if n.type not in NON_VISUAL_TYPES and n.branch_level == 0
         ]
         next_x = (max(n.translate_x for n in root_glyphs) + 10.0) if root_glyphs else 0.0
         new_id = max((n.id for n in self.nodes), default=0) + 1
+        geo, topo, sx, sy, sz, color = self._new_object_defaults()
         self._add_node_to_scene(Node(
             id=new_id, type=5, parent_id=0, branch_level=0,
             translate_x=next_x, translate_y=0.0, translate_z=0.0,
             rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
-            scale_x=1.0, scale_y=1.0, scale_z=1.0,
-            color_r=200, color_g=200, color_b=200, color_a=255,
-            geometry=GEO_OCTA, hide=0, topo=TOPO_POINT,
+            scale_x=sx, scale_y=sy, scale_z=sz,
+            color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
+            geometry=geo, hide=0, topo=topo,
         ))
 
     def _create_child_node(self):
-        """Shift+N / New Child button: create a child octahedron under the selected node.
+        """Shift+N / New Child button: create a child node (using the New Object
+        Defaults) under the selected node.
 
         Multiple presses keep the parent selected and distribute children evenly
         along translate_x so they don't overlap.
@@ -1482,14 +1583,15 @@ class MainWindow(QMainWindow):
         parent = self._selected_nodes[0]
         sibling_count = sum(1 for n in self.nodes if n.parent_id == parent.id)
         new_id = max((n.id for n in self.nodes), default=0) + 1
+        geo, topo, sx, sy, sz, color = self._new_object_defaults()
         self._add_node_to_scene(Node(
             id=new_id, type=5, parent_id=parent.id,
             branch_level=parent.branch_level + 1,
             translate_x=sibling_count * 5.0, translate_y=0.0, translate_z=5.0,
             rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
-            scale_x=1.0, scale_y=1.0, scale_z=1.0,
-            color_r=200, color_g=200, color_b=200, color_a=255,
-            geometry=GEO_OCTA, hide=0, topo=TOPO_POINT,
+            scale_x=sx, scale_y=sy, scale_z=sz,
+            color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
+            geometry=geo, hide=0, topo=topo,
         ), select_new=False)
 
     def _add_node_to_scene(self, node: Node, select_new: bool = True):
@@ -1498,6 +1600,7 @@ class MainWindow(QMainWindow):
         self._viewport.register_node(node)  # syncs _by_id, invalidates, repaints
         self._table.append_node(node)
         self._update_stats()
+        self._update_sel_values()
         if select_new:
             self._table.select_by_id(node.id)
         self.statusBar().showMessage(
@@ -1529,6 +1632,7 @@ class MainWindow(QMainWindow):
         # without emitting selectionChanged, so resync self._selected_nodes by hand.
         self._on_table_selection()
         self._update_stats()
+        self._update_sel_values()
         self.statusBar().showMessage(f"Deleted {len(ids_to_delete)} node(s).")
 
     # --- Channel / animation playback ---
