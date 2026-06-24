@@ -208,3 +208,78 @@ def test_cube_children_spread_across_all_six_faces(tmp_path):
         dominant_axes.add((dominant_axis, pos[dominant_axis] > 0))
     # All 6 children must land on 6 *different* signed axes, not collapse onto one.
     assert len(dominant_axes) == 6
+
+
+# ---------------------------------------------------------------------------
+# rotation_mode: GlyphViz-only EULER_XYZ vs ANTz's only-ever HEADING_TILT_ROLL.
+# Missing column must default to HEADING_TILT_ROLL so every pre-existing file
+# (no such column) keeps rendering exactly as it did before this feature.
+# ---------------------------------------------------------------------------
+
+def test_missing_rotation_mode_column_defaults_to_heading_tilt_roll(tmp_path):
+    rows = [_row(id=1, parent_id=0)]
+    nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
+    assert nodes[0].rotation_mode == 1  # ROTATION_MODE_HEADING_TILT_ROLL
+
+
+def test_explicit_rotation_mode_column_overrides_legacy_default(tmp_path):
+    rows = [_row(id=1, parent_id=0, rotation_mode=0)]
+    path = tmp_path / "node.csv"
+    pd.DataFrame(rows).to_csv(path, index=False)  # extra col, not reindexed away
+    nodes = load_node_csv(str(path))
+    assert nodes[0].rotation_mode == 0  # ROTATION_MODE_EULER_XYZ
+
+
+def test_rotation_mode_round_trips_through_save(tmp_path):
+    node = Node(
+        id=2, type=5, parent_id=1, branch_level=1,
+        translate_x=0, translate_y=0, translate_z=0,
+        rotate_x=30, rotate_y=0, rotate_z=0,
+        scale_x=1, scale_y=1, scale_z=1,
+        color_r=0, color_g=0, color_b=0, color_a=255,
+        geometry=1, hide=0, topo=topo.TOPO_NONE, rotation_mode=0,
+    )
+    path = tmp_path / "node.csv"
+    save_node_csv([node], str(path))
+    reloaded = load_node_csv(str(path))
+    assert reloaded[0].rotation_mode == 0
+
+
+def test_untouched_legacy_rotation_mode_omits_column_on_save(tmp_path):
+    """A node loaded from a column-less legacy file (rotation_mode defaults
+    to HEADING_TILT_ROLL=1 on load) and saved without being touched should
+    NOT grow a new column — keeps untouched legacy files byte-for-byte
+    stable. (A *new* node at the dataclass default of 0/EULER_XYZ is the
+    opposite case — see test_rotation_mode_round_trips_through_save — and
+    DOES need the column, since omitting it would misread as legacy on
+    reload.)"""
+    node = Node(
+        id=1, type=5, parent_id=0, branch_level=0,
+        translate_x=0, translate_y=0, translate_z=0,
+        rotate_x=0, rotate_y=0, rotate_z=0,
+        scale_x=1, scale_y=1, scale_z=1,
+        color_r=0, color_g=0, color_b=0, color_a=255,
+        geometry=1, hide=0, topo=topo.TOPO_NONE, rotation_mode=1,
+    )
+    path = tmp_path / "node.csv"
+    save_node_csv([node], str(path))
+    header = path.read_text().splitlines()[0]
+    assert "rotation_mode" not in header
+
+
+@pytest.mark.parametrize("heading", [0.0, 60.0, 120.0, 180.0, 240.0, 300.0])
+def test_heading_tilt_roll_holds_constant_elevation_while_euler_xyz_wobbles(heading):
+    """Same two numbers (rotate_x=30 fixed, rotate_y=heading swept) feed into
+    both conventions. HEADING_TILT_ROLL composes Heading(z)-then-Tilt(x), the
+    standard spherical-coordinate parameterization, so the boresight's
+    z-component (elevation) stays constant across the sweep. EULER_XYZ
+    composes rotate_x-then-rotate_y as plain axis rotations, which do not
+    correspond to azimuth/elevation, so elevation visibly varies instead."""
+    tilt = 30.0
+    htr = topo.local_rotation_matrix(tilt, heading, 0.0, 1)
+    xyz = topo.local_rotation_matrix(tilt, heading, 0.0, 0)
+    htr_z = htr[2][2]
+    xyz_z = xyz[2][2]
+    assert htr_z == pytest.approx(math.cos(math.radians(tilt)))
+    if heading not in (0.0, 180.0):
+        assert xyz_z != pytest.approx(htr_z, abs=0.05)

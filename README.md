@@ -21,6 +21,14 @@ you inspect, select, and edit node properties interactively.
 - **Property inspector** — edit a selected node's position, rotation, scale
   (with an X/Y/Z lock for uniform scaling), geometry, topology, torus `ratio`,
   and color, with changes reflected live in the viewport and table.
+- **Rotation mode** — per-node choice between plain Euler XYZ (each of
+  `rotate_x/y/z` rotates about its own named axis; the default for new nodes)
+  and ANTz's legacy Heading/Tilt/Roll convention (`rotate_y`/`rotate_z` both
+  rotate about z, matching ANTz/KML's camera-and-model convention). Files with
+  no `rotation_mode` column load as Heading/Tilt/Roll, so existing ANTz/GaiaViz
+  and pre-existing GlyphViz data renders unchanged. See
+  [`examples/Rotation_Convention_Example/`](examples/Rotation_Convention_Example/)
+  for a side-by-side demonstration of the difference.
 - **Geometry library** — a built-in set of glyphs (cube, sphere, cone, torus,
   dodecahedron, octahedron, tetrahedron, icosahedron, pin, cylinder, grid,
   point — each with wireframe and solid variants where applicable) rendered

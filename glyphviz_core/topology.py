@@ -10,7 +10,7 @@ offset function and registering it in _TOPO_OFFSET_FUNCS.
 import math
 
 from .geometry_data import ROD_HEIGHT_FACTOR, torus_radii
-from .node import Node
+from .node import Node, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL
 
 # topo id values — full reference list from Topology-Guide.md (np_topo_id there).
 # Every id except TOPO_NONE has a dedicated offset function registered in
@@ -299,7 +299,7 @@ def _rot_z(deg):
     return ((c, -s, 0.0), (s, c, 0.0), (0.0, 0.0, 1.0))
 
 
-def local_rotation_matrix(rx: float, ry: float, rz: float):
+def _local_rotation_matrix_heading_tilt_roll(rx: float, ry: float, rz: float):
     """3x3 rotation matrix matching ANTz's DrawPinChild/DrawPin convention:
       glRotatef(rotate_y,  0, 0, -1)  → Rz(-ry)   "heading"
       glRotatef(rotate_x, -1, 0,  0)  → Rx(-rx)   "roll"
@@ -307,6 +307,23 @@ def local_rotation_matrix(rx: float, ry: float, rz: float):
     OpenGL right-multiplies, so the combined matrix is Rz(-ry) @ Rx(-rx) @ Rz(-rz).
     rotate_y and rotate_z both drive Z-axis rotations (no Y-axis rotation in ANTz)."""
     return _mat_mul(_mat_mul(_rot_z(-ry), _rot_x(-rx)), _rot_z(-rz))
+
+
+def _local_rotation_matrix_euler_xyz(rx: float, ry: float, rz: float):
+    """GlyphViz-only alternative: rotate_x about its own axis, then rotate_y
+    about the resulting axis, then rotate_z about the final axis. No ANTz
+    sign inversions — each field maps to a standard right-hand-rule rotation
+    about the axis it's named for."""
+    return _mat_mul(_mat_mul(_rot_x(rx), _rot_y(ry)), _rot_z(rz))
+
+
+def local_rotation_matrix(rx: float, ry: float, rz: float,
+                           rotation_mode: int = ROTATION_MODE_HEADING_TILT_ROLL):
+    """Dispatches to the node's chosen rotate_x/y/z interpretation (see
+    ROTATION_MODE_* in node.py)."""
+    if rotation_mode == ROTATION_MODE_EULER_XYZ:
+        return _local_rotation_matrix_euler_xyz(rx, ry, rz)
+    return _local_rotation_matrix_heading_tilt_roll(rx, ry, rz)
 
 
 # Precomputed per-face base rotations for Cube topology: aligns the child's
@@ -385,7 +402,8 @@ def compute_world_rotations(
         if cached is not None:
             return cached
 
-        local = local_rotation_matrix(node.rotate_x, node.rotate_y, node.rotate_z)
+        local = local_rotation_matrix(node.rotate_x, node.rotate_y, node.rotate_z,
+                                       node.rotation_mode)
         parent = by_id.get(node.parent_id)
         if parent is None or parent is node or node.id in visiting:
             combined[node.id]     = local

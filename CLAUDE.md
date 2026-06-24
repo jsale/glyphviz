@@ -34,6 +34,15 @@ Z-topology variants (9–13) are each "akin to" their non-Z counterpart with the
 
 When topology behavior is ambiguous, consult `gaiaviz-skill/references/structure/Topology-Guide.md` first. If not covered there, derive from first principles and note the choice in the commit message.
 
+## Rotation Convention
+
+`rotate_x/y/z` support two interpretations, selected per-node via `Node.rotation_mode` (`glyphviz_core/node.py`):
+
+- **`ROTATION_MODE_HEADING_TILT_ROLL`** (1) — ANTz's only-ever convention: a Z-X-Z "proper Euler" sequence borrowed from KML's Heading/Tilt/Roll camera-and-model convention (`rotate_y`=Heading about z, `rotate_x`=Tilt about x, `rotate_z`=Roll about z again — see `gaiaviz-skill/references/structure/Node-Field-Descriptions.md`'s Rotate section). Heading-then-Tilt is the standard spherical-coordinate parameterization, matching the longitude/latitude convention `translate_x/y` already use on Sphere/Torus topologies.
+- **`ROTATION_MODE_EULER_XYZ`** (0) — GlyphViz-only, and the default for new nodes: `rotate_x/y/z` each rotate about their own named axis, intuitive for hand-posing glyphs. Jeff finds the ANTz convention unintuitive for that workflow and no longer needs rotation-specific ANTz file compatibility.
+
+Implemented in `glyphviz_core/topology.py`'s `local_rotation_matrix()` dispatcher. **CSV default-handling is asymmetric by design**: a missing `rotation_mode` column (every pre-existing ANTz/GaiaViz/`gv_` file) loads as `HEADING_TILT_ROLL` in `csv_reader.py`'s `load_node_csv`, preserving old files' rendering exactly; a freshly-constructed `Node()` in code defaults to `EULER_XYZ`. `save_node_csv` only writes the column when a node's value would be *misread* by that load-side fallback (i.e. `rotation_mode != HEADING_TILT_ROLL`) — not simply "non-default" — so untouched legacy files stay byte-for-byte stable and new EULER_XYZ nodes still round-trip correctly. See `examples/Rotation_Convention_Example/` for a verified (numerically checked against `local_rotation_matrix()`) side-by-side demonstration: identical `(rotate_x=30, rotate_y=0..360)` input traces a level circle under Heading/Tilt/Roll but wobbles in elevation under Euler XYZ.
+
 ## Collaboration Notes
 
 - Address the developer as **Jeff**, not "the user."

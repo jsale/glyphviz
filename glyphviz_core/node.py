@@ -12,6 +12,15 @@ NODE_TYPE_LINK   = 7   # graph edge from parent_id (A-end) to child_id (B-end)
 
 NON_VISUAL_TYPES = frozenset({NODE_TYPE_WORLD, NODE_TYPE_CAMERA, NODE_TYPE_GRID})
 
+# rotate_x/y/z interpretation. ANTz/GaiaViz always used HEADING_TILT_ROLL (a
+# Z-X-Z "proper Euler" sequence borrowed from KML's Heading/Tilt/Roll camera
+# and model convention: rotate_y and rotate_z both rotate about the z-axis).
+# EULER_XYZ is GlyphViz-only: rotate_x/y/z each rotate about their own named
+# axis, intuitive for hand-posing glyphs but unable to isolate "spin around
+# wherever I'm currently aimed" into a single channel the way Roll can.
+ROTATION_MODE_EULER_XYZ = 0
+ROTATION_MODE_HEADING_TILT_ROLL = 1
+
 
 @dataclass
 class Node:
@@ -38,6 +47,7 @@ class Node:
     ratio: float = 0.1
     subspace: int = 0
     texture_id: int = 0
+    rotation_mode: int = ROTATION_MODE_EULER_XYZ
     text: str = ""   # display label shown in 3D viewport
     link: str = ""   # URL or file path opened by U key
     # Preserves untracked CSV columns (e.g. channel IDs, quaternion, segments)

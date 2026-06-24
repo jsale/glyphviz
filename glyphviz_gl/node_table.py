@@ -23,6 +23,7 @@ _COLUMNS = [
     ("Rx",      "rotate_x"),
     ("Ry",      "rotate_y"),
     ("Rz",      "rotate_z"),
+    ("RotMode", "rotation_mode"),
     ("Sx",      "scale_x"),
     ("Sy",      "scale_y"),
     ("Sz",      "scale_z"),

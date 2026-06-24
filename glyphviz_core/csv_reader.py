@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .node import Node
+from .node import Node, ROTATION_MODE_HEADING_TILT_ROLL
 
 # Columns that GlyphViz reads into explicit Node fields.
 # Everything else in the CSV is stashed in Node.extras for round-trip preservation.
@@ -15,7 +15,7 @@ _TRACKED_COLS = frozenset({
     'scale_x', 'scale_y', 'scale_z',
     'color_r', 'color_g', 'color_b', 'color_a',
     'geometry', 'hide', 'topo', 'ratio', 'subspace', 'facet', 'texture_id',
-    'text', 'link',
+    'text', 'link', 'rotation_mode',
 })
 
 # Extra columns written as plain strings (not int/float formatted).
@@ -193,6 +193,7 @@ def load_node_csv(path: str) -> list[Node]:
     has_texture_id = 'texture_id' in df.columns
     has_text = 'text' in df.columns
     has_link = 'link' in df.columns
+    has_rotation_mode = 'rotation_mode' in df.columns
 
     # Fall back to companion tag file only when neither inline column is present.
     tag_data: dict[int, tuple[str, str]] = {}
@@ -231,6 +232,14 @@ def load_node_csv(path: str) -> list[Node]:
                 else 0
             ),
             texture_id=int(row['texture_id']) if has_texture_id else 0,
+            # Missing column means a pre-existing file authored under ANTz's
+            # only-ever convention; default to it so old files keep rendering
+            # exactly as before. New Node() calls elsewhere get EULER_XYZ via
+            # the dataclass default instead.
+            rotation_mode=(
+                int(row['rotation_mode']) if has_rotation_mode
+                else ROTATION_MODE_HEADING_TILT_ROLL
+            ),
         )
         # Preserve all untracked columns so save_node_csv can round-trip them.
         node.extras = {
@@ -263,16 +272,23 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
     Node.extras (preserving the original file values) or from _DEFAULT_EXTRAS
     for newly-created nodes.
 
-    If any node has non-empty text or link, those columns are appended after
-    the 94-column ANTz standard set (ANTz tools ignore unknown extra columns).
+    If any node has non-empty text/link, or a non-default rotation_mode,
+    those columns are appended after the 94-column ANTz standard set (ANTz
+    tools ignore unknown extra columns).
     """
     has_text = any(n.text for n in nodes)
     has_link = any(n.link for n in nodes)
+    # Omitting the column means "ROTATION_MODE_HEADING_TILT_ROLL" on reload
+    # (see load_node_csv), so the column is needed whenever a node's value
+    # would be *misread* by that fallback — not merely when it's non-zero.
+    has_rotation_mode = any(n.rotation_mode != ROTATION_MODE_HEADING_TILT_ROLL for n in nodes)
     col_order = list(_COL_ORDER)
     if has_text:
         col_order.append('text')
     if has_link:
         col_order.append('link')
+    if has_rotation_mode:
+        col_order.append('rotation_mode')
 
     with open(path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
@@ -309,6 +325,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
                 row['text'] = node.text
             if has_link:
                 row['link'] = node.link
+            if has_rotation_mode:
+                row['rotation_mode'] = node.rotation_mode
 
             # Format each cell: strings as-is, floats with 6 dp, others as int.
             cells = []

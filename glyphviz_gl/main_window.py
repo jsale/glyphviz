@@ -26,7 +26,9 @@ from PySide6.QtWidgets import (
 
 from glyphviz_core.csv_reader import load_node_csv, save_node_csv
 from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA
-from glyphviz_core.node import Node, NON_VISUAL_TYPES
+from glyphviz_core.node import (
+    Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
+)
 from glyphviz_core.topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT, CUBE_FACE_NAMES
 
 from .audio_player import AudioPlayer
@@ -438,6 +440,19 @@ class MainWindow(QMainWindow):
             sb.valueChanged.connect(self._on_insp_rotation_changed)
             rot_layout.addWidget(sb)
 
+        self._insp_rotation_mode = QComboBox()
+        self._insp_rotation_mode.addItem("Euler XYZ", ROTATION_MODE_EULER_XYZ)
+        self._insp_rotation_mode.addItem("Heading/Tilt/Roll (ANTz)", ROTATION_MODE_HEADING_TILT_ROLL)
+        self._insp_rotation_mode.setToolTip(
+            "Euler XYZ: rotate_x/y/z each rotate about their own named axis "
+            "(intuitive for hand-posing).\n"
+            "Heading/Tilt/Roll: ANTz's legacy convention — rotate_y and "
+            "rotate_z both rotate about z, with rotate_x in between. Lets a "
+            "node spin in place around wherever it's aimed using only "
+            "rotate_z, useful for outward-facing children on Sphere/Torus."
+        )
+        self._insp_rotation_mode.currentIndexChanged.connect(self._on_insp_rotation_mode_changed)
+
         scale_widget = QWidget()
         scale_w_layout = QHBoxLayout(scale_widget)
         scale_w_layout.setContentsMargins(0, 0, 0, 0)
@@ -519,6 +534,7 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Parent:",   self._insp_parent)
         insp_layout.addRow("Pos (X,Y,Z):", pos_widget)
         insp_layout.addRow("Rotate (X,Y,Z):", rot_widget)
+        insp_layout.addRow("Rotation Mode:", self._insp_rotation_mode)
         insp_layout.addRow("Scale (X,Y,Z):", scale_widget)
         insp_layout.addRow("", self._insp_scale_lock)
         insp_layout.addRow("Geometry:", self._insp_geo)
@@ -937,6 +953,11 @@ class MainWindow(QMainWindow):
         self._insp_subspace.setCurrentIndex(max(idx, 0))
         self._insp_subspace.blockSignals(False)
 
+        idx = self._insp_rotation_mode.findData(node.rotation_mode)
+        self._insp_rotation_mode.blockSignals(True)
+        self._insp_rotation_mode.setCurrentIndex(max(idx, 0))
+        self._insp_rotation_mode.blockSignals(False)
+
         self._refresh_color_btn(node)
 
         self._insp_text.blockSignals(True)
@@ -997,6 +1018,11 @@ class MainWindow(QMainWindow):
         self._insp_subspace.blockSignals(True)
         self._insp_subspace.setCurrentIndex(max(idx, 0))
         self._insp_subspace.blockSignals(False)
+
+        idx = self._insp_rotation_mode.findData(primary.rotation_mode)
+        self._insp_rotation_mode.blockSignals(True)
+        self._insp_rotation_mode.setCurrentIndex(max(idx, 0))
+        self._insp_rotation_mode.blockSignals(False)
 
         self._refresh_color_btn(primary)
 
@@ -1149,6 +1175,15 @@ class MainWindow(QMainWindow):
         subspace = self._insp_subspace.currentData()
         for node in self._selected_nodes:
             node.subspace = subspace
+            self._table.refresh_node(node.id)
+        self._viewport.scene_invalidate()
+
+    def _on_insp_rotation_mode_changed(self, _idx: int):
+        if not self._selected_nodes:
+            return
+        rotation_mode = self._insp_rotation_mode.currentData()
+        for node in self._selected_nodes:
+            node.rotation_mode = rotation_mode
             self._table.refresh_node(node.id)
         self._viewport.scene_invalidate()
 
