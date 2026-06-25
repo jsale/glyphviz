@@ -58,134 +58,26 @@ TOPO_NAMES = {
 }
 
 
-def kml_offset(longitude: float, latitude: float, altitude: float, radius: float, scale: float = 1.0):
+def kml_offset(longitude: float, latitude: float, altitude: float, radius: float):
     """
-    Convert KML-style longitude/latitude/altitude into a Cartesian offset from
-    the parent sphere's center (uniform radius — used by Point topology and
-    as the uniform-scale degenerate case).  For sphere parents with non-uniform
-    scale use kml_ellipsoid_offset instead.
+    Convert KML-style longitude/latitude/altitude into a Cartesian offset
+    from the parent's center, in the parent's own *unscaled* local frame.
+    No scale is applied here: the result is transformed into world space by
+    the parent's `world_basis` (see compute_world_bases), which is what
+    carries the parent's (and every ancestor's) rotation and per-axis
+    stretch through correctly, no matter how many hierarchy levels deep.
+    `radius` is the topology's unscaled base radius — e.g. base_scale for
+    Sphere (children sit on the rendered surface) or 0.0 for Point/Zsphere
+    (children offset straight from the center, altitude only).
     """
     lon = math.radians(longitude)
     lat = math.radians(latitude)
-    r = radius + altitude * scale
+    r = radius + altitude
     cos_lat = math.cos(lat)
     return (
         r * cos_lat * math.cos(lon),
         r * cos_lat * math.sin(lon),
         r * math.sin(lat),
-    )
-
-
-def kml_ellipsoid_offset(longitude: float, latitude: float, altitude: float,
-                          rx: float, ry: float, rz: float, alt_scale: float = 1.0):
-    """
-    Child offset for a sphere-topology parent whose rendered surface is an
-    ellipsoid with per-axis semi-axes (rx, ry, rz).
-
-    Uses the 'stretched-sphere' parametrisation that matches node_world_matrix:
-        surface point = (rx·cos(lat)·cos(lon),
-                         ry·cos(lat)·sin(lon),
-                         rz·sin(lat))
-    Altitude offsets further outward along the local sphere-normal direction
-    (nx, ny, nz), scaled by alt_scale:
-        final = ((rx + alt)·nx, (ry + alt)·ny, (rz + alt)·nz)
-
-    When rx == ry == rz == radius this reduces exactly to kml_offset.
-    The per-axis radii ensure that scaling the parent along X moves only
-    children whose placement longitude faces X, not all children — matching
-    ANTz's ellipsoidal parent-child placement.
-    """
-    lon = math.radians(longitude)
-    lat = math.radians(latitude)
-    alt = altitude * alt_scale
-    cos_lat = math.cos(lat)
-    nx = cos_lat * math.cos(lon)
-    ny = cos_lat * math.sin(lon)
-    nz = math.sin(lat)
-    return (
-        (rx + alt) * nx,
-        (ry + alt) * ny,
-        (rz + alt) * nz,
-    )
-
-
-def torus_offset(major_angle: float, minor_angle: float, elevation: float, radius: float,
-                 ratio: float, scale: float = 1.0):
-    """
-    Convert torus-relative coordinates into a Cartesian offset from the
-    parent's center, on (or above) the donut's surface — mirroring the
-    sphere/KML convention:
-      longitude-like translate_x -> angle around the major (orbital) circle
-      latitude-like  translate_y -> angle around the minor (tube) circle
-      altitude-like  translate_z -> elevation, offset outward from the tube surface
-
-    Matches _draw_torus's local-space orientation: the major circle lies in
-    the local XY plane and the tube cross-section extends along local Z.
-
-    `ratio` is the parent's own torus `ratio` property — it determines the
-    donut's major/minor radius proportions (see geometry.torus_radii), so a
-    child rides on the actual rendered surface regardless of the parent's
-    ratio.
-
-    `elevation` is local-space, carried into world space by `scale` (the
-    parent's cumulative world scale) — see kml_offset for why.
-    """
-    u = math.radians(major_angle)
-    v = math.radians(minor_angle)
-    major_r, minor_r = torus_radii(ratio, radius)
-    tube_r = minor_r + elevation * scale
-    cos_v = math.cos(v)
-    radial = major_r + tube_r * cos_v
-    return (
-        radial * math.cos(u),
-        radial * math.sin(u),
-        tube_r * math.sin(v),
-    )
-
-
-def rod_offset(axial_pos: float, angle_deg: float, elevation: float, radius: float, scale: float = 1.0):
-    """
-    Convert rod-relative coordinates into a Cartesian offset from the
-    parent's CENTER, matching the GlyphViz rod-topology convention:
-      translate_x -> position along the rod's length (local Z axis);
-                     0 = bottom end of cylinder, 180 = top end.
-                     (ANTz uses 0 = top, -180 = bottom; GlyphViz inverts sign.)
-      translate_y -> angle (degrees) around the rod's circumference
-      translate_z -> radial distance from the cylinder's center axis
-                     (0 = on the axis; positive = outward)
-
-    `radius` is the parent's effective rendered radius (including base_scale).
-    The full [0, 180] axial range maps to the cylinder's actual rendered length
-    so 13 children spaced 15 units apart fill the cylinder evenly.
-    """
-    angle = math.radians(angle_deg)
-    radial = elevation * scale
-    # Map [0, 180] to [0, 2*half_length]: bottom cap of the parent cylinder
-    # sits at the parent's world origin, so tx=0 lands a child there and
-    # tx=180 lands it at the top cap — matching ANTz's one-end-at-origin convention.
-    world_z = (axial_pos / 180.0) * 2.0 * radius * ROD_HEIGHT_FACTOR
-    return (
-        radial * math.cos(angle),
-        radial * math.sin(angle),
-        world_z,
-    )
-
-
-def pin_offset(tx: float, ty: float, tz: float, parent_radius: float, scale: float = 1.0):
-    """
-    Stack children vertically above the parent's top (along the Z axis):
-      translate_x -> height above the parent's topmost point
-      translate_y -> X offset from the stack axis
-      translate_z -> Y offset from the stack axis
-
-    Designed for pin-like arrangements where items hang or stack in a column
-    above a parent node.
-    """
-    s = scale
-    return (
-        ty * s,
-        tz * s,
-        parent_radius + tx * s,
     )
 
 
@@ -208,61 +100,10 @@ _CUBE_FACES = [
 ]
 
 
-def cube_offset(tx: float, ty: float, tz: float, parent_radius: float,
-                scale: float = 1.0, subspace: int = 0):
-    """
-    Place a child on one of the six faces of the parent cube:
-      child.subspace (0–5) selects the face (see _CUBE_FACES)
-      translate_x    -> "right" (u-axis) within the face plane
-      translate_y    -> "up" (v-axis) within the face plane
-      translate_z    -> elevation above the face surface (along face normal)
-
-    The face center is at parent_radius * face_normal from the parent center.
-    For a cube glyph scaled by glScalef(rx, ry, rz), each face's center is
-    exactly at radius distance along its normal, so children land on the
-    actual rendered cube face when translate_z == 0.
-    """
-    face_idx = max(0, min(5, subspace))
-    n, u, v = _CUBE_FACES[face_idx]
-    s = scale
-    dist = parent_radius + tz * s
-    return (
-        dist * n[0] + tx * s * u[0] + ty * s * v[0],
-        dist * n[1] + tx * s * u[1] + ty * s * v[1],
-        dist * n[2] + tx * s * u[2] + ty * s * v[2],
-    )
-
-
-def spiral_offset(tx: float, ty: float, tz: float, parent_radius: float, scale: float = 1.0):
-    """
-    Custom conical helix (spiral) topology — a GlyphViz-specific
-    implementation inspired by GaiaViz's description of a "conical spiral
-    with inner radius, outer radius and height":
-      translate_x -> continuous angle in degrees around the helix axis
-                     (0–360 = first turn, 360–720 = second turn, etc.)
-      translate_y -> additional height offset above the computed helix height
-      translate_z -> radial offset from the nominal helix radius
-
-    The helix rises at a pitch of one full parent_radius per complete turn
-    (360°), giving a natural stacking density. Radius stays at parent_radius
-    from the axis unless offset by translate_z.
-    """
-    s = scale
-    theta = math.radians(tx)
-    height = (tx / 360.0) * parent_radius * s
-    r = parent_radius + tz * s
-    return (
-        r * math.cos(theta),
-        r * math.sin(theta),
-        height + ty * s,
-    )
-
-
 # ---------------------------------------------------------------------------
 # 3x3 rotation matrices (row-major tuples-of-tuples — no numpy needed) used to
-# cascade orientation through the parent->child chain, mirroring how
-# compute_world_scales cascades per-axis scale and compute_world_positions
-# cascades translation.
+# cascade orientation and scale through the parent->child chain (see
+# compute_world_bases) and to cascade translation (compute_world_positions).
 # ---------------------------------------------------------------------------
 
 _MAT_IDENTITY = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
@@ -279,6 +120,14 @@ def _mat_mul(a, b):
 def _mat_vec_mul(m, v):
     """3x3 matrix times column vector v=(x,y,z)."""
     return tuple(sum(m[i][k] * v[k] for k in range(3)) for i in range(3))
+
+
+def _mat_scale_cols(m, v):
+    """3x3 matrix times a diagonal scale matrix: m @ diag(v)."""
+    return tuple(
+        tuple(m[i][j] * v[j] for j in range(3))
+        for i in range(3)
+    )
 
 
 def _rot_x(deg):
@@ -365,148 +214,136 @@ def _topology_base_rotation(parent_topo: int, tx: float, ty: float, tz: float,
     return _MAT_IDENTITY
 
 
-def compute_world_rotations(
+def compute_world_bases(
     nodes: list[Node],
 ) -> tuple[dict[int, tuple], dict[int, tuple], dict[int, tuple]]:
     """
-    Resolve every node's cumulative orientation and return three dicts:
+    Resolve every node's cumulative rotation+scale and return three dicts:
 
-    combined[id]      = R_parent_world @ R_topo_base @ R_child_local
-                        (full world rotation, including each ancestor's
-                        synthetic "face outward from its parent's surface"
-                        contribution)
-    parent_world[id]  = parent's combined world rotation (identity for roots)
-    child_local[id]   = R_topo_base @ R_child_local
-                        (the child's own contribution, without parent)
+    world_basis[id]   = parent_basis[id] @ child_local[id] @ diag(own raw scale)
+                        (the full recursive rotation+scale composition, the
+                        same thing a real glPushMatrix/glPopMatrix chain
+                        would produce — fusing each level's rotation AND
+                        scale into one matrix before moving to the next
+                        level)
+    parent_basis[id]  = parent's world_basis (identity for roots)
+    child_local[id]   = topo_base_rotation(parent.topo, placement) @ own
+                        rotation (this node's own orientation contribution,
+                        no scale)
 
-    The split is needed by node_world_matrix to build the ANTz-correct
-    rendering matrix: R_parent @ S_parent @ R_child_local @ S_child, where
-    the parent's non-uniform scale is sandwiched between the two rotation
-    halves so it distorts the child's shape relative to its orientation —
-    e.g. a sphere stretched along X produces a diamond-shaped child at 45°.
-    ANTz-validated for one level deep; there's no golden-master coverage of
-    multi-level Sphere/Point/Rod/Cube nesting with a non-uniform ancestor
-    scale, and the synthetic topo_base rotation is known to compound oddly
-    at deeper nesting levels in that case (see git history for the
-    `explicit_world` attempt at separating position placement from glyph
-    orientation, reverted because it fixed position while leaving the
-    glyph-shape distortion — the dominant visual symptom — unaddressed).
+    Scale here is deliberately kept in RAW (dimensionless) units — no
+    base_scale baked in. base_scale (the global geometry-to-world-units
+    conversion) is applied exactly once by node_world_matrix and
+    compute_world_positions, not once per hierarchy level, which would
+    otherwise compound it as base_scale**depth.
+
+    Fusing rotation and scale recursively (rather than tracking cumulative
+    rotation and a flat cumulative-scale vector in separate dicts and
+    sandwiching them together post-hoc, which was tried previously) is
+    required for correctness beyond one level of nesting: rotation and
+    non-uniform scale don't commute, so flattening cumulative scale into a
+    flat per-axis vector silently misapplies an ancestor's stretch to the
+    wrong world axis as soon as an intermediate level has its own rotation —
+    e.g. rotating an unrelated intermediate parent changes a grandchild's
+    rendered *shape*, not just its position/orientation, which is the bug
+    this replaces.
+
+    For a node whose parent is a root, the rendering matrix built from these
+    three dicts (see node_world_matrix) is algebraically identical to the
+    ANTz-validated one-level-deep formula `R_parent @ S_parent @
+    R_child_local @ S_child` (a root's own scale/rotation equal its
+    cumulative scale/world rotation, since it has no ancestors), so this
+    cannot regress that already-confirmed case (e.g. a sphere stretched
+    along X producing a diamond-shaped child at 45°) while correctly
+    generalizing to arbitrary depth.
     """
     by_id = {n.id: n for n in nodes}
-    combined:     dict[int, tuple] = {}
-    parent_world: dict[int, tuple] = {}
+    world_basis:  dict[int, tuple] = {}
+    parent_basis: dict[int, tuple] = {}
     child_local:  dict[int, tuple] = {}
 
     def resolve(node: Node, visiting: frozenset[int]) -> tuple:
-        cached = combined.get(node.id)
+        cached = world_basis.get(node.id)
         if cached is not None:
             return cached
 
-        local = local_rotation_matrix(node.rotate_x, node.rotate_y, node.rotate_z,
-                                       node.rotation_mode)
+        own_rot = local_rotation_matrix(node.rotate_x, node.rotate_y, node.rotate_z,
+                                         node.rotation_mode)
+        own_scale = (node.scale_x, node.scale_y, node.scale_z)
         parent = by_id.get(node.parent_id)
         if parent is None or parent is node or node.id in visiting:
-            combined[node.id]     = local
-            parent_world[node.id] = _MAT_IDENTITY
-            child_local[node.id]  = local
+            parent_basis[node.id] = _MAT_IDENTITY
+            child_local[node.id]  = own_rot
+            world_basis[node.id]  = _mat_scale_cols(own_rot, own_scale)
         else:
-            prot = resolve(parent, visiting | {node.id})
+            pwb = resolve(parent, visiting | {node.id})
             topo_rot = _topology_base_rotation(
                 parent.topo, node.translate_x, node.translate_y, node.translate_z,
                 node.subspace,
             )
-            lc = _mat_mul(topo_rot, local)
-            combined[node.id]     = _mat_mul(prot, lc)
-            parent_world[node.id] = prot
+            lc = _mat_mul(topo_rot, own_rot)
+            parent_basis[node.id] = pwb
             child_local[node.id]  = lc
+            world_basis[node.id]  = _mat_mul(pwb, _mat_scale_cols(lc, own_scale))
 
-        return combined[node.id]
+        return world_basis[node.id]
 
     for n in nodes:
         resolve(n, frozenset())
 
-    return combined, parent_world, child_local
-
-
-def _avg3(scale: tuple[float, float, float]) -> float:
-    return (scale[0] + scale[1] + scale[2]) / 3.0
-
-
-def _axis_scaled(vec: tuple[float, float, float], scale: tuple[float, float, float]) -> tuple[float, float, float]:
-    return (vec[0] * scale[0], vec[1] * scale[1], vec[2] * scale[2])
+    return world_basis, parent_basis, child_local
 
 
 # All _*_offset wrappers share the signature:
-#   (tx, ty, tz, parent_radius, parent_ratio, parent_scale, child_subspace=0)
-# child_subspace is only used by _cube_offset; the others ignore it.
+#   (tx, ty, tz, base_radius, parent_ratio, child_subspace=0)
+# where base_radius is the topology's fixed, UNSCALED base size (base_scale,
+# or 0.0 for the Z-variants/Point that place children through the center).
+# No scale appears here at all — compute_world_positions transforms the
+# returned local-frame offset by the parent's world_basis (see
+# compute_world_bases), which applies every ancestor's rotation and per-axis
+# stretch in the mathematically correct order, however many levels deep.
+# child_subspace is only used by _cube_offset/_zcube_offset.
 
-def _cartesian_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
-    """Plain Cartesian (dx, dy, dz) offset from the parent's center, expressed
-    in the parent's local space and carried along — per axis — by its
-    cumulative world scale: standard scene-graph composition
-    (world_offset = parent_scale * local_offset), matching how
-    compute_world_scales cascades sizing, and respecting independently
-    scaled X/Y/Z. This is the Plane/Grid topology's coordinate system
-    (translate_x/y position a child within the parent's local plane,
+def _cartesian_offset(tx, ty, tz, _base_radius, _parent_ratio, _child_subspace=0):
+    """Plain Cartesian (dx, dy, dz) offset from the parent's center, in the
+    parent's own local frame. This is the Plane/Grid topology's coordinate
+    system (translate_x/y position a child within the parent's local plane,
     translate_z is elevation above it) and the fallback for topologies not
     yet modeled.
     """
-    sx, sy, sz = parent_scale
-    return (tx * sx, ty * sy, tz * sz)
+    return (tx, ty, tz)
 
 
-def _sphere_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
-    # parent_radius = avg(sx,sy,sz) * base_scale, so recover per-axis radii:
-    #   per_axis_radius = per_axis_scale * base_scale
-    #                   = per_axis_scale * parent_radius / avg(parent_scale)
-    # This ensures a child at longitude=90 moves only when scale_y changes,
-    # not when scale_x or scale_z changes (ANTz ellipsoidal placement).
-    avg_s = _avg3(parent_scale)
-    if avg_s < 1e-9:
-        return (0.0, 0.0, 0.0)
-    f = parent_radius / avg_s          # = base_scale
-    rx = parent_scale[0] * f
-    ry = parent_scale[1] * f
-    rz = parent_scale[2] * f
-    return kml_ellipsoid_offset(tx, ty, tz, rx, ry, rz, avg_s)
+def _sphere_offset(tx, ty, tz, base_radius, _parent_ratio, _child_subspace=0):
+    return kml_offset(tx, ty, tz, base_radius)
 
 
-def _torus_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale, _child_subspace=0):
-    avg_s = _avg3(parent_scale)
-    if avg_s < 1e-9:
-        return (0.0, 0.0, 0.0)
-    base_radius = parent_radius / avg_s
+def _torus_offset(tx, ty, tz, base_radius, parent_ratio, _child_subspace=0):
     u = math.radians(tx)
     v = math.radians(ty)
     major_r, minor_r = torus_radii(parent_ratio, base_radius)
     tube_r = minor_r + tz
     cos_v = math.cos(v)
     radial = major_r + tube_r * cos_v
-    local = (
+    return (
         radial * math.cos(u),
         radial * math.sin(u),
         tube_r * math.sin(v),
     )
-    return _axis_scaled(local, parent_scale)
 
 
-def _rod_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
-    avg_s = _avg3(parent_scale)
-    if avg_s < 1e-9:
-        return (0.0, 0.0, 0.0)
+def _rod_offset(tx, ty, tz, base_radius, _parent_ratio, _child_subspace=0):
     angle = math.radians(ty)
     radial = tz
-    z_radius = parent_radius / avg_s
-    world_z = (tx / 180.0) * 2.0 * z_radius * ROD_HEIGHT_FACTOR
-    local = (
+    world_z = (tx / 180.0) * 2.0 * base_radius * ROD_HEIGHT_FACTOR
+    return (
         radial * math.cos(angle),
         radial * math.sin(angle),
         world_z,
     )
-    return _axis_scaled(local, parent_scale)
 
 
-def _cylinder_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+def _cylinder_offset(tx, ty, tz, base_radius, _parent_ratio, _child_subspace=0):
     """Cylinder topology (per Topology-Guide.md: 'Children on cylindrical
     surface'):
       translate_x -> angle (degrees) around the cylinder's axis (local Z,
@@ -524,170 +361,124 @@ def _cylinder_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _ch
                      confirming base Cylinder's translate_z=0 means the
                      surface, not the axis.
     """
-    avg_s = _avg3(parent_scale)
-    if avg_s < 1e-9:
-        return (0.0, 0.0, 0.0)
-    base_radius = parent_radius / avg_s
     angle = math.radians(tx)
     radial = base_radius + tz
-    local = (
+    return (
         radial * math.cos(angle),
         radial * math.sin(angle),
         ty,
     )
-    return _axis_scaled(local, parent_scale)
 
 
-def _point_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
-    """Point topology: longitude/latitude/altitude from the parent center with
-    per-axis scale — a child at lon=0, alt=5 on a parent scaled 2x along X
-    lands at world X=10, not X=6.67 (which avg-scale would give).
-    Equivalent to kml_ellipsoid_offset with rx=ry=rz=0 and per-axis alt_scale."""
-    lon = math.radians(tx)
-    lat = math.radians(ty)
-    cos_lat = math.cos(lat)
-    nx = cos_lat * math.cos(lon)
-    ny = cos_lat * math.sin(lon)
-    nz = math.sin(lat)
-    sx, sy, sz = parent_scale
-    return (tz * nx * sx, tz * ny * sy, tz * nz * sz)
+def _point_offset(tx, ty, tz, _base_radius, _parent_ratio, _child_subspace=0):
+    """Point topology: longitude/latitude/altitude from the parent center —
+    a child at lon=0, alt=5 sits 5 units out along the parent's local +X;
+    world_basis then carries that through the parent's (and every
+    ancestor's) per-axis scale and rotation."""
+    return kml_offset(tx, ty, tz, 0.0)
 
 
-def _pin_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
-    avg_s = _avg3(parent_scale)
-    if avg_s < 1e-9:
-        return (0.0, 0.0, 0.0)
-    base_radius = parent_radius / avg_s
-    local = (ty, tz, base_radius + tx)
-    return _axis_scaled(local, parent_scale)
+def _pin_offset(tx, ty, tz, base_radius, _parent_ratio, _child_subspace=0):
+    return (ty, tz, base_radius + tx)
 
 
-def _cube_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, child_subspace=0):
-    avg_s = _avg3(parent_scale)
-    if avg_s < 1e-9:
-        return (0.0, 0.0, 0.0)
-    base_radius = parent_radius / avg_s
+def _cube_offset(tx, ty, tz, base_radius, _parent_ratio, child_subspace=0):
     face_idx = max(0, min(5, child_subspace))
     n, u, v = _CUBE_FACES[face_idx]
     dist = base_radius + tz
-    local = (
+    return (
         dist * n[0] + tx * u[0] + ty * v[0],
         dist * n[1] + tx * u[1] + ty * v[1],
         dist * n[2] + tx * u[2] + ty * v[2],
     )
-    return _axis_scaled(local, parent_scale)
 
 
-def _spiral_offset(tx, ty, tz, parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
-    avg_s = _avg3(parent_scale)
-    if avg_s < 1e-9:
-        return (0.0, 0.0, 0.0)
-    base_radius = parent_radius / avg_s
+def _spiral_offset(tx, ty, tz, base_radius, _parent_ratio, _child_subspace=0):
     theta = math.radians(tx)
     height = (tx / 360.0) * base_radius
-    local = (
+    return (
         (base_radius + tz) * math.cos(theta),
         (base_radius + tz) * math.sin(theta),
         height + ty,
     )
-    return _axis_scaled(local, parent_scale)
 
 
 # ---------------------------------------------------------------------------
 # Z-topology variants (9-13): each is "akin to" an already-implemented
 # topology with its surface/radius term zeroed out, so children sit at/through
-# the parent's center instead of on its rendered surface. Per Topology-Guide.md
-# ("Important Scale and Position Notes"), Z-types still scale their placement
-# position by the parent's cumulative world scale (same as their base
-# topology) — only the CHILD's own rendered size is exempted from inheriting
-# parent scale, which is handled separately in compute_world_scales.
+# the parent's center instead of on its rendered surface (Topology-Guide.md's
+# "Important Scale and Position Notes").
 # ---------------------------------------------------------------------------
 
-def _zcube_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, child_subspace=0):
+def _zcube_offset(tx, ty, tz, _base_radius, _parent_ratio, child_subspace=0):
     """Akin to Cube, but dist = tz only (no base_radius term) — a child at
     tz=0 sits at the parent's center rather than on the cube face."""
     face_idx = max(0, min(5, child_subspace))
     n, u, v = _CUBE_FACES[face_idx]
     dist = tz
-    local = (
+    return (
         dist * n[0] + tx * u[0] + ty * v[0],
         dist * n[1] + tx * u[1] + ty * v[1],
         dist * n[2] + tx * u[2] + ty * v[2],
     )
-    return _axis_scaled(local, parent_scale)
 
 
-def _zsphere_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+def _zsphere_offset(tx, ty, tz, _base_radius, _parent_ratio, _child_subspace=0):
     """Akin to KML/Sphere coords, but translate_z=0 is the center point (the
-    ellipsoid radii are forced to 0) rather than the sphere's surface."""
-    lon = math.radians(tx)
-    lat = math.radians(ty)
-    cos_lat = math.cos(lat)
-    nx = cos_lat * math.cos(lon)
-    ny = cos_lat * math.sin(lon)
-    nz = math.sin(lat)
-    local = (tz * nx, tz * ny, tz * nz)
-    return _axis_scaled(local, parent_scale)
+    radius is forced to 0) rather than the sphere's surface."""
+    return kml_offset(tx, ty, tz, 0.0)
 
 
-def _ztorus_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale, _child_subspace=0):
+def _ztorus_offset(tx, ty, tz, base_radius, parent_ratio, _child_subspace=0):
     """Akin to Torus, but with zero tube thickness: the minor (tube) radius
     is dropped, so translate_z directly offsets outward from the major
     (orbital) ring instead of riding on a donut surface."""
-    avg_s = _avg3(parent_scale)
-    if avg_s < 1e-9:
-        return (0.0, 0.0, 0.0)
-    base_radius = parent_radius / avg_s
     u = math.radians(tx)
     v = math.radians(ty)
     major_r, _minor_r = torus_radii(parent_ratio, base_radius)
     tube_r = tz  # zero thickness: no minor-radius contribution
     cos_v = math.cos(v)
     radial = major_r + tube_r * cos_v
-    local = (
+    return (
         radial * math.cos(u),
         radial * math.sin(u),
         tube_r * math.sin(v),
     )
-    return _axis_scaled(local, parent_scale)
 
 
-def _zcylinder_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+def _zcylinder_offset(tx, ty, tz, _base_radius, _parent_ratio, _child_subspace=0):
     """Akin to Cylinder, but with radius=0: children collapse onto the
     central axis (translate_z directly offsets outward from the axis instead
     of riding on the cylinder's surface)."""
     angle = math.radians(tx)
     radial = tz
-    local = (
+    return (
         radial * math.cos(angle),
         radial * math.sin(angle),
         ty,
     )
-    return _axis_scaled(local, parent_scale)
 
 
-def _zrod_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale, child_subspace=0):
+def _zrod_offset(tx, ty, tz, base_radius, parent_ratio, child_subspace=0):
     """Akin to Zcylinder — identical placement math; the only documented
-    difference (scale not affecting child size) is a scale-cascade rule
-    handled in compute_world_scales, not a position difference here."""
-    return _zcylinder_offset(tx, ty, tz, parent_radius, parent_ratio, parent_scale, child_subspace)
+    difference (scale not affecting child size) is a separate rendering rule,
+    not a position difference here."""
+    return _zcylinder_offset(tx, ty, tz, base_radius, parent_ratio, child_subspace)
 
 
-def _plot_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+def _plot_offset(tx, ty, tz, _base_radius, _parent_ratio, _child_subspace=0):
     """Plot topology (1D/2D/3D line plot, GPS, Oscilloscope): children placed
-    at their Cartesian translate_x/y/z coordinates, scaled by the parent's
-    world scale — same spatial layout as Plane, distinct semantic meaning."""
-    sx, sy, sz = parent_scale
-    return (tx * sx, ty * sy, tz * sz)
+    at their Cartesian translate_x/y/z coordinates — same spatial layout as
+    Plane, distinct semantic meaning."""
+    return (tx, ty, tz)
 
 
-def _surface_offset(tx, ty, tz, _parent_radius, _parent_ratio, parent_scale, _child_subspace=0):
+def _surface_offset(tx, ty, tz, _base_radius, _parent_ratio, _child_subspace=0):
     """Surface topology (deformable grid, FFT, LIDAR, sound sphere): children
-    placed at their Cartesian translate_x/y/z coordinates, scaled by the parent's
-    world scale — translate_x/y form the grid position, translate_z is the
-    height value at that grid point."""
-    sx, sy, sz = parent_scale
-    return (tx * sx, ty * sy, tz * sz)
+    placed at their Cartesian translate_x/y/z coordinates — translate_x/y
+    form the grid position, translate_z is the height value at that grid
+    point."""
+    return (tx, ty, tz)
 
 
 _TOPO_OFFSET_FUNCS = {
@@ -713,9 +504,8 @@ _TOPO_OFFSET_FUNCS = {
 
 def compute_world_positions(
     nodes: list[Node],
-    radius_of,
-    world_scale: dict[int, tuple[float, float, float]],
-    world_rotation: dict[int, tuple] | None = None,
+    base_scale: float,
+    world_basis: dict[int, tuple] | None = None,
 ) -> dict[int, tuple[float, float, float]]:
     """
     Resolve every node's world-space position by walking its parent chain.
@@ -725,24 +515,18 @@ def compute_world_positions(
     parent's world position plus an offset derived from the parent's
     topology — so moving a parent carries its whole subtree with it.
 
-    `radius_of(node)` returns a node's rendered surface radius, needed by
-    surface-based topologies (e.g. sphere) to place children on its surface.
-    `world_scale` is the cumulative scale map from compute_world_scales,
-    needed by Cartesian-style topologies (e.g. Plane, None) to carry a
-    child's local offset along proportionally when the parent is resized —
-    the standard scene-graph composition (world_offset = parent_scale *
-    local_offset) that keeps position and size scaling consistent.
-
-    `world_rotation` should be the `combined` map from compute_world_rotations:
-    the topology offset is computed in the parent's *local* space, so it's
-    rotated by the parent's cumulative world rotation before being added to
-    the parent's world position — the same standard scene-graph composition
-    (world_offset = parent_rotation * local_offset) that keeps a rotated
-    parent's whole subtree riding along with it.
+    The topology offset (e.g. a longitude/latitude point on the parent's
+    surface) is computed in the parent's own *unscaled* local frame, with
+    `base_scale` standing in for the parent's rendered base size — see the
+    `_*_offset` functions above — then transformed into world space by the
+    parent's `world_basis` (from compute_world_bases), the parent's full
+    recursive rotation+scale composition: this is what threads every
+    ancestor's per-axis stretch and rotation through correctly, however many
+    non-uniformly-scaled, rotated levels sit above it.
     """
     by_id = {n.id: n for n in nodes}
     resolved: dict[int, tuple[float, float, float]] = {}
-    world_rotation = world_rotation or {}
+    world_basis = world_basis or {}
 
     def resolve(node: Node, visiting: frozenset[int]) -> tuple[float, float, float]:
         cached = resolved.get(node.id)
@@ -757,12 +541,10 @@ def compute_world_positions(
             offset_fn = _TOPO_OFFSET_FUNCS.get(parent.topo, _cartesian_offset)
             local_offset = offset_fn(
                 node.translate_x, node.translate_y, node.translate_z,
-                radius_of(parent), parent.ratio,
-                world_scale.get(parent.id, (1.0, 1.0, 1.0)),
-                node.subspace,
+                base_scale, parent.ratio, node.subspace,
             )
-            prot = world_rotation.get(parent.id, _MAT_IDENTITY)
-            ox, oy, oz = _mat_vec_mul(prot, local_offset)
+            wb_parent = world_basis.get(parent.id, _MAT_IDENTITY)
+            ox, oy, oz = _mat_vec_mul(wb_parent, local_offset)
             pos = (px + ox, py + oy, pz + oz)
 
         resolved[node.id] = pos
@@ -772,46 +554,3 @@ def compute_world_positions(
         resolve(n, frozenset())
 
     return resolved
-
-
-def compute_world_scales(
-    nodes: list[Node],
-) -> tuple[dict[int, tuple[float, float, float]], dict[int, tuple[float, float, float]]]:
-    """
-    Resolve every node's cumulative per-axis scale and return two dicts:
-
-    world[id]        = (parent_world_sx * own_sx, …)  — full cumulative scale
-                       (used by _placement_radius, world_scale() accessor, and
-                       as the `world_scale` argument to compute_world_positions)
-    parent_world[id] = parent's cumulative scale ((1,1,1) for roots)
-
-    The split is needed by node_world_matrix: `sp = parent_world[id]` is
-    inserted between R_parent and R_child_local so a non-uniform parent scale
-    distorts the child's rendered shape relative to the child's orientation,
-    matching ANTz behavior (see compute_world_rotations docstring).
-    """
-    by_id = {n.id: n for n in nodes}
-    world:        dict[int, tuple[float, float, float]] = {}
-    parent_world: dict[int, tuple[float, float, float]] = {}
-
-    def resolve(node: Node, visiting: frozenset[int]) -> tuple[float, float, float]:
-        cached = world.get(node.id)
-        if cached is not None:
-            return cached
-
-        parent = by_id.get(node.parent_id)
-        os = (node.scale_x, node.scale_y, node.scale_z)
-        if parent is None or parent is node or node.id in visiting:
-            world[node.id]        = os
-            parent_world[node.id] = (1.0, 1.0, 1.0)
-        else:
-            ps = resolve(parent, visiting | {node.id})
-            world[node.id]        = (os[0] * ps[0], os[1] * ps[1], os[2] * ps[2])
-            parent_world[node.id] = ps
-
-        return world[node.id]
-
-    for n in nodes:
-        resolve(n, frozenset())
-
-    return world, parent_world

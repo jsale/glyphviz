@@ -11,16 +11,19 @@ Design contract
   against the ANTz C oracle.  No other code path may compose node transforms.
 
 * The 4x4 matrix produced is (row-major NumPy, translation in last column):
-      T_world  @  R_world  [@  T_cap_rod]  @  S_rendered
-  where S_rendered = world_scale * base_scale * [rod factors if TOPO_ROD].
-  For rod nodes a cap-offset T(0,0,drz) shifts the bottom to the node's world
-  origin (ANTz kNPoffsetRod convention).
+      T_world  @  parent_basis  @  child_local  @  S_child  [@  T_cap_rod]
+  where parent_basis (see topology.compute_world_bases) is the parent's full
+  recursive rotation+scale composition down the ancestor chain. For rod
+  nodes a cap-offset T(0,0,drz) shifts the bottom to the node's world origin
+  (ANTz kNPoffsetRod convention).
 
 * Transforms are recomputed lazily on demand via Scene._ensure(), then cached
   until Scene.invalidate() is called.  The viewport calls invalidate() at the
   start of each paint to match ANTz's per-frame recomputation, and the pick
   pass reuses the freshly-computed cache without a second invalidation.
 """
+
+import math
 
 import numpy as np
 
@@ -29,9 +32,8 @@ from .geometry_data import ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
 from .node import Node, NODE_TYPE_WORLD, NON_VISUAL_TYPES
 from .topology import (
     TOPO_ROD,
+    compute_world_bases,
     compute_world_positions,
-    compute_world_rotations,
-    compute_world_scales,
 )
 
 _MAT_IDENTITY_3 = ((1., 0., 0.), (0., 1., 0.), (0., 0., 1.))
@@ -46,13 +48,14 @@ class Scene:
         self._by_id: dict[int, Node] = {n.id: n for n in nodes}
         self._dirty = True
         self._world_pos: dict[int, tuple[float, float, float]] = {}
-        self._world_rot: dict[int, tuple] = {}
-        self._world_scale: dict[int, tuple[float, float, float]] = {}
-        # Decomposed rotation/scale caches used by node_world_matrix to build
-        # the ANTz-correct rendering matrix (see node_world_matrix docstring).
-        self._parent_world_rot:   dict[int, tuple] = {}
-        self._child_local_rot:    dict[int, tuple] = {}
-        self._parent_world_scale: dict[int, tuple[float, float, float]] = {}
+        # Recursive rotation+scale caches from compute_world_bases (RAW,
+        # dimensionless scale — base_scale is applied once, below, not once
+        # per hierarchy level). world_basis also doubles as the matrix that
+        # orients/stretches a node's children's topology offsets into world
+        # space (see compute_world_positions).
+        self._world_basis:  dict[int, tuple] = {}
+        self._parent_basis: dict[int, tuple] = {}
+        self._child_local:  dict[int, tuple] = {}
 
     def invalidate(self):
         """Mark cached transforms stale; they will be recomputed on next access."""
@@ -66,23 +69,13 @@ class Scene:
     def _ensure(self):
         if not self._dirty:
             return
-        self._world_scale, self._parent_world_scale = compute_world_scales(self.nodes)
-        self._world_rot, self._parent_world_rot, self._child_local_rot = (
-            compute_world_rotations(self.nodes)
+        self._world_basis, self._parent_basis, self._child_local = (
+            compute_world_bases(self.nodes)
         )
         self._world_pos = compute_world_positions(
-            self.nodes,
-            self._placement_radius,
-            self._world_scale,
-            self._world_rot,
+            self.nodes, self.base_scale, self._world_basis,
         )
         self._dirty = False
-
-    def _placement_radius(self, node: Node) -> float:
-        """Average rendered radius used for surface-topology child placement."""
-        s = self._world_scale.get(node.id, (node.scale_x, node.scale_y, node.scale_z))
-        avg = (s[0] + s[1] + s[2]) / 3.0
-        return max(avg * self.base_scale, 0.2)
 
     # --- public accessors (trigger lazy compute) ---
 
@@ -90,13 +83,18 @@ class Scene:
         self._ensure()
         return self._world_pos.get(node_id)
 
-    def world_rot(self, node_id: int) -> tuple | None:
-        self._ensure()
-        return self._world_rot.get(node_id)
-
     def world_scale(self, node_id: int) -> tuple[float, float, float] | None:
+        """Approximate per-axis cumulative scale (column norms of the node's
+        RAW world_basis) — a camera-framing/UI hint, not exact glyph-shape
+        math (see node_world_matrix for that)."""
         self._ensure()
-        return self._world_scale.get(node_id)
+        wb = self._world_basis.get(node_id)
+        if wb is None:
+            return None
+        return tuple(
+            math.sqrt(wb[0][j] ** 2 + wb[1][j] ** 2 + wb[2][j] ** 2)
+            for j in range(3)
+        )
 
     def glyph_nodes(self) -> list[Node]:
         """Nodes that represent visual glyphs (not camera/world/grid infrastructure)."""
@@ -124,23 +122,28 @@ def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
 
     The rendering 3x3 is built as the ANTz-correct hierarchical product:
 
-        M3 = R_parent_world @ S_parent @ R_child_local @ S_child
+        M3 = parent_basis @ child_local @ S_child
 
-    where R_child_local = R_topo_base @ R_own.  This means the parent's
-    non-uniform scale is sandwiched between the parent's rotation and the
-    child's local frame, so a child that is oriented 90° relative to its
-    parent sees a different axis stretched — matching ANTz's behavior where
-    a sphere stretched along X produces a diamond-shaped child at 45° and
-    a Y-elongated child at 90° (rather than always elongating along world X).
+    where parent_basis is the parent's full recursive rotation+scale
+    composition (see compute_world_bases — fusing each ancestor level's
+    rotation AND scale into one matrix before moving to the next level,
+    rather than a flat cumulative-scale vector that doesn't commute with
+    intervening rotation), child_local is this node's own topo_base+rotation
+    contribution, and S_child = diag(this node's own scale * base_scale,
+    floored at 0.2). base_scale is applied here, exactly once, rather than
+    inside the recursive composition — applying it once per hierarchy level
+    would compound it as base_scale**depth.
 
-    In NumPy broadcasting:
-        M3 = (R_pw * sp) @ R_lc * sc
-    where sp / sc are (3,) vectors and the * broadcasts column-wise,
-    i.e. (R_pw * sp)[i,k] = R_pw[i,k]*sp[k] (= R_pw @ diag(sp)) and
-         (... * sc)[i,j]   = ...[i,j]*sc[j]  (= ... @ diag(sc)).
+    This means a non-uniform ancestor scale distorts a descendant's rendered
+    shape relative to its *actual* accumulated orientation at every level —
+    e.g. a sphere stretched along X produces a diamond-shaped child at 45° —
+    correctly at any nesting depth, since rotation and non-uniform scale
+    don't commute.
 
-    For rod nodes the child-scale vector uses ROD_RADIUS/HEIGHT factors and
-    the translation gains the cap offset (bottom of cylinder at world origin).
+    For rod nodes the child-scale vector is further adjusted by the fixed
+    ROD_RADIUS/HEIGHT factors relating the rod glyph's modeled proportions
+    to its scale fields, and the translation gains a cap offset (bottom of
+    the cylinder at the node's world origin, ANTz's kNPoffsetRod convention).
 
     This function is the single source of truth for node transforms.
     The renderer loads it with glMultMatrixf; the FBO picker renders with it;
@@ -152,15 +155,8 @@ def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
         node.id, (node.translate_x, node.translate_y, node.translate_z)
     )
 
-    R_pw = np.array(
-        scene._parent_world_rot.get(node.id, _MAT_IDENTITY_3), dtype=np.float64
-    )
-    sp = np.array(
-        scene._parent_world_scale.get(node.id, (1.0, 1.0, 1.0)), dtype=np.float64
-    )
-    R_lc = np.array(
-        scene._child_local_rot.get(node.id, _MAT_IDENTITY_3), dtype=np.float64
-    )
+    pwb = np.array(scene._parent_basis.get(node.id, _MAT_IDENTITY_3), dtype=np.float64)
+    lc  = np.array(scene._child_local.get(node.id, _MAT_IDENTITY_3), dtype=np.float64)
 
     bs = scene.base_scale
     sc = np.array([
@@ -171,7 +167,7 @@ def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
 
     if node.topo == TOPO_ROD:
         sc_rod = sc * np.array([ROD_RADIUS_FACTOR, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR])
-        M3 = (R_pw * sp) @ R_lc * sc_rod
+        M3 = (pwb @ lc) * sc_rod
         # Cap offset: translate bottom of cylinder to world origin (ANTz convention).
         # M3[:, 2] is the rendered Z-axis vector (direction + magnitude), so adding
         # it once shifts the origin from the cylinder centre to its bottom cap.
@@ -182,8 +178,7 @@ def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
             [0.,       0.,       0.,        1.             ],
         ], dtype=np.float64)
 
-    # T_world @ (R_parent @ S_parent @ R_child_local @ S_child)
-    M3 = (R_pw * sp) @ R_lc * sc
+    M3 = (pwb @ lc) * sc
     return np.array([
         [M3[0, 0], M3[0, 1], M3[0, 2], wx],
         [M3[1, 0], M3[1, 1], M3[1, 2], wy],

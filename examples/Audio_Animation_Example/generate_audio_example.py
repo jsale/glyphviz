@@ -121,9 +121,9 @@ ROOT_RADIUS_WORLD = 0.36   # -> SCALE = 0.12, same as the original flat build
 L1_RADIUS_WORLD   = 0.30
 L2_RADIUS_WORLD   = 0.24
 
-# glyphviz_core/topology.py's compute_world_scales() cascades scale_x
-# multiplicatively down the hierarchy (world_scale = parent's *cumulative*
-# world_scale * own scale_x), so the local scale_x a child needs depends on
+# glyphviz_core/topology.py's compute_world_bases() cascades scale_x
+# multiplicatively down the hierarchy (world scale = parent's *cumulative*
+# world scale * own scale_x), so the local scale_x a child needs depends on
 # its parent's world size, not just on what that child "looks like" alone.
 SCALE    = ROOT_RADIUS_WORLD / BASE_SCALE
 L1_SCALE = L1_RADIUS_WORLD / ROOT_RADIUS_WORLD

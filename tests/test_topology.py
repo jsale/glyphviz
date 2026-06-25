@@ -93,7 +93,7 @@ def test_subspace_round_trips_through_save_as_facet(tmp_path):
     (5, (0, 0, -1)),   # -Z
 ])
 def test_cube_offset_face_centers_on_correct_world_axis(subspace, axis):
-    offset = topo._cube_offset(0, 0, 0, 10.0, 0.1, (1.0, 1.0, 1.0), subspace)
+    offset = topo._cube_offset(0, 0, 0, 10.0, 0.1, subspace)
     expected = tuple(10.0 * a for a in axis)
     for got, exp in zip(offset, expected):
         assert got == pytest.approx(exp)
@@ -103,7 +103,7 @@ def test_cube_offset_inplane_axes_match_antz_ground_truth():
     """+X face: local-x (right when facing it) = world +Y, local-y (up) = world +Z
     — derived from Jeff's confirmed facet/coordinate convention and verified
     against the existing _CUBE_FACES table."""
-    offset = topo._cube_offset(5.0, 7.0, 0.0, 10.0, 0.1, (1.0, 1.0, 1.0), 0)
+    offset = topo._cube_offset(5.0, 7.0, 0.0, 10.0, 0.1, 0)
     assert offset == pytest.approx((10.0, 5.0, 7.0))
 
 
@@ -119,17 +119,17 @@ def test_cube_offset_inplane_axes_match_antz_ground_truth():
 # ---------------------------------------------------------------------------
 
 def test_cylinder_offset_on_surface_at_zero_angle():
-    x, y, z = topo._cylinder_offset(0.0, 0.0, 0.0, 10.0, 0.1, (1.0, 1.0, 1.0))
+    x, y, z = topo._cylinder_offset(0.0, 0.0, 0.0, 10.0, 0.1)
     assert (x, y, z) == pytest.approx((10.0, 0.0, 0.0))
 
 
 def test_cylinder_offset_height_is_literal_not_normalized():
-    x, y, z = topo._cylinder_offset(0.0, 25.0, 0.0, 10.0, 0.1, (1.0, 1.0, 1.0))
+    x, y, z = topo._cylinder_offset(0.0, 25.0, 0.0, 10.0, 0.1)
     assert (x, y, z) == pytest.approx((10.0, 0.0, 25.0))
 
 
 def test_cylinder_offset_angle_90_degrees():
-    x, y, z = topo._cylinder_offset(90.0, 0.0, 0.0, 10.0, 0.1, (1.0, 1.0, 1.0))
+    x, y, z = topo._cylinder_offset(90.0, 0.0, 0.0, 10.0, 0.1)
     assert (x, y, z) == pytest.approx((0.0, 10.0, 0.0), abs=1e-9)
 
 
@@ -139,21 +139,21 @@ def test_cylinder_offset_angle_90_degrees():
 
 def test_zcube_offset_drops_base_radius_term():
     # At tz=0, a Zcube child sits at the parent's center, unlike Cube (radius away).
-    assert topo._zcube_offset(0, 0, 0, 10.0, 0.1, (1.0, 1.0, 1.0), 0) == pytest.approx((0.0, 0.0, 0.0))
+    assert topo._zcube_offset(0, 0, 0, 10.0, 0.1, 0) == pytest.approx((0.0, 0.0, 0.0))
     # With tz != 0 it still moves outward along the face normal.
-    assert topo._zcube_offset(0, 0, 5, 10.0, 0.1, (1.0, 1.0, 1.0), 0) == pytest.approx((5.0, 0.0, 0.0))
+    assert topo._zcube_offset(0, 0, 5, 10.0, 0.1, 0) == pytest.approx((5.0, 0.0, 0.0))
 
 
 def test_zsphere_offset_center_at_zero_altitude():
-    assert topo._zsphere_offset(45.0, 30.0, 0.0, 10.0, 0.1, (1.0, 1.0, 1.0)) == pytest.approx((0.0, 0.0, 0.0))
+    assert topo._zsphere_offset(45.0, 30.0, 0.0, 10.0, 0.1) == pytest.approx((0.0, 0.0, 0.0))
 
 
 def test_zsphere_offset_matches_point_offset():
     """Topology-Guide.md describes Point as 'similar to Sphere ... but center
     is translate_z=0.0' — the same description given for Zsphere — so their
     position math should coincide (the documented difference between them is
-    the scale-cascade rule, not placement)."""
-    args = (12.0, -20.0, 7.0, 10.0, 0.1, (2.0, 1.0, 0.5))
+    a separate rendering rule, not placement)."""
+    args = (12.0, -20.0, 7.0, 10.0, 0.1)
     assert topo._zsphere_offset(*args) == pytest.approx(topo._point_offset(*args))
 
 
@@ -163,27 +163,27 @@ def test_ztorus_offset_zero_thickness_sits_on_major_circle():
     # (radial = major_r + minor_r, not major_r alone).
     from glyphviz_core.geometry_data import torus_radii
     major_r, _minor_r = torus_radii(0.1, 10.0)
-    x, y, z = topo._ztorus_offset(0.0, 0.0, 0.0, 10.0, 0.1, (1.0, 1.0, 1.0))
+    x, y, z = topo._ztorus_offset(0.0, 0.0, 0.0, 10.0, 0.1)
     assert (x, y, z) == pytest.approx((major_r, 0.0, 0.0))
 
 
 def test_ztorus_offset_tz_offsets_directly_no_minor_radius():
-    x, y, z = topo._ztorus_offset(0.0, 90.0, 4.0, 10.0, 0.1, (1.0, 1.0, 1.0))
+    x, y, z = topo._ztorus_offset(0.0, 90.0, 4.0, 10.0, 0.1)
     # v=90 puts the tube angle straight up: z should equal tz exactly (tube_r=tz).
     assert z == pytest.approx(4.0)
 
 
 def test_zcylinder_offset_radius_zero_collapses_to_axis():
-    assert topo._zcylinder_offset(45.0, 7.0, 0.0, 10.0, 0.1, (1.0, 1.0, 1.0)) == pytest.approx((0.0, 0.0, 7.0))
+    assert topo._zcylinder_offset(45.0, 7.0, 0.0, 10.0, 0.1) == pytest.approx((0.0, 0.0, 7.0))
 
 
 def test_zcylinder_offset_tz_offsets_directly_from_axis():
-    x, y, z = topo._zcylinder_offset(0.0, 0.0, 3.0, 10.0, 0.1, (1.0, 1.0, 1.0))
+    x, y, z = topo._zcylinder_offset(0.0, 0.0, 3.0, 10.0, 0.1)
     assert (x, y, z) == pytest.approx((3.0, 0.0, 0.0))
 
 
 def test_zrod_offset_matches_zcylinder_placement():
-    args = (15.0, 40.0, 5.0, 10.0, 0.1, (1.5, 0.5, 2.0))
+    args = (15.0, 40.0, 5.0, 10.0, 0.1)
     assert topo._zrod_offset(*args) == pytest.approx(topo._zcylinder_offset(*args))
 
 
