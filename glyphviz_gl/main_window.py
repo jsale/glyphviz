@@ -1,3 +1,4 @@
+import copy
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
@@ -28,7 +29,7 @@ from glyphviz_core.csv_reader import load_node_csv, save_node_csv
 from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
-    NODE_TYPE_WORLD, RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
+    NODE_TYPE_LINK, NODE_TYPE_WORLD, RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
     WORLD_DEFAULT_BG_RGB,
 )
 from glyphviz_core.topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT, CUBE_FACE_NAMES
@@ -57,6 +58,11 @@ class MainWindow(QMainWindow):
         # the next edit increments correctly.
         self._anchor_pos: tuple[float, float, float] = (0.0, 0.0, 0.0)
         self._anchor_rot: tuple[float, float, float] = (0.0, 0.0, 0.0)
+
+        # Copy/Paste clipboard: a node plus its full descendant closure, always
+        # copied together (V1 — see CLAUDE.md/memory; no partial-subtree copies).
+        self._clipboard_nodes: list[Node] = []
+        self._clipboard_root_id: int | None = None
 
         # Channel animation state
         self._ch_engine = None
@@ -134,6 +140,17 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
         file_menu.addAction("&Quit").triggered.connect(self.close)
+
+        edit_menu = mb.addMenu("&Edit")
+        copy_act = edit_menu.addAction("&Copy")
+        copy_act.setShortcut("Ctrl+C")
+        copy_act.setToolTip("Copy the selected node and its full descendant subtree.")
+        copy_act.triggered.connect(self._copy_selected)
+
+        paste_act = edit_menu.addAction("&Paste")
+        paste_act.setShortcut("Ctrl+V")
+        paste_act.setToolTip("Paste the copied subtree as a new sibling, with fresh ids.")
+        paste_act.triggered.connect(self._paste_clipboard)
 
         tex_menu = mb.addMenu("&Textures")
 
@@ -1726,13 +1743,19 @@ class MainWindow(QMainWindow):
             self._new_obj_color,
         )
 
-    def _create_root_node(self):
-        """Create a new root-level node using the New Object Defaults, stepping +10 along X from the last one."""
+    def _next_root_x(self) -> float:
+        """Next translate_x for a new root-level (branch_level 0) node,
+        stepping +10 along X from the last one. Shared by _create_root_node
+        and _paste_clipboard's no-selection case."""
         root_glyphs = [
             n for n in self.nodes
             if n.type not in NON_VISUAL_TYPES and n.branch_level == 0
         ]
-        next_x = (max(n.translate_x for n in root_glyphs) + 10.0) if root_glyphs else 0.0
+        return (max(n.translate_x for n in root_glyphs) + 10.0) if root_glyphs else 0.0
+
+    def _create_root_node(self):
+        """Create a new root-level node using the New Object Defaults, stepping +10 along X from the last one."""
+        next_x = self._next_root_x()
         new_id = max((n.id for n in self.nodes), default=0) + 1
         geo, topo, sx, sy, sz, color = self._new_object_defaults()
         self._add_node_to_scene(Node(
@@ -1808,6 +1831,91 @@ class MainWindow(QMainWindow):
         self._update_stats()
         self._update_sel_values()
         self.statusBar().showMessage(f"Deleted {len(ids_to_delete)} node(s).")
+
+    # --- Copy / Paste (V1: single node + full descendant closure only) ---
+
+    def _copy_selected(self):
+        """Ctrl+C / Edit > Copy: snapshot the selected node and its full
+        descendant subtree onto an in-memory clipboard. No partial-subtree
+        copies — a node always brings every descendant with it, mirroring
+        _delete_selected's restriction model."""
+        if len(self._selected_nodes) != 1:
+            self.statusBar().showMessage("Select exactly one node to copy.")
+            return
+        root = self._selected_nodes[0]
+        closure_ids = self._descendants_of({root.id})
+        self._clipboard_root_id = root.id
+        self._clipboard_nodes = [
+            copy.deepcopy(n) for n in self.nodes if n.id in closure_ids
+        ]
+        self.statusBar().showMessage(
+            f"Copied node {root.id} and {len(self._clipboard_nodes) - 1} descendant(s)."
+        )
+
+    def _paste_clipboard(self):
+        """Ctrl+V / Edit > Paste: insert a fresh copy of the clipboard subtree
+        (ids reassigned via max(existing ids) + 1, same allocation rule as
+        _create_root_node), parented onto whatever's selected right now:
+
+        - exactly one node selected -> the pasted subtree becomes a CHILD of
+          it (positioned like _create_child_node). Re-selecting the original
+          parent and pasting reproduces a plain "new sibling," since a
+          sibling is just another child of the same parent.
+        - nothing selected -> the pasted subtree becomes a new root-level
+          (branch_level 0, parent_id=0) object (positioned like
+          _create_root_node), regardless of where the original lived.
+        - more than one node selected -> ambiguous paste target; aborted.
+
+        Internal links (type=7) whose A-end and B-end both fall inside the
+        copied subtree are remapped to the new ids; a link whose other end
+        falls outside the copied subtree is dropped rather than left
+        dangling or pointed at an ambiguous target."""
+        if not self._clipboard_nodes:
+            self.statusBar().showMessage("Nothing to paste — copy a node first.")
+            return
+        if len(self._selected_nodes) > 1:
+            self.statusBar().showMessage("Select exactly one node (or none) as the paste target.")
+            return
+
+        next_id = max((n.id for n in self.nodes), default=0) + 1
+        id_map: dict[int, int] = {}
+        for n in self._clipboard_nodes:
+            id_map[n.id] = next_id
+            next_id += 1
+
+        root = next(n for n in self._clipboard_nodes if n.id == self._clipboard_root_id)
+        target = self._selected_nodes[0] if self._selected_nodes else None
+        if target is not None:
+            new_parent_id = target.id
+            new_branch_level = target.branch_level + 1
+            sibling_count = sum(1 for n in self.nodes if n.parent_id == target.id)
+            new_translate = (sibling_count * 5.0, 0.0, 5.0)
+        else:
+            new_parent_id = 0
+            new_branch_level = 0
+            new_translate = (self._next_root_x(), 0.0, 0.0)
+        branch_level_delta = new_branch_level - root.branch_level
+
+        pasted: list[Node] = []
+        for n in self._clipboard_nodes:
+            new_node = copy.deepcopy(n)
+            new_node.id = id_map[n.id]
+            new_node.branch_level = n.branch_level + branch_level_delta
+            if n.id == self._clipboard_root_id:
+                new_node.parent_id = new_parent_id
+                new_node.translate_x, new_node.translate_y, new_node.translate_z = new_translate
+            else:
+                new_node.parent_id = id_map.get(n.parent_id, n.parent_id)
+            if new_node.type == NODE_TYPE_LINK:
+                b_id = int(float(n.extras.get('child_id', 0)))
+                if b_id not in id_map:
+                    continue   # B-end outside the copied subtree — drop the link
+                new_node.extras['child_id'] = id_map[b_id]
+            pasted.append(new_node)
+            self._add_node_to_scene(new_node, select_new=False)
+
+        self._table.select_by_ids({n.id for n in pasted})
+        self.statusBar().showMessage(f"Pasted {len(pasted)} node(s).")
 
     # --- Channel / animation playback ---
 
