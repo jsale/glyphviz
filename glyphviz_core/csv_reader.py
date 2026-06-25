@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .node import Node, ROTATION_MODE_HEADING_TILT_ROLL
+from .node import Node, ROTATION_MODE_HEADING_TILT_ROLL, RENDER_MODE_NORMAL
 
 # Columns that GlyphViz reads into explicit Node fields.
 # Everything else in the CSV is stashed in Node.extras for round-trip preservation.
@@ -16,6 +16,7 @@ _TRACKED_COLS = frozenset({
     'color_r', 'color_g', 'color_b', 'color_a',
     'geometry', 'hide', 'topo', 'ratio', 'subspace', 'facet', 'texture_id',
     'text', 'link', 'rotation_mode',
+    'render_mode', 'fog_enabled', 'fog_start', 'fog_end',
     'translate_rate_x', 'translate_rate_y', 'translate_rate_z',
     'rotate_rate_x', 'rotate_rate_y', 'rotate_rate_z',
     'scale_rate_x', 'scale_rate_y', 'scale_rate_z',
@@ -73,6 +74,7 @@ _FLOAT_COLS = frozenset({
     'set_hi_x', 'set_hi_y', 'set_hi_z',
     'set_lo_x', 'set_lo_y', 'set_lo_z',
     'proximity_x', 'proximity_y', 'proximity_z',
+    'fog_start', 'fog_end',
 })
 
 # GaiaViz np_node.csv uses different names for a handful of columns that
@@ -194,6 +196,10 @@ def load_node_csv(path: str) -> list[Node]:
     has_text = 'text' in df.columns
     has_link = 'link' in df.columns
     has_rotation_mode = 'rotation_mode' in df.columns
+    has_render_mode = 'render_mode' in df.columns
+    has_fog_enabled = 'fog_enabled' in df.columns
+    has_fog_start = 'fog_start' in df.columns
+    has_fog_end = 'fog_end' in df.columns
     rate_cols = (
         'translate_rate_x', 'translate_rate_y', 'translate_rate_z',
         'rotate_rate_x', 'rotate_rate_y', 'rotate_rate_z',
@@ -245,6 +251,10 @@ def load_node_csv(path: str) -> list[Node]:
                 int(row['rotation_mode']) if has_rotation_mode
                 else ROTATION_MODE_HEADING_TILT_ROLL
             ),
+            render_mode=int(row['render_mode']) if has_render_mode else RENDER_MODE_NORMAL,
+            fog_enabled=int(row['fog_enabled']) if has_fog_enabled else 0,
+            fog_start=float(row['fog_start']) if has_fog_start else 0.0,
+            fog_end=float(row['fog_end']) if has_fog_end else 0.0,
             **{col: float(row[col]) for col in rate_cols if col in df.columns},
         )
         # Preserve all untracked columns so save_node_csv can round-trip them.
@@ -288,6 +298,13 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
     # (see load_node_csv), so the column is needed whenever a node's value
     # would be *misread* by that fallback — not merely when it's non-zero.
     has_rotation_mode = any(n.rotation_mode != ROTATION_MODE_HEADING_TILT_ROLL for n in nodes)
+    # World-node-only scene settings (see node.py); omitting a column means
+    # "default" on reload, so each is only written when some node's value
+    # would actually be misread by that fallback.
+    has_render_mode = any(n.render_mode != RENDER_MODE_NORMAL for n in nodes)
+    has_fog_enabled = any(n.fog_enabled for n in nodes)
+    has_fog_start = any(n.fog_start for n in nodes)
+    has_fog_end = any(n.fog_end for n in nodes)
     col_order = list(_COL_ORDER)
     if has_text:
         col_order.append('text')
@@ -295,6 +312,14 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
         col_order.append('link')
     if has_rotation_mode:
         col_order.append('rotation_mode')
+    if has_render_mode:
+        col_order.append('render_mode')
+    if has_fog_enabled:
+        col_order.append('fog_enabled')
+    if has_fog_start:
+        col_order.append('fog_start')
+    if has_fog_end:
+        col_order.append('fog_end')
 
     with open(path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
@@ -342,6 +367,14 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
                 row['link'] = node.link
             if has_rotation_mode:
                 row['rotation_mode'] = node.rotation_mode
+            if has_render_mode:
+                row['render_mode'] = node.render_mode
+            if has_fog_enabled:
+                row['fog_enabled'] = node.fog_enabled
+            if has_fog_start:
+                row['fog_start'] = node.fog_start
+            if has_fog_end:
+                row['fog_end'] = node.fog_end
 
             # Format each cell: strings as-is, floats with 6 dp, others as int.
             cells = []

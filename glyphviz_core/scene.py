@@ -26,7 +26,7 @@ import numpy as np
 
 from .csv_reader import load_node_csv
 from .geometry_data import ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
-from .node import Node, NON_VISUAL_TYPES
+from .node import Node, NODE_TYPE_WORLD, NON_VISUAL_TYPES
 from .topology import (
     TOPO_ROD,
     compute_world_positions,
@@ -104,6 +104,13 @@ class Scene:
 
     def node_by_id(self, node_id: int) -> Node | None:
         return self._by_id.get(node_id)
+
+    def world_node(self) -> Node | None:
+        """The World node (type=0), holding scene-wide background/render-mode/
+        fog settings — see node.py. Returns the lowest-id match, or None if
+        the file has no World row (old files render with hardcoded defaults)."""
+        world_nodes = [n for n in self.nodes if n.type == NODE_TYPE_WORLD]
+        return min(world_nodes, key=lambda n: n.id) if world_nodes else None
 
     @classmethod
     def load(cls, path, base_scale: float = 3.0) -> 'Scene':

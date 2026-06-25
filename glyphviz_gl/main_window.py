@@ -28,6 +28,8 @@ from glyphviz_core.csv_reader import load_node_csv, save_node_csv
 from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
+    NODE_TYPE_WORLD, RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
+    WORLD_DEFAULT_BG_RGB,
 )
 from glyphviz_core.topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT, CUBE_FACE_NAMES
 
@@ -101,6 +103,8 @@ class MainWindow(QMainWindow):
         self._viewport.fpsUpdated.connect(self._on_fps_updated)
         self._viewport.tagToggled.connect(self._on_tag_toggled)
         self._viewport.nodesManipulated.connect(self._on_viewport_manipulated)
+        self._viewport.bgToggleRequested.connect(self._on_scene_bg_toggle_bw)
+        self._viewport.renderModeCycleRequested.connect(self._on_scene_render_mode_cycle)
         self.setCentralWidget(self._viewport)
         # Link self.nodes into the viewport scene so appends stay in sync.
         self._viewport.set_nodes(self.nodes)
@@ -320,6 +324,67 @@ class MainWindow(QMainWindow):
         self._scale_slider.valueChanged.connect(self._update_scale)
         scale_layout.addWidget(self._scale_label)
         scale_layout.addWidget(self._scale_slider)
+
+        # --- Scene Settings group: world-level (not per-node) background
+        # color, render/blend mode, and fog — read from/written to the World
+        # node (type=0, see node.py), mirroring ANTz's global Background
+        # Color (B) and Transparency Mode (8) hotkeys.
+        scene_grp = QGroupBox("Scene Settings")
+        scene_form = QFormLayout(scene_grp)
+        scene_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+
+        bg_row = QWidget()
+        bg_row_layout = QHBoxLayout(bg_row)
+        bg_row_layout.setContentsMargins(0, 0, 0, 0)
+        bg_row_layout.setSpacing(4)
+        self._scene_bg_btn = QPushButton()
+        self._scene_bg_btn.setFixedHeight(24)
+        self._scene_bg_btn.clicked.connect(self._on_scene_bg_color)
+        self._scene_bg_bw_btn = QPushButton("B/W")
+        self._scene_bg_bw_btn.setFixedWidth(36)
+        self._scene_bg_bw_btn.setToolTip("Toggle background between black and white  [B]")
+        self._scene_bg_bw_btn.clicked.connect(self._on_scene_bg_toggle_bw)
+        bg_row_layout.addWidget(self._scene_bg_btn, 1)
+        bg_row_layout.addWidget(self._scene_bg_bw_btn)
+        self._set_color_btn(self._scene_bg_btn, *WORLD_DEFAULT_BG_RGB, 255)
+
+        self._scene_render_mode = QComboBox()
+        for mode_id in range(RENDER_MODE_COUNT):
+            self._scene_render_mode.addItem(RENDER_MODE_NAMES.get(mode_id, str(mode_id)), mode_id)
+        self._scene_render_mode.setToolTip(
+            "Scene-wide blend mode for transparent glyphs  [8 cycles modes]"
+        )
+        self._scene_render_mode.currentIndexChanged.connect(self._on_scene_render_mode_changed)
+
+        self._scene_fog_enabled = QCheckBox("Enable Fog")
+        self._scene_fog_enabled.toggled.connect(self._on_scene_fog_toggled)
+
+        fog_row = QWidget()
+        fog_row_layout = QHBoxLayout(fog_row)
+        fog_row_layout.setContentsMargins(0, 0, 0, 0)
+        fog_row_layout.setSpacing(4)
+        self._scene_fog_start = QDoubleSpinBox()
+        self._scene_fog_end = QDoubleSpinBox()
+        for sb in (self._scene_fog_start, self._scene_fog_end):
+            sb.setRange(0.0, 1_000_000.0)
+            sb.setDecimals(1)
+            sb.setSingleStep(10.0)
+            sb.setEnabled(False)
+            fog_row_layout.addWidget(sb)
+        # Set initial values *before* connecting valueChanged — this group is
+        # built before _build_table(), so a triggered handler here would hit
+        # self._table before it exists.
+        self._scene_fog_start.setValue(20.0)
+        self._scene_fog_end.setValue(200.0)
+        self._scene_fog_start.valueChanged.connect(self._on_scene_fog_changed)
+        self._scene_fog_end.valueChanged.connect(self._on_scene_fog_changed)
+        self._scene_fog_start.setToolTip("Distance where fog begins")
+        self._scene_fog_end.setToolTip("Distance where fog is fully opaque")
+
+        scene_form.addRow("Background:", bg_row)
+        scene_form.addRow("Render Mode:", self._scene_render_mode)
+        scene_form.addRow("", self._scene_fog_enabled)
+        scene_form.addRow("Fog Start/End:", fog_row)
 
         # --- Stats group ---
         stats_grp = QGroupBox("Scene Info")
@@ -716,6 +781,7 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(disp)
         layout.addWidget(scale_grp)
+        layout.addWidget(scene_grp)
         layout.addWidget(stats_grp)
         layout.addWidget(create_grp)
         layout.addWidget(delete_grp)
@@ -772,6 +838,7 @@ class MainWindow(QMainWindow):
             self._table.set_nodes(self.nodes)
             self._update_stats(Path(path).name)
             self._update_sel_values()
+            self._refresh_scene_settings()
             msg = f"Loaded {len(self.nodes)} nodes from {Path(path).name}"
             # Auto-load textures/videos/GIFs from a media/ folder next to the CSV.
             auto_tex = Path(path).parent / "media"
@@ -1417,6 +1484,113 @@ class MainWindow(QMainWindow):
             return
         self._new_obj_color = color
         self._set_color_btn(self._new_color_btn, color.red(), color.green(), color.blue(), color.alpha())
+
+    # --- Scene Settings (World node) handlers ---
+
+    def _ensure_world_node(self) -> Node:
+        """Return the scene's World node (type=0), synthesizing one with
+        default settings if the file doesn't have one yet. The new node is
+        appended (not written to disk until save_node_csv sees a non-default
+        value, same asymmetric-default rule as rotation_mode).
+
+        id is allocated as max(existing ids) + 1, like _create_root_node —
+        NOT 0, since parent_id=0 is the universal "attached to grid" sentinel
+        (see topology.py's by_id.get(node.parent_id)); a World node at id=0
+        would silently become the parent of every root-level node in the file.
+        """
+        world_nodes = [n for n in self.nodes if n.type == NODE_TYPE_WORLD]
+        if world_nodes:
+            return min(world_nodes, key=lambda n: n.id)
+        r, g, b = WORLD_DEFAULT_BG_RGB
+        new_id = max((n.id for n in self.nodes), default=0) + 1
+        node = Node(
+            id=new_id, type=NODE_TYPE_WORLD, parent_id=0, branch_level=0,
+            translate_x=0.0, translate_y=0.0, translate_z=0.0,
+            rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
+            scale_x=1.0, scale_y=1.0, scale_z=1.0,
+            color_r=r, color_g=g, color_b=b, color_a=255,
+            geometry=0, hide=0, topo=0,
+        )
+        self.nodes.append(node)
+        self._viewport.register_node(node)
+        self._table.append_node(node)
+        self._update_stats()
+        return node
+
+    def _refresh_scene_settings(self):
+        """Sync the Scene Settings panel from the current World node (or
+        defaults, if none exists yet) — called after loading a file."""
+        world_nodes = [n for n in self.nodes if n.type == NODE_TYPE_WORLD]
+        world = min(world_nodes, key=lambda n: n.id) if world_nodes else None
+        r, g, b = (world.color_r, world.color_g, world.color_b) if world else WORLD_DEFAULT_BG_RGB
+        mode = world.render_mode if world else RENDER_MODE_NORMAL
+        fog_on = bool(world.fog_enabled) if world else False
+        fog_start = world.fog_start if world and world.fog_start else 20.0
+        fog_end = world.fog_end if world and world.fog_end else 200.0
+
+        self._set_color_btn(self._scene_bg_btn, r, g, b, 255)
+        idx = self._scene_render_mode.findData(mode)
+        self._scene_render_mode.blockSignals(True)
+        self._scene_render_mode.setCurrentIndex(max(idx, 0))
+        self._scene_render_mode.blockSignals(False)
+        self._scene_fog_enabled.blockSignals(True)
+        self._scene_fog_enabled.setChecked(fog_on)
+        self._scene_fog_enabled.blockSignals(False)
+        for sb, value in ((self._scene_fog_start, fog_start), (self._scene_fog_end, fog_end)):
+            sb.blockSignals(True)
+            sb.setValue(value)
+            sb.setEnabled(fog_on)
+            sb.blockSignals(False)
+
+    def _on_scene_bg_color(self):
+        world = self._ensure_world_node()
+        initial = QColor(world.color_r, world.color_g, world.color_b)
+        color = QColorDialog.getColor(initial, self, "Background Color")
+        if not color.isValid():
+            return
+        world.color_r, world.color_g, world.color_b = color.red(), color.green(), color.blue()
+        self._set_color_btn(self._scene_bg_btn, color.red(), color.green(), color.blue(), 255)
+        self._table.refresh_node(world.id)
+        self._viewport.update()
+
+    def _on_scene_bg_toggle_bw(self):
+        """Mirrors ANTz's 'B' hotkey: flip background between black and white."""
+        world = self._ensure_world_node()
+        is_white = world.color_r >= 128
+        rgb = 0 if is_white else 255
+        world.color_r = world.color_g = world.color_b = rgb
+        self._set_color_btn(self._scene_bg_btn, rgb, rgb, rgb, 255)
+        self._table.refresh_node(world.id)
+        self._viewport.update()
+
+    def _on_scene_render_mode_cycle(self):
+        """Mirrors ANTz's '8' hotkey: cycle to the next render mode."""
+        next_index = (self._scene_render_mode.currentIndex() + 1) % self._scene_render_mode.count()
+        self._scene_render_mode.setCurrentIndex(next_index)   # triggers _on_scene_render_mode_changed
+
+    def _on_scene_render_mode_changed(self, _index: int):
+        mode = self._scene_render_mode.currentData()
+        if mode is None:
+            return
+        world = self._ensure_world_node()
+        world.render_mode = mode
+        self._table.refresh_node(world.id)
+        self._viewport.update()
+
+    def _on_scene_fog_toggled(self, checked: bool):
+        world = self._ensure_world_node()
+        world.fog_enabled = 1 if checked else 0
+        self._scene_fog_start.setEnabled(checked)
+        self._scene_fog_end.setEnabled(checked)
+        self._table.refresh_node(world.id)
+        self._viewport.update()
+
+    def _on_scene_fog_changed(self, _value: float):
+        world = self._ensure_world_node()
+        world.fog_start = self._scene_fog_start.value()
+        world.fog_end = self._scene_fog_end.value()
+        self._table.refresh_node(world.id)
+        self._viewport.update()
 
     def _on_table_double_click(self):
         node = self._table.selected_node()

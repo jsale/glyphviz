@@ -10,7 +10,12 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from pathlib import Path
 
-from glyphviz_core.node import Node, NON_VISUAL_TYPES, NODE_TYPE_LINK
+from glyphviz_core.node import (
+    Node, NON_VISUAL_TYPES, NODE_TYPE_LINK,
+    RENDER_MODE_NORMAL, RENDER_MODE_ADDITIVE, RENDER_MODE_SUBTRACTIVE,
+    RENDER_MODE_DARK, RENDER_MODE_OFF, RENDER_MODE_SCREEN, RENDER_MODE_PREMULTIPLIED,
+    WORLD_DEFAULT_BG_RGB,
+)
 from glyphviz_core.scene import Scene, node_world_matrix
 from glyphviz_core.topology import TOPO_PLOT, TOPO_SURFACE
 
@@ -30,6 +35,35 @@ def _gl_col_major(M: np.ndarray) -> np.ndarray:
     """Convert a 4x4 NumPy row-major matrix to a float32 column-major flat array
     for glMultMatrixf / glLoadMatrixf (OpenGL column-major convention)."""
     return M.astype(np.float32).T.flatten()
+
+
+_DEFAULT_BG = tuple(c / 255.0 for c in WORLD_DEFAULT_BG_RGB)  # used when the scene has no World node
+
+
+def _apply_render_mode(mode: int):
+    """Scene-wide blend state — see node.py's RENDER_MODE_* constants."""
+    if mode == RENDER_MODE_OFF:
+        glDisable(GL_BLEND)
+        return
+    glEnable(GL_BLEND)
+    if mode == RENDER_MODE_ADDITIVE:
+        glBlendEquation(GL_FUNC_ADD)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE)
+    elif mode == RENDER_MODE_SUBTRACTIVE:
+        glBlendEquation(GL_FUNC_REVERSE_SUBTRACT)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE)
+    elif mode == RENDER_MODE_DARK:
+        glBlendEquation(GL_FUNC_ADD)
+        glBlendFunc(GL_ZERO, GL_SRC_COLOR)
+    elif mode == RENDER_MODE_SCREEN:
+        glBlendEquation(GL_FUNC_ADD)
+        glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE)
+    elif mode == RENDER_MODE_PREMULTIPLIED:
+        glBlendEquation(GL_FUNC_ADD)
+        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+    else:  # RENDER_MODE_NORMAL
+        glBlendEquation(GL_FUNC_ADD)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
 
 class Viewport(QOpenGLWidget):
@@ -62,6 +96,9 @@ class Viewport(QOpenGLWidget):
 
     # Tag visibility toggled with T key
     tagToggled = Signal(bool)
+
+    bgToggleRequested = Signal()         # B → toggle background black/white
+    renderModeCycleRequested = Signal()  # 8 → cycle scene render mode
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -351,7 +388,7 @@ class Viewport(QOpenGLWidget):
     # --- GL lifecycle ---
 
     def initializeGL(self):
-        glClearColor(0.08, 0.08, 0.12, 1.0)
+        glClearColor(*_DEFAULT_BG, 1.0)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
         glEnable(GL_LIGHT0)
@@ -397,9 +434,24 @@ class Viewport(QOpenGLWidget):
         glDepthMask(GL_TRUE)
         glEnable(GL_CULL_FACE)
         glEnable(GL_LIGHTING)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
+
+        world = self._scene.world_node()
+        if world is not None:
+            bg_r, bg_g, bg_b = world.color_r / 255.0, world.color_g / 255.0, world.color_b / 255.0
+        else:
+            bg_r, bg_g, bg_b = _DEFAULT_BG
+        glClearColor(bg_r, bg_g, bg_b, 1.0)
+        _apply_render_mode(world.render_mode if world is not None else RENDER_MODE_NORMAL)
+        if world is not None and world.fog_enabled:
+            glEnable(GL_FOG)
+            glFogi(GL_FOG_MODE, GL_LINEAR)
+            glFogfv(GL_FOG_COLOR, [bg_r, bg_g, bg_b, 1.0])
+            glFogf(GL_FOG_START, world.fog_start)
+            glFogf(GL_FOG_END, world.fog_end)
+        else:
+            glDisable(GL_FOG)
+
         w, h = self.width(), self.height()
         if h > 0:
             glViewport(0, 0, int(w * self.devicePixelRatioF()), int(h * self.devicePixelRatioF()))
@@ -844,6 +896,7 @@ class Viewport(QOpenGLWidget):
 
         glDisable(GL_LIGHTING)
         glDisable(GL_BLEND)
+        glDisable(GL_FOG)  # fog tints fragment color by distance — would corrupt color-ID reads
 
         # Re-use the scene cache from the most recent paint (no invalidate here).
         # Mirror paintGL's _draw_limit cutoff so nodes hidden by the
@@ -1032,6 +1085,12 @@ class Viewport(QOpenGLWidget):
             self.show_tags = not self.show_tags
             self.tagToggled.emit(self.show_tags)
             self.update()
+            event.accept()
+        elif event.key() == Qt.Key.Key_B:
+            self.bgToggleRequested.emit()
+            event.accept()
+        elif event.key() == Qt.Key.Key_8:
+            self.renderModeCycleRequested.emit()
             event.accept()
         else:
             super().keyPressEvent(event)

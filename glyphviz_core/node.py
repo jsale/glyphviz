@@ -21,6 +21,34 @@ NON_VISUAL_TYPES = frozenset({NODE_TYPE_WORLD, NODE_TYPE_CAMERA, NODE_TYPE_GRID}
 ROTATION_MODE_EULER_XYZ = 0
 ROTATION_MODE_HEADING_TILT_ROLL = 1
 
+# Scene-wide blend mode, read from the World node (type=0) only — see
+# Scene.world_node(). Mirrors ANTz's global "transparency mode" hotkey (8),
+# documented as a scene-wide toggle, not a per-glyph one (User-Commands.md's
+# "Global Color Settings" section), plus two GlyphViz-original additions
+# (SCREEN, PREMULTIPLIED) that fit the same fixed-function blend pipeline.
+RENDER_MODE_NORMAL = 0         # GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA (current default)
+RENDER_MODE_ADDITIVE = 1       # GL_SRC_ALPHA, GL_ONE — glow / light-stacking
+RENDER_MODE_SUBTRACTIVE = 2    # GL_FUNC_REVERSE_SUBTRACT
+RENDER_MODE_DARK = 3           # GL_ZERO, GL_SRC_COLOR — multiply
+RENDER_MODE_OFF = 4            # blending disabled, alpha ignored
+RENDER_MODE_SCREEN = 5         # GL_ONE_MINUS_DST_COLOR, GL_ONE
+RENDER_MODE_PREMULTIPLIED = 6  # GL_ONE, GL_ONE_MINUS_SRC_ALPHA
+
+# Fallback background color (0-255) used when a scene has no World node —
+# matches the viewport's original hardcoded glClearColor(0.08, 0.08, 0.12, 1).
+WORLD_DEFAULT_BG_RGB = (20, 20, 31)
+
+RENDER_MODE_COUNT = 7
+RENDER_MODE_NAMES = {
+    RENDER_MODE_NORMAL: "Normal",
+    RENDER_MODE_ADDITIVE: "Additive",
+    RENDER_MODE_SUBTRACTIVE: "Subtractive",
+    RENDER_MODE_DARK: "Dark (Multiply)",
+    RENDER_MODE_OFF: "Off",
+    RENDER_MODE_SCREEN: "Screen",
+    RENDER_MODE_PREMULTIPLIED: "Premultiplied Alpha",
+}
+
 
 @dataclass
 class Node:
@@ -64,6 +92,12 @@ class Node:
     scale_rate_z: float = 0.0
     text: str = ""   # display label shown in 3D viewport
     link: str = ""   # URL or file path opened by U key
+    # World-node-only scene settings (see Scene.world_node()): background
+    # color reuses color_r/g/b/a above; fog fades to that same color.
+    render_mode: int = RENDER_MODE_NORMAL
+    fog_enabled: int = 0
+    fog_start: float = 0.0
+    fog_end: float = 0.0
     # Preserves untracked CSV columns (e.g. channel IDs, quaternion, segments)
     # so that save_node_csv can round-trip files without data loss.
     extras: dict = field(default_factory=dict)
