@@ -10,7 +10,7 @@ offset function and registering it in _TOPO_OFFSET_FUNCS.
 import math
 
 from .geometry_data import ROD_HEIGHT_FACTOR, torus_radii
-from .node import Node, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL
+from .node import Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL
 
 # topo id values — full reference list from Topology-Guide.md (np_topo_id there).
 # Every id except TOPO_NONE has a dedicated offset function registered in
@@ -30,6 +30,23 @@ TOPO_ZSPHERE   = 10
 TOPO_ZTORUS    = 11
 TOPO_ZCYLINDER = 12
 TOPO_ZROD      = 13
+
+# Plane and the Z-topology family position/space children via translate_x/y/z
+# AND that spacing scales with the parent's own scale (Topology-Guide.md:
+# "do NOT affect children size... DO affect children's translate_x/y/z
+# position" -- e.g. scaling the World Grid up deliberately re-spaces every
+# attached child, confirmed wanted for real use, like laying glyphs out
+# across a map-textured floor). What this family does NOT do is stretch
+# children's rendered SIZE the way Sphere/Cube/Torus/Rod's one-level-deep
+# shape inheritance does (the ANTz-validated "diamond child" behavior) --
+# a non-uniformly-scaled Grid must not also distort attached glyphs' own
+# shape. See compute_world_bases' `parent_basis` exemption (shape only;
+# compute_world_positions intentionally has no matching exemption -- it
+# always uses `world_basis`, which carries the parent's own scale, for this
+# family same as any other topology).
+NO_SIZE_INHERIT_TOPOS = frozenset({
+    TOPO_PLANE, TOPO_ZCUBE, TOPO_ZSPHERE, TOPO_ZTORUS, TOPO_ZCYLINDER, TOPO_ZROD,
+})
 TOPO_SPIRAL    = 14
 TOPO_VIDEO     = 15
 TOPO_PLOT      = 16  # 1D/2D/3D line plot, GPS, Oscilloscope (jsale/antz extension)
@@ -216,6 +233,7 @@ def _topology_base_rotation(parent_topo: int, tx: float, ty: float, tz: float,
 
 def compute_world_bases(
     nodes: list[Node],
+    grid: Node | None = None,
 ) -> tuple[dict[int, tuple], dict[int, tuple], dict[int, tuple]]:
     """
     Resolve every node's cumulative rotation+scale and return three dicts:
@@ -226,10 +244,28 @@ def compute_world_bases(
                         would produce — fusing each level's rotation AND
                         scale into one matrix before moving to the next
                         level)
-    parent_basis[id]  = parent's world_basis (identity for roots)
+    parent_basis[id]  = parent's world_basis (identity for roots with no
+                        `grid`; the grid's own world_basis for roots when a
+                        World Grid node is passed in — see `grid` below) —
+                        EXCEPT when the parent's topo is in
+                        NO_SIZE_INHERIT_TOPOS (Plane/Z-topology family), where
+                        it's the parent's own parent_basis @ child_local
+                        instead: everything above the parent, minus the
+                        parent's own scale — so that family's scale can still
+                        space children out via translate_x/y/z (see
+                        compute_world_positions, which uses `world_basis`
+                        rather than this dict) without also distorting their
+                        rendered SHAPE, which is all `parent_basis` feeds
+                        (node_world_matrix).
     child_local[id]   = topo_base_rotation(parent.topo, placement) @ own
                         rotation (this node's own orientation contribution,
                         no scale)
+
+    `grid`, if given (see Scene.grid_node()), is the World Grid node that
+    every ordinary root glyph (no real parent, not itself World/Camera/the
+    grid) implicitly attaches to — composed exactly like any other child of
+    a TOPO_PLANE parent. Pass None (the default) to get today's behavior:
+    every parentless node is its own independent root at the origin.
 
     Scale here is deliberately kept in RAW (dimensionless) units — no
     base_scale baked in. base_scale (the global geometry-to-world-units
@@ -271,6 +307,11 @@ def compute_world_bases(
                                          node.rotation_mode)
         own_scale = (node.scale_x, node.scale_y, node.scale_z)
         parent = by_id.get(node.parent_id)
+        if (parent is None and grid is not None and node is not grid
+                and node.type not in NON_VISUAL_TYPES):
+            # Root glyph with no explicit parent: implicitly attach to the
+            # World Grid, same as any other child of a TOPO_PLANE node.
+            parent = grid
         if parent is None or parent is node or node.id in visiting:
             parent_basis[node.id] = _MAT_IDENTITY
             child_local[node.id]  = own_rot
@@ -282,7 +323,15 @@ def compute_world_bases(
                 node.subspace,
             )
             lc = _mat_mul(topo_rot, own_rot)
-            parent_basis[node.id] = pwb
+            if parent.topo in NO_SIZE_INHERIT_TOPOS:
+                # Shape sandwich only (see NO_SIZE_INHERIT_TOPOS): use the
+                # parent's rotation-only basis -- its own parent_basis/
+                # child_local, i.e. everything above it, minus its own scale
+                # -- so this parent's scale spaces children out (world_basis,
+                # used for position below) without resizing them.
+                parent_basis[node.id] = _mat_mul(parent_basis[parent.id], child_local[parent.id])
+            else:
+                parent_basis[node.id] = pwb
             child_local[node.id]  = lc
             world_basis[node.id]  = _mat_mul(pwb, _mat_scale_cols(lc, own_scale))
 
@@ -506,14 +555,26 @@ def compute_world_positions(
     nodes: list[Node],
     base_scale: float,
     world_basis: dict[int, tuple] | None = None,
+    grid: Node | None = None,
 ) -> dict[int, tuple[float, float, float]]:
     """
     Resolve every node's world-space position by walking its parent chain.
 
     Root nodes (parent_id missing/unresolvable) use translate_x/y/z directly
-    as Cartesian world coordinates. Each child's world position is its
-    parent's world position plus an offset derived from the parent's
-    topology — so moving a parent carries its whole subtree with it.
+    as Cartesian world coordinates, UNLESS a World Grid node is passed in via
+    `grid` (see Scene.grid_node()) — then ordinary root glyphs (not
+    World/Camera, not the grid itself) implicitly attach to it instead,
+    exactly like any other child of a TOPO_PLANE parent. Pass the same `grid`
+    value used to build `world_basis` via compute_world_bases — the two
+    consumers must agree on the implicit-parent redirect or glyph position
+    and glyph shape/orientation will disagree (see compute_world_bases).
+    Each child's world position is its parent's world position plus an
+    offset derived from the parent's topology — so moving a parent carries
+    its whole subtree with it. This applies uniformly to every topology,
+    including Plane/Z-topology parents (NO_SIZE_INHERIT_TOPOS, e.g. the World
+    Grid): scaling the grid deliberately re-spaces every attached child
+    (Jeff confirmed this is wanted — only the *shape* exemption in
+    compute_world_bases' `parent_basis` is special-cased, not position).
 
     The topology offset (e.g. a longitude/latitude point on the parent's
     surface) is computed in the parent's own *unscaled* local frame, with
@@ -534,6 +595,9 @@ def compute_world_positions(
             return cached
 
         parent = by_id.get(node.parent_id)
+        if (parent is None and grid is not None and node is not grid
+                and node.type not in NON_VISUAL_TYPES):
+            parent = grid
         if parent is None or parent is node or node.id in visiting:
             pos = (node.translate_x, node.translate_y, node.translate_z)
         else:

@@ -480,8 +480,8 @@ class Viewport(QOpenGLWidget):
             self._mv_matrix = None
             self._proj_matrix = None
 
-        if self.show_grid:
-            self._draw_grid()
+        if self.show_grid and self._scene.grid_node() is None:
+            self._draw_grid()   # fallback decoration for scenes with no real Grid node
         if self.show_axes:
             self._draw_axes()
 
@@ -791,6 +791,11 @@ class Viewport(QOpenGLWidget):
         glEnable(GL_LIGHTING)
 
     def _draw_grid(self):
+        """Procedural, camera-distance-sized decoration with no Node behind
+        it — only drawn as a fallback when the scene has no real World Grid
+        node (see Scene.grid_node(), main_window._ensure_grid_node()). Once a
+        Grid node exists it renders/scales/textures through the normal
+        per-node path instead, like any other glyph."""
         glDisable(GL_LIGHTING)
         glColor3f(0.22, 0.22, 0.28)
         glLineWidth(1.0)

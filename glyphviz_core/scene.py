@@ -29,7 +29,7 @@ import numpy as np
 
 from .csv_reader import load_node_csv
 from .geometry_data import ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
-from .node import Node, NODE_TYPE_WORLD, NON_VISUAL_TYPES
+from .node import Node, NODE_TYPE_GRID, NODE_TYPE_WORLD, NON_VISUAL_TYPES
 from .topology import (
     TOPO_ROD,
     compute_world_bases,
@@ -69,11 +69,12 @@ class Scene:
     def _ensure(self):
         if not self._dirty:
             return
+        grid = self.grid_node()
         self._world_basis, self._parent_basis, self._child_local = (
-            compute_world_bases(self.nodes)
+            compute_world_bases(self.nodes, grid)
         )
         self._world_pos = compute_world_positions(
-            self.nodes, self.base_scale, self._world_basis,
+            self.nodes, self.base_scale, self._world_basis, grid,
         )
         self._dirty = False
 
@@ -109,6 +110,17 @@ class Scene:
         the file has no World row (old files render with hardcoded defaults)."""
         world_nodes = [n for n in self.nodes if n.type == NODE_TYPE_WORLD]
         return min(world_nodes, key=lambda n: n.id) if world_nodes else None
+
+    def grid_node(self) -> Node | None:
+        """The World Grid node (type=6) that ordinary root-level glyphs
+        implicitly attach to — see compute_world_bases/compute_world_positions's
+        `grid` parameter. Returns the lowest-id match, or None if the file has
+        no Grid row (root glyphs then fall back to the global origin, as
+        before this feature existed). V1 supports exactly one functional
+        anchor grid; any additional Grid rows render as ordinary glyphs with
+        no anchor effect."""
+        grid_nodes = [n for n in self.nodes if n.type == NODE_TYPE_GRID]
+        return min(grid_nodes, key=lambda n: n.id) if grid_nodes else None
 
     @classmethod
     def load(cls, path, base_scale: float = 3.0) -> 'Scene':

@@ -26,13 +26,13 @@ from PySide6.QtWidgets import (
 )
 
 from glyphviz_core.csv_reader import load_node_csv, save_node_csv
-from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA
+from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA, GEO_GRID_WIRE
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
-    NODE_TYPE_LINK, NODE_TYPE_WORLD, RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
-    WORLD_DEFAULT_BG_RGB,
+    NODE_TYPE_GRID, NODE_TYPE_LINK, NODE_TYPE_WORLD, RENDER_MODE_COUNT, RENDER_MODE_NAMES,
+    RENDER_MODE_NORMAL, WORLD_DEFAULT_BG_RGB,
 )
-from glyphviz_core.topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT, CUBE_FACE_NAMES
+from glyphviz_core.topology import TOPO_NAMES, TOPO_COUNT, TOPO_PLANE, TOPO_POINT, CUBE_FACE_NAMES
 
 from .audio_player import AudioPlayer
 from .node_table import NodeTableView
@@ -434,8 +434,18 @@ class MainWindow(QMainWindow):
         )
         self._btn_new_child.clicked.connect(self._create_child_node)
 
+        self._btn_new_grid = QPushButton("Add World Grid")
+        self._btn_new_grid.setToolTip(
+            "Create the scene's World Grid, the real object root-level\n"
+            "nodes attach to (selects the existing one if already present).\n"
+            "Scale/move/texture it like any other node — Move, Rotate, Scale,\n"
+            "Color/Texture tools all apply normally once it's selected."
+        )
+        self._btn_new_grid.clicked.connect(self._ensure_grid_node)
+
         create_layout.addWidget(self._btn_new_node)
         create_layout.addWidget(self._btn_new_child)
+        create_layout.addWidget(self._btn_new_grid)
 
         # --- New Object Defaults: geometry/topology/scale/color applied to
         # nodes created via New Node, New Child, N, and Shift+N. Position and
@@ -1745,13 +1755,32 @@ class MainWindow(QMainWindow):
 
     def _next_root_x(self) -> float:
         """Next translate_x for a new root-level (branch_level 0) node,
-        stepping +10 along X from the last one. Shared by _create_root_node
-        and _paste_clipboard's no-selection case."""
+        stepping +10 WORLD units from the last one. Shared by
+        _create_root_node and _paste_clipboard's no-selection case.
+
+        Steps in WORLD space, not raw translate units, and converts back
+        through the World Grid's scale_x (if one exists — see
+        _ensure_grid_node): root glyphs implicitly attach to it, so a big
+        grid (e.g. scale_x=50) would otherwise turn a "+10" step into a
+        500-world-unit jump, flinging each new node visually far from the
+        last one (and off the grid) even though the step "looks like" 10."""
         root_glyphs = [
             n for n in self.nodes
-            if n.type not in NON_VISUAL_TYPES and n.branch_level == 0
+            if n.type not in NON_VISUAL_TYPES
+            and n.type not in (NODE_TYPE_GRID, NODE_TYPE_LINK)
+            and n.branch_level == 0
         ]
-        return (max(n.translate_x for n in root_glyphs) + 10.0) if root_glyphs else 0.0
+        if not root_glyphs:
+            return 0.0
+        max_world_x = max(
+            self._viewport.world_position(n.id)[0]
+            if self._viewport.world_position(n.id) is not None else n.translate_x
+            for n in root_glyphs
+        )
+        grid_nodes = [n for n in self.nodes if n.type == NODE_TYPE_GRID]
+        grid = min(grid_nodes, key=lambda n: n.id) if grid_nodes else None
+        scale_x = grid.scale_x if grid and grid.scale_x else 1.0
+        return (max_world_x + 10.0) / scale_x
 
     def _create_root_node(self):
         """Create a new root-level node using the New Object Defaults, stepping +10 along X from the last one."""
@@ -1766,6 +1795,66 @@ class MainWindow(QMainWindow):
             color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
             geometry=geo, hide=0, topo=topo,
         ))
+
+    def _ensure_grid_node(self) -> Node:
+        """"Add World Grid" button: select the scene's World Grid (type=6) if
+        one already exists, else create one. Once it exists, ordinary
+        root-level nodes implicitly attach to it (see
+        topology.compute_world_bases's `grid` param) and it's selectable/
+        editable through the normal node tools like any other glyph — no
+        bespoke Grid settings panel needed.
+
+        id is allocated as max(existing ids) + 1, like _create_root_node,
+        not 0 — parent_id=0 is the "no explicit parent" sentinel; a Grid at
+        id=0 would be indistinguishable from a dangling parent_id reference.
+        """
+        grid_nodes = [n for n in self.nodes if n.type == NODE_TYPE_GRID]
+        if grid_nodes:
+            grid = min(grid_nodes, key=lambda n: n.id)
+            self._table.select_by_id(grid.id)
+            self.statusBar().showMessage(f"World Grid already exists (node {grid.id}) — selected it.")
+            return grid
+        new_id = max((n.id for n in self.nodes), default=0) + 1
+        r, g, b = (56, 56, 71)   # matches the procedural grid's line color this replaces
+        # Existing root-level glyphs are about to start implicitly attaching
+        # to this grid (see compute_world_bases' `grid` param) the instant it
+        # exists. Capture them now, before the grid (with its own scale) is
+        # in self.nodes, so the divide-back-out below uses their CURRENT
+        # (pre-grid, i.e. world == translate) positions.
+        root_glyphs = [
+            n for n in self.nodes
+            if n.type not in NON_VISUAL_TYPES and n.type != NODE_TYPE_LINK
+            and n.parent_id == 0
+        ]
+        grid = Node(
+            id=new_id, type=NODE_TYPE_GRID, parent_id=0, branch_level=0,
+            translate_x=0.0, translate_y=0.0, translate_z=0.0,
+            rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
+            # Large (50,50,1) default footprint -- the primary use case is a
+            # big map-textured floor with normal-sized glyphs distributed
+            # across it (translate_x/y chosen as map coordinates, scaled up
+            # to world space by this same 50x -- see compute_world_positions).
+            scale_x=50.0, scale_y=50.0, scale_z=1.0,
+            color_r=r, color_g=g, color_b=b, color_a=255,
+            geometry=GEO_GRID_WIRE, hide=0, topo=TOPO_PLANE,
+        )
+        # Divide each existing root glyph's translate by the grid's own scale
+        # so its WORLD position (and hence its visual spacing relative to its
+        # own size) is exactly unchanged by this grid coming into existence --
+        # only a deliberate, later Scale-tool edit on the grid should re-space
+        # anything (see _next_root_x and NO_SIZE_INHERIT_TOPOS).
+        for n in root_glyphs:
+            if grid.scale_x:
+                n.translate_x /= grid.scale_x
+            if grid.scale_y:
+                n.translate_y /= grid.scale_y
+            if grid.scale_z:
+                n.translate_z /= grid.scale_z
+        self._add_node_to_scene(grid)
+        for n in root_glyphs:
+            self._table.refresh_node(n.id)
+        self._viewport.scene_invalidate()
+        return grid
 
     def _create_child_node(self):
         """Shift+N / New Child button: create a child node (using the New Object
