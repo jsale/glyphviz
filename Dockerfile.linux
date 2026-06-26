@@ -1,0 +1,36 @@
+# Linux/NVIDIA port spike for GlyphViz — not the primary Windows build (see
+# build.bat / GlyphViz.spec for that). Validates that PySide6 + PyOpenGL can
+# get a real GPU-backed GL context via the NVIDIA driver on Linux, ahead of
+# committing to full cross-platform packaging.
+#
+# Build:
+#   docker build -f Dockerfile.linux -t glyphviz-linux .
+# Run (headless render smoke test):
+#   docker run --rm --gpus all -v <host-dir>:/out glyphviz-linux \
+#       python tools/export_frame.py --csv examples/Topology_Example/topology_example_gv_node.csv --out /out/smoke.png
+FROM nvidia/cuda:12.4.1-base-ubuntu22.04
+
+ENV NVIDIA_DRIVER_CAPABILITIES=all \
+    DEBIAN_FRONTEND=noninteractive \
+    QT_QPA_PLATFORM=xcb \
+    DISPLAY=:99
+
+# Qt's "offscreen" QPA plugin can't back a QOpenGLWidget (no native window
+# surface to create a GL context against) -- run under a virtual X server
+# (Xvfb, started via xvfb-run) with the real "xcb" platform plugin instead.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 python3-venv xvfb \
+        libegl1 libgl1 libopengl0 libglu1-mesa libglib2.0-0 \
+        libxkbcommon0 libxkbcommon-x11-0 libxcb-xkb1 \
+        libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
+        libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 \
+        libxcb-xinerama0 libxcb-xfixes0 libdbus-1-3 libfontconfig1 \
+        libxrender1 libxi6 libsm6 libice6 libxext6 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY requirements.txt .
+RUN python3 -m venv /venv && /venv/bin/pip install --no-cache-dir -r requirements.txt
+ENV PATH="/venv/bin:${PATH}"
+
+COPY . .
