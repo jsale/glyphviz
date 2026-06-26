@@ -13,7 +13,7 @@ import pandas as pd
 import pytest
 
 from glyphviz_core.csv_reader import _COL_ORDER, load_node_csv, save_node_csv
-from glyphviz_core.node import Node, NODE_TYPE_GRID
+from glyphviz_core.node import Node
 from glyphviz_core import topology as topo
 
 
@@ -208,94 +208,6 @@ def test_cube_children_spread_across_all_six_faces(tmp_path):
         dominant_axes.add((dominant_axis, pos[dominant_axis] > 0))
     # All 6 children must land on 6 *different* signed axes, not collapse onto one.
     assert len(dominant_axes) == 6
-
-
-# ---------------------------------------------------------------------------
-# World Grid (type=6): root glyphs with no explicit parent implicitly attach
-# to the scene's Grid node (see Scene.grid_node(), compute_world_bases'/
-# compute_world_positions' `grid` param), exactly like any other child of a
-# TOPO_PLANE parent -- scaling the grid deliberately re-spaces attached
-# children (confirmed wanted: e.g. spreading glyphs out across a bigger
-# map-textured floor), but must NOT also distort their own rendered shape
-# (NO_SIZE_INHERIT_TOPOS, confirmed separately).
-# ---------------------------------------------------------------------------
-
-def test_root_glyph_position_scales_with_grid(tmp_path):
-    """A root glyph (parent_id=0, no real parent) inherits the grid's own
-    position and per-axis scale through TOPO_PLANE's plain Cartesian offset
-    -- moving/scaling the grid carries every attached root glyph with it and
-    re-spaces it, same as moving/scaling any other Plane-topology parent."""
-    rows = [
-        _row(id=1, parent_id=0, type=NODE_TYPE_GRID, topo=topo.TOPO_PLANE,
-             translate_x=100.0, translate_y=0.0, scale_x=2.0, scale_y=1.0),
-        _row(id=2, parent_id=0, translate_x=10.0, translate_y=20.0),
-    ]
-    nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
-    from glyphviz_core.scene import Scene
-    scene = Scene(nodes, base_scale=1.0)
-    pos = scene.world_pos(2)
-    # grid world pos (100, 0, 0) + grid_scale * (translate_x, translate_y, 0)
-    assert pos == pytest.approx((100.0 + 2.0 * 10.0, 0.0 + 1.0 * 20.0, 0.0))
-
-
-def test_grid_scale_does_not_affect_attached_glyph_shape(tmp_path):
-    """A root glyph's rendered size must stay exactly as if no grid existed,
-    regardless of the grid's own (possibly very non-uniform) scale."""
-    rows = [
-        _row(id=1, parent_id=0, type=NODE_TYPE_GRID, topo=topo.TOPO_PLANE,
-             scale_x=50.0, scale_y=50.0, scale_z=1.0),
-        _row(id=2, parent_id=0, translate_x=10.0, translate_y=20.0,
-             scale_x=1.0, scale_y=1.0, scale_z=1.0),
-    ]
-    nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
-    from glyphviz_core.scene import Scene
-    from glyphviz_core.scene import node_world_matrix
-    scene = Scene(nodes, base_scale=3.0)
-    glyph = next(n for n in nodes if n.id == 2)
-    M = node_world_matrix(glyph, scene)
-    rendered_scale = tuple(
-        math.sqrt(sum(M[i][j] ** 2 for i in range(3))) for j in range(3)
-    )
-    # base_scale (3.0) * the glyph's own scale (1,1,1) -- no trace of the grid's 50x.
-    assert rendered_scale == pytest.approx((3.0, 3.0, 3.0))
-
-
-def test_grid_node_itself_stays_at_its_own_origin(tmp_path):
-    """The grid is the anchor, not anchored to itself -- its own world
-    position is just its own translate_x/y/z, exactly like any other root."""
-    rows = [_row(id=1, parent_id=0, type=NODE_TYPE_GRID, topo=topo.TOPO_PLANE,
-                  translate_x=5.0, translate_y=-3.0)]
-    nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
-    from glyphviz_core.scene import Scene
-    scene = Scene(nodes, base_scale=1.0)
-    assert scene.world_pos(1) == pytest.approx((5.0, -3.0, 0.0))
-
-
-def test_no_grid_node_root_glyph_unaffected_backward_compat(tmp_path):
-    """A scene with zero Grid rows behaves exactly as before this feature --
-    a root glyph's world position is its own translate_x/y/z, untouched."""
-    rows = [_row(id=2, parent_id=0, translate_x=10.0, translate_y=20.0)]
-    nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
-    from glyphviz_core.scene import Scene
-    scene = Scene(nodes, base_scale=1.0)
-    assert scene.world_pos(2) == pytest.approx((10.0, 20.0, 0.0))
-
-
-def test_world_and_camera_nodes_do_not_attach_to_grid(tmp_path):
-    """World (type=0) and Camera (type=1) rows keep parent_id=0's original
-    'no parent at all' meaning even when a Grid node exists -- only ordinary
-    glyphs implicitly attach to it."""
-    rows = [
-        _row(id=1, parent_id=0, type=NODE_TYPE_GRID, topo=topo.TOPO_PLANE,
-             translate_x=100.0, scale_x=2.0),
-        _row(id=2, parent_id=0, type=0, translate_x=10.0),    # World
-        _row(id=3, parent_id=0, type=1, translate_x=10.0),    # Camera
-    ]
-    nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
-    from glyphviz_core.scene import Scene
-    scene = Scene(nodes, base_scale=1.0)
-    assert scene.world_pos(2) == pytest.approx((10.0, 0.0, 0.0))
-    assert scene.world_pos(3) == pytest.approx((10.0, 0.0, 0.0))
 
 
 # ---------------------------------------------------------------------------

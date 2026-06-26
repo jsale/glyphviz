@@ -1,21 +1,16 @@
 from dataclasses import dataclass, field
 
-# Node CSV "type" values (see
-# gaiaviz-skill/references/structure/Node-Field-Descriptions.md). World and
-# Camera rows are scene-wide settings/views rather than positioned glyphs, so
-# they're kept and editable in the table but skipped when drawing/picking in
-# the 3D viewport. Grid and ordinary glyph rows ARE drawn/picked normally.
+# Node CSV "type" values that describe scene infrastructure rather than visual
+# data glyphs (see gaiaviz-skill/references/structure/Node-Field-Descriptions.md).
+# GlyphViz doesn't yet have its own camera/grid/world handling, so these rows
+# are kept (and remain editable in the table) but skipped when drawing/picking
+# in the 3D viewport — otherwise they show up as stray wireframe-cube glyphs.
 NODE_TYPE_WORLD  = 0   # one-per-file global scene/world parameters
 NODE_TYPE_CAMERA = 1   # camera 'lookat' definitions (switchable with 'C' in ANTz/GaiaViz)
 NODE_TYPE_GRID   = 6   # world grid / subgrid definitions
 NODE_TYPE_LINK   = 7   # graph edge from parent_id (A-end) to child_id (B-end)
 
-# World/Camera rows hold scene-wide settings, not a position in the glyph
-# hierarchy -- they're never drawn, picked, or counted as scene content.
-# Grid rows are NOT in this set: a Grid is a real, renderable, pickable
-# scene object (see Scene.grid_node() / node_world_matrix) that root glyphs
-# implicitly attach to, not infrastructure to hide.
-NON_VISUAL_TYPES = frozenset({NODE_TYPE_WORLD, NODE_TYPE_CAMERA})
+NON_VISUAL_TYPES = frozenset({NODE_TYPE_WORLD, NODE_TYPE_CAMERA, NODE_TYPE_GRID})
 
 # rotate_x/y/z interpretation. ANTz/GaiaViz always used HEADING_TILT_ROLL (a
 # Z-X-Z "proper Euler" sequence borrowed from KML's Heading/Tilt/Roll camera
