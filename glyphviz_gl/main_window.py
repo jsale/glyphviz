@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 from glyphviz_core.csv_reader import (
     load_node_csv, save_node_csv, save_tag_csv, stamp_node_and_tag_paths,
 )
-from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA
+from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA, GEO_MESH
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
     NODE_TYPE_LINK, NODE_TYPE_WORLD, RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
@@ -185,6 +185,14 @@ class MainWindow(QMainWindow):
         clear_tex_act = tex_menu.addAction("&Clear Textures")
         clear_tex_act.setToolTip("Unload all textures and return to solid-color rendering.")
         clear_tex_act.triggered.connect(self._clear_textures)
+
+        mesh_menu = mb.addMenu("&Meshes")
+        import_mesh_act = mesh_menu.addAction("&Import Mesh File…")
+        import_mesh_act.setToolTip(
+            "Load an OBJ/STL/PLY/glTF file as a GEO_MESH shape.\n"
+            "Applies to the selected node, or creates a new root node if none is selected."
+        )
+        import_mesh_act.triggered.connect(self._import_mesh_file)
 
         self._view_menu = mb.addMenu("&View")
 
@@ -924,6 +932,49 @@ class MainWindow(QMainWindow):
             self._lbl_tex.setText("Texture load failed")
             self.statusBar().showMessage(f"Texture error: {exc}")
         self._refresh_audio_combo()
+
+    def _import_mesh_file(self):
+        """Meshes > Import Mesh File…: load an OBJ/STL/etc. as a GEO_MESH
+        shape. Mirrors Paste's target rule — applies to the single selected
+        node if there is one, else creates a new root node (see
+        _create_root_node)."""
+        if len(self._selected_nodes) > 1:
+            self.statusBar().showMessage("Select exactly one node (or none) as the import target.")
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Import Mesh File", str(Path.home()),
+            "Mesh Files (*.obj *.stl *.ply *.glb *.gltf)",
+        )
+        if not path:
+            return
+        try:
+            mesh_id = self._viewport.load_mesh_file(path)
+        except Exception as exc:
+            self.statusBar().showMessage(f"Mesh import failed: {exc}")
+            return
+        name = self._viewport.mesh_name(mesh_id)
+
+        if len(self._selected_nodes) == 1:
+            node = self._selected_nodes[0]
+            node.geometry = GEO_MESH
+            node.mesh_id = mesh_id
+            self._table.refresh_node(node.id)
+            self._update_sel_values()
+            self._viewport.scene_invalidate()
+            self.statusBar().showMessage(f"Assigned mesh '{name}' (id {mesh_id}) to node {node.id}.")
+            return
+
+        next_x = self._next_root_x()
+        new_id = max((n.id for n in self.nodes), default=0) + 1
+        self._add_node_to_scene(Node(
+            id=new_id, type=5, parent_id=0, branch_level=0,
+            translate_x=next_x, translate_y=0.0, translate_z=0.0,
+            rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
+            scale_x=5.0, scale_y=5.0, scale_z=5.0,
+            color_r=200, color_g=200, color_b=200, color_a=255,
+            geometry=GEO_MESH, hide=0, topo=0, mesh_id=mesh_id,
+        ))
+        self.statusBar().showMessage(f"Imported mesh '{name}' (id {mesh_id}) as new node {new_id}.")
 
     def _clear_textures(self):
         self._viewport.clear_textures()

@@ -30,7 +30,11 @@ GEO_CYLINDER       = 19
 GEO_GRID_WIRE      = 20
 GEO_GRID           = 21
 GEO_POINT          = 22
-GEO_COUNT          = 23
+# GlyphViz extension (no ANTz/GaiaViz equivalent): an arbitrary triangle mesh
+# imported from an external file (OBJ, STL, ...) via glyphviz_core.mesh_loader,
+# selected per-node by Node.mesh_id rather than by a fixed shape.
+GEO_MESH           = 23
+GEO_COUNT          = 24
 
 GEO_NAMES = {
     GEO_CUBE_WIRE:     "Cube Wire",
@@ -56,6 +60,7 @@ GEO_NAMES = {
     GEO_GRID_WIRE:     "Grid Wire",
     GEO_GRID:          "Grid",
     GEO_POINT:         "Point",
+    GEO_MESH:          "Mesh (Imported)",
 }
 
 _WIRE_IDS = frozenset({

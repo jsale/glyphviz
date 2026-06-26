@@ -18,6 +18,7 @@ from glyphviz_core.node import (
 )
 from glyphviz_core.scene import Scene, node_world_matrix
 from glyphviz_core.topology import TOPO_PLOT, TOPO_SURFACE
+from glyphviz_core.mesh_loader import load_mesh_file as _load_mesh_data
 
 from .geometry import GeoRenderer, WIRE_TO_SOLID
 from .texture_manager import TextureManager
@@ -150,6 +151,8 @@ class Viewport(QOpenGLWidget):
         self._proj_matrix: np.ndarray | None = None
 
         self._geo = GeoRenderer()
+        self._next_mesh_id = 1
+        self._mesh_names: dict[int, str] = {}   # mesh_id -> source filename, for the UI
         self._tex_mgr = TextureManager()
         self._video_mgr = VideoManager()
         self._last_tex_tick = time.perf_counter()
@@ -310,6 +313,24 @@ class Viewport(QOpenGLWidget):
         self._update_render_timer_state()
         self.update()
         return img_count + vid_count
+
+    def load_mesh_file(self, path: str) -> int:
+        """Import an OBJ/STL/etc. file (glyphviz_core.mesh_loader) and compile
+        it into a new GEO_MESH display list. Must be called while the OpenGL
+        context is current (safe from the main thread after the widget has
+        been shown). Returns the new mesh_id (1, 2, 3, ... in import order)."""
+        data = _load_mesh_data(path)
+        self.makeCurrent()
+        self._geo.setup()
+        mesh_id = self._next_mesh_id
+        self._next_mesh_id += 1
+        self._geo.register_mesh(mesh_id, data)
+        self._mesh_names[mesh_id] = data.name
+        self.update()
+        return mesh_id
+
+    def mesh_name(self, mesh_id: int) -> str:
+        return self._mesh_names.get(mesh_id, "")
 
     def clear_textures(self):
         """Release all loaded textures and stop video playback."""
@@ -710,7 +731,8 @@ class Viewport(QOpenGLWidget):
 
         # M already encodes scale (column norms = rendered radii), so we draw
         # the geometry at unit size (1,1,1) and let the matrix handle sizing.
-        self._geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio, gl_tex_name=gl_tex)
+        self._geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio, gl_tex_name=gl_tex,
+                       mesh_id=node.mesh_id)
 
         if selected:
             glDisable(GL_LIGHTING)
@@ -928,7 +950,7 @@ class Viewport(QOpenGLWidget):
             # Draw the solid equivalent for wireframe geometries so the
             # entire silhouette is pickable, not just the visible wires.
             pick_geo = WIRE_TO_SOLID.get(node.geometry, node.geometry)
-            self._geo.draw(pick_geo, 1.0, 1.0, 1.0, ratio=node.ratio)
+            self._geo.draw(pick_geo, 1.0, 1.0, 1.0, ratio=node.ratio, mesh_id=node.mesh_id)
             glPopMatrix()
 
         # Draw link nodes as pick targets.  Each link gets:

@@ -16,7 +16,7 @@ _TRACKED_COLS = frozenset({
     'scale_x', 'scale_y', 'scale_z',
     'color_r', 'color_g', 'color_b', 'color_a',
     'geometry', 'hide', 'topo', 'ratio', 'subspace', 'facet', 'texture_id',
-    'text', 'link', 'rotation_mode',
+    'mesh_id', 'text', 'link', 'rotation_mode',
     'render_mode', 'fog_enabled', 'fog_start', 'fog_end',
     'translate_rate_x', 'translate_rate_y', 'translate_rate_z',
     'rotate_rate_x', 'rotate_rate_y', 'rotate_rate_z',
@@ -227,6 +227,7 @@ def load_node_csv(path: str) -> list[Node]:
     has_subspace = 'subspace' in df.columns
     has_facet = 'facet' in df.columns
     has_texture_id = 'texture_id' in df.columns
+    has_mesh_id = 'mesh_id' in df.columns
     has_text = 'text' in df.columns
     has_link = 'link' in df.columns
     has_rotation_mode = 'rotation_mode' in df.columns
@@ -277,6 +278,7 @@ def load_node_csv(path: str) -> list[Node]:
                 else 0
             ),
             texture_id=int(row['texture_id']) if has_texture_id else 0,
+            mesh_id=int(row['mesh_id']) if has_mesh_id else 0,
             # Missing column means a pre-existing file authored under ANTz's
             # only-ever convention; default to it so old files keep rendering
             # exactly as before. New Node() calls elsewhere get EULER_XYZ via
@@ -332,6 +334,10 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
     # (see load_node_csv), so the column is needed whenever a node's value
     # would be *misread* by that fallback — not merely when it's non-zero.
     has_rotation_mode = any(n.rotation_mode != ROTATION_MODE_HEADING_TILT_ROLL for n in nodes)
+    # mesh_id has no ANTz/GaiaViz equivalent; omitting the column means 0 on
+    # reload (no mesh selected), so it only needs writing when some node
+    # actually references an imported mesh.
+    has_mesh_id = any(n.mesh_id for n in nodes)
     # World-node-only scene settings (see node.py); omitting a column means
     # "default" on reload, so each is only written when some node's value
     # would actually be misread by that fallback.
@@ -346,6 +352,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
         col_order.append('link')
     if has_rotation_mode:
         col_order.append('rotation_mode')
+    if has_mesh_id:
+        col_order.append('mesh_id')
     if has_render_mode:
         col_order.append('render_mode')
     if has_fog_enabled:
@@ -390,6 +398,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
             row['ratio'] = node.ratio
             row['facet'] = node.subspace + 1
             row['texture_id'] = node.texture_id
+            if has_mesh_id:
+                row['mesh_id'] = node.mesh_id
             row['translate_rate_x'] = node.translate_rate_x
             row['translate_rate_y'] = node.translate_rate_y
             row['translate_rate_z'] = node.translate_rate_z

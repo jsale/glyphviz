@@ -16,11 +16,12 @@ from glyphviz_core.geometry_data import (
     GEO_CONE, GEO_TORUS_WIRE, GEO_TORUS, GEO_DODECA_WIRE, GEO_DODECA,
     GEO_OCTA_WIRE, GEO_OCTA, GEO_TETRA_WIRE, GEO_TETRA, GEO_ICOSA_WIRE,
     GEO_ICOSA, GEO_PIN, GEO_PIN_WIRE, GEO_CYLINDER_WIRE, GEO_CYLINDER,
-    GEO_GRID_WIRE, GEO_GRID, GEO_POINT, GEO_COUNT, GEO_NAMES, WIRE_TO_SOLID,
-    TORUS_DEFAULT_RATIO, torus_radii, CYLINDER_RADIUS_RATIO,
+    GEO_GRID_WIRE, GEO_GRID, GEO_POINT, GEO_MESH, GEO_COUNT, GEO_NAMES,
+    WIRE_TO_SOLID, TORUS_DEFAULT_RATIO, torus_radii, CYLINDER_RADIUS_RATIO,
     CYLINDER_HEIGHT_RATIO, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR,
     GRID_HALF_EXTENT,
 )
+from glyphviz_core.mesh_loader import MeshData
 
 _WIRE_IDS = frozenset({
     GEO_CUBE_WIRE, GEO_SPHERE_WIRE, GEO_CONE_WIRE, GEO_TORUS_WIRE,
@@ -455,6 +456,7 @@ class GeoRenderer:
     def __init__(self):
         self._lists: dict[int, int] = {}
         self._tex_dispatch: dict[int, object] = {}
+        self._mesh_lists: dict[int, int] = {}   # mesh_id -> display list
         self._ready = False
 
     def setup(self):
@@ -522,10 +524,45 @@ class GeoRenderer:
 
         self._ready = True
 
+    def register_mesh(self, mesh_id: int, mesh: MeshData) -> None:
+        """Compile *mesh* (already normalized to radius ~1 by mesh_loader)
+        into a display list addressable by mesh_id. Must be called with an
+        active GL context. Replaces any previous list for the same id."""
+        old = self._mesh_lists.pop(mesh_id, None)
+        if old:
+            glDeleteLists(old, 1)
+        dl = glGenLists(1)
+        glNewList(dl, GL_COMPILE)
+        glBegin(GL_TRIANGLES)
+        for face in mesh.faces:
+            for vi in face:
+                n = mesh.normals[vi]
+                v = mesh.vertices[vi]
+                glNormal3f(float(n[0]), float(n[1]), float(n[2]))
+                glVertex3f(float(v[0]), float(v[1]), float(v[2]))
+        glEnd()
+        glEndList()
+        self._mesh_lists[mesh_id] = dl
+
     def draw(self, geo_id: int, rx: float, ry: float, rz: float,
-             ratio: float = TORUS_DEFAULT_RATIO, gl_tex_name: int = 0):
+             ratio: float = TORUS_DEFAULT_RATIO, gl_tex_name: int = 0,
+             mesh_id: int = 0):
         if not self._ready:
             return
+        if geo_id == GEO_MESH:
+            dl = self._mesh_lists.get(mesh_id)
+            if dl:
+                # Imported files can't be trusted to share the procedural
+                # shapes' outward-CCW winding convention (see _outward_tri
+                # above), so skip the back-face cull that relies on it.
+                glDisable(GL_CULL_FACE)
+                glPushMatrix()
+                glScalef(rx, ry, rz)
+                glCallList(dl)
+                glPopMatrix()
+                glEnable(GL_CULL_FACE)
+                return
+            geo_id = GEO_SPHERE   # no mesh loaded yet — fall back like other unknown ids
         if geo_id == GEO_POINT:
             # Points have no orientation/extent to stretch — fall back to
             # an average size for the on-screen point sprite.

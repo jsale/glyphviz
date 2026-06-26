@@ -75,6 +75,7 @@ class Node:
     ratio: float = 0.1
     subspace: int = 0
     texture_id: int = 0
+    mesh_id: int = 0   # selects an imported GEO_MESH shape (see mesh_loader.py); no ANTz/GaiaViz equivalent
     rotation_mode: int = ROTATION_MODE_EULER_XYZ
     # Per-cycle velocities (ANTz convention: added to translate/rotate/scale
     # every cycle, nominally 60 cycles/second — see Node-Field-Descriptions.md's
