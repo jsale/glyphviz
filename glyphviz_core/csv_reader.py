@@ -1,5 +1,6 @@
 import csv
 import re as _re
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -128,6 +129,21 @@ _DEFAULT_EXTRAS: dict = {
 }
 
 
+_TIMESTAMP_RE = _re.compile(r'\d{14}$')
+_TIMESTAMP_FORMAT = '%Y%m%d%H%M%S'   # YYYYMMDDHHMMSS, no delimiters
+
+
+def _swap_node_tag_stem(stem: str, target: str) -> str | None:
+    """Swap the 'node'/'tag' infix in a node-CSV stem, per ANTz/gv_ convention.
+
+    E.g. 'gv_node' -> 'gv_tag', 'topology_example_gv_node' -> '..._gv_tag'.
+    Returns None if the stem doesn't end with 'node' (no sensible swap).
+    """
+    if stem.endswith('node'):
+        return stem[:-4] + target
+    return None
+
+
 def _tag_file_path(node_csv_path: str) -> Path | None:
     """Return the companion tag-file path for a node CSV, or None if not applicable.
 
@@ -137,11 +153,29 @@ def _tag_file_path(node_csv_path: str) -> Path | None:
     Returns None if the candidate file does not exist.
     """
     p = Path(node_csv_path)
-    stem = p.stem
-    if stem.endswith('node'):
-        candidate = p.parent / (stem[:-4] + 'tag' + p.suffix)
-        return candidate if candidate.exists() else None
-    return None
+    tag_stem = _swap_node_tag_stem(p.stem, 'tag')
+    if tag_stem is None:
+        return None
+    candidate = p.parent / (tag_stem + p.suffix)
+    return candidate if candidate.exists() else None
+
+
+def stamp_node_and_tag_paths(node_path: str | Path) -> tuple[Path, Path | None]:
+    """Given a desired node-CSV path, return (stamped_node_path, stamped_tag_path)
+    sharing one freshly-generated timestamp (YYYYMMDDHHMMSS, no delimiters).
+
+    Any timestamp already trailing the stem (from a prior save this session)
+    is stripped first, so repeated calls advance the stamp instead of stacking
+    one onto the next. The tag path is None when the (unstamped) stem doesn't
+    end in 'node' — there's no sensible 'tag' counterpart name to derive.
+    """
+    p = Path(node_path)
+    base_stem = _TIMESTAMP_RE.sub('', p.stem)
+    stamp = datetime.now().strftime(_TIMESTAMP_FORMAT)
+    node_out = p.parent / f'{base_stem}{stamp}{p.suffix}'
+    tag_stem = _swap_node_tag_stem(base_stem, 'tag')
+    tag_out = p.parent / f'{tag_stem}{stamp}{p.suffix}' if tag_stem is not None else None
+    return node_out, tag_out
 
 
 def _load_tag_file(tag_path: Path) -> dict[int, tuple[str, str]]:
@@ -330,6 +364,10 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
             row.update(node.extras)
             row['data'] = node.id       # 'data' mirrors 'id' by convention
             row['id'] = node.id
+            # 'record_id' defaults to the node's own id (matching load_node_csv's
+            # tag-lookup fallback) rather than _DEFAULT_EXTRAS's bare 0, so a
+            # freshly-created node's tag can still be matched by record_id.
+            row['record_id'] = node.extras.get('record_id', node.id)
             row['type'] = node.type
             row['parent_id'] = node.parent_id
             row['branch_level'] = node.branch_level
@@ -387,3 +425,25 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
                 else:
                     cells.append(int(float(val)))
             writer.writerow(cells)
+
+
+def save_tag_csv(nodes: list[Node], path: str) -> None:
+    """Write a gv_tag.csv/np_tag.csv companion file: one row per node that has
+    a non-empty text or link, in the 'id,table_id,record_id,title' shape this
+    project's own example data already uses (see examples/*/*_gv_tag.csv) —
+    table_id is always 0 (the GaiaViz tag-table id), record_id matches the
+    node CSV's record_id/id (see save_node_csv), and title is the inverse of
+    _load_tag_file's decode: an HTML <a href> anchor when a link is set, else
+    plain text.
+    """
+    with open(path, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f, lineterminator='\r\n')
+        writer.writerow(['id', 'table_id', 'record_id', 'title'])
+        tag_id = 0
+        for node in nodes:
+            if not node.text and not node.link:
+                continue
+            title = f'<a href="{node.link}">{node.text}</a>' if node.link else node.text
+            record_id = node.extras.get('record_id', node.id)
+            writer.writerow([tag_id, 0, record_id, title])
+            tag_id += 1

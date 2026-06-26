@@ -1,4 +1,5 @@
 import copy
+import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
@@ -25,7 +26,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from glyphviz_core.csv_reader import load_node_csv, save_node_csv
+from glyphviz_core.csv_reader import (
+    load_node_csv, save_node_csv, save_tag_csv, stamp_node_and_tag_paths,
+)
 from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
@@ -41,6 +44,16 @@ from .viewport import Viewport
 _AUDIO_TICK_MS = 33   # redraw rate while Channels playback is audio-driven (~30 Hz)
 
 
+def _app_dir() -> Path:
+    """Directory treated as 'next to the executable' for K-key autosave: the
+    frozen executable's folder (e.g. PyInstaller), or the folder containing
+    main.py when running from source. No ANTz-style usr/csv/ subfolder yet —
+    that's a future convention, not implemented here."""
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[1]
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -48,6 +61,12 @@ class MainWindow(QMainWindow):
         self.resize(1280, 800)
         self.nodes: list[Node] = []
         self._current_path: str | None = None   # path of the currently open file
+        self._current_tag_path: str | None = None   # companion tag-file path, if any
+        # False right after Open (the on-disk file has no timestamp yet); the
+        # first Ctrl+S after opening silently stamps a *new* file rather than
+        # overwriting the original, so opening + saving never clobbers an
+        # un-timestamped file the user (or another tool) created.
+        self._path_is_stamped = False
 
         # Multi-select state
         self._selected_nodes: list[Node] = []
@@ -108,6 +127,7 @@ class MainWindow(QMainWindow):
         self._viewport.drawLimitChanged.connect(self._on_draw_limit_changed)
         self._viewport.fpsUpdated.connect(self._on_fps_updated)
         self._viewport.tagToggled.connect(self._on_tag_toggled)
+        self._viewport.quickSaveRequested.connect(self._quick_save)
         self._viewport.nodesManipulated.connect(self._on_viewport_manipulated)
         self._viewport.bgToggleRequested.connect(self._on_scene_bg_toggle_bw)
         self._viewport.renderModeCycleRequested.connect(self._on_scene_render_mode_cycle)
@@ -413,6 +433,16 @@ class MainWindow(QMainWindow):
         stats_layout.addWidget(self._lbl_file)
         stats_layout.addWidget(self._lbl_total)
         stats_layout.addWidget(self._lbl_visible)
+
+        self._cb_save_tag = QCheckBox("Also Save Tag File")
+        self._cb_save_tag.setChecked(True)
+        self._cb_save_tag.setToolTip(
+            "When checked, Save/Save As also writes a companion gv_tag.csv-style\n"
+            "file (id,table_id,record_id,title) for any node with tag text or a link.\n"
+            "Only possible when the node file's name ends in 'node' (e.g. gv_node.csv).\n"
+            "The K key always saves both, regardless of this checkbox."
+        )
+        stats_layout.addWidget(self._cb_save_tag)
 
         # --- Create group ---
         create_grp = QGroupBox("Create")
@@ -850,6 +880,8 @@ class MainWindow(QMainWindow):
             self._ch_stop()
             self.nodes = load_node_csv(path)
             self._current_path = path
+            self._current_tag_path = None
+            self._path_is_stamped = False
             self._save_act.setEnabled(True)
             self._viewport.set_nodes(self.nodes)
             self._table.set_nodes(self.nodes)
@@ -917,15 +949,22 @@ class MainWindow(QMainWindow):
         self._viewport.set_audio_solo(texture_id)
 
     def _save_csv(self):
-        """Ctrl+S — overwrite the currently open file."""
+        """Ctrl+S — overwrite the currently open (already-timestamped) file.
+        If the open file has no timestamp yet (freshly Opened), silently
+        stamp it first — this writes a new file rather than overwriting the
+        original un-timestamped one, and that new path becomes current."""
         if not self._current_path:
             self._save_csv_as()
             return
-        self._write_csv(self._current_path)
+        if not self._path_is_stamped:
+            self._restamp_current_path()
+        self._write_node_and_tag(self._current_path, self._current_tag_path)
 
     def _save_csv_as(self):
-        """Ctrl+Shift+S — pick a new path and save."""
-        start = self._current_path or str(Path.home())
+        """Ctrl+Shift+S — pick a base name/location, then save under a fresh
+        YYYYMMDDHHMMSS-stamped name. Every subsequent Ctrl+S overwrites this
+        same stamped file; picking Save As again generates a new stamp."""
+        start = self._current_path or str(Path.home() / "gv_node.csv")
         path, _ = QFileDialog.getSaveFileName(
             self, "Save Node CSV",
             start,
@@ -933,10 +972,34 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return
-        self._write_csv(path)
         self._current_path = path
+        self._restamp_current_path()
+        self._write_node_and_tag(self._current_path, self._current_tag_path)
         self._save_act.setEnabled(True)
-        self._lbl_file.setText(f"File: {Path(path).name}")
+
+    def _restamp_current_path(self):
+        """Generate a fresh timestamp for self._current_path (and its tag
+        companion), updating both current-path fields and the file label."""
+        node_path, tag_path = stamp_node_and_tag_paths(self._current_path)
+        self._current_path = str(node_path)
+        self._current_tag_path = str(tag_path) if tag_path else None
+        self._path_is_stamped = True
+        self._lbl_file.setText(f"File: {Path(self._current_path).name}")
+
+    def _quick_save(self):
+        """K — fully automatic save, no dialog: writes a fresh-stamped node
+        CSV and tag CSV (always both, regardless of the tag checkbox) next
+        to the executable, under the gv_node/gv_tag base names. Independent
+        of whatever file is currently open via Open/Save As."""
+        node_path, tag_path = stamp_node_and_tag_paths(_app_dir() / "gv_node.csv")
+        try:
+            save_node_csv(self.nodes, str(node_path))
+            save_tag_csv(self.nodes, str(tag_path))
+            self.statusBar().showMessage(
+                f"Quick-saved {len(self.nodes)} nodes to {node_path.name} (+ {tag_path.name})"
+            )
+        except Exception as exc:
+            self.statusBar().showMessage(f"Quick-save error: {exc}")
 
     def _save_scene_png(self):
         """F12 — save the current viewport as a PNG image."""
@@ -955,12 +1018,17 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             self.statusBar().showMessage(f"Screenshot error: {exc}")
 
-    def _write_csv(self, path: str):
+    def _write_node_and_tag(self, node_path: str, tag_path: str | None):
         try:
-            save_node_csv(self.nodes, path)
-            self.statusBar().showMessage(
-                f"Saved {len(self.nodes)} nodes to {Path(path).name}"
-            )
+            save_node_csv(self.nodes, node_path)
+            msg = f"Saved {len(self.nodes)} nodes to {Path(node_path).name}"
+            if self._cb_save_tag.isChecked():
+                if tag_path:
+                    save_tag_csv(self.nodes, tag_path)
+                    msg += f" (+ tags to {Path(tag_path).name})"
+                else:
+                    msg += " (tag file skipped: name doesn't end in 'node')"
+            self.statusBar().showMessage(msg)
         except Exception as exc:
             self.statusBar().showMessage(f"Save error: {exc}")
 

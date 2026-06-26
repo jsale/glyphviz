@@ -99,6 +99,7 @@ class Viewport(QOpenGLWidget):
 
     bgToggleRequested = Signal()         # B → toggle background black/white
     renderModeCycleRequested = Signal()  # 8 → cycle scene render mode
+    quickSaveRequested = Signal()        # K → silent auto-save node+tag CSV
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1091,6 +1092,9 @@ class Viewport(QOpenGLWidget):
             event.accept()
         elif event.key() == Qt.Key.Key_8:
             self.renderModeCycleRequested.emit()
+            event.accept()
+        elif event.key() == Qt.Key.Key_K:
+            self.quickSaveRequested.emit()
             event.accept()
         else:
             super().keyPressEvent(event)
