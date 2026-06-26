@@ -1,0 +1,101 @@
+id,table_id,record_id,title
+0,0,1445,FAST #1: 2020-10-07 08:14  79min  avgHR 124  maxHR 152
+1,0,1455,fast #1: 2020-10-07
+2,0,1456,Total time: 79 min
+3,0,1457,Max HR: 152 bpm
+4,0,1458,Avg HR: 124 bpm
+5,0,1695,FAST #2: 2023-10-02 10:10  80min  avgHR 130  maxHR 152
+6,0,1705,fast #2: 2023-10-02
+7,0,1706,Total time: 80 min
+8,0,1707,Max HR: 152 bpm
+9,0,1708,Avg HR: 130 bpm
+10,0,1945,FAST #3: 2023-10-07 08:29  81min  avgHR 136  maxHR 159
+11,0,1955,fast #3: 2023-10-07
+12,0,1956,Total time: 81 min
+13,0,1957,Max HR: 159 bpm
+14,0,1958,Avg HR: 136 bpm
+15,0,2195,FAST #4: 2021-12-02 11:06  83min  avgHR 124  maxHR 157
+16,0,2205,fast #4: 2021-12-02
+17,0,2206,Total time: 83 min
+18,0,2207,Max HR: 157 bpm
+19,0,2208,Avg HR: 124 bpm
+20,0,2445,FAST #5: 2023-01-31 13:10  84min  avgHR 120  maxHR 145
+21,0,2455,fast #5: 2023-01-31
+22,0,2456,Total time: 84 min
+23,0,2457,Max HR: 145 bpm
+24,0,2458,Avg HR: 120 bpm
+25,0,2695,FAST #6: 2023-06-19 11:05  84min  avgHR 119  maxHR 148
+26,0,2705,fast #6: 2023-06-19
+27,0,2706,Total time: 84 min
+28,0,2707,Max HR: 148 bpm
+29,0,2708,Avg HR: 119 bpm
+30,0,2945,FAST #7: 2023-03-25 11:10  84min  avgHR 120  maxHR 146
+31,0,2955,fast #7: 2023-03-25
+32,0,2956,Total time: 84 min
+33,0,2957,Max HR: 146 bpm
+34,0,2958,Avg HR: 120 bpm
+35,0,3195,FAST #8: 2020-12-16 09:09  85min  avgHR 116  maxHR 148
+36,0,3205,fast #8: 2020-12-16
+37,0,3206,Total time: 85 min
+38,0,3207,Max HR: 148 bpm
+39,0,3208,Avg HR: 116 bpm
+40,0,3445,FAST #9: 2020-11-06 08:54  85min  avgHR 121  maxHR 153
+41,0,3455,fast #9: 2020-11-06
+42,0,3456,Total time: 85 min
+43,0,3457,Max HR: 153 bpm
+44,0,3458,Avg HR: 121 bpm
+45,0,3695,FAST #10: 2025-11-30 11:19  86min  avgHR 133  maxHR 157
+46,0,3705,fast #10: 2025-11-30
+47,0,3706,Total time: 86 min
+48,0,3707,Max HR: 157 bpm
+49,0,3708,Avg HR: 133 bpm
+50,0,3945,SLOW #11: 2021-04-14 08:31  129min  avgHR 108  maxHR 129
+51,0,3955,slow #11: 2021-04-14
+52,0,3956,Total time: 129 min
+53,0,3957,Max HR: 129 bpm
+54,0,3958,Avg HR: 108 bpm
+55,0,4195,SLOW #12: 2020-08-17 08:30  129min  avgHR 113  maxHR 150
+56,0,4205,slow #12: 2020-08-17
+57,0,4206,Total time: 129 min
+58,0,4207,Max HR: 150 bpm
+59,0,4208,Avg HR: 113 bpm
+60,0,4445,SLOW #13: 2025-05-31 09:15  131min  avgHR 113  maxHR 141
+61,0,4455,slow #13: 2025-05-31
+62,0,4456,Total time: 131 min
+63,0,4457,Max HR: 141 bpm
+64,0,4458,Avg HR: 113 bpm
+65,0,4695,SLOW #14: 2023-02-08 11:46  131min  avgHR 102  maxHR 120
+66,0,4705,slow #14: 2023-02-08
+67,0,4706,Total time: 131 min
+68,0,4707,Max HR: 120 bpm
+69,0,4708,Avg HR: 102 bpm
+70,0,4945,SLOW #15: 2025-10-17 09:35  132min  avgHR 119  maxHR 150
+71,0,4955,slow #15: 2025-10-17
+72,0,4956,Total time: 132 min
+73,0,4957,Max HR: 150 bpm
+74,0,4958,Avg HR: 119 bpm
+75,0,5195,SLOW #16: 2020-01-20 07:58  133min  avgHR 98  maxHR 117
+76,0,5205,slow #16: 2020-01-20
+77,0,5206,Total time: 133 min
+78,0,5207,Max HR: 117 bpm
+79,0,5208,Avg HR: 98 bpm
+80,0,5445,SLOW #17: 2020-08-24 07:34  133min  avgHR 102  maxHR 141
+81,0,5455,slow #17: 2020-08-24
+82,0,5456,Total time: 133 min
+83,0,5457,Max HR: 141 bpm
+84,0,5458,Avg HR: 102 bpm
+85,0,5695,SLOW #18: 2020-03-04 07:23  137min  avgHR 109  maxHR 132
+86,0,5705,slow #18: 2020-03-04
+87,0,5706,Total time: 137 min
+88,0,5707,Max HR: 132 bpm
+89,0,5708,Avg HR: 109 bpm
+90,0,5945,SLOW #19: 2023-09-24 09:04  138min  avgHR 99  maxHR 124
+91,0,5955,slow #19: 2023-09-24
+92,0,5956,Total time: 138 min
+93,0,5957,Max HR: 124 bpm
+94,0,5958,Avg HR: 99 bpm
+95,0,6195,SLOW #20: 2019-09-02 07:46  138min  avgHR 115  maxHR 150
+96,0,6205,slow #20: 2019-09-02
+97,0,6206,Total time: 138 min
+98,0,6207,Max HR: 150 bpm
+99,0,6208,Avg HR: 115 bpm
