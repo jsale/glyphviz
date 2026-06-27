@@ -196,18 +196,36 @@ def _topology_base_rotation(parent_topo: int, tx: float, ty: float, tz: float,
     surface at its placement (tx, ty, tz) so the outward-facing side tracks the
     surface as the child's placement coordinates change.
 
-    Rod    — Rz(ty): rotates the child around the cylinder axis by the angular
-             placement angle.  A child with Ry=90 (cylinder tilted horizontal)
-             will point radially outward like a spoke at azimuth ty.
-    Sphere/Point (KML) — Rz(tx)*Ry(90-ty): aligns the child's +Z with the
-             sphere-surface normal at (longitude=tx, latitude=ty).
+    Rod / Zrod — Rz(ty) / Rz(tx): rotates the child around the cylinder axis
+             by its angular placement, so a child with Ry=90 (its own
+             rotate_x/y/z tilting it to point radially outward like a spoke)
+             keeps facing outward — orthogonal to the orbit — as it travels
+             along the circular path, instead of holding a fixed world
+             orientation while the position sweeps underneath it. Rod's angle
+             param is ty (tx is the linear position along the rod's length);
+             Zrod delegates its placement math to _zcylinder_offset, so its
+             angle param is tx like Cylinder, not ty.
+    Sphere/Point/Torus/Ztorus (KML-style) — Rz(tx)*Ry(90-ty): aligns the
+             child's +Z with the surface normal at (longitude=tx,
+             latitude=ty). Torus's surface normal at (orbital angle=tx,
+             tube angle=ty) has exactly this same KML form (the tube
+             cross-section is a small "sphere" wrapped around the main
+             ring), so the formula carries over unchanged from Sphere/Point.
+    Cylinder/Zcylinder/Spiral — Rz(tx): these have a single circular angle
+             param (tx), with no second axis to wrap around (Cylinder/
+             Zcylinder's ty is linear height along the axis; Spiral's ty is
+             a linear offset added to its helical height) — same "carry the
+             child's own static orientation around" idea as Rod, just one
+             axis instead of two.
     Cube   — precomputed rotation per face (subspace), aligning +Z with face normal.
-    Pin / Cylinder and all others — identity (no placement-based rotation).
-    Torus  — deferred; its two-axis rotation will be addressed separately.
+    Pin and all others — identity (no circular placement, so no orientation
+             to carry around).
     """
-    if parent_topo == TOPO_ROD:
+    if parent_topo in (TOPO_ROD,):
         return _rot_z(ty)
-    if parent_topo in (TOPO_SPHERE, TOPO_POINT):
+    if parent_topo in (TOPO_ZROD, TOPO_CYLINDER, TOPO_ZCYLINDER, TOPO_SPIRAL):
+        return _rot_z(tx)
+    if parent_topo in (TOPO_SPHERE, TOPO_POINT, TOPO_TORUS, TOPO_ZTORUS):
         return _mat_mul(_rot_z(tx), _rot_y(90.0 - ty))
     if parent_topo == TOPO_CUBE:
         return _CUBE_FACE_BASE_ROTS[max(0, min(5, child_subspace))]

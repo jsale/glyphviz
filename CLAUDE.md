@@ -14,6 +14,8 @@ This is an open architectural question. When implementing topologies or behavior
 
 GaiaViz's `np_` file/column prefix stands for "neural physics," Shane Saxon's architectural concept underpinning ANTz/GaiaViz — GlyphViz has no equivalent architecture and shouldn't claim the name. GlyphViz's own example/generated data uses a `gv_` prefix instead (`gv_node.csv`, `gv_tag.csv`, `gv_ch-map.csv`, `gv_ch-tracks.csv`). The `np_` prefix is still recognized when *reading* genuine third-party GaiaViz files — both as a filename pattern and as the handful of GaiaViz-specific column names (`np_node_id`, `np_geometry_id`, `np_topo_id`, `np_texture_id`, `np_ch_in_id`) aliased in `glyphviz_core/csv_reader.py` and `channel_engine.py`. Do not rename those aliases — they exist for interop, not branding. `gaiaviz-skill/examples/` also keeps `np_` since it demonstrates the actual GaiaViz spec.
 
+**Node↔tag pairing convention**: a tag CSV's name is its node CSV's name with the `node`/`np_node` stem swapped for `tag`/`np_tag` — e.g. `gv_node.csv` ↔ `gv_tag.csv`, `np_node.csv` ↔ `np_tag.csv`, and timestamped saves carry the same stamp on both (`gv_node20260625182432.csv` ↔ `gv_tag20260625182432.csv`). `glyphviz_core/csv_reader.py`'s `stamp_node_and_tag_paths()` derives the tag path this way and only when the unstamped node-file stem ends in `node`; `load_node_csv` looks for the matching tag file automatically on open. Tag rows: `table_id` is always `0`, `record_id` matches the node CSV's `id` column (see "Pending High-Priority Features" → Tags below for the full row format).
+
 ## Pending High-Priority Features
 
 1. **Tags** — Text labels attached to nodes. Load/render the tag CSV (`gv_tag.csv` for GlyphViz-native data, `np_tag.csv` for GaiaViz-format data); support URL, local file, and app-launch encoding. `table_id` must be 0; `record_id` matches the node CSV's id column. Spec: `gaiaviz-skill/references/format/Tag-Format.md` and `Text-Tags-Usage.md`.
@@ -52,7 +54,11 @@ Implemented in `glyphviz_core/topology.py`'s `local_rotation_matrix()` dispatche
 ## Tech Stack
 
 Python 3.12, PySide6 (Qt6), PyOpenGL, numpy, pandas.
-Run: `conda run -n glyphviz python main.py` (Windows/Anaconda).
+Run: `C:\Users\jsale\anaconda3\envs\glyphviz\python.exe main.py` — call the conda env's
+`python.exe` directly for *every* invocation (running the app, one-off scripts, headless
+verification scripts, tests). Never use `conda run -n glyphviz ...`: it hangs silently on
+Jeff's Windows setup (broken stdout/stderr inheritance in some terminal environments) and
+needs Ctrl+C to escape.
 
 ## GaiaViz Skill
 
