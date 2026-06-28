@@ -425,6 +425,14 @@ class Viewport(QOpenGLWidget):
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_CULL_FACE)
         glCullFace(GL_BACK)
+        # Antialias GL_POINTS (rounds Point-geometry sprites and the round
+        # line caps/joins drawn below) and GL_LINES/LINE_STRIP (smooths the
+        # otherwise jagged Link/Plot lines). Both rely on GL_BLEND, already
+        # enabled above.
+        glEnable(GL_POINT_SMOOTH)
+        glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         self._geo.setup()
 
     def resizeGL(self, w, h):
@@ -457,6 +465,8 @@ class Viewport(QOpenGLWidget):
         glEnable(GL_CULL_FACE)
         glEnable(GL_LIGHTING)
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
+        glEnable(GL_POINT_SMOOTH)
+        glEnable(GL_LINE_SMOOTH)
 
         world = self._scene.world_node()
         if world is not None:
@@ -569,10 +579,19 @@ class Viewport(QOpenGLWidget):
             b_pos = self._scene.world_pos(b_id)
             if a_pos is None or b_pos is None:
                 continue
-            glLineWidth(max(link.ratio * 20.0, 1.0))
+            width = max(link.ratio * 20.0, 1.0)
+            glLineWidth(width)
             glColor4f(link.color_r / 255.0, link.color_g / 255.0,
                       link.color_b / 255.0, link.color_a / 255.0)
             glBegin(GL_LINES)
+            glVertex3f(a_pos[0], a_pos[1], a_pos[2])
+            glVertex3f(b_pos[0], b_pos[1], b_pos[2])
+            glEnd()
+            # Round end caps: GL_LINE_SMOOTH antialiases a line's edges but
+            # its caps stay flat/square, so stamp an antialiased GL_POINTS
+            # dot (same width) at each endpoint to round them off too.
+            glPointSize(width)
+            glBegin(GL_POINTS)
             glVertex3f(a_pos[0], a_pos[1], a_pos[2])
             glVertex3f(b_pos[0], b_pos[1], b_pos[2])
             glEnd()
@@ -588,17 +607,32 @@ class Viewport(QOpenGLWidget):
                         if self.show_hidden or not k.hide]
                 if len(kids) < 2:
                     continue
-                glLineWidth(max(node.ratio * 20.0, 1.0))
+                width = max(node.ratio * 20.0, 1.0)
+                kid_positions = [
+                    self._scene.world_pos(kid.id) or
+                    (kid.translate_x, kid.translate_y, kid.translate_z)
+                    for kid in kids
+                ]
+                glLineWidth(width)
                 glBegin(GL_LINE_STRIP)
-                for kid in kids:
-                    pos = self._scene.world_pos(kid.id) or (
-                        kid.translate_x, kid.translate_y, kid.translate_z)
+                for kid, pos in zip(kids, kid_positions):
+                    glColor4f(kid.color_r / 255.0, kid.color_g / 255.0,
+                              kid.color_b / 255.0, kid.color_a / 255.0)
+                    glVertex3f(pos[0], pos[1], pos[2])
+                glEnd()
+                # Round caps/joins: see the matching comment in the link-line
+                # block above -- one antialiased point per vertex, including
+                # interior joints, so corners aren't left mitred/jagged.
+                glPointSize(width)
+                glBegin(GL_POINTS)
+                for kid, pos in zip(kids, kid_positions):
                     glColor4f(kid.color_r / 255.0, kid.color_g / 255.0,
                               kid.color_b / 255.0, kid.color_a / 255.0)
                     glVertex3f(pos[0], pos[1], pos[2])
                 glEnd()
 
         glLineWidth(1.0)
+        glPointSize(1.0)
 
         # ---- TOPO_SURFACE quad meshes (with lighting for 3-D shading) ----
         if any_surface:
@@ -920,6 +954,10 @@ class Viewport(QOpenGLWidget):
         glDisable(GL_LIGHTING)
         glDisable(GL_BLEND)
         glDisable(GL_FOG)  # fog tints fragment color by distance — would corrupt color-ID reads
+        # Point/line antialiasing blends edge pixels toward the background —
+        # would corrupt color-ID reads at glyph silhouettes the same way fog does.
+        glDisable(GL_POINT_SMOOTH)
+        glDisable(GL_LINE_SMOOTH)
 
         # Re-use the scene cache from the most recent paint (no invalidate here).
         # Mirror paintGL's _draw_limit cutoff so nodes hidden by the
