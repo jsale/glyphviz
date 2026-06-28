@@ -1,0 +1,201 @@
+id,table_id,record_id,title
+0,0,3,Grade 2 | 2003 | Economically Disadvantaged: 32.9% above proficient
+1,0,4,Grade 2 | 2003 | Not Economically Disadvantaged: 65.9% above proficient
+2,0,5,Grade 3 | 2003 | Economically Disadvantaged: 27.6% above proficient
+3,0,6,Grade 3 | 2003 | Not Economically Disadvantaged: 61.6% above proficient
+4,0,7,Grade 4 | 2003 | Economically Disadvantaged: 26.7% above proficient
+5,0,8,Grade 4 | 2003 | Not Economically Disadvantaged: 61.6% above proficient
+6,0,9,Grade 5 | 2003 | Economically Disadvantaged: 19.5% above proficient
+7,0,10,Grade 5 | 2003 | Not Economically Disadvantaged: 51.3% above proficient
+8,0,11,Grade 6 | 2003 | Economically Disadvantaged: 20.9% above proficient
+9,0,12,Grade 6 | 2003 | Not Economically Disadvantaged: 53.9% above proficient
+10,0,13,Grade 7 | 2003 | Economically Disadvantaged: 17.8% above proficient
+11,0,14,Grade 7 | 2003 | Not Economically Disadvantaged: 48.9% above proficient
+12,0,15,Grade 8 | 2003 | Economically Disadvantaged: 13.3% above proficient
+13,0,16,Grade 8 | 2003 | Not Economically Disadvantaged: 36.5% above proficient
+14,0,17,Grade 9 | 2003 | Economically Disadvantaged: 10.7% above proficient
+15,0,18,Grade 9 | 2003 | Not Economically Disadvantaged: 28.8% above proficient
+16,0,19,Grade 10 | 2003 | Economically Disadvantaged: 12.1% above proficient
+17,0,20,Grade 10 | 2003 | Not Economically Disadvantaged: 29.9% above proficient
+18,0,21,Grade 11 | 2003 | Economically Disadvantaged: 14.1% above proficient
+19,0,22,Grade 11 | 2003 | Not Economically Disadvantaged: 30.8% above proficient
+20,0,23,Grade 2 | 2004 | Economically Disadvantaged: 33.8% above proficient
+21,0,24,Grade 2 | 2004 | Not Economically Disadvantaged: 65.7% above proficient
+22,0,25,Grade 3 | 2004 | Economically Disadvantaged: 31.2% above proficient
+23,0,26,Grade 3 | 2004 | Not Economically Disadvantaged: 61.8% above proficient
+24,0,27,Grade 4 | 2004 | Economically Disadvantaged: 30.1% above proficient
+25,0,28,Grade 4 | 2004 | Not Economically Disadvantaged: 64.0% above proficient
+26,0,29,Grade 5 | 2004 | Economically Disadvantaged: 19.8% above proficient
+27,0,30,Grade 5 | 2004 | Not Economically Disadvantaged: 53.2% above proficient
+28,0,31,Grade 6 | 2004 | Economically Disadvantaged: 20.9% above proficient
+29,0,32,Grade 6 | 2004 | Not Economically Disadvantaged: 53.7% above proficient
+30,0,33,Grade 7 | 2004 | Economically Disadvantaged: 21.7% above proficient
+31,0,34,Grade 7 | 2004 | Not Economically Disadvantaged: 51.8% above proficient
+32,0,35,Grade 8 | 2004 | Economically Disadvantaged: 14.7% above proficient
+33,0,36,Grade 8 | 2004 | Not Economically Disadvantaged: 41.2% above proficient
+34,0,37,Grade 9 | 2004 | Economically Disadvantaged: 10.6% above proficient
+35,0,38,Grade 9 | 2004 | Not Economically Disadvantaged: 27.0% above proficient
+36,0,39,Grade 10 | 2004 | Economically Disadvantaged: 11.2% above proficient
+37,0,40,Grade 10 | 2004 | Not Economically Disadvantaged: 26.0% above proficient
+38,0,41,Grade 11 | 2004 | Economically Disadvantaged: 15.8% above proficient
+39,0,42,Grade 11 | 2004 | Not Economically Disadvantaged: 29.5% above proficient
+40,0,43,Grade 2 | 2005 | Economically Disadvantaged: 41.3% above proficient
+41,0,44,Grade 2 | 2005 | Not Economically Disadvantaged: 72.2% above proficient
+42,0,45,Grade 3 | 2005 | Economically Disadvantaged: 33.9% above proficient
+43,0,46,Grade 3 | 2005 | Not Economically Disadvantaged: 65.8% above proficient
+44,0,47,Grade 4 | 2005 | Economically Disadvantaged: 39.5% above proficient
+45,0,48,Grade 4 | 2005 | Not Economically Disadvantaged: 70.5% above proficient
+46,0,49,Grade 5 | 2005 | Economically Disadvantaged: 27.1% above proficient
+47,0,50,Grade 5 | 2005 | Not Economically Disadvantaged: 59.8% above proficient
+48,0,51,Grade 6 | 2005 | Economically Disadvantaged: 27.0% above proficient
+49,0,52,Grade 6 | 2005 | Not Economically Disadvantaged: 61.2% above proficient
+50,0,53,Grade 7 | 2005 | Economically Disadvantaged: 25.9% above proficient
+51,0,54,Grade 7 | 2005 | Not Economically Disadvantaged: 58.5% above proficient
+52,0,55,Grade 8 | 2005 | Economically Disadvantaged: 20.1% above proficient
+53,0,56,Grade 8 | 2005 | Not Economically Disadvantaged: 49.6% above proficient
+54,0,57,Grade 9 | 2005 | Economically Disadvantaged: 14.4% above proficient
+55,0,58,Grade 9 | 2005 | Not Economically Disadvantaged: 35.6% above proficient
+56,0,59,Grade 10 | 2005 | Economically Disadvantaged: 11.5% above proficient
+57,0,60,Grade 10 | 2005 | Not Economically Disadvantaged: 30.0% above proficient
+58,0,61,Grade 11 | 2005 | Economically Disadvantaged: 17.9% above proficient
+59,0,62,Grade 11 | 2005 | Not Economically Disadvantaged: 36.0% above proficient
+60,0,63,Grade 2 | 2006 | Economically Disadvantaged: 43.1% above proficient
+61,0,64,Grade 2 | 2006 | Not Economically Disadvantaged: 75.3% above proficient
+62,0,65,Grade 3 | 2006 | Economically Disadvantaged: 37.0% above proficient
+63,0,66,Grade 3 | 2006 | Not Economically Disadvantaged: 69.5% above proficient
+64,0,67,Grade 4 | 2006 | Economically Disadvantaged: 40.8% above proficient
+65,0,68,Grade 4 | 2006 | Not Economically Disadvantaged: 72.5% above proficient
+66,0,69,Grade 5 | 2006 | Economically Disadvantaged: 30.4% above proficient
+67,0,70,Grade 5 | 2006 | Not Economically Disadvantaged: 62.6% above proficient
+68,0,71,Grade 6 | 2006 | Economically Disadvantaged: 30.0% above proficient
+69,0,72,Grade 6 | 2006 | Not Economically Disadvantaged: 63.8% above proficient
+70,0,73,Grade 7 | 2006 | Economically Disadvantaged: 30.0% above proficient
+71,0,74,Grade 7 | 2006 | Not Economically Disadvantaged: 64.6% above proficient
+72,0,75,Grade 8 | 2006 | Economically Disadvantaged: 19.7% above proficient
+73,0,76,Grade 8 | 2006 | Not Economically Disadvantaged: 50.4% above proficient
+74,0,77,Grade 9 | 2006 | Economically Disadvantaged: 14.1% above proficient
+75,0,78,Grade 9 | 2006 | Not Economically Disadvantaged: 37.5% above proficient
+76,0,79,Grade 10 | 2006 | Economically Disadvantaged: 11.7% above proficient
+77,0,80,Grade 10 | 2006 | Not Economically Disadvantaged: 29.9% above proficient
+78,0,81,Grade 11 | 2006 | Economically Disadvantaged: 17.6% above proficient
+79,0,82,Grade 11 | 2006 | Not Economically Disadvantaged: 35.8% above proficient
+80,0,83,Grade 2 | 2007 | Economically Disadvantaged: 42.5% above proficient
+81,0,84,Grade 2 | 2007 | Not Economically Disadvantaged: 74.2% above proficient
+82,0,85,Grade 3 | 2007 | Economically Disadvantaged: 37.2% above proficient
+83,0,86,Grade 3 | 2007 | Not Economically Disadvantaged: 69.0% above proficient
+84,0,87,Grade 4 | 2007 | Economically Disadvantaged: 42.3% above proficient
+85,0,88,Grade 4 | 2007 | Not Economically Disadvantaged: 73.8% above proficient
+86,0,89,Grade 5 | 2007 | Economically Disadvantaged: 31.4% above proficient
+87,0,90,Grade 5 | 2007 | Not Economically Disadvantaged: 65.6% above proficient
+88,0,91,Grade 6 | 2007 | Economically Disadvantaged: 30.2% above proficient
+89,0,92,Grade 6 | 2007 | Not Economically Disadvantaged: 64.6% above proficient
+90,0,93,Grade 7 | 2007 | Economically Disadvantaged: 31.8% above proficient
+91,0,94,Grade 7 | 2007 | Not Economically Disadvantaged: 64.2% above proficient
+92,0,95,Grade 8 | 2007 | Economically Disadvantaged: 21.9% above proficient
+93,0,96,Grade 8 | 2007 | Not Economically Disadvantaged: 53.7% above proficient
+94,0,97,Grade 9 | 2007 | Economically Disadvantaged: 15.9% above proficient
+95,0,98,Grade 9 | 2007 | Not Economically Disadvantaged: 39.9% above proficient
+96,0,99,Grade 10 | 2007 | Economically Disadvantaged: 12.4% above proficient
+97,0,100,Grade 10 | 2007 | Not Economically Disadvantaged: 30.9% above proficient
+98,0,101,Grade 11 | 2007 | Economically Disadvantaged: 18.4% above proficient
+99,0,102,Grade 11 | 2007 | Not Economically Disadvantaged: 40.2% above proficient
+100,0,103,Grade 2 | 2008 | Economically Disadvantaged: 43.9% above proficient
+101,0,104,Grade 2 | 2008 | Not Economically Disadvantaged: 74.8% above proficient
+102,0,105,Grade 3 | 2008 | Economically Disadvantaged: 38.2% above proficient
+103,0,106,Grade 3 | 2008 | Not Economically Disadvantaged: 71.2% above proficient
+104,0,107,Grade 4 | 2008 | Economically Disadvantaged: 46.9% above proficient
+105,0,108,Grade 4 | 2008 | Not Economically Disadvantaged: 76.8% above proficient
+106,0,109,Grade 5 | 2008 | Economically Disadvantaged: 36.2% above proficient
+107,0,110,Grade 5 | 2008 | Not Economically Disadvantaged: 69.2% above proficient
+108,0,111,Grade 6 | 2008 | Economically Disadvantaged: 34.4% above proficient
+109,0,112,Grade 6 | 2008 | Not Economically Disadvantaged: 69.0% above proficient
+110,0,113,Grade 7 | 2008 | Economically Disadvantaged: 33.8% above proficient
+111,0,114,Grade 7 | 2008 | Not Economically Disadvantaged: 66.2% above proficient
+112,0,115,Grade 8 | 2008 | Economically Disadvantaged: 27.9% above proficient
+113,0,116,Grade 8 | 2008 | Not Economically Disadvantaged: 60.0% above proficient
+114,0,117,Grade 9 | 2008 | Economically Disadvantaged: 20.7% above proficient
+115,0,118,Grade 9 | 2008 | Not Economically Disadvantaged: 46.0% above proficient
+116,0,119,Grade 10 | 2008 | Economically Disadvantaged: 17.7% above proficient
+117,0,120,Grade 10 | 2008 | Not Economically Disadvantaged: 39.2% above proficient
+118,0,121,Grade 11 | 2008 | Economically Disadvantaged: 18.2% above proficient
+119,0,122,Grade 11 | 2008 | Not Economically Disadvantaged: 41.9% above proficient
+120,0,123,Grade 2 | 2009 | Economically Disadvantaged: 49.0% above proficient
+121,0,124,Grade 2 | 2009 | Not Economically Disadvantaged: 77.6% above proficient
+122,0,125,Grade 3 | 2009 | Economically Disadvantaged: 44.3% above proficient
+123,0,126,Grade 3 | 2009 | Not Economically Disadvantaged: 76.0% above proficient
+124,0,127,Grade 4 | 2009 | Economically Disadvantaged: 54.1% above proficient
+125,0,128,Grade 4 | 2009 | Not Economically Disadvantaged: 81.6% above proficient
+126,0,129,Grade 5 | 2009 | Economically Disadvantaged: 45.1% above proficient
+127,0,130,Grade 5 | 2009 | Not Economically Disadvantaged: 75.8% above proficient
+128,0,131,Grade 6 | 2009 | Economically Disadvantaged: 40.0% above proficient
+129,0,132,Grade 6 | 2009 | Not Economically Disadvantaged: 70.1% above proficient
+130,0,133,Grade 7 | 2009 | Economically Disadvantaged: 37.6% above proficient
+131,0,134,Grade 7 | 2009 | Not Economically Disadvantaged: 70.8% above proficient
+132,0,135,Grade 8 | 2009 | Economically Disadvantaged: 30.9% above proficient
+133,0,136,Grade 8 | 2009 | Not Economically Disadvantaged: 62.9% above proficient
+134,0,137,Grade 9 | 2009 | Economically Disadvantaged: 24.0% above proficient
+135,0,138,Grade 9 | 2009 | Not Economically Disadvantaged: 50.8% above proficient
+136,0,139,Grade 10 | 2009 | Economically Disadvantaged: 21.4% above proficient
+137,0,140,Grade 10 | 2009 | Not Economically Disadvantaged: 46.5% above proficient
+138,0,141,Grade 11 | 2009 | Economically Disadvantaged: 20.5% above proficient
+139,0,142,Grade 11 | 2009 | Not Economically Disadvantaged: 45.3% above proficient
+140,0,143,Grade 2 | 2010 | Economically Disadvantaged: 51.3% above proficient
+141,0,144,Grade 2 | 2010 | Not Economically Disadvantaged: 77.9% above proficient
+142,0,145,Grade 3 | 2010 | Economically Disadvantaged: 45.6% above proficient
+143,0,146,Grade 3 | 2010 | Not Economically Disadvantaged: 75.4% above proficient
+144,0,147,Grade 4 | 2010 | Economically Disadvantaged: 58.9% above proficient
+145,0,148,Grade 4 | 2010 | Not Economically Disadvantaged: 83.4% above proficient
+146,0,149,Grade 5 | 2010 | Economically Disadvantaged: 51.7% above proficient
+147,0,150,Grade 5 | 2010 | Not Economically Disadvantaged: 80.5% above proficient
+148,0,151,Grade 6 | 2010 | Economically Disadvantaged: 45.4% above proficient
+149,0,152,Grade 6 | 2010 | Not Economically Disadvantaged: 77.3% above proficient
+150,0,153,Grade 7 | 2010 | Economically Disadvantaged: 42.1% above proficient
+151,0,154,Grade 7 | 2010 | Not Economically Disadvantaged: 72.3% above proficient
+152,0,155,Grade 8 | 2010 | Economically Disadvantaged: 39.1% above proficient
+153,0,156,Grade 8 | 2010 | Not Economically Disadvantaged: 69.7% above proficient
+154,0,157,Grade 9 | 2010 | Economically Disadvantaged: 29.3% above proficient
+155,0,158,Grade 9 | 2010 | Not Economically Disadvantaged: 56.7% above proficient
+156,0,159,Grade 10 | 2010 | Economically Disadvantaged: 26.4% above proficient
+157,0,160,Grade 10 | 2010 | Not Economically Disadvantaged: 52.2% above proficient
+158,0,161,Grade 11 | 2010 | Economically Disadvantaged: 23.6% above proficient
+159,0,162,Grade 11 | 2010 | Not Economically Disadvantaged: 51.8% above proficient
+160,0,163,Grade 2 | 2011 | Economically Disadvantaged: 51.6% above proficient
+161,0,164,Grade 2 | 2011 | Not Economically Disadvantaged: 79.9% above proficient
+162,0,165,Grade 3 | 2011 | Economically Disadvantaged: 48.0% above proficient
+163,0,166,Grade 3 | 2011 | Not Economically Disadvantaged: 77.1% above proficient
+164,0,167,Grade 4 | 2011 | Economically Disadvantaged: 60.0% above proficient
+165,0,168,Grade 4 | 2011 | Not Economically Disadvantaged: 84.3% above proficient
+166,0,169,Grade 5 | 2011 | Economically Disadvantaged: 54.2% above proficient
+167,0,170,Grade 5 | 2011 | Not Economically Disadvantaged: 82.1% above proficient
+168,0,171,Grade 6 | 2011 | Economically Disadvantaged: 45.9% above proficient
+169,0,172,Grade 6 | 2011 | Not Economically Disadvantaged: 74.4% above proficient
+170,0,173,Grade 7 | 2011 | Economically Disadvantaged: 46.6% above proficient
+171,0,174,Grade 7 | 2011 | Not Economically Disadvantaged: 77.0% above proficient
+172,0,175,Grade 8 | 2011 | Economically Disadvantaged: 42.7% above proficient
+173,0,176,Grade 8 | 2011 | Not Economically Disadvantaged: 71.3% above proficient
+174,0,177,Grade 9 | 2011 | Economically Disadvantaged: 31.6% above proficient
+175,0,178,Grade 9 | 2011 | Not Economically Disadvantaged: 59.4% above proficient
+176,0,179,Grade 10 | 2011 | Economically Disadvantaged: 30.1% above proficient
+177,0,180,Grade 10 | 2011 | Not Economically Disadvantaged: 57.5% above proficient
+178,0,181,Grade 11 | 2011 | Economically Disadvantaged: 26.8% above proficient
+179,0,182,Grade 11 | 2011 | Not Economically Disadvantaged: 52.3% above proficient
+180,0,183,Grade 2 | 2012 | Economically Disadvantaged: 50.8% above proficient
+181,0,184,Grade 2 | 2012 | Not Economically Disadvantaged: 81.6% above proficient
+182,0,185,Grade 3 | 2012 | Economically Disadvantaged: 51.2% above proficient
+183,0,186,Grade 3 | 2012 | Not Economically Disadvantaged: 80.6% above proficient
+184,0,187,Grade 4 | 2012 | Economically Disadvantaged: 59.9% above proficient
+185,0,188,Grade 4 | 2012 | Not Economically Disadvantaged: 84.4% above proficient
+186,0,189,Grade 5 | 2012 | Economically Disadvantaged: 55.7% above proficient
+187,0,190,Grade 5 | 2012 | Not Economically Disadvantaged: 82.6% above proficient
+188,0,191,Grade 6 | 2012 | Economically Disadvantaged: 49.1% above proficient
+189,0,192,Grade 6 | 2012 | Not Economically Disadvantaged: 80.4% above proficient
+190,0,193,Grade 7 | 2012 | Economically Disadvantaged: 49.8% above proficient
+191,0,194,Grade 7 | 2012 | Not Economically Disadvantaged: 79.3% above proficient
+192,0,195,Grade 8 | 2012 | Economically Disadvantaged: 47.0% above proficient
+193,0,196,Grade 8 | 2012 | Not Economically Disadvantaged: 75.7% above proficient
+194,0,197,Grade 9 | 2012 | Economically Disadvantaged: 34.0% above proficient
+195,0,198,Grade 9 | 2012 | Not Economically Disadvantaged: 60.6% above proficient
+196,0,199,Grade 10 | 2012 | Economically Disadvantaged: 34.0% above proficient
+197,0,200,Grade 10 | 2012 | Not Economically Disadvantaged: 62.5% above proficient
+198,0,201,Grade 11 | 2012 | Economically Disadvantaged: 27.9% above proficient
+199,0,202,Grade 11 | 2012 | Not Economically Disadvantaged: 54.7% above proficient

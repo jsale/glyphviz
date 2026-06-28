@@ -20,7 +20,10 @@ proficient banding.
   BL0  one node per (school, year). Geometry=Sphere-Wire, Topo=Pin.
        translate_x/y from a fixed lat/lon -> world-XY scale+offset
        (mapminlat/lon constants below); translate_z = (year-2002)*2 stacks
-       years vertically. scale=0.25.
+       years vertically. scale=0.25. lat/lon are clamped to the county
+       bounding box (clamp_to_county()) before projection -- schoollatlng
+       is a shared lookup table, not SDUSD-only, and a handful of
+       schoolcodes otherwise resolve thousands of units off-scene.
   BL1  torus anchor, child of BL0, Topo=Torus, ratio=0.06, color_a=155
        (translucent). Always at local origin (anchors at its parent).
   BL2  6 demographic subgroups, child of BL1, fixed evenly around the torus
@@ -86,8 +89,17 @@ GlyphViz's own examples don't use that preamble -- ids here start at 1.
 
 Output files (written to --output-dir, default: this script's directory)
 --------------------------------------------------------------------------
-  {PREFIX}_gv_node.csv   BL0..BL3 node hierarchy for every (year, school)
-  {PREFIX}_gv_tag.csv    matching tag/label text per node
+  {PREFIX}_gv_node.csv   BL0..BL3 node hierarchy for every (year, school),
+                         plus one ground-plane node (see GROUND_* constants,
+                         disable with --no-ground-image) textured with the
+                         San Diego County satellite image at media/
+                         map00001.jpg -- GlyphViz auto-loads any media/
+                         folder next to the node CSV on open, assigning
+                         texture_id by alphanumeric order (1 = first file),
+                         so no manifest/extra wiring is needed beyond that
+                         file being present.
+  {PREFIX}_gv_tag.csv    matching tag/label text per node (the ground plane
+                         has none, matching the PHP)
 
 Usage
 -----
@@ -110,6 +122,7 @@ OUTPUT_DIR = Path(__file__).parent
 DEFAULT_DATA_DIR = Path(r"C:\Jeff\python\glyphviz\glyphviz_examples\CalStateTesting_Example")
 PREFIX = "CalStateTesting_Example"
 
+TOPO_PLANE = 8
 TOPO_TORUS = 3
 TOPO_PIN = 5
 TOPO_ROD = 6
@@ -124,6 +137,25 @@ GEO_OCTA = 11
 GEO_TETRA = 13
 GEO_ICOSA = 15
 GEO_CYLINDER_WIRE = 18
+GEO_GRID = 21
+
+# Ground-plane satellite image (media/map00001.jpg, the same map00001.jpg the
+# PHP's own $files_to_zip bundled) -- a single static node, not per-year/
+# school, matching the one extra row Jeff's reference node CSV appends after
+# the main loop. Literal field values lifted from that reference row (a
+# GlyphViz-side export, hence the 95th rotation_mode column that had to be
+# dropped to line back up with the legacy 94-column schema). GEO_GRID's
+# native quad is a square inscribed in a unit circle (half-extent 1/sqrt(2)),
+# so GROUND_SCALE=200 gives a world footprint of ~283x283 -- close to, if not
+# pixel-exact with, the ~360x360 span the geo-projection spreads schools over.
+GROUND_SCALE = 200.0
+GROUND_TX = -18.868
+GROUND_TY = 6.606
+GROUND_RATIO = 0.1
+GROUND_COLOR = (200, 200, 200)
+GROUND_TEXTURE_ID = 1
+GROUND_FACET = 1
+GROUND_SEGMENTS = 16
 
 # Geo-registration bounding box (San Diego County) -- $mapminlat etc. in the PHP.
 MAP_MIN_LAT = 32.547103
@@ -132,6 +164,18 @@ MAP_MIN_LON = -116.794333
 MAP_MAX_LON = -117.313437
 X_SCALE = -360 / (MAP_MAX_LON - MAP_MIN_LON)
 Y_SCALE = 360 / (MAP_MAX_LAT - MAP_MIN_LAT)
+_LAT_LO, _LAT_HI = min(MAP_MIN_LAT, MAP_MAX_LAT), max(MAP_MIN_LAT, MAP_MAX_LAT)
+_LON_LO, _LON_HI = min(MAP_MIN_LON, MAP_MAX_LON), max(MAP_MIN_LON, MAP_MAX_LON)
+
+
+def clamp_to_county(lat, lon):
+    """schoollatlng is a shared, multi-project lookup table (not SDUSD-only)
+    -- a handful of schoolcodes resolve to lat/lon thousands of units outside
+    San Diego County (numeric collisions with other entities, not real SDUSD
+    placements). Rather than dropping those schools (losing real test-score
+    data) or leaving them flung far off-scene, clamp to the county's own
+    bounding box so they land at the nearest edge instead."""
+    return max(_LAT_LO, min(lat, _LAT_HI)), max(_LON_LO, min(lon, _LON_HI))
 
 # $colortable -- only the indices actually used by the generator are needed.
 COLOR_TABLE = {
@@ -169,6 +213,7 @@ NODE_FIELDS = [
     "scale_x", "scale_y", "scale_z",
     "color_r", "color_g", "color_b", "color_a",
     "geometry", "hide", "topo", "ratio", "rotate_rate_y",
+    "texture_id", "facet", "segments_x", "segments_y",
 ]
 
 
@@ -205,7 +250,8 @@ def bl3_geometry(k, geom_on):
             20: GEO_DODECA, 21: GEO_OCTA, 22: GEO_TETRA, 23: GEO_ICOSA}.get(k, GEO_OCTA)
 
 
-def node_row(node_id, parent_id, branch_level, tx, ty, tz, scale, color, geometry, topo, ratio, rotate_rate_y=0.0):
+def node_row(node_id, parent_id, branch_level, tx, ty, tz, scale, color, geometry, topo, ratio,
+             rotate_rate_y=0.0, texture_id=0, facet=0, segments_x=16, segments_y=16):
     r, g, b = color
     return {
         "id": node_id, "type": 5, "parent_id": parent_id, "branch_level": branch_level,
@@ -215,7 +261,18 @@ def node_row(node_id, parent_id, branch_level, tx, ty, tz, scale, color, geometr
         "color_r": r, "color_g": g, "color_b": b, "color_a": 255,
         "geometry": geometry, "hide": 0, "topo": topo, "ratio": ratio,
         "rotate_rate_y": round(rotate_rate_y, 6),
+        "texture_id": texture_id, "facet": facet,
+        "segments_x": segments_x, "segments_y": segments_y,
     }
+
+
+def ground_plane_node(node_id):
+    """The satellite-image ground plane (see GROUND_* constants above) --
+    a single top-level node, parent_id=0, no tag (the PHP didn't write one
+    for it either)."""
+    return node_row(node_id, 0, 0, GROUND_TX, GROUND_TY, 0.0, GROUND_SCALE, GROUND_COLOR,
+                     GEO_GRID, TOPO_PLANE, ratio=GROUND_RATIO, texture_id=GROUND_TEXTURE_ID,
+                     facet=GROUND_FACET, segments_x=GROUND_SEGMENTS, segments_y=GROUND_SEGMENTS)
 
 
 def _bucket_test_rows(rows, subgroup_codes):
@@ -350,6 +407,8 @@ def build_arg_parser():
     parser.add_argument("--rotation", action="store_true", help="spin BL3 test nodes (rotate_rate_y) proportional to percent-above-proficient")
     parser.add_argument("--dbquery-flag", action="store_true",
                          help="encode record_id as <year-2-digits><schoolcode> instead of the sequential node id")
+    parser.add_argument("--no-ground-image", action="store_true",
+                         help="omit the satellite-image ground plane (media/map00001.jpg, texture_id=1)")
     parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
     parser.add_argument("--prefix", default=PREFIX)
     return parser
@@ -381,6 +440,7 @@ def generate(args):
 
         for school_code in schools:
             lat, lon, school_name = source.school_info(school_code)
+            lat, lon = clamp_to_county(lat, lon)
 
             mean_scale_score, percent_above_proficient, total_subgroup_tested = source.test_data(
                 year, school_code, args.grade, subgroup_codes)
@@ -453,6 +513,10 @@ def generate(args):
                                  "record_id": record_id if args.dbquery_flag else bl3_id,
                                  "title": f"Test: {TESTS[k - 7]} MSS: {fmt_num(mean_scale_score[j][k])} "
                                           f"Pct. Prof: {fmt_num(pct_prof)}"})
+
+    if not args.no_ground_image:
+        nodes.append(ground_plane_node(next_id))
+        next_id += 1
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     node_path = args.output_dir / f"{args.prefix}_gv_node.csv"
