@@ -713,7 +713,10 @@ class MainWindow(QMainWindow):
         self._insp_ratio.setToolTip(
             "Torus minor-radius proportion (GaiaViz/ANTz 'ratio'): the tube "
             "radius as a fraction of the torus's overall radius. Also used to "
-            "place children riding on a Torus-topology parent's surface."
+            "place children riding on a Torus-topology parent's surface.\n"
+            "On other glyphs this field doubles up: Point geometry uses it as "
+            "an on-screen sprite size, and Link/Plot-parent nodes use it as "
+            "line width (both as ratio * 20, in pixels)."
         )
         self._insp_ratio.valueChanged.connect(self._on_insp_ratio_changed)
 

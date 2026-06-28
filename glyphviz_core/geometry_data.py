@@ -34,7 +34,16 @@ GEO_POINT          = 22
 # imported from an external file (OBJ, STL, ...) via glyphviz_core.mesh_loader,
 # selected per-node by Node.mesh_id rather than by a fixed shape.
 GEO_MESH           = 23
-GEO_COUNT          = 24
+# GlyphViz extensions (no ANTz/GaiaViz equivalent): flat 2-D marker shapes,
+# the same idea as Point but with a recognizable outline -- useful as cheap,
+# scatter-plot-style markers for large point clouds. Unlike Point these are
+# ordinary world-space flat plates (like Square/Grid), scaled by the node's
+# normal scale_x/y/z and compiled into display lists for performance at
+# scale, rather than fixed-pixel-size GL_POINTS sprites.
+GEO_CIRCLE         = 24
+GEO_CROSS          = 25
+GEO_STAR           = 26
+GEO_COUNT          = 27
 
 GEO_NAMES = {
     GEO_CUBE_WIRE:     "Cube Wire",
@@ -61,6 +70,9 @@ GEO_NAMES = {
     GEO_GRID:          "Grid",
     GEO_POINT:         "Point",
     GEO_MESH:          "Mesh (Imported)",
+    GEO_CIRCLE:        "Circle",
+    GEO_CROSS:         "Cross",
+    GEO_STAR:          "Star",
 }
 
 _WIRE_IDS = frozenset({

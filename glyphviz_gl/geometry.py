@@ -16,7 +16,8 @@ from glyphviz_core.geometry_data import (
     GEO_CONE, GEO_TORUS_WIRE, GEO_TORUS, GEO_DODECA_WIRE, GEO_DODECA,
     GEO_OCTA_WIRE, GEO_OCTA, GEO_TETRA_WIRE, GEO_TETRA, GEO_ICOSA_WIRE,
     GEO_ICOSA, GEO_PIN, GEO_PIN_WIRE, GEO_CYLINDER_WIRE, GEO_CYLINDER,
-    GEO_GRID_WIRE, GEO_GRID, GEO_POINT, GEO_MESH, GEO_COUNT, GEO_NAMES,
+    GEO_GRID_WIRE, GEO_GRID, GEO_POINT, GEO_MESH, GEO_CIRCLE, GEO_CROSS,
+    GEO_STAR, GEO_COUNT, GEO_NAMES,
     WIRE_TO_SOLID, TORUS_DEFAULT_RATIO, torus_radii, CYLINDER_RADIUS_RATIO,
     CYLINDER_HEIGHT_RATIO, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR,
     GRID_HALF_EXTENT,
@@ -448,6 +449,67 @@ def _draw_grid_solid(textured: bool = False):
     glEnd()
 
 
+def _flat_double_sided_fan(points: list[tuple[float, float]]):
+    """Shared helper for Circle/Star: triangle-fan a flat, star-shaped (i.e.
+    every boundary point visible from the center) 2-D outline from the
+    origin, drawn double-sided like _draw_grid_solid so it reads correctly
+    from either side."""
+    loop = points + [points[0]]
+    glBegin(GL_TRIANGLE_FAN)
+    glNormal3f(0.0, 0.0, 1.0)
+    glVertex3f(0.0, 0.0, 0.0)
+    for x, y in loop:
+        glVertex3f(x, y, 0.0)
+    glEnd()
+    glBegin(GL_TRIANGLE_FAN)
+    glNormal3f(0.0, 0.0, -1.0)
+    glVertex3f(0.0, 0.0, 0.0)
+    for x, y in reversed(loop):
+        glVertex3f(x, y, 0.0)
+    glEnd()
+
+
+def _draw_circle(segments=24):
+    """Flat circular disc in the XY plane -- a Point glyph with a real,
+    lit/scaled outline instead of a fixed-pixel GL_POINTS sprite."""
+    pts = [(math.cos(2.0 * math.pi * i / segments),
+            math.sin(2.0 * math.pi * i / segments)) for i in range(segments)]
+    _flat_double_sided_fan(pts)
+
+
+def _draw_star(points=5, inner_ratio=0.382):
+    """Flat N-pointed star outline in the XY plane (default inner_ratio
+    approximates a classic regular 5-point star)."""
+    verts = []
+    for i in range(points * 2):
+        r = 1.0 if i % 2 == 0 else inner_ratio
+        a = math.pi / 2.0 + i * math.pi / points
+        verts.append((r * math.cos(a), r * math.sin(a)))
+    _flat_double_sided_fan(verts)
+
+
+def _draw_cross(half_width=0.3):
+    """Flat plus-sign ("+") marker: two perpendicular bars in the XY plane,
+    each drawn double-sided like _draw_grid_solid. Built from two quads
+    rather than one concave outline since legacy GL_POLYGON requires convex
+    geometry."""
+    s, w = 1.0, half_width
+    bars = (
+        ((-s, -w), (s, -w), (s, w), (-s, w)),
+        ((-w, -s), (w, -s), (w, s), (-w, s)),
+    )
+    glBegin(GL_QUADS)
+    glNormal3f(0.0, 0.0, 1.0)
+    for bar in bars:
+        for x, y in bar:
+            glVertex3f(x, y, 0.0)
+    glNormal3f(0.0, 0.0, -1.0)
+    for bar in bars:
+        for x, y in reversed(bar):
+            glVertex3f(x, y, 0.0)
+    glEnd()
+
+
 # ---------------------------------------------------------------------------
 # GeoRenderer — compiles all shapes into OpenGL display lists
 # ---------------------------------------------------------------------------
@@ -486,6 +548,9 @@ class GeoRenderer:
             GEO_ICOSA_WIRE:    lambda: _draw_tri_wire(_ICOSA_VERTS, _ICOSA_FACES),
             GEO_DODECA:        lambda: _draw_poly_solid(_DODECA_VERTS, _DODECA_FACES),
             GEO_DODECA_WIRE:   lambda: _draw_poly_wire(_DODECA_VERTS, _DODECA_FACES),
+            GEO_CIRCLE:        lambda: _draw_circle(),
+            GEO_CROSS:         lambda: _draw_cross(),
+            GEO_STAR:          lambda: _draw_star(),
         }
 
         # Textured variants call geometry functions directly (bypassing display
@@ -564,8 +629,12 @@ class GeoRenderer:
                 return
             geo_id = GEO_SPHERE   # no mesh loaded yet — fall back like other unknown ids
         if geo_id == GEO_POINT:
-            # Points have no orientation/extent to stretch — fall back to
-            # an average size for the on-screen point sprite.
+            # Points have no orientation/extent to stretch, and callers always
+            # pass rx=ry=rz=1 here (node scale is already baked into the
+            # modelview matrix, which a GL_POINTS sprite's pixel size ignores)
+            # -- so scale can't drive point size. Use `ratio` instead, with
+            # the same ratio*20 convention as Link/Plot line width, so it's
+            # the one control that actually resizes a Point glyph on screen.
             # Restore whatever lighting state we found (rather than forcing
             # it back on) -- callers like the color-ID pick pass disable
             # lighting for their whole render and rely on it staying off;
@@ -576,7 +645,7 @@ class GeoRenderer:
             was_lit = glIsEnabled(GL_LIGHTING)
             if was_lit:
                 glDisable(GL_LIGHTING)
-            glPointSize(max(2.0, ((rx + ry + rz) / 3.0) * 2))
+            glPointSize(max(2.0, ratio * 20.0))
             glBegin(GL_POINTS)
             glVertex3f(0.0, 0.0, 0.0)
             glEnd()
