@@ -360,10 +360,10 @@ class MainWindow(QMainWindow):
         # --- Scale group ---
         scale_grp = QGroupBox("Global Scale")
         scale_layout = QVBoxLayout(scale_grp)
-        self._scale_label = QLabel("Scale: 3.0")
+        self._scale_label = QLabel("Scale: 1.0")
         self._scale_slider = QSlider(Qt.Orientation.Horizontal)
         self._scale_slider.setRange(1, 100)
-        self._scale_slider.setValue(30)
+        self._scale_slider.setValue(10)
         self._scale_slider.setTickInterval(10)
         self._scale_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self._scale_slider.valueChanged.connect(self._update_scale)

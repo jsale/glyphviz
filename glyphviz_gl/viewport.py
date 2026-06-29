@@ -105,7 +105,7 @@ class Viewport(QOpenGLWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._scene = Scene([])
-        self._base_scale = 3.0
+        self._base_scale = 1.0
         self.show_axes = True
         self.show_grid = True
         self.show_hidden = False

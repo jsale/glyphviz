@@ -33,7 +33,7 @@ def render_frame(
     out_path: str,
     width: int = 1280,
     height: int = 720,
-    base_scale: float = 3.0,
+    base_scale: float = 1.0,
     azimuth: float | None = None,
     elevation: float | None = None,
     distance: float | None = None,
@@ -70,7 +70,7 @@ def main() -> int:
     parser.add_argument("--out", required=True, help="Output PNG path.")
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
-    parser.add_argument("--base-scale", type=float, default=3.0)
+    parser.add_argument("--base-scale", type=float, default=1.0)
     parser.add_argument("--azimuth", type=float, default=None,
                          help="Camera azimuth in degrees. Default: auto bounding-box framing.")
     parser.add_argument("--elevation", type=float, default=None,
