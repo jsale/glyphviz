@@ -142,15 +142,12 @@ GEO_GRID = 21
 # Ground-plane satellite image (media/map00001.jpg, the same map00001.jpg the
 # PHP's own $files_to_zip bundled) -- a single static node, not per-year/
 # school, matching the one extra row Jeff's reference node CSV appends after
-# the main loop. Literal field values lifted from that reference row (a
-# GlyphViz-side export, hence the 95th rotation_mode column that had to be
-# dropped to line back up with the legacy 94-column schema). GEO_GRID's
-# native quad is a square inscribed in a unit circle (half-extent 1/sqrt(2)),
-# so GROUND_SCALE=200 gives a world footprint of ~283x283 -- close to, if not
-# pixel-exact with, the ~360x360 span the geo-projection spreads schools over.
-GROUND_SCALE = 200.0
-GROUND_TX = -18.868
-GROUND_TY = 6.606
+# the main loop. Position/scale hand-tuned by Jeff in the live app against
+# this example's real school marker positions (supersedes the original
+# reference-row values, which didn't actually line up).
+GROUND_SCALE = 84.0
+GROUND_TX = -11.176
+GROUND_TY = -49.39
 GROUND_RATIO = 0.1
 GROUND_COLOR = (200, 200, 200)
 GROUND_TEXTURE_ID = 1
