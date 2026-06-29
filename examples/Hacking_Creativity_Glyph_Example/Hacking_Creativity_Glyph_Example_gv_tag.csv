@@ -1,0 +1,204 @@
+id,table_id,record_id,title
+1,0,1,"Louvain0_0: Cerebral~ Self-confident~ Ideator -- 59 members | mean degree 5.8 (highest 49) | mean centrality 1.82, bridging 1.02, diversity 0.73"
+2,0,2,Time: Late Nights (shared by all 59 members of this cluster)
+3,0,3,Juggle/Specialist: Specialist (shared by all 59 members of this cluster)
+4,0,4,Focus: Daydreamer (shared by all 59 members of this cluster)
+5,0,5,Details: Perfectionist (shared by all 59 members of this cluster)
+6,0,6,Kinetic/Cerebral/Intuitive: Cerebral (shared by all 59 members of this cluster)
+7,0,7,Organization: Organized (shared by all 59 members of this cluster)
+8,0,8,Process: Ideator (shared by all 59 members of this cluster)
+9,0,9,Pace: Moderate (shared by all 59 members of this cluster)
+10,0,10,Confidence: Self Confident (shared by all 59 members of this cluster)
+11,0,11,Mean degree within cluster: 5.8
+12,0,12,Highest-degree member in this cluster: degree 49
+13,0,13,Centrality (mean within cluster): 1.82
+14,0,14,Bridging (mean within cluster): 1.02
+15,0,15,Diversity (mean within cluster): 0.73
+16,0,16,"Louvain0_1: Kinetic~ Perfectionist~ Multitasker~ Doer -- 106 members | mean degree 5.6 (highest 37) | mean centrality 2.58, bridging 0.69, diversity 0.57"
+17,0,17,Time: Evening (shared by all 106 members of this cluster)
+18,0,18,Juggle/Specialist: Multitasker (shared by all 106 members of this cluster)
+19,0,19,Details: Perfectionist (shared by all 106 members of this cluster)
+20,0,20,Kinetic/Cerebral/Intuitive: Kinetic (shared by all 106 members of this cluster)
+21,0,21,Organization: Organized (shared by all 106 members of this cluster)
+22,0,22,Process: Doer (shared by all 106 members of this cluster)
+23,0,23,Pace: Hyperactive (shared by all 106 members of this cluster)
+24,0,24,Confidence: Self Confident (shared by all 106 members of this cluster)
+25,0,25,Social/Solitary: Social (shared by all 106 members of this cluster)
+26,0,26,Mood: Stable (shared by all 106 members of this cluster)
+27,0,27,Mean degree within cluster: 5.6
+28,0,28,Highest-degree member in this cluster: degree 37
+29,0,29,Centrality (mean within cluster): 2.58
+30,0,30,Bridging (mean within cluster): 0.69
+31,0,31,Diversity (mean within cluster): 0.57
+32,0,32,"Louvain0_2: Kinetic~ Driven~ Solitary~ Doer -- 28 members | mean degree 3.6 (highest 8) | mean centrality 1.62, bridging 0.62, diversity 0.54"
+33,0,33,Time: Early Morning (shared by all 28 members of this cluster)
+34,0,34,Focus: Hardworking (shared by all 28 members of this cluster)
+35,0,35,Details: Detail Oriented/Principled (shared by all 28 members of this cluster)
+36,0,36,Kinetic/Cerebral/Intuitive: Kinetic (shared by all 28 members of this cluster)
+37,0,37,Organization: Neat (shared by all 28 members of this cluster)
+38,0,38,Process: Doer (shared by all 28 members of this cluster)
+39,0,39,Pace: Moderate (shared by all 28 members of this cluster)
+40,0,40,Confidence: Self Confident (shared by all 28 members of this cluster)
+41,0,41,Social/Solitary: Solitary (shared by all 28 members of this cluster)
+42,0,42,Mood: Stable (shared by all 28 members of this cluster)
+43,0,43,Adaptable/Determined: Felxible (shared by all 28 members of this cluster)
+44,0,44,Chance/Risk/Habit: Deliberate (shared by all 28 members of this cluster)
+45,0,45,Mean degree within cluster: 3.6
+46,0,46,Highest-degree member in this cluster: degree 8
+47,0,47,Centrality (mean within cluster): 1.62
+48,0,48,Bridging (mean within cluster): 0.62
+49,0,49,Diversity (mean within cluster): 0.54
+50,0,50,"Louvain0_3: Kinetic~ Pragmatic~ Multitasker~ Evaluator -- 119 members | mean degree 6.4 (highest 64) | mean centrality 3.70, bridging 0.55, diversity 0.36"
+51,0,51,Time: Late Morning (shared by all 119 members of this cluster)
+52,0,52,Juggle/Specialist: Multitasker (shared by all 119 members of this cluster)
+53,0,53,Details: Pragmatic (shared by all 119 members of this cluster)
+54,0,54,Kinetic/Cerebral/Intuitive: Kinetic (shared by all 119 members of this cluster)
+55,0,55,Process: Evaluator (shared by all 119 members of this cluster)
+56,0,56,Pace: Moderate (shared by all 119 members of this cluster)
+57,0,57,Confidence: Self Doubting (shared by all 119 members of this cluster)
+58,0,58,Mood: Sensitive (shared by all 119 members of this cluster)
+59,0,59,Adaptable/Determined: Adaptive (shared by all 119 members of this cluster)
+60,0,60,Chance/Risk/Habit: Rule Breaker (shared by all 119 members of this cluster)
+61,0,61,Mean degree within cluster: 6.4
+62,0,62,Highest-degree member in this cluster: degree 64
+63,0,63,Centrality (mean within cluster): 3.70
+64,0,64,Bridging (mean within cluster): 0.55
+65,0,65,Diversity (mean within cluster): 0.36
+66,0,66,"Louvain0_4: Self-Critical~ Solitary~ Risk Averse~ Doer -- 33 members | mean degree 4.1 (highest 10) | mean centrality 1.74, bridging 0.75, diversity 0.65"
+67,0,67,Time: Late Morning (shared by all 33 members of this cluster)
+68,0,68,Details: Pragmatic (shared by all 33 members of this cluster)
+69,0,69,Kinetic/Cerebral/Intuitive: Cerebral (shared by all 33 members of this cluster)
+70,0,70,Process: Evaluator (shared by all 33 members of this cluster)
+71,0,71,Pace: Slow (shared by all 33 members of this cluster)
+72,0,72,Confidence: Self Critical (shared by all 33 members of this cluster)
+73,0,73,Social/Solitary: Solitary (shared by all 33 members of this cluster)
+74,0,74,Chance/Risk/Habit: Risk Averse (shared by all 33 members of this cluster)
+75,0,75,Mean degree within cluster: 4.1
+76,0,76,Highest-degree member in this cluster: degree 10
+77,0,77,Centrality (mean within cluster): 1.74
+78,0,78,Bridging (mean within cluster): 0.75
+79,0,79,Diversity (mean within cluster): 0.65
+80,0,80,"Louvain0_5: Cerebral~ Rule-Breaking~ Envisioner -- 45 members | mean degree 5.7 (highest 23) | mean centrality 2.14, bridging 0.93, diversity 0.62"
+81,0,81,Time: Early Morning (shared by all 45 members of this cluster)
+82,0,82,Juggle/Specialist: Generalist (shared by all 45 members of this cluster)
+83,0,83,Kinetic/Cerebral/Intuitive: Cerebral (shared by all 45 members of this cluster)
+84,0,84,Process: Envisioner (shared by all 45 members of this cluster)
+85,0,85,Pace: slow (shared by all 45 members of this cluster)
+86,0,86,Confidence: Moderately confident (shared by all 45 members of this cluster)
+87,0,87,Chance/Risk/Habit: Rule Breaker (shared by all 45 members of this cluster)
+88,0,88,Mean degree within cluster: 5.7
+89,0,89,Highest-degree member in this cluster: degree 23
+90,0,90,Centrality (mean within cluster): 2.14
+91,0,91,Bridging (mean within cluster): 0.93
+92,0,92,Diversity (mean within cluster): 0.62
+93,0,93,"Louvain0_6: Cerebral~ Deliberate~ Envisioner -- 67 members | mean degree 4.0 (highest 20) | mean centrality 2.20, bridging 0.52, diversity 0.39"
+94,0,94,Time: Early Morning (shared by all 67 members of this cluster)
+95,0,95,Juggle/Specialist: Specialist (shared by all 67 members of this cluster)
+96,0,96,Focus: Focused (shared by all 67 members of this cluster)
+97,0,97,Kinetic/Cerebral/Intuitive: Cerebral (shared by all 67 members of this cluster)
+98,0,98,Organization: Messy (shared by all 67 members of this cluster)
+99,0,99,Process: Envisioner (shared by all 67 members of this cluster)
+100,0,100,Pace: Slow (shared by all 67 members of this cluster)
+101,0,101,Mood: Stable (shared by all 67 members of this cluster)
+102,0,102,Adaptable/Determined: Deliberate (shared by all 67 members of this cluster)
+103,0,103,Chance/Risk/Habit: Spontaneous (shared by all 67 members of this cluster)
+104,0,104,Mean degree within cluster: 4.0
+105,0,105,Highest-degree member in this cluster: degree 20
+106,0,106,Centrality (mean within cluster): 2.20
+107,0,107,Bridging (mean within cluster): 0.52
+108,0,108,Diversity (mean within cluster): 0.39
+109,0,109,"Louvain0_7: Crebral~ Tortured~ Intense -- 5 members | mean degree 1.6 (highest 3) | mean centrality 1.60, bridging 0.00, diversity 0.00"
+110,0,110,Focus: Intense (shared by all 5 members of this cluster)
+111,0,111,Kinetic/Cerebral/Intuitive: Cerebral (shared by all 5 members of this cluster)
+112,0,112,Pace: Moderate (shared by all 5 members of this cluster)
+113,0,113,Confidence: Self Critical (shared by all 5 members of this cluster)
+114,0,114,Mood: Tortured (shared by all 5 members of this cluster)
+115,0,115,Mean degree within cluster: 1.6
+116,0,116,Highest-degree member in this cluster: degree 3
+117,0,117,Centrality (mean within cluster): 1.60
+118,0,118,Bridging (mean within cluster): 0.00
+119,0,119,Diversity (mean within cluster): 0.00
+120,0,120,"Louvain0_8: Intuitive~ Driven~ Social~ Neat -- 41 members | mean degree 3.2 (highest 12) | mean centrality 1.75, bridging 0.46, diversity 0.36"
+121,0,121,Time: Late Nights (shared by all 41 members of this cluster)
+122,0,122,Focus: Driven (shared by all 41 members of this cluster)
+123,0,123,Details: Perfectionist (shared by all 41 members of this cluster)
+124,0,124,Kinetic/Cerebral/Intuitive: Intuitive (shared by all 41 members of this cluster)
+125,0,125,Organization: Neat (shared by all 41 members of this cluster)
+126,0,126,Process: Jack of All (shared by all 41 members of this cluster)
+127,0,127,Pace: Fast (shared by all 41 members of this cluster)
+128,0,128,Social/Solitary: Social (shared by all 41 members of this cluster)
+129,0,129,Chance/Risk/Habit: Habit (shared by all 41 members of this cluster)
+130,0,130,Mean degree within cluster: 3.2
+131,0,131,Highest-degree member in this cluster: degree 12
+132,0,132,Centrality (mean within cluster): 1.75
+133,0,133,Bridging (mean within cluster): 0.46
+134,0,134,Diversity (mean within cluster): 0.36
+135,0,135,"Louvain0_9: Principled~ Stable~ Methodical~ Risk-Averse~ Doer -- 45 members | mean degree 4.6 (highest 17) | mean centrality 2.07, bridging 0.71, diversity 0.53"
+136,0,136,Time: Early Afternoon (shared by all 45 members of this cluster)
+137,0,137,Juggle/Specialist: Singltasker (shared by all 45 members of this cluster)
+138,0,138,Details: Principled (shared by all 45 members of this cluster)
+139,0,139,Kinetic/Cerebral/Intuitive: Cerebral (shared by all 45 members of this cluster)
+140,0,140,Process: Doer (shared by all 45 members of this cluster)
+141,0,141,Pace: Moderate (shared by all 45 members of this cluster)
+142,0,142,Confidence: Self Confident (shared by all 45 members of this cluster)
+143,0,143,Mood: Stable (shared by all 45 members of this cluster)
+144,0,144,Chance/Risk/Habit: Risk Averse (shared by all 45 members of this cluster)
+145,0,145,Mean degree within cluster: 4.6
+146,0,146,Highest-degree member in this cluster: degree 17
+147,0,147,Centrality (mean within cluster): 2.07
+148,0,148,Bridging (mean within cluster): 0.71
+149,0,149,Diversity (mean within cluster): 0.53
+150,0,150,"Louvain0_10: Intuititive~ Self-Critical~ Solitary~ Ideator -- 5 members | mean degree 1.6 (highest 3) | mean centrality 1.60, bridging 0.00, diversity 0.00"
+151,0,151,Juggle/Specialist: Singltasker (shared by all 5 members of this cluster)
+152,0,152,Focus: Driven (shared by all 5 members of this cluster)
+153,0,153,Details: Perfectionist (shared by all 5 members of this cluster)
+154,0,154,Kinetic/Cerebral/Intuitive: Intuitive (shared by all 5 members of this cluster)
+155,0,155,Organization: Neat (shared by all 5 members of this cluster)
+156,0,156,Process: Ideator (shared by all 5 members of this cluster)
+157,0,157,Pace: Fast (shared by all 5 members of this cluster)
+158,0,158,Confidence: Self Critical (shared by all 5 members of this cluster)
+159,0,159,Social/Solitary: Solitary (shared by all 5 members of this cluster)
+160,0,160,Adaptable/Determined: Flexible (shared by all 5 members of this cluster)
+161,0,161,Chance/Risk/Habit: Habit (shared by all 5 members of this cluster)
+162,0,162,Mean degree within cluster: 1.6
+163,0,163,Highest-degree member in this cluster: degree 3
+164,0,164,Centrality (mean within cluster): 1.60
+165,0,165,Bridging (mean within cluster): 0.00
+166,0,166,Diversity (mean within cluster): 0.00
+167,0,167,"Louvain0_11: Tortured~ Solitary~ Singletasker~ Ideator -- 95 members | mean degree 5.0 (highest 36) | mean centrality 2.03, bridging 0.73, diversity 0.58"
+168,0,168,Time: Late Nights (shared by all 95 members of this cluster)
+169,0,169,Juggle/Specialist: Singltasker (shared by all 95 members of this cluster)
+170,0,170,Focus: Daydreamer (shared by all 95 members of this cluster)
+171,0,171,Details: Perfectionist (shared by all 95 members of this cluster)
+172,0,172,Kinetic/Cerebral/Intuitive: Kinetic (shared by all 95 members of this cluster)
+173,0,173,Organization: Messy (shared by all 95 members of this cluster)
+174,0,174,Process: Ideator (shared by all 95 members of this cluster)
+175,0,175,Pace: Moderate (shared by all 95 members of this cluster)
+176,0,176,Confidence: Self Doubting (shared by all 95 members of this cluster)
+177,0,177,Social/Solitary: Solitary (shared by all 95 members of this cluster)
+178,0,178,Mood: Tortured (shared by all 95 members of this cluster)
+179,0,179,Chance/Risk/Habit: Risk Averse (shared by all 95 members of this cluster)
+180,0,180,Mean degree within cluster: 5.0
+181,0,181,Highest-degree member in this cluster: degree 36
+182,0,182,Centrality (mean within cluster): 2.03
+183,0,183,Bridging (mean within cluster): 0.73
+184,0,184,Diversity (mean within cluster): 0.58
+185,0,185,"Louvain0_12: Tortured~ Social~ Multitasker~ Ideator -- 14 members | mean degree 2.2 (highest 5) | mean centrality 2.05, bridging 0.04, diversity 0.04"
+186,0,186,Time: Early Afternoon (shared by all 14 members of this cluster)
+187,0,187,Juggle/Specialist: Multitasker (shared by all 14 members of this cluster)
+188,0,188,Focus: Driven (shared by all 14 members of this cluster)
+189,0,189,Details: Perfectionist (shared by all 14 members of this cluster)
+190,0,190,Kinetic/Cerebral/Intuitive: Intuitive (shared by all 14 members of this cluster)
+191,0,191,Organization: Neat (shared by all 14 members of this cluster)
+192,0,192,Process: Ideator (shared by all 14 members of this cluster)
+193,0,193,Pace: Fast (shared by all 14 members of this cluster)
+194,0,194,Confidence: Insecure (shared by all 14 members of this cluster)
+195,0,195,Social/Solitary: Social (shared by all 14 members of this cluster)
+196,0,196,Mood: Tortured (shared by all 14 members of this cluster)
+197,0,197,Adaptable/Determined: Flexible (shared by all 14 members of this cluster)
+198,0,198,Chance/Risk/Habit: Risk Taker (shared by all 14 members of this cluster)
+199,0,199,Mean degree within cluster: 2.2
+200,0,200,Highest-degree member in this cluster: degree 5
+201,0,201,Centrality (mean within cluster): 2.05
+202,0,202,Bridging (mean within cluster): 0.04
+203,0,203,Diversity (mean within cluster): 0.04
