@@ -519,14 +519,7 @@ class Viewport(QOpenGLWidget):
                 vp_x = int(screen_x * dpr)
                 vp_w = fb_w - vp_x if screen_x else int(half_w * dpr)
                 glViewport(vp_x, 0, vp_w, fb_h)
-                glMatrixMode(GL_PROJECTION)
-                glLoadIdentity()
-                gluPerspective(45.0, seg_w / h, 0.1, 100000.0)
-                glMatrixMode(GL_MODELVIEW)
-                glLoadIdentity()
-                eye_x, eye_y, eye_z = self._eye_position_with_offset(lateral_offset)
-                tx, ty, tz = self._cam_target
-                gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
+                self._setup_stereo_eye_matrices(lateral_offset, seg_w, h)
                 mv, pr = self._capture_camera_matrices()
                 self._draw_scene_content()
                 if self.show_tags and mv is not None:
@@ -588,6 +581,56 @@ class Viewport(QOpenGLWidget):
         eye_x += -math.sin(az) * lateral_offset
         eye_y += math.cos(az) * lateral_offset
         return eye_x, eye_y, eye_z
+
+    def _setup_stereo_eye_matrices(self, lateral_offset: float, seg_w: float, h: float):
+        """Set up GL_PROJECTION (off-axis/asymmetric frustum) and GL_MODELVIEW
+        (shared orbit-camera orientation + an eye-space lateral translate) for
+        one stereo eye pass. Call with GL_PROJECTION/GL_MODELVIEW already
+        pushed; this overwrites both with glLoadIdentity().
+
+        Both eyes use the *exact same* gluLookAt call (same eye position,
+        target, up) -- the only per-eye differences are an eye-space
+        glTranslatef and a matching shift of the projection frustum's
+        center, which keeps the camera's orientation (and hence the
+        rendered "up" direction) identical between the two eyes at every
+        azimuth/elevation.
+
+        This matters because the earlier approach -- shifting each eye's
+        *world-space position* and re-aiming a separate gluLookAt at the
+        same target -- gives each eye a slightly different forward vector.
+        gluLookAt derives its internal right/up basis via cross(forward,
+        up), and that cross product shrinks toward zero (and becomes
+        numerically unstable) as forward approaches parallel to the
+        world-up axis -- i.e. orbiting toward a straight-down view. Because
+        the two eyes' forward vectors differ ever so slightly, they'd
+        destabilize differently and visibly twist relative to each other
+        near the pole. Sharing one orientation for both eyes sidesteps the
+        instability entirely (any wobble at the exact pole now matches
+        whatever the single-eye camera already does, identically in both
+        eyes), while the off-axis frustum shift keeps convergence
+        (zero parallax) exactly at the orbit target -- see paintGL's
+        eye-offset/distance ratio for the eye-separation math itself.
+        """
+        near, far = 0.1, 100000.0
+        half_h = near * math.tan(math.radians(45.0) / 2.0)
+        half_w = half_h * (seg_w / h)
+        d = max(self._cam_distance, 1e-6)
+        shift = -lateral_offset * near / d
+
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glFrustum(shift - half_w, shift + half_w, -half_h, half_h, near, far)
+
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        glTranslatef(-lateral_offset, 0.0, 0.0)
+        az = math.radians(self._cam_azimuth)
+        el = math.radians(self._cam_elevation)
+        tx, ty, tz = self._cam_target
+        eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
+        eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
+        eye_z = tz + self._cam_distance * math.sin(el)
+        gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
 
     def _capture_camera_matrices(self) -> tuple[np.ndarray | None, np.ndarray | None]:
         """Snapshot the current GL modelview/projection matrices (row-major)
@@ -1042,18 +1085,24 @@ class Viewport(QOpenGLWidget):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         # Mirror paintGL's projection and camera setup exactly (including the
-        # per-eye lateral offset when called for stereo-mode picking).
+        # per-eye off-axis frustum/eye-space shift when called for stereo-mode
+        # picking -- see _setup_stereo_eye_matrices).
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
-        glLoadIdentity()
-        gluPerspective(45.0, w / h, 0.1, 100000.0)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
-        glLoadIdentity()
 
-        eye_x, eye_y, eye_z = self._eye_position_with_offset(lateral_offset)
-        tx, ty, tz = self._cam_target
-        gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
+        if seg_w is not None:
+            self._setup_stereo_eye_matrices(lateral_offset, w, h)
+        else:
+            glMatrixMode(GL_PROJECTION)
+            glLoadIdentity()
+            gluPerspective(45.0, w / h, 0.1, 100000.0)
+            glMatrixMode(GL_MODELVIEW)
+            glLoadIdentity()
+            eye_x, eye_y, eye_z = self._eye_position_with_offset(lateral_offset)
+            tx, ty, tz = self._cam_target
+            gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
 
         glDisable(GL_LIGHTING)
         glDisable(GL_BLEND)
