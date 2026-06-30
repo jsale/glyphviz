@@ -120,6 +120,16 @@ class Viewport(QOpenGLWidget):
         self._cam_elevation = 25.0
         self._cam_target = [0.0, 0.0, 0.0]
 
+        # Cross-eye free-view stereo: render the scene twice (per-eye lateral
+        # camera offset, same look-at target -> toe-in convergence at the
+        # target with zero parallax there), side by side in this same widget.
+        # Separation auto-scales with cam_distance (a fixed % of it) so it
+        # stays sensible across zoom levels; stereo_separation_pct is also
+        # user-adjustable for scenes where the default depth feels too flat
+        # or too extreme.
+        self.stereo_mode: bool = False
+        self.stereo_separation_pct: float = 3.0
+
         self._last_pos = QPoint()
         self._press_pos = QPoint()
         self._drag_button = None
@@ -485,33 +495,114 @@ class Viewport(QOpenGLWidget):
             glDisable(GL_FOG)
 
         w, h = self.width(), self.height()
-        if h > 0:
-            glViewport(0, 0, int(w * self.devicePixelRatioF()), int(h * self.devicePixelRatioF()))
+        if h <= 0 or w <= 0:
+            return
+        dpr = self.devicePixelRatioF()
+        fb_w, fb_h = int(w * dpr), int(h * dpr)
+        glViewport(0, 0, fb_w, fb_h)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        if self.stereo_mode and w >= 2:
+            self._mv_matrix = None
+            self._proj_matrix = None
+            half_w = w // 2
+            right_w = w - half_w
+            sep = self._cam_distance * (self.stereo_separation_pct / 100.0)
+            # Cross-eye free-view: the eyes converge by crossing, so the image
+            # meant for the RIGHT eye goes on the screen's LEFT half and vice
+            # versa (opposite of parallel/"wall-eyed" viewing).
+            tag_batches = []
+            for screen_x, seg_w, lateral_offset in (
+                (0, half_w, +sep / 2.0),        # screen-left  <- right-eye camera
+                (half_w, right_w, -sep / 2.0),  # screen-right <- left-eye camera
+            ):
+                vp_x = int(screen_x * dpr)
+                vp_w = fb_w - vp_x if screen_x else int(half_w * dpr)
+                glViewport(vp_x, 0, vp_w, fb_h)
+                glMatrixMode(GL_PROJECTION)
+                glLoadIdentity()
+                gluPerspective(45.0, seg_w / h, 0.1, 100000.0)
+                glMatrixMode(GL_MODELVIEW)
+                glLoadIdentity()
+                eye_x, eye_y, eye_z = self._eye_position_with_offset(lateral_offset)
+                tx, ty, tz = self._cam_target
+                gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
+                mv, pr = self._capture_camera_matrices()
+                self._draw_scene_content()
+                if self.show_tags and mv is not None:
+                    tag_batches.append((screen_x, seg_w, mv, pr))
+            self._video_mgr.finalize_frame()   # pause any video no node drew this frame
+
+            glViewport(0, 0, fb_w, fb_h)   # restore full-widget viewport for QPainter overlay
+            if tag_batches:
+                self._draw_tags_qpainter_stereo(tag_batches)
+        else:
             glMatrixMode(GL_PROJECTION)
             glLoadIdentity()
             gluPerspective(45.0, w / h, 0.1, 100000.0)
             glMatrixMode(GL_MODELVIEW)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glLoadIdentity()
+            glLoadIdentity()
 
+            az = math.radians(self._cam_azimuth)
+            el = math.radians(self._cam_elevation)
+            tx, ty, tz = self._cam_target
+            eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
+            eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
+            eye_z = tz + self._cam_distance * math.sin(el)
+            gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
+
+            # Capture camera matrices for world→screen tag projection (before node transforms).
+            self._mv_matrix, self._proj_matrix = self._capture_camera_matrices()
+
+            self._draw_scene_content()
+            self._video_mgr.finalize_frame()   # pause any video no node drew this frame
+
+            if self._rubber_mode and self._rubber_start and self._rubber_end:
+                self._draw_rubber_band()
+
+            # QPainter tag overlay (must come after all glBegin/glEnd blocks).
+            if self.show_tags and self._mv_matrix is not None:
+                self._draw_tags_qpainter()
+
+        # FPS: count this frame; emit once per second
+        self._fps_frames += 1
+        now = time.perf_counter()
+        elapsed = now - self._fps_t0
+        if elapsed >= 1.0:
+            self.fpsUpdated.emit(self._fps_frames / elapsed)
+            self._fps_frames = 0
+            self._fps_t0 = now
+
+    def _eye_position_with_offset(self, lateral_offset: float) -> tuple[float, float, float]:
+        """Eye position for the current orbit camera, shifted by lateral_offset
+        world units along the camera's right vector (perpendicular to the view
+        direction, in the XY plane -- same "right" convention as the
+        middle-button pan in mouseMoveEvent). lateral_offset=0 matches the
+        normal single-eye camera exactly; used to build the two stereo eyes."""
         az = math.radians(self._cam_azimuth)
         el = math.radians(self._cam_elevation)
         tx, ty, tz = self._cam_target
         eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
         eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
         eye_z = tz + self._cam_distance * math.sin(el)
-        gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
+        eye_x += -math.sin(az) * lateral_offset
+        eye_y += math.cos(az) * lateral_offset
+        return eye_x, eye_y, eye_z
 
-        # Capture camera matrices for world→screen tag projection (before node transforms).
+    def _capture_camera_matrices(self) -> tuple[np.ndarray | None, np.ndarray | None]:
+        """Snapshot the current GL modelview/projection matrices (row-major)
+        for world->screen tag projection, right after gluLookAt/gluPerspective."""
         try:
             mv = np.array(glGetDoublev(GL_MODELVIEW_MATRIX), dtype=np.float64)
             pr = np.array(glGetDoublev(GL_PROJECTION_MATRIX), dtype=np.float64)
-            self._mv_matrix = mv.reshape(4, 4).T   # column-major → row-major
-            self._proj_matrix = pr.reshape(4, 4).T
+            return mv.reshape(4, 4).T, pr.reshape(4, 4).T   # column-major -> row-major
         except Exception:
-            self._mv_matrix = None
-            self._proj_matrix = None
+            return None, None
 
+    def _draw_scene_content(self):
+        """Draw grid/axes/nodes/topology overlays against whatever camera
+        matrices are currently loaded. Shared by the normal single-eye pass
+        and each stereo eye pass in paintGL."""
         if self.show_grid:
             self._draw_grid()
         if self.show_axes:
@@ -529,25 +620,8 @@ class Viewport(QOpenGLWidget):
                 break
             self._draw_node(node, selected=(node.id in self.selected_node_ids))
             visible_count += 1
-        self._video_mgr.finalize_frame()   # pause any video no node drew this frame
 
         self._draw_topology_overlays()
-
-        if self._rubber_mode and self._rubber_start and self._rubber_end:
-            self._draw_rubber_band()
-
-        # QPainter tag overlay (must come after all glBegin/glEnd blocks).
-        if self.show_tags and self._mv_matrix is not None:
-            self._draw_tags_qpainter()
-
-        # FPS: count this frame; emit once per second
-        self._fps_frames += 1
-        now = time.perf_counter()
-        elapsed = now - self._fps_t0
-        if elapsed >= 1.0:
-            self.fpsUpdated.emit(self._fps_frames / elapsed)
-            self._fps_frames = 0
-            self._fps_t0 = now
 
     def _draw_topology_overlays(self):
         """Draw type=7 link lines, TOPO_PLOT polylines, and TOPO_SURFACE quad meshes."""
@@ -688,14 +762,12 @@ class Viewport(QOpenGLWidget):
 
         glEnable(GL_LIGHTING)  # restore for subsequent passes (rubber band, etc.)
 
-    def _draw_tags_qpainter(self):
-        """Project tagged nodes to screen space and draw text with QPainter overlay."""
-        mv = self._mv_matrix
-        pr = self._proj_matrix
-        w, h = self.width(), self.height()
-        if w <= 0 or h <= 0:
-            return
-
+    def _project_tagged_nodes(self, mv: np.ndarray, pr: np.ndarray,
+                               vx: int, vy: int, vw: int, vh: int) -> list[tuple[str, int, int]]:
+        """World->screen project every tagged, visible node's position using
+        the given camera matrices into the (vx, vy, vw, vh) viewport sub-rect
+        (Qt widget coordinates). Used for both the full-widget single-eye
+        view and each half-width stereo eye view."""
         tagged: list[tuple[str, int, int]] = []
         visible_count = 0
         for node in self._scene.nodes:
@@ -721,12 +793,26 @@ class Viewport(QOpenGLWidget):
                 ndc = clip[:3] / clip[3]
                 if not (-1.0 <= ndc[0] <= 1.0 and -1.0 <= ndc[1] <= 1.0 and -1.0 <= ndc[2] <= 1.0):
                     continue
-                sx = int((ndc[0] + 1.0) / 2.0 * w)
-                sy = int((1.0 - (ndc[1] + 1.0) / 2.0) * h)   # Y-flip for Qt
+                sx = vx + int((ndc[0] + 1.0) / 2.0 * vw)
+                sy = vy + int((1.0 - (ndc[1] + 1.0) / 2.0) * vh)   # Y-flip for Qt
                 tagged.append((node.text, sx, sy))
             except Exception:
                 continue
+        return tagged
 
+    def _paint_tags(self, painter: QPainter, tagged: list[tuple[str, int, int]]):
+        for text, sx, sy in tagged:
+            painter.setPen(QColor(0, 0, 0, 200))
+            painter.drawText(sx + 6, sy + 1, text)
+            painter.setPen(QColor(255, 255, 200, 230))
+            painter.drawText(sx + 5, sy, text)
+
+    def _draw_tags_qpainter(self):
+        """Project tagged nodes to screen space and draw text with QPainter overlay."""
+        w, h = self.width(), self.height()
+        if w <= 0 or h <= 0:
+            return
+        tagged = self._project_tagged_nodes(self._mv_matrix, self._proj_matrix, 0, 0, w, h)
         if not tagged:
             return
 
@@ -735,11 +821,24 @@ class Viewport(QOpenGLWidget):
         font = painter.font()
         font.setPointSize(9)
         painter.setFont(font)
-        for text, sx, sy in tagged:
-            painter.setPen(QColor(0, 0, 0, 200))
-            painter.drawText(sx + 6, sy + 1, text)
-            painter.setPen(QColor(255, 255, 200, 230))
-            painter.drawText(sx + 5, sy, text)
+        self._paint_tags(painter, tagged)
+        painter.end()
+
+    def _draw_tags_qpainter_stereo(self, batches: list[tuple[int, int, np.ndarray, np.ndarray]]):
+        """Stereo equivalent of _draw_tags_qpainter: project and draw each
+        eye's tags into its own screen half. batches is a list of
+        (screen_x, seg_w, mv, pr) -- one entry per eye pass."""
+        h = self.height()
+        if h <= 0:
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        font = painter.font()
+        font.setPointSize(9)
+        painter.setFont(font)
+        for screen_x, seg_w, mv, pr in batches:
+            tagged = self._project_tagged_nodes(mv, pr, screen_x, 0, seg_w, h)
+            self._paint_tags(painter, tagged)
         painter.end()
 
     def _draw_node(self, node: Node, selected: bool = False):
@@ -908,9 +1007,16 @@ class Viewport(QOpenGLWidget):
         self._pick_fbo = self._pick_tex = self._pick_rbo = 0
         self._pick_fbo_size = (0, 0)
 
-    def _render_pick_scene(self) -> tuple | None:
+    def _render_pick_scene(self, seg_w: float | None = None, lateral_offset: float = 0.0) -> tuple | None:
         """
         Bind the pick FBO and render all glyphs with color-ID encoding.
+
+        seg_w: width (Qt logical px) to use for the perspective aspect ratio
+        and FBO sizing instead of self.width() -- used for stereo per-eye
+        picking, where a click falls within one half of the split widget.
+        lateral_offset: camera eye lateral offset (world units), matching
+        paintGL's stereo eye offset; 0.0 (the default) is the normal
+        single-eye camera.
 
         Returns (qt_fbo, fb_w, fb_h, dpr, w, h) with the GL state ready for
         glReadPixels, or None if setup failed.  Caller MUST call
@@ -920,7 +1026,8 @@ class Viewport(QOpenGLWidget):
         """
         if not self._scene.nodes:
             return None
-        w, h = self.width(), self.height()
+        w = seg_w if seg_w is not None else self.width()
+        h = self.height()
         if w <= 0 or h <= 0:
             return None
         dpr = self.devicePixelRatio()
@@ -934,7 +1041,8 @@ class Viewport(QOpenGLWidget):
         glClearColor(0.0, 0.0, 0.0, 0.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        # Mirror paintGL's projection and camera setup exactly
+        # Mirror paintGL's projection and camera setup exactly (including the
+        # per-eye lateral offset when called for stereo-mode picking).
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
@@ -943,12 +1051,8 @@ class Viewport(QOpenGLWidget):
         glPushMatrix()
         glLoadIdentity()
 
-        az = math.radians(self._cam_azimuth)
-        el = math.radians(self._cam_elevation)
+        eye_x, eye_y, eye_z = self._eye_position_with_offset(lateral_offset)
         tx, ty, tz = self._cam_target
-        eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
-        eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
-        eye_z = tz + self._cam_distance * math.sin(el)
         gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
 
         glDisable(GL_LIGHTING)
@@ -1046,16 +1150,32 @@ class Viewport(QOpenGLWidget):
 
         The Y-flip (Qt top-left vs OpenGL bottom-left) and devicePixelRatio
         (HiDPI) are both handled here.
+
+        In stereo mode, the click falls in one half of the split widget;
+        re-render the pick pass with that half's eye offset and aspect ratio
+        (mirroring paintGL's stereo loop) so the pick ray matches what's
+        actually on screen there.
         """
         self.makeCurrent()
         try:
-            result = self._render_pick_scene()
+            if self.stereo_mode:
+                w = self.width()
+                half_w = w // 2
+                sep = self._cam_distance * (self.stereo_separation_pct / 100.0)
+                if screen_x < half_w:
+                    seg_w, local_x, lateral_offset = half_w, screen_x, +sep / 2.0
+                else:
+                    seg_w, local_x, lateral_offset = w - half_w, screen_x - half_w, -sep / 2.0
+                result = self._render_pick_scene(seg_w=seg_w, lateral_offset=lateral_offset)
+            else:
+                local_x = screen_x
+                result = self._render_pick_scene()
             if result is None:
                 return None
             qt_fbo, fb_w, fb_h, dpr, w, h = result
 
             # Y-flip + HiDPI scaling
-            fb_x = min(max(int(screen_x * dpr), 0), fb_w - 1)
+            fb_x = min(max(int(local_x * dpr), 0), fb_w - 1)
             fb_y = min(max(int((h - 1 - screen_y) * dpr), 0), fb_h - 1)
             pixel = glReadPixels(fb_x, fb_y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE)
 
@@ -1180,8 +1300,13 @@ class Viewport(QOpenGLWidget):
     # --- mouse ---
 
     def mousePressEvent(self, event):
-        # Shift+LeftButton starts rubber-band region select
-        if (event.button() == Qt.MouseButton.LeftButton
+        # Shift+LeftButton starts rubber-band region select (disabled in
+        # stereo mode: a single screen-space rectangle can't be mapped back
+        # to one node set when the two eyes show different projections of
+        # the same scene). Single-node click/double-click picking still
+        # works in stereo -- see _pick_node, which re-renders the matching
+        # eye's pick pass for whichever half was clicked.
+        if (not self.stereo_mode and event.button() == Qt.MouseButton.LeftButton
                 and event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
             self._rubber_mode = True
             self._rubber_start = event.pos()
@@ -1215,7 +1340,8 @@ class Viewport(QOpenGLWidget):
             self.update()
             return
 
-        # --- normal click ---
+        # --- normal click --- (single-node picking works in stereo mode too;
+        # only rubber-band region select is disabled there, see mousePressEvent)
         if (not self._drag_moved
                 and self._drag_button == Qt.MouseButton.LeftButton):
             node = self._pick_node(event.pos().x(), event.pos().y())

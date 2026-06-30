@@ -218,6 +218,18 @@ class MainWindow(QMainWindow):
         self._tags_act.triggered.connect(lambda c: self._set_tags(c))
 
         self._view_menu.addSeparator()
+        self._stereo_act = self._view_menu.addAction("Stereo &3D (Cross-Eye)")
+        self._stereo_act.setCheckable(True)
+        self._stereo_act.setChecked(False)
+        self._stereo_act.setToolTip(
+            "Side-by-side stereo pair, free-viewed by crossing your eyes.\n"
+            "Fills the Viewer panel and adapts as side panels open/close.\n"
+            "Camera orbit/pan/zoom and single-node click/double-click selection\n"
+            "still work; rubber-band region select is disabled while active."
+        )
+        self._stereo_act.triggered.connect(lambda c: self._set_stereo(c))
+
+        self._view_menu.addSeparator()
         self._view_menu.addAction("Reset &Camera").triggered.connect(self._reset_camera)
 
     def _build_manipulate_toolbar(self):
@@ -369,6 +381,32 @@ class MainWindow(QMainWindow):
         self._scale_slider.valueChanged.connect(self._update_scale)
         scale_layout.addWidget(self._scale_label)
         scale_layout.addWidget(self._scale_slider)
+
+        # --- Stereo 3D group: side-by-side cross-eye free-view pair ---
+        stereo_grp = QGroupBox("Stereo 3D (Cross-Eye)")
+        stereo_layout = QVBoxLayout(stereo_grp)
+        self._cb_stereo = QCheckBox("Enable Stereo View")
+        self._cb_stereo.setChecked(False)
+        self._cb_stereo.setToolTip(
+            "Side-by-side stereo pair, free-viewed by crossing your eyes.\n"
+            "Camera orbit/pan/zoom and single-node click/double-click selection\n"
+            "still work; rubber-band region select is disabled while active."
+        )
+        self._cb_stereo.toggled.connect(self._set_stereo)
+        self._stereo_sep_label = QLabel("Eye Separation: 3.0%")
+        self._stereo_sep_slider = QSlider(Qt.Orientation.Horizontal)
+        self._stereo_sep_slider.setRange(5, 150)   # 0.5% - 15.0% of camera distance
+        self._stereo_sep_slider.setValue(30)       # 3.0% default
+        self._stereo_sep_slider.setTickInterval(10)
+        self._stereo_sep_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._stereo_sep_slider.setToolTip(
+            "Eye separation as a % of camera distance -- auto-scales with zoom.\n"
+            "Higher = stronger 3-D depth (and harder to fuse); lower = subtler."
+        )
+        self._stereo_sep_slider.valueChanged.connect(self._update_stereo_separation)
+        stereo_layout.addWidget(self._cb_stereo)
+        stereo_layout.addWidget(self._stereo_sep_label)
+        stereo_layout.addWidget(self._stereo_sep_slider)
 
         # --- Scene Settings group: world-level (not per-node) background
         # color, render/blend mode, and fog — read from/written to the World
@@ -839,6 +877,7 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(disp)
         layout.addWidget(scale_grp)
+        layout.addWidget(stereo_grp)
         layout.addWidget(scene_grp)
         layout.addWidget(stats_grp)
         layout.addWidget(create_grp)
@@ -1141,6 +1180,18 @@ class MainWindow(QMainWindow):
         scale = value / 10.0
         self._scale_label.setText(f"Scale: {scale:.1f}")
         self._viewport.base_scale = scale
+        self._viewport.update()
+
+    def _set_stereo(self, checked: bool):
+        self._viewport.stereo_mode = checked
+        self._cb_stereo.setChecked(checked)
+        self._stereo_act.setChecked(checked)
+        self._viewport.update()
+
+    def _update_stereo_separation(self, value: int):
+        pct = value / 10.0
+        self._stereo_sep_label.setText(f"Eye Separation: {pct:.1f}%")
+        self._viewport.stereo_separation_pct = pct
         self._viewport.update()
 
     # --- Select By ---
