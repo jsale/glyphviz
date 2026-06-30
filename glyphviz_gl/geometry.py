@@ -517,7 +517,8 @@ def _draw_cross(half_width=0.3):
 class GeoRenderer:
     def __init__(self):
         self._lists: dict[int, int] = {}
-        self._tex_dispatch: dict[int, object] = {}
+        self._tex_lists: dict[int, int] = {}
+        self._torus_lists: dict[tuple, int] = {}   # (geo_id, textured, rounded ratio) -> display list
         self._mesh_lists: dict[int, int] = {}   # mesh_id -> display list
         self._ready = False
 
@@ -553,9 +554,14 @@ class GeoRenderer:
             GEO_STAR:          lambda: _draw_star(),
         }
 
-        # Textured variants call geometry functions directly (bypassing display
-        # lists) so that glTexCoord2f / gluQuadricTexture calls are live.
-        self._tex_dispatch = {
+        # Textured variants are also compiled into display lists, same as the
+        # untextured shapes above: glTexCoord2f / gluQuadricTexture calls are
+        # ordinary GL commands and get captured into the list just like
+        # glVertex3f/glNormal3f — the texture *binding* stays outside the
+        # list and is set per-node in draw() via glBindTexture before
+        # glCallList, so one compiled list is shared across every node using
+        # that geometry, whatever texture each one binds.
+        _TEX_DISPATCH = {
             GEO_CUBE:     lambda: _draw_cube(True, True),
             GEO_SPHERE:   lambda: _draw_sphere(True, textured=True),
             GEO_CONE:     lambda: _draw_cone(True, textured=True),
@@ -575,8 +581,8 @@ class GeoRenderer:
             if fn is None:
                 # GEO_TORUS/GEO_TORUS_WIRE are deliberately absent: their
                 # shape (not just size) depends on each node's own `ratio`,
-                # so they're drawn immediately per-node in draw() instead of
-                # baked into one fixed-shape display list.
+                # so they're compiled lazily per distinct ratio in draw()
+                # instead of baked into one fixed-shape list here.
                 continue
             dl = glGenLists(1)
             glNewList(dl, GL_COMPILE)
@@ -586,6 +592,16 @@ class GeoRenderer:
                 _draw_sphere(True)
             glEndList()
             self._lists[geo_id] = dl
+
+        for geo_id, fn in _TEX_DISPATCH.items():
+            dl = glGenLists(1)
+            glNewList(dl, GL_COMPILE)
+            try:
+                fn()
+            except Exception:
+                _draw_sphere(True, textured=True)
+            glEndList()
+            self._tex_lists[geo_id] = dl
 
         self._ready = True
 
@@ -659,15 +675,25 @@ class GeoRenderer:
         if geo_id in (GEO_TORUS, GEO_TORUS_WIRE):
             # Each node may set its own torus `ratio` (major/minor radius
             # proportions), so — unlike the other glyphs — its shape can't be
-            # captured by a single fixed-shape display list scaled per node;
-            # draw it immediately with radii derived from this node's ratio.
-            r_major, r_minor = torus_radii(ratio)
+            # baked into one fixed-shape list at setup() time. Instead, cache
+            # one compiled list per distinct (rounded) ratio actually seen,
+            # built once on first use and reused by every node/frame sharing
+            # that ratio rather than regenerating the mesh every draw call.
+            key = (geo_id, textured, round(ratio, 4))
+            dl = self._torus_lists.get(key)
+            if dl is None:
+                r_major, r_minor = torus_radii(ratio)
+                dl = glGenLists(1)
+                glNewList(dl, GL_COMPILE)
+                _draw_torus(geo_id == GEO_TORUS, r_major, r_minor, textured=textured)
+                glEndList()
+                self._torus_lists[key] = dl
             if textured:
                 glEnable(GL_TEXTURE_2D)
                 glBindTexture(GL_TEXTURE_2D, gl_tex_name)
             glPushMatrix()
             glScalef(rx, ry, rz)
-            _draw_torus(geo_id == GEO_TORUS, r_major, r_minor, textured=textured)
+            glCallList(dl)
             glPopMatrix()
             if textured:
                 glBindTexture(GL_TEXTURE_2D, 0)
@@ -675,13 +701,13 @@ class GeoRenderer:
             return
 
         if textured:
-            fn = self._tex_dispatch.get(geo_id)
-            if fn is not None:
+            dl = self._tex_lists.get(geo_id)
+            if dl is not None:
                 glEnable(GL_TEXTURE_2D)
                 glBindTexture(GL_TEXTURE_2D, gl_tex_name)
                 glPushMatrix()
                 glScalef(rx, ry, rz)
-                fn()
+                glCallList(dl)
                 glPopMatrix()
                 glBindTexture(GL_TEXTURE_2D, 0)
                 glDisable(GL_TEXTURE_2D)

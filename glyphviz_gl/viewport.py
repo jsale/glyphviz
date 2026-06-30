@@ -26,6 +26,14 @@ from .video_manager import VideoManager
 
 _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag
 
+# Safety valve for scenes where most/all nodes are tagged at once (e.g. a
+# heatmap-style file with thousands of labeled points): QPainter text
+# rasterization is CPU-bound and doesn't batch, so drawing thousands of
+# on-screen tags every frame can dominate frame time even after they're
+# individually cheap to project. Ordinary tag counts (tens to low hundreds)
+# never hit this; it only engages on pathological cases.
+_MAX_TAGS_PER_FRAME = 500
+
 # ANTz rate convention (translate_rate_x/y/z, rotate_rate_x/y/z, scale_rate_x/y/z):
 # a delta applied every cycle, nominally 60 cycles/second — see
 # Node-Field-Descriptions.md's Translate/Rotate/Scale sections.
@@ -521,7 +529,7 @@ class Viewport(QOpenGLWidget):
                 glViewport(vp_x, 0, vp_w, fb_h)
                 self._setup_stereo_eye_matrices(lateral_offset, seg_w, h)
                 mv, pr = self._capture_camera_matrices()
-                self._draw_scene_content()
+                self._draw_scene_content(mv, pr)
                 if self.show_tags and mv is not None:
                     tag_batches.append((screen_x, seg_w, mv, pr))
             self._video_mgr.finalize_frame()   # pause any video no node drew this frame
@@ -642,14 +650,19 @@ class Viewport(QOpenGLWidget):
         except Exception:
             return None, None
 
-    def _draw_scene_content(self):
+    def _draw_scene_content(self, mv: np.ndarray | None = None, pr: np.ndarray | None = None):
         """Draw grid/axes/nodes/topology overlays against whatever camera
         matrices are currently loaded. Shared by the normal single-eye pass
-        and each stereo eye pass in paintGL."""
+        and each stereo eye pass in paintGL. mv/pr let the stereo per-eye
+        loop pass its own just-captured matrices in for frustum culling
+        (self._mv_matrix/_proj_matrix are left None in stereo mode -- see
+        paintGL -- since each eye needs its own off-axis projection)."""
         if self.show_grid:
             self._draw_grid()
         if self.show_axes:
             self._draw_axes()
+
+        planes = self._frustum_planes(mv, pr)
 
         visible_count = 0
         for node in self._scene.nodes:
@@ -661,10 +674,55 @@ class Viewport(QOpenGLWidget):
                 continue
             if self._draw_limit is not None and visible_count >= self._draw_limit:
                 break
-            self._draw_node(node, selected=(node.id in self.selected_node_ids))
+            # Count this node against the decimation cap regardless of
+            # frustum culling, so the \\-key limit stays a stable scene-wide
+            # cap rather than fluctuating with camera angle.
             visible_count += 1
+            M = node_world_matrix(node, self._scene)
+            if planes is not None and not self._sphere_in_frustum(planes, M):
+                continue
+            self._draw_node(node, M, selected=(node.id in self.selected_node_ids))
 
         self._draw_topology_overlays()
+
+    def _frustum_planes(self, mv: np.ndarray | None = None, pr: np.ndarray | None = None
+                         ) -> list[tuple[float, float, float, float]] | None:
+        """Six view-frustum planes (a,b,c,d), normalized so a point's signed
+        distance is a*x+b*y+c*z+d, derived from the projection/modelview
+        matrices via the standard Gribb/Hartmann extraction. Falls back to
+        self._mv_matrix/_proj_matrix (the single-eye camera) when mv/pr
+        aren't passed explicitly; returns None if neither is available yet."""
+        mv = self._mv_matrix if mv is None else mv
+        pr = self._proj_matrix if pr is None else pr
+        if mv is None or pr is None:
+            return None
+        m = pr @ mv   # row-major: clip = m @ world
+        raw = (m[3] + m[0], m[3] - m[0],   # left, right
+               m[3] + m[1], m[3] - m[1],   # bottom, top
+               m[3] + m[2], m[3] - m[2])   # near, far
+        planes = []
+        for p in raw:
+            n = math.sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2])
+            if n < 1e-12:
+                n = 1.0
+            planes.append((p[0] / n, p[1] / n, p[2] / n, p[3] / n))
+        return planes
+
+    @staticmethod
+    def _sphere_in_frustum(planes: list[tuple[float, float, float, float]], M: np.ndarray) -> bool:
+        """True unless the node's bounding sphere (derived from its world
+        matrix M) is entirely on the outside of some frustum plane. All
+        glyph geometry is compiled at unit scale (radius ~1 -- see
+        geometry.py's module docstring), so the world-space bounding radius
+        is M's largest per-axis stretch (column norm of its 3x3 linear
+        part), with headroom for shapes that touch the unit sphere at their
+        corners (e.g. cube) and for the selection-outline halo drawn at 1.05."""
+        cx, cy, cz = M[0, 3], M[1, 3], M[2, 3]
+        radius = float(np.linalg.norm(M[:3, :3], axis=0).max()) * 1.2
+        for a, b, c, d in planes:
+            if a * cx + b * cy + c * cz + d < -radius:
+                return False
+        return True
 
     def _draw_topology_overlays(self):
         """Draw type=7 link lines, TOPO_PLOT polylines, and TOPO_SURFACE quad meshes."""
@@ -812,6 +870,7 @@ class Viewport(QOpenGLWidget):
         (Qt widget coordinates). Used for both the full-widget single-eye
         view and each half-width stereo eye view."""
         tagged: list[tuple[str, int, int]] = []
+        mvp = pr @ mv   # hoisted out of the loop -- same combined matrix for every node
         visible_count = 0
         for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
@@ -830,7 +889,7 @@ class Viewport(QOpenGLWidget):
             wp = self._scene.world_pos(node.id) or (node.translate_x, node.translate_y, node.translate_z)
             try:
                 v = np.array([wp[0], wp[1], wp[2], 1.0])
-                clip = pr @ mv @ v
+                clip = mvp @ v
                 if clip[3] <= 0:
                     continue
                 ndc = clip[:3] / clip[3]
@@ -839,6 +898,8 @@ class Viewport(QOpenGLWidget):
                 sx = vx + int((ndc[0] + 1.0) / 2.0 * vw)
                 sy = vy + int((1.0 - (ndc[1] + 1.0) / 2.0) * vh)   # Y-flip for Qt
                 tagged.append((node.text, sx, sy))
+                if len(tagged) >= _MAX_TAGS_PER_FRAME:
+                    break   # safety valve -- see _MAX_TAGS_PER_FRAME
             except Exception:
                 continue
         return tagged
@@ -884,11 +945,11 @@ class Viewport(QOpenGLWidget):
             self._paint_tags(painter, tagged)
         painter.end()
 
-    def _draw_node(self, node: Node, selected: bool = False):
+    def _draw_node(self, node: Node, M: np.ndarray, selected: bool = False):
         # node_world_matrix is the single source of truth — same matrix the
         # pick pass uses, so rendering and picking are identical by construction.
-        M = node_world_matrix(node, self._scene)
-
+        # Caller passes M in (already computed once for frustum culling)
+        # rather than this method recomputing it a second time per node.
         glPushMatrix()
         glMultMatrixf(_gl_col_major(M))
 
