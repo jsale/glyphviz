@@ -194,6 +194,12 @@ class MainWindow(QMainWindow):
         )
         import_mesh_act.triggered.connect(self._import_mesh_file)
 
+        tools_menu = mb.addMenu("&Tools")
+        composer_act = tools_menu.addAction("&Glyph Composer…")
+        composer_act.setShortcut("Ctrl+G")
+        composer_act.setToolTip("Build and preview hierarchical glyph templates.")
+        composer_act.triggered.connect(self._on_glyph_composer)
+
         self._view_menu = mb.addMenu("&View")
 
         self._axes_act = self._view_menu.addAction("Show &Axes")
@@ -974,6 +980,11 @@ class MainWindow(QMainWindow):
             self._lbl_tex.setText("Texture load failed")
             self.statusBar().showMessage(f"Texture error: {exc}")
         self._refresh_audio_combo()
+
+    def _on_glyph_composer(self):
+        from .glyph_composer_dialog import GlyphComposerDialog
+        dlg = GlyphComposerDialog(self, parent=self)
+        dlg.exec()
 
     def _import_mesh_file(self):
         """Meshes > Import Mesh File…: load an OBJ/STL/etc. as a GEO_MESH
