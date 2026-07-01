@@ -14,6 +14,13 @@ repro_test*.csv
 # Third-party reference material — not ours to publish
 gaiaviz-skill/
 
+# Hyperglyph Lab: bulk-generated design output (the CSV/JSON per design is
+# disposable/regeneratable; ratings.csv — the design journal — stays tracked)
+hyperglyph_lab/output/
+
+# Jupyter autosave checkpoints
+.ipynb_checkpoints/
+
 # Editor/OS cruft
 .vscode/
 .idea/
