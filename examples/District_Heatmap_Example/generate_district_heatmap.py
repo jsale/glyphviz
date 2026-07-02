@@ -126,15 +126,17 @@ _LON_LO, _LON_HI = min(MAP_MIN_LON, MAP_MAX_LON), max(MAP_MIN_LON, MAP_MAX_LON)
 # ground_plane_node() since both examples share the same geo-projection and
 # satellite image. No texture_id animation, so no Channels binding needed
 # for this node.
-GROUND_SCALE = 84.0
-GROUND_TX, GROUND_TY = -11.176, -49.39
+GROUND_SCALE = 270.0
+GROUND_TX, GROUND_TY = 10, -6.5
 GROUND_TEXTURE_ID = 1
 
-MARKER_SCALE = 1.0   # GEO_CIRCLE's native radius is 1.0 at scale=1.0 -- school
-                      # nearest-neighbor distances in this projection have a
-                      # ~4.6-unit median (and several genuinely co-located
-                      # duplicates at ~0), so anything much bigger than this
-                      # starts visually merging adjacent schools together
+MARKER_SCALE = 3.0   # GEO_CIRCLE's native radius is 1.0 at scale=1.0 and the app's
+                      # default Global Scale (base_scale) -- school nearest-neighbor
+                      # distances in this projection have a ~4.6-unit median (and
+                      # several genuinely co-located duplicates at ~0), so anything
+                      # much bigger than this starts visually merging adjacent
+                      # schools together. 3.0 restores the original ~3-unit rendered
+                      # radius now that the app's Global Scale default is 1.0, not 3.0.
 MARKER_Z = 2.0   # small lift above the ground plane to avoid z-fighting
 
 FRAMES_PER_YEAR = 30   # 30fps -> 1 second of animation per year

@@ -2,7 +2,7 @@
 """
 generate_multi_hike_race.py
 =============================
-A "ghost race" demo: Jeff's 10 fastest and 10 slowest recorded hikes up
+A "ghost race" demo: Jeff's 3 fastest and 3 slowest recorded hikes up
 Cowles Mountain (San Diego, CA), animated simultaneously on the real DEM
 terrain from Surface_Example. Two separate glyph families per hike, deliberately
 decoupled (per Jeff's design correction -- v1 wrongly nested the dashboard
@@ -46,9 +46,9 @@ the real recorded value matters more than surface-snapping.
 
 Shared timeline
 ---------------
-All 20 hikes resample onto one common real-elapsed-minutes grid (1800
+All 6 hikes resample onto one common real-elapsed-minutes grid (1800
 frames = 60s at the app's default 30fps Channels playback), spanning
-0..max(elapsed_minutes) across the 20 selected hikes. Hikes that finish
+0..max(elapsed_minutes) across the 6 selected hikes. Hikes that finish
 early simply freeze (clip the query time to that hike's own duration
 before interpolating) rather than zero-padding -- so fast climbers visibly
 stop at the summit while slow ones are still en route. This is the literal
@@ -58,14 +58,15 @@ hike's real pace, not a duration-normalized percentage.
 Plot/needle convention (matching Topology_Example's Plot topology: raw
 Cartesian, x=time-like axis, z=value axis): each dashboard lays its 3 plots
 out side by side along LOCAL X, in the same order and at the same fixed
-offsets for every hike (PLOT_X_OFFSETS: elevation 0, heart rate 55, pace 110;
-PLOT_WIDTH=50 -- Jeff's own suggested numbers), each panel x = elevation
-minutes scaled to a shared 0..PLOT_WIDTH range (so a slower hike's curve is
-visibly longer, not just normalized), z = the metric normalized 0..
-PLOT_HEIGHT across all 20 hikes so panels are comparable. Because every
+offsets for every hike (PLOT_X_OFFSETS: elevation 0, heart rate 105, pace 210;
+PLOT_WIDTH=100 -- doubled from Jeff's original suggestion of 50 for
+readability), each panel x = elevation minutes scaled to a shared
+0..PLOT_WIDTH range (so a slower hike's curve is visibly longer, not just
+normalized), z = the metric normalized 0..
+PLOT_HEIGHT across all 6 hikes so panels are comparable. Because every
 dashboard uses identical local offsets and differs only in its own Y
 placement (see "Dashboard layout" below), the same metric's panel always
-occupies the same (X, Z) band -- "lining up" the 20 heart-rate plots (or
+occupies the same (X, Z) band -- "lining up" the 6 heart-rate plots (or
 elevation, or pace) is just a matter of scanning across Y at that band, no
 per-metric alignment math needed at view time.
 
@@ -77,21 +78,19 @@ without any engine change, since the offset is baked in at generation time.
 
 Dashboard layout
 ----------------
-20 dashboards distributed along world Y (per Jeff: a horizontal row of
+6 dashboards distributed along world Y (per Jeff: a horizontal row of
 panels reads more intuitively for comparison than a vertical tower),
 starting well clear of the terrain's footprint -- TERRAIN_SCALE=10 puts the
 mountain at roughly X:-190..190, Y:-180..180, so DASHBOARD_X0=220 sits
 outside that. Dashboard i is at (DASHBOARD_X0, i * DASHBOARD_Y_SPACING,
 DASHBOARD_Z0), fastest hike nearest Y=0, slowest farthest out. With
-PLOT_WIDTH=50 x 3 panels this is a genuinely large structure (worth knowing
-before orbiting around to find it) -- a fast follow-up, if a single 20-wide
-row proves awkward to view, would be wrapping it into a grid instead while
-keeping each row's own panels aligned the same way.
+PLOT_WIDTH=100 x 3 panels this is a genuinely large structure (worth knowing
+before orbiting around to find it).
 
 Terrain scale
 -------------
 The terrain's native grid (1 grid-index unit = 1 world unit, per
-Surface_Example) renders ~10x smaller than the PLOT_WIDTH=50 dashboards --
+Surface_Example) renders ~10x smaller than the PLOT_WIDTH=100 dashboards --
 per Jeff, scale the mountain up rather than shrink the plots down. The
 terrain root's own scale_x/y/z is set to TERRAIN_SCALE=10 (cascades onto
 every terrain child's translate+scale for free); the climber, being a
@@ -103,12 +102,12 @@ Output files (written to OUTPUT_DIR)
 -------------------------------------
   {PREFIX}_gv_node.csv       terrain mesh (from Surface_Example's DEM/aerial
                               JPGs, duplicated here for a self-contained load)
-                              + 20 climbers (on the mountain) + 20 dashboards
+                              + 6 climbers (on the mountain) + 6 dashboards
                               (distributed along Y, off to the side)
   {PREFIX}_gv_tag.csv        per-climber date/time/stats label + per-dashboard
                               identifying label + per-stat-satellite label
   {PREFIX}_gv_ch-map.csv     channel -> attribute bindings (climbers + needles)
-  {PREFIX}_gv_ch-tracks.csv  1800 frames x 180 tracks
+  {PREFIX}_gv_ch-tracks.csv  1800 frames x 54 tracks
 
 Usage
 -----
@@ -145,8 +144,16 @@ GEO_OCTA_WIRE, GEO_OCTA = 10, 11
 GEO_PIN, GEO_PIN_WIRE = 16, 17
 GEO_POINT = 22
 
-NEEDLE_SCALE = 1.0   # Jeff: the v4 needles (scale 1.2, GEO_POINT) were "nearly impossible to see";
-                      # 4.0 (GEO_OCTA) turned out way too large at normal viewing distance -- 1.0 is right
+# The app's default Global Scale (Scene.base_scale) changed 3.0 -> 1.0 after
+# this example's node sizes were originally tuned, which shrinks every
+# regular-mesh glyph's rendered size 3x (Point-topology markers are exempt --
+# their on-screen size comes from `ratio`, not `scale`, see geometry.py).
+# Multiplying the affected scale constants below by NODE_SIZE_SCALE restores
+# the originally-tuned proportions under the new default.
+NODE_SIZE_SCALE = 3.0
+
+NEEDLE_SCALE = 1.0 * NODE_SIZE_SCALE   # Jeff: the v4 needles (scale 1.2, GEO_POINT) were "nearly impossible to see";
+                      # 4.0 (GEO_OCTA) turned out way too large at normal viewing distance -- 1.0 (pre-NODE_SIZE_SCALE) is right
 NEEDLE_COLOR = (255, 255, 255)  # white -- same-as-hike-color made it low-contrast against its own plot line
 
 # Terrain (must match Surface_Example/generate_surface_example.py's grid math
@@ -172,19 +179,19 @@ ANCHOR_TRAILHEAD_PIXEL = (250.0, 110.0)
 ANCHOR_SUMMIT_LATLON = (32.812849, -117.032018)
 ANCHOR_SUMMIT_PIXEL = (139.0, 300.0)
 
-N_FAST = 10
-N_SLOW = 10
+N_FAST = 3                # trimmed from 10 -- 6 hikes total reads more clearly and performs
+N_SLOW = 3                # better on average machines than the original 20
 N_FRAMES = 1800           # 60s at the app's default 30fps Channels playback
 PLOT_POINTS = 50          # static points per plot polyline
-PLOT_WIDTH = 50.0         # Jeff's own suggested scale
-PLOT_GAP = 5.0            # gap between consecutive panels along local X
+PLOT_WIDTH = 100.0        # doubled from Jeff's original 50 for readability
+PLOT_GAP = 5.0            # gap between consecutive panels along local X -- unchanged, still fine
 PLOT_HEIGHT = 30.0
 PLOT_X_OFFSETS = {
     "elevation": 0.0,
     "heartrate": PLOT_WIDTH + PLOT_GAP,
     "pace": 2 * (PLOT_WIDTH + PLOT_GAP),
 }
-CLIMBER_SCALE = 0.4 * TERRAIN_SCALE   # keep the same relative prominence on the now-bigger mountain
+CLIMBER_SCALE = 0.4 * TERRAIN_SCALE * NODE_SIZE_SCALE   # keep the same relative prominence on the now-bigger mountain
 PACE_CLIP_MIN_KMH = 2.0   # clip absurd instantaneous pace spikes (near-stops)
 PACE_CLIP_MAX_MIN_KM = 30.0
 
@@ -543,7 +550,7 @@ def main():
             ("Avg HR", f"{avg_hr:.0f} bpm", avg_hr / 200.0, base + 13),
         ]
         for (sx, sy, sz), (label, value_str, frac, stat_id) in zip(STAT_OFFSETS, stats):
-            stat_scale = max(0.05, min(0.6, frac)) * 5.0
+            stat_scale = max(0.05, min(0.6, frac)) * 5.0 * NODE_SIZE_SCALE
             nodes.append(base_row(
                 stat_id, dashboard_id, 1, sx, sy, sz, stat_scale, color, GEO_CUBE,
             ))
@@ -554,7 +561,7 @@ def main():
 
         # --- plot panels + needles (per metric), laid out side by side along
         # local X at identical offsets for every dashboard, so the same metric
-        # always occupies the same X band across all 20 stacked dashboards ---
+        # always occupies the same X band across all 6 stacked dashboards ---
         metrics = {
             "elevation": (data["elevation"], elev_min, elev_max),
             "heartrate": (data["heartrate"], hr_min, hr_max),
@@ -567,7 +574,7 @@ def main():
             point_id += 1
             nodes.append(base_row(
                 plot_id, dashboard_id, 1, 0.0, 0.0, 0.0, 1.0, color, GEO_POINT,
-                topo=TOPO_PLOT, ratio=0.4,
+                topo=TOPO_PLOT, ratio=0.1,
             ))
 
             # static polyline: PLOT_POINTS samples evenly across this hike's

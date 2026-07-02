@@ -80,7 +80,7 @@ F_HI    = 16000.0
 # a *local* offset, so L1/L2 children (whose translate_z is carried by their
 # parent's cumulative world_scale, same cascading as the placement math above)
 # move less in world space than the root does for the same track value — e.g.
-# at SCALE-derived cascaded scales of ~0.12/0.10, a child's visible bounce is
+# at SCALE-derived cascaded scales of ~0.36/0.30, a child's visible bounce is
 # roughly 1/8-1/10th of the root's. Bumped 4x (2.0 -> 8.0) since the prior
 # value was too small to see the children move at all.
 AMPLITUDE = 8.0
@@ -89,9 +89,10 @@ AMPLITUDE = 8.0
 SPACING = 3.0
 
 RATIO  = 0.1
-GEO_SPHERE  = 3   # glyphviz_core/geometry_data.py
+GEO_SPHERE_WIRE = 2   # glyphviz_core/geometry_data.py -- wireframe, not solid Sphere (3): cheaper to
+                      # render, which matters here since every level of every band's hyperglyph uses it
 TOPO_SPHERE = 2   # glyphviz_core/topology.py
-BASE_SCALE  = 3.0   # the desktop app's default Global Scale slider value
+BASE_SCALE  = 1.0   # the desktop app's default Global Scale slider value
 
 # Hyperglyph validation pass: give each band root a couple of child levels,
 # all bound to the same channel (ch_input_id) as their parent, so the whole
@@ -117,7 +118,7 @@ BASE_SCALE  = 3.0   # the desktop app's default Global Scale slider value
 N_L1_CHILDREN = 4
 N_L2_CHILDREN = 2
 
-ROOT_RADIUS_WORLD = 0.36   # -> SCALE = 0.12, same as the original flat build
+ROOT_RADIUS_WORLD = 0.36   # -> SCALE = 0.36 now that BASE_SCALE matches the app's Global Scale default (1.0)
 L1_RADIUS_WORLD   = 0.30
 L2_RADIUS_WORLD   = 0.24
 
@@ -129,9 +130,10 @@ SCALE    = ROOT_RADIUS_WORLD / BASE_SCALE
 L1_SCALE = L1_RADIUS_WORLD / ROOT_RADIUS_WORLD
 L2_SCALE = L2_RADIUS_WORLD / L1_RADIUS_WORLD
 
-# Grab-bag of solid geometries to randomize child shape from (GEO_SPHERE stays
-# reserved for the band roots) — glyphviz_core/geometry_data.py ids.
-CHILD_GEOMETRIES = [1, 5, 7, 9, 11, 13, 15, 16, 19]   # Cube,Cone,Torus,Dodeca,Octa,Tetra,Icosa,Pin,Cylinder
+# Grab-bag of wireframe geometries to randomize child shape from (GEO_SPHERE_WIRE
+# stays reserved for the band roots) — glyphviz_core/geometry_data.py ids. Wire,
+# not solid, for the same render-cost reason as the band roots.
+CHILD_GEOMETRIES = [0, 4, 6, 8, 10, 12, 14, 17, 18]   # Cube,Cone,Torus,Dodeca,Octa,Tetra,Icosa,Pin,Cylinder (Wire)
 _rng = random.Random(42)   # fixed seed: regenerating reproduces the same shapes
 
 
@@ -179,7 +181,7 @@ def write_nodes(path: Path, band_freqs) -> int:
         rows.append(_node_row(
             root_id, 0, 0,
             x0 + i * SPACING, 0.0, 0.0,
-            SCALE, color, GEO_SPHERE, ch_id,
+            SCALE, color, GEO_SPHERE_WIRE, ch_id,
         ))
 
         for j in range(N_L1_CHILDREN):

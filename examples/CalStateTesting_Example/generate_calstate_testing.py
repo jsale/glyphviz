@@ -145,9 +145,9 @@ GEO_GRID = 21
 # the main loop. Position/scale hand-tuned by Jeff in the live app against
 # this example's real school marker positions (supersedes the original
 # reference-row values, which didn't actually line up).
-GROUND_SCALE = 84.0
-GROUND_TX = -11.176
-GROUND_TY = -49.39
+GROUND_SCALE = 270.0
+GROUND_TX = 10
+GROUND_TY = -6.5
 GROUND_RATIO = 0.1
 GROUND_COLOR = (200, 200, 200)
 GROUND_TEXTURE_ID = 1
