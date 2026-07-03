@@ -47,6 +47,11 @@ class Scene:
         self.base_scale = base_scale
         self._by_id: dict[int, Node] = {n.id: n for n in nodes}
         self._dirty = True
+        # Monotonic change counter, bumped by invalidate()/register_node().
+        # Lets a renderer detect "scene content changed since I last baked
+        # it" (e.g. the viewport's retained scene display list) without
+        # subscribing to every mutation path individually.
+        self._revision = 0
         self._world_pos: dict[int, tuple[float, float, float]] = {}
         # Recursive rotation+scale caches from compute_world_bases (RAW,
         # dimensionless scale — base_scale is applied once, below, not once
@@ -56,15 +61,20 @@ class Scene:
         self._world_basis:  dict[int, tuple] = {}
         self._parent_basis: dict[int, tuple] = {}
         self._child_local:  dict[int, tuple] = {}
+        # Finished per-node draw data (see node_draw_data) — derived from the
+        # caches above, so cleared whenever they are recomputed in _ensure().
+        self._draw_data: dict[int, tuple] = {}
 
     def invalidate(self):
         """Mark cached transforms stale; they will be recomputed on next access."""
         self._dirty = True
+        self._revision += 1
 
     def register_node(self, node: Node):
         """Called after a node is appended directly to self.nodes — keeps _by_id in sync."""
         self._by_id[node.id] = node
         self._dirty = True
+        self._revision += 1
 
     def _ensure(self):
         if not self._dirty:
@@ -75,6 +85,7 @@ class Scene:
         self._world_pos = compute_world_positions(
             self.nodes, self.base_scale, self._world_basis,
         )
+        self._draw_data = {}
         self._dirty = False
 
     # --- public accessors (trigger lazy compute) ---
@@ -95,6 +106,35 @@ class Scene:
             math.sqrt(wb[0][j] ** 2 + wb[1][j] ** 2 + wb[2][j] ** 2)
             for j in range(3)
         )
+
+    def node_draw_data(self, node: Node) -> tuple:
+        """Per-node data the renderer needs every frame, computed once and
+        cached until invalidate():
+
+            (M, gl_matrix, radius)
+
+        M          -- node_world_matrix() result (float64 row-major 4x4)
+        gl_matrix  -- the same matrix as a float32 column-major flat array,
+                      ready for glMultMatrixf/glLoadMatrixf
+        radius     -- max column norm of M's 3x3 linear part = the node's
+                      world-space bounding-sphere radius for unit geometry
+                      (callers add their own headroom for corner-touching
+                      shapes / selection halos)
+
+        Profiling showed recomposing these per node per frame dominated the
+        static-scene render loop; they only actually change when the scene
+        is invalidated, never with camera movement.
+        """
+        self._ensure()   # also clears _draw_data if transforms were stale
+        cached = self._draw_data.get(node.id)
+        if cached is not None:
+            return cached
+        M = node_world_matrix(node, self)
+        gl_matrix = M.astype(np.float32).T.flatten()
+        radius = float(np.linalg.norm(M[:3, :3], axis=0).max())
+        data = (M, gl_matrix, radius)
+        self._draw_data[node.id] = data
+        return data
 
     def glyph_nodes(self) -> list[Node]:
         """Nodes that represent visual glyphs (not camera/world/grid infrastructure)."""

@@ -11,8 +11,8 @@ import numpy as np
 
 def gl_col_major(M: np.ndarray) -> np.ndarray:
     """Row-major 4x4 -> flat column-major float32, for glLoadMatrixf/glMultMatrixf
-    (mirrors glyphviz_gl.viewport._gl_col_major; duplicated to keep this
-    package independent of the Qt-importing viewport module)."""
+    (same conversion Scene.node_draw_data caches for the desktop renderer;
+    duplicated here to keep this package independent of glyphviz_gl)."""
     return M.astype(np.float32).T.flatten()
 
 

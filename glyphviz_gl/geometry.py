@@ -625,6 +625,29 @@ class GeoRenderer:
         glEndList()
         self._mesh_lists[mesh_id] = dl
 
+    def ensure_torus_list(self, geo_id: int, textured: bool, ratio: float) -> int:
+        """Return (compiling on first use) the display list for a torus with
+        this node's `ratio`. Each node may set its own torus ratio
+        (major/minor radius proportions), so — unlike the other glyphs — its
+        shape can't be baked into one fixed-shape list at setup() time;
+        instead one list is cached per distinct (rounded) ratio actually
+        seen, and reused by every node/frame sharing that ratio.
+
+        Kept separate from draw() so callers about to compile their own
+        display list (the viewport's retained scene list) can pre-warm every
+        torus ratio first — glNewList must never nest, so the lazy compile
+        here would be an invalid operation if it fired mid-bake."""
+        key = (geo_id, textured, round(ratio, 4))
+        dl = self._torus_lists.get(key)
+        if dl is None:
+            r_major, r_minor = torus_radii(ratio)
+            dl = glGenLists(1)
+            glNewList(dl, GL_COMPILE)
+            _draw_torus(geo_id == GEO_TORUS, r_major, r_minor, textured=textured)
+            glEndList()
+            self._torus_lists[key] = dl
+        return dl
+
     def draw(self, geo_id: int, rx: float, ry: float, rz: float,
              ratio: float = TORUS_DEFAULT_RATIO, gl_tex_name: int = 0,
              mesh_id: int = 0):
@@ -673,21 +696,7 @@ class GeoRenderer:
         textured = gl_tex_name > 0 and geo_id not in _WIRE_IDS
 
         if geo_id in (GEO_TORUS, GEO_TORUS_WIRE):
-            # Each node may set its own torus `ratio` (major/minor radius
-            # proportions), so — unlike the other glyphs — its shape can't be
-            # baked into one fixed-shape list at setup() time. Instead, cache
-            # one compiled list per distinct (rounded) ratio actually seen,
-            # built once on first use and reused by every node/frame sharing
-            # that ratio rather than regenerating the mesh every draw call.
-            key = (geo_id, textured, round(ratio, 4))
-            dl = self._torus_lists.get(key)
-            if dl is None:
-                r_major, r_minor = torus_radii(ratio)
-                dl = glGenLists(1)
-                glNewList(dl, GL_COMPILE)
-                _draw_torus(geo_id == GEO_TORUS, r_major, r_minor, textured=textured)
-                glEndList()
-                self._torus_lists[key] = dl
+            dl = self.ensure_torus_list(geo_id, textured, ratio)
             if textured:
                 glEnable(GL_TEXTURE_2D)
                 glBindTexture(GL_TEXTURE_2D, gl_tex_name)

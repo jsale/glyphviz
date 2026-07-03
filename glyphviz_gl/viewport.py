@@ -16,9 +16,11 @@ from glyphviz_core.node import (
     RENDER_MODE_DARK, RENDER_MODE_OFF, RENDER_MODE_SCREEN, RENDER_MODE_PREMULTIPLIED,
     WORLD_DEFAULT_BG_RGB,
 )
-from glyphviz_core.scene import Scene, node_world_matrix
+from glyphviz_core.scene import Scene
 from glyphviz_core.topology import TOPO_PLOT, TOPO_SURFACE
 from glyphviz_core.mesh_loader import load_mesh_file as _load_mesh_data
+
+from glyphviz_core.geometry_data import GEO_TORUS, GEO_TORUS_WIRE
 
 from .geometry import GeoRenderer, WIRE_TO_SOLID
 from .texture_manager import TextureManager
@@ -38,12 +40,6 @@ _MAX_TAGS_PER_FRAME = 500
 # a delta applied every cycle, nominally 60 cycles/second — see
 # Node-Field-Descriptions.md's Translate/Rotate/Scale sections.
 _RATE_CYCLE_MS = 1000.0 / 60.0
-
-
-def _gl_col_major(M: np.ndarray) -> np.ndarray:
-    """Convert a 4x4 NumPy row-major matrix to a float32 column-major flat array
-    for glMultMatrixf / glLoadMatrixf (OpenGL column-major convention)."""
-    return M.astype(np.float32).T.flatten()
 
 
 _DEFAULT_BG = tuple(c / 255.0 for c in WORLD_DEFAULT_BG_RGB)  # used when the scene has no World node
@@ -168,6 +164,18 @@ class Viewport(QOpenGLWidget):
         self._mv_matrix: np.ndarray | None = None
         self._proj_matrix: np.ndarray | None = None
 
+        # Retained-mode scene display list: the whole per-node draw loop
+        # baked into one glCallList, rebuilt only when the scene changes
+        # (see _draw_scene_content). _assets_rev covers change sources the
+        # Scene revision counter can't see: texture/video folder loads and
+        # mesh (re)registration, which alter the GL names / nested display
+        # lists the baked commands reference.
+        self._scene_dl = 0
+        self._scene_dl_key = None        # key the compiled list matches
+        self._scene_dl_last_key = None   # key seen on the previous pass
+        self._scene_dl_video_ids: set[int] = set()
+        self._assets_rev = 0
+
         self._geo = GeoRenderer()
         self._next_mesh_id = 1
         self._mesh_names: dict[int, str] = {}   # mesh_id -> source filename, for the UI
@@ -222,6 +230,7 @@ class Viewport(QOpenGLWidget):
 
     def set_nodes(self, nodes: list[Node]):
         self._draw_limit = None   # new scene → show everything
+        self._assets_rev += 1     # new Scene restarts its revision counter — force a scene-list rebuild
         self._scene = Scene(nodes, self._base_scale)
         self._scene._ensure()   # pre-compute so camera init can read positions
         self._update_render_timer_state()
@@ -328,6 +337,7 @@ class Viewport(QOpenGLWidget):
         img_count = self._tex_mgr.load_folder(folder)
         vid_count = self._video_mgr.load_folder(folder, img_count + 1)
         self._needs_video_tick = bool(vid_count) or self._tex_mgr.has_animated()
+        self._assets_rev += 1   # GL texture names changed — rebake the scene list
         self._update_render_timer_state()
         self.update()
         return img_count + vid_count
@@ -344,6 +354,7 @@ class Viewport(QOpenGLWidget):
         self._next_mesh_id += 1
         self._geo.register_mesh(mesh_id, data)
         self._mesh_names[mesh_id] = data.name
+        self._assets_rev += 1   # baked glCallList references resolve by id — rebake
         self.update()
         return mesh_id
 
@@ -356,6 +367,7 @@ class Viewport(QOpenGLWidget):
         self._tex_mgr.release()
         self._video_mgr.release()
         self._needs_video_tick = False
+        self._assets_rev += 1   # texture names released — rebake the scene list
         self._update_render_timer_state()
         self.update()
 
@@ -428,6 +440,12 @@ class Viewport(QOpenGLWidget):
     # --- GL lifecycle ---
 
     def initializeGL(self):
+        # If the GL context was recreated (widget reparent, screen change),
+        # any previously compiled scene display list id is dead — forget it
+        # so the next paint rebakes instead of calling a stale list.
+        self._scene_dl = 0
+        self._scene_dl_key = None
+        self._scene_dl_last_key = None
         glClearColor(*_DEFAULT_BG, 1.0)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
@@ -662,8 +680,37 @@ class Viewport(QOpenGLWidget):
         if self.show_axes:
             self._draw_axes()
 
-        planes = self._frustum_planes(mv, pr)
+        # Retained-mode fast path: when nothing about the scene's *content*
+        # has changed since the last pass (camera motion doesn't count — the
+        # camera lives on the modelview stack outside the baked commands),
+        # the entire per-node loop is replayed from one compiled display
+        # list, eliminating all per-node Python work. The key captures every
+        # content-change source: Scene._revision (node edits, gizmo drags,
+        # rate animation, base_scale), _assets_rev (texture/video/mesh
+        # loads), and the two loop-shape toggles baked into the commands.
+        key = (self._scene._revision, self._assets_rev,
+               self.show_hidden, self._draw_limit)
+        if self._scene_dl and key == self._scene_dl_key:
+            for tid in self._scene_dl_video_ids:
+                self._video_mgr.get_gl_name(tid)   # keep baked videos marked visible
+            glCallList(self._scene_dl)
+        elif key == self._scene_dl_last_key:
+            # Scene content held still for a full pass — bake it now, then
+            # replay. (Rate-animated scenes bump _revision every frame and
+            # never reach here; they stay on the immediate path below.)
+            self._compile_scene_dl(key)
+            glCallList(self._scene_dl)
+        else:
+            self._draw_nodes_immediate(self._frustum_planes(mv, pr))
+        self._scene_dl_last_key = key
 
+        self._draw_selected_outlines()
+        self._draw_topology_overlays()
+
+    def _draw_nodes_immediate(self, planes):
+        """Per-node draw loop with CPU frustum culling — used while scene
+        content is actively changing (and by _compile_scene_dl, without
+        culling, for the baked list)."""
         visible_count = 0
         for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
@@ -678,12 +725,97 @@ class Viewport(QOpenGLWidget):
             # frustum culling, so the \\-key limit stays a stable scene-wide
             # cap rather than fluctuating with camera angle.
             visible_count += 1
-            M = node_world_matrix(node, self._scene)
-            if planes is not None and not self._sphere_in_frustum(planes, M):
+            M, gl_matrix, radius = self._scene.node_draw_data(node)
+            if planes is not None and not self._sphere_in_frustum(
+                    planes, M[0, 3], M[1, 3], M[2, 3], radius * 1.2):
                 continue
-            self._draw_node(node, M, selected=(node.id in self.selected_node_ids))
+            self._draw_node(node, gl_matrix)
 
-        self._draw_topology_overlays()
+    def _compile_scene_dl(self, key):
+        """Bake the whole per-node draw loop into one display list.
+
+        No frustum culling here — the list must stay valid from any camera
+        angle (GPU clipping handles off-screen geometry). Selection outlines
+        are drawn outside the list (_draw_selected_outlines), so selection
+        changes never force a rebake. Texture binds compile into the list by
+        GL name; video/GIF managers update the *content* under those same
+        names each tick, so playback keeps animating inside the baked list —
+        but VideoManager also pauses any video no draw call "used" this
+        frame, so we record which video texture_ids got baked in and re-mark
+        them every replayed frame (see _draw_scene_content)."""
+        if not self._scene_dl:
+            self._scene_dl = glGenLists(1)
+        self._scene_dl_video_ids = set()
+        for node in self._scene.nodes:
+            if node.texture_id and not self._tex_mgr.get_gl_name(node.texture_id):
+                if self._video_mgr.get_gl_name(node.texture_id):
+                    self._scene_dl_video_ids.add(node.texture_id)
+            # Pre-warm the per-ratio torus lists: GeoRenderer.draw compiles
+            # them lazily, and glNewList must never nest inside the bake
+            # below. (The immediate pass usually warmed them already, but a
+            # frustum-culled off-screen torus wouldn't be.)
+            if node.geometry in (GEO_TORUS, GEO_TORUS_WIRE):
+                textured = (node.geometry == GEO_TORUS and node.texture_id
+                            and bool(self._tex_mgr.get_gl_name(node.texture_id)
+                                     or self._video_mgr.get_gl_name(node.texture_id)))
+                self._geo.ensure_torus_list(node.geometry, bool(textured), node.ratio)
+        glNewList(self._scene_dl, GL_COMPILE)
+        self._draw_nodes_immediate(planes=None)
+        glEndList()
+        self._scene_dl_key = key
+
+    def _draw_selected_outlines(self):
+        """Yellow bounding-box halo around each selected node. Drawn as its
+        own pass (not inside _draw_node) so the baked scene display list is
+        selection-independent."""
+        if not self.selected_node_ids:
+            return
+        visible_count = 0
+        limit_ids: set[int] | None = None
+        if self._draw_limit is not None:
+            # Mirror the draw loop's decimation: only outline nodes that
+            # actually rendered.
+            limit_ids = set()
+            for node in self._scene.nodes:
+                if node.type in NON_VISUAL_TYPES or node.type == NODE_TYPE_LINK:
+                    continue
+                if not self.show_hidden and node.hide:
+                    continue
+                if visible_count >= self._draw_limit:
+                    break
+                visible_count += 1
+                limit_ids.add(node.id)
+        for nid in self.selected_node_ids:
+            node = self._scene.node_by_id(nid)
+            if node is None or node.type in NON_VISUAL_TYPES or node.type == NODE_TYPE_LINK:
+                continue
+            if not self.show_hidden and node.hide:
+                continue
+            if limit_ids is not None and nid not in limit_ids:
+                continue
+            _, gl_matrix, _ = self._scene.node_draw_data(node)
+            glPushMatrix()
+            glMultMatrixf(gl_matrix)
+            glDisable(GL_LIGHTING)
+            glLineWidth(1.5)
+            glColor4f(1.0, 0.95, 0.1, 1.0)
+            # Bounding box at ±1.05 in unit local space (the matrix's scale
+            # makes it track the node's actual rendered size).
+            b = 1.05
+            glBegin(GL_LINES)
+            for sx in (-b, b):
+                for sy in (-b, b):
+                    glVertex3f(sx, sy, -b); glVertex3f(sx, sy, b)
+            for sx in (-b, b):
+                for sz in (-b, b):
+                    glVertex3f(sx, -b, sz); glVertex3f(sx, b, sz)
+            for sy in (-b, b):
+                for sz in (-b, b):
+                    glVertex3f(-b, sy, sz); glVertex3f(b, sy, sz)
+            glEnd()
+            glLineWidth(1.0)
+            glEnable(GL_LIGHTING)
+            glPopMatrix()
 
     def _frustum_planes(self, mv: np.ndarray | None = None, pr: np.ndarray | None = None
                          ) -> list[tuple[float, float, float, float]] | None:
@@ -709,16 +841,14 @@ class Viewport(QOpenGLWidget):
         return planes
 
     @staticmethod
-    def _sphere_in_frustum(planes: list[tuple[float, float, float, float]], M: np.ndarray) -> bool:
-        """True unless the node's bounding sphere (derived from its world
-        matrix M) is entirely on the outside of some frustum plane. All
-        glyph geometry is compiled at unit scale (radius ~1 -- see
-        geometry.py's module docstring), so the world-space bounding radius
-        is M's largest per-axis stretch (column norm of its 3x3 linear
-        part), with headroom for shapes that touch the unit sphere at their
+    def _sphere_in_frustum(planes: list[tuple[float, float, float, float]],
+                           cx: float, cy: float, cz: float, radius: float) -> bool:
+        """True unless the bounding sphere (center, radius) is entirely on
+        the outside of some frustum plane. All glyph geometry is compiled at
+        unit scale (radius ~1 -- see geometry.py's module docstring), so
+        callers pass Scene.node_draw_data's cached max-column-norm radius,
+        times headroom for shapes that touch the unit sphere at their
         corners (e.g. cube) and for the selection-outline halo drawn at 1.05."""
-        cx, cy, cz = M[0, 3], M[1, 3], M[2, 3]
-        radius = float(np.linalg.norm(M[:3, :3], axis=0).max()) * 1.2
         for a, b, c, d in planes:
             if a * cx + b * cy + c * cz + d < -radius:
                 return False
@@ -945,13 +1075,15 @@ class Viewport(QOpenGLWidget):
             self._paint_tags(painter, tagged)
         painter.end()
 
-    def _draw_node(self, node: Node, M: np.ndarray, selected: bool = False):
-        # node_world_matrix is the single source of truth — same matrix the
-        # pick pass uses, so rendering and picking are identical by construction.
-        # Caller passes M in (already computed once for frustum culling)
-        # rather than this method recomputing it a second time per node.
+    def _draw_node(self, node: Node, gl_matrix: np.ndarray):
+        # gl_matrix is Scene.node_draw_data's cached column-major float32
+        # form of node_world_matrix — the single source of truth, shared
+        # with the pick pass, so rendering and picking are identical by
+        # construction. Selection outlines are a separate pass
+        # (_draw_selected_outlines) so this body can compile into the
+        # retained scene display list unchanged.
         glPushMatrix()
-        glMultMatrixf(_gl_col_major(M))
+        glMultMatrixf(gl_matrix)
 
         glColor4f(
             node.color_r / 255.0,
@@ -970,27 +1102,6 @@ class Viewport(QOpenGLWidget):
         # the geometry at unit size (1,1,1) and let the matrix handle sizing.
         self._geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio, gl_tex_name=gl_tex,
                        mesh_id=node.mesh_id)
-
-        if selected:
-            glDisable(GL_LIGHTING)
-            glLineWidth(1.5)
-            glColor4f(1.0, 0.95, 0.1, 1.0)
-            # Bounding box at ±1.05 in unit local space (M's scale makes it
-            # track the node's actual rendered size).
-            b = 1.05
-            glBegin(GL_LINES)
-            for sx in (-b, b):
-                for sy in (-b, b):
-                    glVertex3f(sx, sy, -b); glVertex3f(sx, sy, b)
-            for sx in (-b, b):
-                for sz in (-b, b):
-                    glVertex3f(sx, -b, sz); glVertex3f(sx, b, sz)
-            for sy in (-b, b):
-                for sz in (-b, b):
-                    glVertex3f(-b, sy, sz); glVertex3f(b, sy, sz)
-            glEnd()
-            glLineWidth(1.0)
-            glEnable(GL_LIGHTING)
 
         glPopMatrix()
 
@@ -1196,9 +1307,9 @@ class Viewport(QOpenGLWidget):
             g = (node.id >> 8) & 0xFF
             b = (node.id >> 16) & 0xFF
             glColor4ub(r, g, b, 255)
-            M = node_world_matrix(node, self._scene)
+            _, gl_matrix, _ = self._scene.node_draw_data(node)
             glPushMatrix()
-            glMultMatrixf(_gl_col_major(M))
+            glMultMatrixf(gl_matrix)
             # Draw the solid equivalent for wireframe geometries so the
             # entire silhouette is pickable, not just the visible wires.
             pick_geo = WIRE_TO_SOLID.get(node.geometry, node.geometry)
@@ -1234,9 +1345,9 @@ class Viewport(QOpenGLWidget):
             # Fallback sphere at the link node's own position.
             own_pos = self._scene.world_pos(node.id)
             if own_pos is not None:
-                M = node_world_matrix(node, self._scene)
+                _, gl_matrix, _ = self._scene.node_draw_data(node)
                 glPushMatrix()
-                glMultMatrixf(_gl_col_major(M))
+                glMultMatrixf(gl_matrix)
                 self._geo.draw(3, 1.0, 1.0, 1.0)   # GEO_SPHERE = 3
                 glPopMatrix()
 
