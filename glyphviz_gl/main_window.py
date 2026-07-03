@@ -99,6 +99,15 @@ class MainWindow(QMainWindow):
         self._gizmo_mode: str | None = None
         self._mode_buttons: dict[str, QPushButton] = {}
 
+        # Rate-animation pause: freezes translate_rate/rotate_rate/scale_rate
+        # in place by zeroing them (snapshotting the originals here) so a Save
+        # while paused writes a genuinely static file — not just a visually
+        # frozen live view — then restores the originals on resume. See
+        # _toggle_rates_paused. Snapshot is keyed by node id since paused
+        # nodes could in principle be deleted before resume.
+        self._rates_paused: bool = False
+        self._paused_rate_snapshot: dict[int, tuple] = {}
+
         self._build_viewport()
         self._build_menu()
         self._build_manipulate_toolbar()
@@ -200,6 +209,15 @@ class MainWindow(QMainWindow):
         composer_act.setToolTip("Build and preview hierarchical glyph templates.")
         composer_act.triggered.connect(self._on_glyph_composer)
 
+        hyperglyph_act = tools_menu.addAction("&Hyperglyph Generator…")
+        hyperglyph_act.setShortcut("Ctrl+H")
+        hyperglyph_act.setToolTip(
+            "Procedurally generate a single randomized multi-level hyperglyph\n"
+            "from a branch-level count and a node budget. For batches of many\n"
+            "designs at once, see hyperglyph_lab/ instead."
+        )
+        hyperglyph_act.triggered.connect(self._on_hyperglyph_generator)
+
         self._view_menu = mb.addMenu("&View")
 
         self._axes_act = self._view_menu.addAction("Show &Axes")
@@ -234,6 +252,18 @@ class MainWindow(QMainWindow):
             "still work; rubber-band region select is disabled while active."
         )
         self._stereo_act.triggered.connect(lambda c: self._set_stereo(c))
+
+        self._view_menu.addSeparator()
+        self._pause_rates_act = self._view_menu.addAction("&Pause Rate Animation")
+        self._pause_rates_act.setCheckable(True)
+        self._pause_rates_act.setChecked(False)
+        self._pause_rates_act.setShortcut("P")
+        self._pause_rates_act.setToolTip(
+            "Freeze all translate_rate/rotate_rate/scale_rate animation in place\n"
+            "(e.g. to Save a static snapshot mid-evolution of a Hyperglyph),\n"
+            "then resume with the original rates unchanged.  [P]"
+        )
+        self._pause_rates_act.triggered.connect(self._toggle_rates_paused)
 
         self._view_menu.addSeparator()
         self._view_menu.addAction("Reset &Camera").triggered.connect(self._reset_camera)
@@ -985,6 +1015,50 @@ class MainWindow(QMainWindow):
         from .glyph_composer_dialog import GlyphComposerDialog
         dlg = GlyphComposerDialog(self, parent=self)
         dlg.exec()
+
+    def _on_hyperglyph_generator(self):
+        from .hyperglyph_dialog import HyperglyphGeneratorDialog
+        dlg = HyperglyphGeneratorDialog(self, parent=self)
+        dlg.exec()
+
+    def _toggle_rates_paused(self, checked: bool):
+        """Freeze (or unfreeze) every node's translate_rate/rotate_rate/
+        scale_rate in place. Zeroing the real Node fields (rather than a
+        purely visual pause) means a Save while paused writes a genuinely
+        static file; resuming restores the exact original values."""
+        if checked:
+            self._paused_rate_snapshot.clear()
+            for n in self.nodes:
+                rates = (
+                    n.translate_rate_x, n.translate_rate_y, n.translate_rate_z,
+                    n.rotate_rate_x, n.rotate_rate_y, n.rotate_rate_z,
+                    n.scale_rate_x, n.scale_rate_y, n.scale_rate_z,
+                )
+                if any(rates):
+                    self._paused_rate_snapshot[n.id] = rates
+                    n.translate_rate_x = n.translate_rate_y = n.translate_rate_z = 0.0
+                    n.rotate_rate_x = n.rotate_rate_y = n.rotate_rate_z = 0.0
+                    n.scale_rate_x = n.scale_rate_y = n.scale_rate_z = 0.0
+            self._rates_paused = True
+            self.statusBar().showMessage(
+                f"Rate animation paused ({len(self._paused_rate_snapshot)} node(s) frozen) — "
+                "Save now to write a static snapshot."
+            )
+        else:
+            by_id = {n.id: n for n in self.nodes}
+            for node_id, rates in self._paused_rate_snapshot.items():
+                n = by_id.get(node_id)
+                if n is None:
+                    continue
+                (n.translate_rate_x, n.translate_rate_y, n.translate_rate_z,
+                 n.rotate_rate_x, n.rotate_rate_y, n.rotate_rate_z,
+                 n.scale_rate_x, n.scale_rate_y, n.scale_rate_z) = rates
+            self._paused_rate_snapshot.clear()
+            self._rates_paused = False
+            self.statusBar().showMessage("Rate animation resumed.")
+        self._pause_rates_act.setChecked(checked)
+        self._viewport.refresh_animation_state()
+        self._viewport.update()
 
     def _import_mesh_file(self):
         """Meshes > Import Mesh File…: load an OBJ/STL/etc. as a GEO_MESH

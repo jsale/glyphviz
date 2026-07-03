@@ -214,6 +214,7 @@ class Viewport(QOpenGLWidget):
     def register_node(self, node: Node):
         """Sync a node appended directly to self._scene.nodes into the scene's lookup cache."""
         self._scene.register_node(node)
+        self._update_render_timer_state()
         self.update()
 
     def remove_nodes(self, ids: set[int]):

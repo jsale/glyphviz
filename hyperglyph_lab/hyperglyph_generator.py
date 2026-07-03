@@ -47,7 +47,7 @@ from glyphviz_core.geometry_data import (
 )
 from glyphviz_core.topology import (
     TOPO_SPHERE, TOPO_TORUS, TOPO_CYLINDER, TOPO_PIN, TOPO_ROD, TOPO_POINT,
-    TOPO_ZSPHERE, TOPO_ZTORUS, TOPO_ZCYLINDER, TOPO_ZROD, TOPO_SPIRAL,
+    TOPO_SPIRAL,
 )
 from glyphviz_core.glyph_recipe import (
     GlyphRecipe, LevelSpec, generate_nodes,
@@ -66,9 +66,18 @@ from glyphviz_core.csv_reader import save_node_csv, save_tag_csv, stamp_node_and
 # angularly-distributed children into nonsense positions, so they're excluded
 # from the branching pool. (Confirmed against Topology-Guide.md conventions —
 # see gaiaviz-skill/references/structure/Topology-Guide.md.)
+#
+# The Z-variants (Zsphere/Ztorus/Zcylinder/Zrod) are also excluded: per
+# CLAUDE.md, they place children through the center/axis rather than on the
+# rendered surface (base_radius=0), which visually reads as everything
+# clustering into one small clump instead of a readable branch structure —
+# Jeff flagged this 2026-07-01. Plot/Surface were never in this pool either
+# (they need plot-index/FFT-grid data this generator doesn't produce). Both
+# families are candidates to bring back later with topology-appropriate
+# placement logic, not as generic angular branches.
 ANGULAR_SAFE_TOPOS = [
     TOPO_SPHERE, TOPO_TORUS, TOPO_CYLINDER, TOPO_PIN, TOPO_ROD, TOPO_POINT,
-    TOPO_ZSPHERE, TOPO_ZTORUS, TOPO_ZCYLINDER, TOPO_ZROD, TOPO_SPIRAL,
+    TOPO_SPIRAL,
 ]
 
 # Geometry "families" — picking one family per design (rather than a fully
@@ -101,6 +110,29 @@ PALETTE_SCHEMES = [
 
 MIN_BRANCH = 2
 MAX_BRANCH = 12
+
+# Used by callers that expose a "Randomize" on/off toggle (e.g. the Tools >
+# Hyperglyph Generator GUI dialog): seeding with this constant instead of a
+# fresh system-random seed makes random_recipe() fully deterministic — the
+# same (branch_levels, max_nodes) always produces the same design — which is
+# what "randomness disabled" means here. It's an arbitrary fixed constant,
+# not a quality signal; the tuned uniform() ranges inside random_recipe still
+# do the choosing, just from a fixed starting point instead of a new one.
+DETERMINISTIC_SEED = 42
+
+# LevelSpec.scale_x/y/z is a *local* multiplier relative to the parent level
+# — GlyphViz's renderer (compute_world_bases in topology.py) recursively
+# composes each level's own scale with its parent's already-cascaded world
+# scale, exactly like a glPushMatrix/glPopMatrix chain. A generator that also
+# pre-multiplies a running "cumulative" scale into each level's local field
+# double-compounds it, shrinking geometrically with depth (0.5^depth gets
+# invisible fast) — that was the cause of the near-zero scales Jeff hit
+# 2026-07-01. Each level now samples its own *local* scale independently, so
+# depth no longer compounds inside this generator at all (the renderer still
+# does its own — correct, single — compounding at draw time).
+SCALE_MIN = 0.5
+SCALE_MAX = 1.3
+ROOT_SCALE_MAX = 1.6
 
 
 # ------------------------------------------------------------------------------
@@ -196,7 +228,7 @@ def random_recipe(branch_levels: int, max_nodes: int, rng: random.Random,
     r0, g0, b0 = _hsv_to_rgb255(hues[0], rng.uniform(0.55, 0.9), rng.uniform(0.75, 1.0))
     a0 = rng.randint(160, 220) if translucent else 255
     trunk_topo = rng.choice(ANGULAR_SAFE_TOPOS)
-    root_scale = rng.uniform(0.8, 1.6)
+    root_scale = rng.uniform(SCALE_MIN, ROOT_SCALE_MAX)
     levels.append(LevelSpec(
         count=1, geometry=rng.choice(geo_pool), topo=trunk_topo,
         ratio=rng.uniform(0.1, 0.3), dist_mode=DIST_LINEAR, dist_step=0.0,
@@ -205,7 +237,6 @@ def random_recipe(branch_levels: int, max_nodes: int, rng: random.Random,
         color_start=(r0, g0, b0, a0), color_end=None,
     ))
 
-    cumulative_scale = root_scale
     parent_topo = trunk_topo
     for i, count in enumerate(counts, start=1):
         is_leaf = (i == len(counts))
@@ -213,17 +244,17 @@ def random_recipe(branch_levels: int, max_nodes: int, rng: random.Random,
         # harmless to set — keeps the recipe editable/coherent in Composer).
         this_topo = parent_topo if is_leaf else rng.choice(ANGULAR_SAFE_TOPOS)
 
-        shrink = rng.uniform(0.4, 0.75)
-        cumulative_scale *= shrink
+        # Independent per-level LOCAL scale — see the SCALE_MIN comment above
+        # for why this must not be multiplied by any running/cumulative value.
+        base_scale = rng.uniform(SCALE_MIN, SCALE_MAX)
         stretch = rng.random() < 0.3
         if stretch:
             axis = rng.choice([0, 1, 2])
             stretch_factors = [1.0, 1.0, 1.0]
-            stretch_factors[axis] = rng.uniform(1.4, 2.6)
-            sx, sy, sz = (cumulative_scale * f for f in stretch_factors)
+            stretch_factors[axis] = rng.uniform(1.4, 2.2)
+            sx, sy, sz = (max(SCALE_MIN, base_scale * f) for f in stretch_factors)
         else:
-            jitter = rng.uniform(0.9, 1.1)
-            sx = sy = sz = cumulative_scale * jitter
+            sx = sy = sz = base_scale
 
         dist_mode = DIST_ANGULAR if rng.random() < 0.75 else DIST_LINEAR
         spread = rng.uniform(1.4, 3.2)
@@ -246,10 +277,10 @@ def random_recipe(branch_levels: int, max_nodes: int, rng: random.Random,
             count=count, geometry=rng.choice(geo_pool), topo=this_topo,
             ratio=rng.uniform(0.08, 0.35),
             dist_mode=dist_mode,
-            dist_step=cumulative_scale * rng.uniform(1.5, 3.0),
+            dist_step=rng.uniform(1.5, 3.0),
             dist_axis=rng.choice([0, 1, 2]),
             dist_tilt=rng.uniform(-30.0, 30.0),
-            dist_tz=cumulative_scale * spread,
+            dist_tz=spread,
             scale_x=sx, scale_y=sy, scale_z=sz,
             rotate_x=rng.uniform(-45, 45), rotate_y=rng.uniform(-45, 45), rotate_z=rng.uniform(-45, 45),
             color_start=(rs, gs, bs, a_start), color_end=color_end,
@@ -283,7 +314,12 @@ def mutate_recipe(base: GlyphRecipe, rng: random.Random, max_nodes: int,
             return v * rng.uniform(1 - jitter, 1 + jitter)
 
         d.ratio = max(0.02, jit(d.ratio))
-        d.scale_x, d.scale_y, d.scale_z = jit(d.scale_x), jit(d.scale_y), jit(d.scale_z)
+        # Clamped to SCALE_MIN (not just jittered) so a recipe saved before
+        # the cumulative-scale fix — which could have near-zero baked-in
+        # values at deep levels — gets pulled back up to a visible size too.
+        d.scale_x = max(SCALE_MIN, jit(d.scale_x))
+        d.scale_y = max(SCALE_MIN, jit(d.scale_y))
+        d.scale_z = max(SCALE_MIN, jit(d.scale_z))
         d.rotate_x = (d.rotate_x + rng.uniform(-20, 20)) % 360
         d.rotate_y = (d.rotate_y + rng.uniform(-20, 20)) % 360
         d.rotate_z = (d.rotate_z + rng.uniform(-20, 20)) % 360
