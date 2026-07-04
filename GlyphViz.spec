@@ -50,8 +50,11 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    # Exclude heavy packages that GlyphViz doesn't use
-    excludes=['tkinter', 'matplotlib', 'scipy', 'PIL', 'IPython'],
+    # Exclude heavy packages that GlyphViz doesn't use.
+    # NOTE: scipy is NOT excluded — glyphviz_core/pdb_loader.py imports
+    # scipy.spatial.cKDTree for bond inference (PDB import). Excluding it
+    # here makes the frozen exe fail at startup with ModuleNotFoundError.
+    excludes=['tkinter', 'matplotlib', 'PIL', 'IPython'],
     noarchive=False,
 )
 
