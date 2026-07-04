@@ -1,0 +1,91 @@
+# Menus
+
+The full menu tree, read directly from `MainWindow._build_menu()` in
+`glyphviz_gl/main_window.py:138-239`. GlyphViz has **six** top-level menus —
+File, Edit, Textures, Meshes, Tools, View. There is no Node or Help menu.
+
+![Menu bar](../assets/screenshots/reference/gui-layout-overview.png)
+
+## File
+
+![File menu](../assets/screenshots/reference/menu-file.png)
+
+| Item | Shortcut | Action |
+|---|---|---|
+| Open Node CSV… | Ctrl+O | Opens a node CSV via file dialog; auto-loads a matching tag file, a `media/` texture folder next to the CSV, and a Channels animation pair if present (`_open_csv` — `main_window.py:927-958`) |
+| Save | Ctrl+S | Overwrites the currently-open file; if it was opened un-stamped, silently stamps it first rather than clobbering the original (`_save_csv` — `main_window.py:1055-1065`) |
+| Save As… | Ctrl+Shift+S | Saves under a fresh `YYYYMMDDHHMMSS`-stamped name (`_save_csv_as` — `main_window.py:1067-1078`) |
+| *(separator)* | | |
+| Save Scene as PNG… | F12 | Saves the current viewport exactly as displayed (`_save_scene_png` — `main_window.py:1108-1123`) |
+| *(separator)* | | |
+| Quit | — | Closes the window |
+
+## Edit
+
+![Edit menu](../assets/screenshots/reference/menu-edit.png)
+
+| Item | Shortcut | Action |
+|---|---|---|
+| Copy | Ctrl+C | Copies the selected node and its full descendant subtree (`_copy_selected` — `main_window.py:2021`) |
+| Paste | Ctrl+V | Pastes the copied subtree as a new sibling with fresh ids (`_paste_clipboard` — `main_window.py:2039`) |
+
+## Textures
+
+![Textures menu](../assets/screenshots/reference/menu-textures.png)
+
+| Item | Action |
+|---|---|
+| Set Texture Folder… | Loads images from a folder in alphanumeric order — texture ID 1 = first file, 2 = second, etc., matching the ANTz `usr/images/` convention (`_browse_texture_folder` — `main_window.py:960-970`) |
+| Clear Textures | Unloads all textures, reverting to solid-color rendering (`_clear_textures` — `main_window.py:1032-1036`) |
+
+## Meshes
+
+![Meshes menu](../assets/screenshots/reference/menu-meshes.png)
+
+| Item | Action |
+|---|---|
+| Import Mesh File… | Loads an OBJ/STL/PLY/glTF file as a `GEO_MESH` shape — applies to the selected node if exactly one is selected, otherwise creates a new root node (`_import_mesh_file` — `main_window.py:989-1030`) |
+
+## Tools
+
+![Tools menu](../assets/screenshots/reference/menu-tools.png)
+
+| Item | Shortcut | Action |
+|---|---|---|
+| Glyph Composer… | Ctrl+G | Opens the hierarchical glyph-template builder dialog (`_on_glyph_composer` — `main_window.py:984-987`) |
+
+## View
+
+![View menu](../assets/screenshots/reference/menu-view.png)
+
+All items below F12/Ctrl+G's row are checkable toggles; checked state mirrors
+the identically-named controls in the [Properties Panel](properties-panel.md)'s
+Display group — the two stay in sync (`_set_axes`, `_set_grid`, etc. update
+both — `main_window.py:1139-1200`).
+
+| Item | Default | Notes |
+|---|---|---|
+| Show Axes | ✓ checked | `main_window.py:205-208` |
+| Show Grid | ✓ checked | `main_window.py:210-213` |
+| Show Hidden Nodes | ☐ unchecked | `main_window.py:215-218` |
+| Show Tag Labels | ✓ checked | Tooltip notes the **T** key toggles the same state (`main_window.py:220-224`) |
+| *(separator)* | | |
+| Stereo 3D (Cross-Eye) | ☐ unchecked | Side-by-side cross-eye stereo pair; disables rubber-band select while active (`main_window.py:227-236`) |
+| *(separator)* | | |
+| Reset Camera | — | See [Viewer Navigation](viewer-navigation.md#camera-controls) (`main_window.py:239`) |
+| Manipulate | ✓ checked | Toggles visibility of the Manipulate (Move/Rotate/Size) toolbar (`main_window.py:279`) |
+| *(separator)* | | |
+| Properties | ✓ checked | Toggles visibility of the Properties dock (`main_window.py:899-900`) |
+| Node Table | ✓ checked | Toggles visibility of the Node Table dock (`main_window.py:911`) |
+
+The last four items (Manipulate/Properties/Node Table) are Qt's built-in
+`toggleViewAction()` for each dock/toolbar, appended by the widget-building
+methods that own them rather than by `_build_menu()` itself — that's why
+they're interleaved with separators added later in `MainWindow.__init__`'s
+build order (`_build_viewport` → `_build_menu` → `_build_manipulate_toolbar`
+→ `_build_panel` → `_build_table`, `main_window.py:102-107`).
+
+## Next step
+
+See [Viewer Navigation](viewer-navigation.md) for mouse/keyboard equivalents
+of common menu actions.

@@ -1,0 +1,100 @@
+site_name: GlyphViz
+site_description: A 3D hierarchical visualization toolkit for hyperdimensional data, built on the ANTz lineage.
+site_url: https://www.iluvdata.org/glyphviz/
+site_dir: C:/Jeff/iluvdata/public_html/glyphviz-docs-site-preview
+
+extra_css:
+  - stylesheets/brand.css
+
+extra_javascript:
+  - https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js
+  - https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js
+  - javascripts/hero-scene.js
+
+theme:
+  name: material
+  custom_dir: overrides
+  logo: assets/brand/glyphviz-mark.svg
+  favicon: assets/brand/favicon-48.png
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.instant
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+
+# Material theme is responsive/mobile-friendly by default (hamburger nav on small viewports)
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quickstart: getting-started/quickstart.md
+      - Core Concepts: getting-started/core-concepts.md
+  - Tutorials:
+      - Overview: tutorials/index.md
+      - "01 — Your First Scene": tutorials/01-first-scene.md
+      - "02 — Tags & Hierarchy": tutorials/02-tags-hierarchy.md
+      - "03 — Topology & Geometry Choices": tutorials/03-topology-geometry.md
+      - "04 — Mapping Real Data": tutorials/04-mapping-real-data.md
+      - "05 — Spatiotemporal EEG Visualization": tutorials/05-eeg-spatiotemporal.md
+      - "06 — Strange Attractors & Phase Space Embedding": tutorials/06-strange-attractors.md
+      - "07 — Hyperdimensional Projection": tutorials/07-hyperdimensional-projection.md
+      - "08 — XR/VR Rendering": tutorials/08-xr-vr-rendering.md
+  - Examples Gallery:
+      - Overview: examples/index.md
+      - DEG Constellation: examples/deg-constellation.md
+      - Subject Globe: examples/subject-globe.md
+      - Gene Coexpression Network: examples/gene-coexpression-network.md
+      - Cardiac Phase Space Attractor: examples/cardiac-phase-space-attractor.md
+      - Health Chronograph: examples/health-chronograph.md
+  - Reference:
+      - Overview: reference/index.md
+      - Viewer Navigation: reference/viewer-navigation.md
+      - Menus: reference/menus.md
+      - Properties Panel: reference/properties-panel.md
+      - Node Panel: reference/node-panel.md
+      - Geometries: reference/geometries.md
+      - Topologies: reference/topologies.md
+      - ANTz Node CSV Format Spec: reference/antz-format-spec.md
+      - CLI Reference: reference/cli.md
+      - API Reference: reference/api/index.md
+      - Glyph Composer Reference: reference/glyph-composer.md
+  - Architecture:
+      - Package Boundary: architecture/package-boundary.md
+      - Golden-Master Validation: architecture/golden-master-validation.md
+      - ANTz & GaiaViz Format Notes: architecture/antz-gaiaviz-format-notes.md
+  - Roadmap: roadmap.md
+  - Media: media/index.md
+  - FAQ: faq.md
+  - Changelog: changelog.md

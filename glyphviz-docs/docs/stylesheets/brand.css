@@ -1,0 +1,128 @@
+/* GlyphViz brand overrides */
+
+:root {
+  --gv-gold: #F2E2A8;        /* header background, soft highlight fills */
+  --gv-gold-strong: #8C6D14; /* borders, underlines, active-state accents */
+  --gv-gold-text: #5C4A12;   /* text set directly on a gold fill */
+  --gv-nav-dark: #3A3660;    /* header nav text/icons, dark-on-gold */
+}
+
+/* Override Material's primary-color theme variables directly so every
+   component that reads them (header, tabs, top progress bar) picks up
+   the pastel gold + dark nav text consistently, rather than patching
+   individual classes. */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--gv-gold);
+  --md-primary-fg-color--light: #F7ECC4;
+  --md-primary-fg-color--dark: #E8D48F;
+  --md-primary-bg-color: var(--gv-nav-dark);
+  --md-primary-bg-color--light: rgba(58, 54, 96, 0.7);
+}
+
+.gv-wordmark {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.gv-wordmark__glyph {
+  color: #534AB7;
+}
+
+.gv-wordmark__viz {
+  color: #0F6E56;
+}
+
+[data-md-color-scheme="slate"] .gv-wordmark__glyph {
+  color: #AFA9EC;
+}
+
+[data-md-color-scheme="slate"] .gv-wordmark__viz {
+  color: #5DCAA5;
+}
+
+/* Slightly larger, unclipped logo mark in the header */
+.md-header .md-logo img,
+.md-header .md-logo svg {
+  height: 1.4rem;
+  width: auto;
+}
+
+/* Tagline shown under the wordmark on the home page hero, not the header */
+.gv-tagline {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 300;
+  letter-spacing: 0.28em;
+  color: var(--color-text-secondary, #5F5E5A);
+  text-transform: uppercase;
+}
+
+/* Reusable gold highlight utilities, for badges, callouts, active states
+   elsewhere on the site */
+.gv-highlight {
+  background-color: var(--gv-gold);
+  color: var(--gv-gold-text);
+  border-radius: 4px;
+  padding: 0.1em 0.5em;
+}
+
+.gv-highlight-border {
+  border-left: 3px solid var(--gv-gold-strong);
+  padding-left: 0.75em;
+}
+
+.gv-underline-gold {
+  text-decoration: underline;
+  text-decoration-color: var(--gv-gold-strong);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+/* Animated hero */
+.gv-hero {
+  margin: 0.5rem 0 2rem;
+}
+
+.gv-hero__canvas {
+  width: 100%;
+  height: 460px;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.gv-hero__canvas:active {
+  cursor: grabbing;
+}
+
+.gv-hero__caption {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--md-default-fg-color--light, #5F5E5A);
+  margin-top: 0.35rem;
+  letter-spacing: 0.02em;
+}
+
+@media screen and (max-width: 76.1875em) {
+  .gv-hero__canvas {
+    height: 320px;
+  }
+}
+
+@media screen and (max-width: 44.9375em) {
+  .gv-hero__canvas {
+    height: 260px;
+  }
+}
+
+.gv-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

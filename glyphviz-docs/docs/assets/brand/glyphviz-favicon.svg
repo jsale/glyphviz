@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="90 130 200 150">
+<!-- Simplified torus + single child dot, legible at 16-32px -->
+<path fill-rule="evenodd"
+  d="M276,200 A84,42,0,0,1,108,200 A84,42,0,0,1,276,200 Z M240,200 A48,24,0,0,1,144,200 A48,24,0,0,1,240,200 Z"
+  fill="#534AB7"/>
+<path d="M276,200 A84,42,0,0,0,108,200" fill="none" stroke="#7F77DD" stroke-width="21" opacity="0.55"/>
+<path d="M133,172 A84,42,0,0,1,192,158" fill="none" stroke="#EEEDFE" stroke-width="9" stroke-linecap="round" opacity="0.8"/>
+<circle cx="252" cy="150" r="26" fill="#0F6E56"/>
+<ellipse cx="243" cy="140" rx="9" ry="8" fill="#5DCAA5" opacity="0.8"/>
+</svg>

@@ -1,0 +1,119 @@
+# Viewer Navigation
+
+Everything on this page is read directly from the event handlers in
+`glyphviz_gl/viewport.py` (the `Viewport` `QOpenGLWidget` subclass) and the
+shortcuts wired up in `glyphviz_gl/main_window.py`. Citations point at the
+function/line where each binding is implemented.
+
+## Camera controls
+
+The camera is orbit/target/distance based (`_cam_azimuth`, `_cam_elevation`,
+`_cam_target`, `_cam_distance` — `viewport.py:126-129`). Which mouse button
+does what depends on whether a Move/Rotate/Size **gizmo mode** is active (see
+[Node manipulation](#node-manipulation) below) — the bindings below describe
+plain camera-only interaction, i.e. no gizmo mode selected.
+
+| Action | Binding | Source |
+|---|---|---|
+| Orbit | Left-click + drag (or Right-click + drag) | `mouseMoveEvent`, `_orbit_camera` — `viewport.py:1502-1515, 1533-1535` |
+| Pan | Middle-click + drag | `mouseMoveEvent` — `viewport.py:1517-1528` |
+| Zoom | Scroll wheel (×0.88 per notch in, ×1.14 per notch out) | `wheelEvent` — `viewport.py:1569-1573` |
+| Reset / reframe view | **View → Reset Camera** menu item | `_reset_camera` — `main_window.py:1802-1803` |
+
+Orbit sensitivity is `0.4°` of azimuth/elevation per pixel of drag; elevation
+is clamped to ±89° (`_orbit_camera`, `viewport.py:1533-1535`). Pan speed scales
+with the current camera distance (`viewport.py:1525-1528`).
+
+**Reset Camera** re-fits the camera's *target* and *distance* to the bounding
+box of all loaded nodes (the same auto-framing `Viewport.set_nodes()` does on
+load) — it does **not** reset azimuth/elevation back to any default angle,
+since it just calls `set_nodes()` again (`main_window.py:1802-1803`,
+`viewport.py:223-244`).
+
+Double-clicking a node also moves the camera: it selects the node and zooms
+in to frame it with headroom (`mouseDoubleClickEvent` →
+`focus_on_node` — `viewport.py:1474-1479, 306-310`). The Node Table's
+double-click does the same thing (`_on_table_double_click` —
+`main_window.py:1796-1800`).
+
+## Selection
+
+| Action | Binding | Source |
+|---|---|---|
+| Select a node | Left-click on it (replaces selection) | `mouseReleaseEvent` — `viewport.py:1453-1469` |
+| Add/remove one node | Ctrl + Left-click on it | `mouseReleaseEvent` → `nodeClickedAdditive` — `viewport.py:1461-1466` |
+| Rubber-band select | Shift + Left-click-drag a rectangle | `mousePressEvent`/`mouseReleaseEvent` — `viewport.py:1412-1425, 1434-1451` |
+| Deselect all | Left-click empty space (no Ctrl held) | `mouseReleaseEvent` — `viewport.py:1467-1469` |
+| Select/deselect all | **Ctrl+A** (toggles: selects all unless everything is already selected, then deselects) | `QShortcut("Ctrl+A")` → `_on_select_all_toggle` — `main_window.py:109-111, 1258-1263` |
+
+Rubber-band region select is disabled while Stereo 3D (Cross-Eye) view is
+active — a single screen-space rectangle can't be mapped back to one node set
+when the two eyes show different projections of the same scene. Single-node
+click/double-click picking still works in stereo (`mousePressEvent` comment —
+`viewport.py:1413-1418`).
+
+Node Table row selection and Viewer selection are the same selection state —
+picking in one updates the other (`_on_table_selection`,
+`_on_viewport_pick*` — `main_window.py:1267-1284`). See
+[Node Panel](node-panel.md).
+
+## Keyboard shortcuts
+
+Shortcuts handled directly in the Viewer (`Viewport.keyPressEvent`/`event`,
+`viewport.py:1341-1390`) — active whenever the 3D view has keyboard focus:
+
+| Key | Action | Source |
+|---|---|---|
+| ↑ (Up) | Select the current node's parent | `navParent` → `_nav_parent` — `viewport.py:1356-1358`, `main_window.py:1844-1852` |
+| ↓ (Down) | Select the current node's first child | `navChild` → `_nav_child` — `viewport.py:1359-1361`, `main_window.py:1854-1865` |
+| Tab | Select next sibling (wraps; at branch level 0 this cycles all root nodes) | `navNextSibling` → `_nav_next_sibling` — `viewport.py:1345-1348`, `main_window.py:1867-1891` |
+| Shift+Tab | Select previous sibling (wraps) | `navPrevSibling` → `_nav_prev_sibling` — `viewport.py:1349-1352`, `main_window.py:1893-1906` |
+| N | New node (child of selection if a non-root node is selected, else a new root) | `createNode` → `_on_create_node` — `viewport.py:1362-1366`, `main_window.py:1910-1913` |
+| Shift+N | New child node under the current (single) selection | `createChildNode` → `_create_child_node` — `viewport.py:1363-1364` |
+| \ (backslash) | Halve the draw limit (progressively hides nodes — perf aid for huge scenes) | `_adjust_draw_limit(0.5)` — `viewport.py:1368-1374, 1392-1408` |
+| Shift+\ or \| | Double the draw limit (restores toward showing everything) | `_adjust_draw_limit(2.0)` — `viewport.py:1368-1374` |
+| T | Toggle tag-label display | `viewport.py:1375-1379` |
+| B | Toggle background black/white | `bgToggleRequested` — `viewport.py:1380-1382` |
+| 8 | Cycle the scene-wide render/blend mode | `renderModeCycleRequested` — `viewport.py:1383-1385` |
+| K | Quick-save — writes fresh, timestamped node + tag CSVs immediately (no dialog), next to the running executable | `quickSaveRequested` → `_quick_save` — `viewport.py:1386-1388`, `main_window.py:1093-1106` |
+
+Shortcuts registered at the main-window level (`QShortcut`, still fire while
+the Viewer has focus, since Qt shortcuts aren't widget-scoped here):
+
+| Key | Action | Source |
+|---|---|---|
+| Ctrl+A | Select all / deselect all (see above) | `main_window.py:109-111` |
+| U | Open the selected node's **Link** field (URL or local file) in the OS default handler | `_on_open_link` — `main_window.py:112, 1166-1181` |
+| Delete / Backspace | Delete the selected node(s) and their descendants | `_delete_selected` — `main_window.py:113-114` |
+
+File/Edit/View menu actions carry their own accelerators (Ctrl+O, Ctrl+S,
+Ctrl+Shift+S, F12, Ctrl+C, Ctrl+V, Ctrl+G) — see [Menus](menus.md).
+
+## Node manipulation
+
+The **Manipulate** toolbar (built in `_build_manipulate_toolbar`,
+`main_window.py:241-279`) sits above the Viewer and is always visible. It has
+three mutually-exclusive mode buttons — **Move**, **Rotate**, **Size** — plus
+**X**/**Y**/**Z** axis-confinement checkboxes (all checked by default). The
+buttons are disabled until at least one node is selected.
+
+Clicking a mode button a second time returns to camera-only dragging
+(`_on_mode_button_clicked` — `main_window.py:281-283`). While a mode is
+active:
+
+- **Left-click + drag** moves/rotates/scales the selection along the first
+  enabled axis (and the second, if two or more axes are checked).
+- **Right-click + drag** manipulates the third enabled axis, but only when
+  all three X/Y/Z boxes are checked — otherwise Right-click still just orbits
+  the camera.
+
+(`mouseMoveEvent`, `_apply_axis_deltas` — `viewport.py:1499-1567`.) Move drag
+speed matches camera-pan speed; Rotate drag speed matches orbit sensitivity
+(0.4° per pixel); Size drag applies a `1.0 + raw*0.004` per-pixel multiplier,
+floored at `0.001` (`viewport.py:1552-1562`).
+
+## Next step
+
+See [Menus](menus.md) for the menu-driven equivalents of these actions, or
+[Properties Panel](properties-panel.md) to see what happens after you select
+a node.
