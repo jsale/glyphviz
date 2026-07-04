@@ -134,6 +134,11 @@ class Viewport(QOpenGLWidget):
         self.stereo_mode: bool = False
         self.stereo_separation_pct: float = 3.0
 
+        # Camera-follow: keep _cam_target locked to the first selected visual
+        # node (in scene order) each frame, so orbit/zoom stay live while the
+        # node animates away. Pan is overridden while this is on.
+        self.follow_selected: bool = False
+
         self._last_pos = QPoint()
         self._press_pos = QPoint()
         self._drag_button = None
@@ -299,25 +304,87 @@ class Viewport(QOpenGLWidget):
         if not img.save(str(path)):
             raise RuntimeError(f"Failed to save screenshot to {path}")
 
-    def focus_on(self, world_pos: tuple[float, float, float], min_distance: float = 1.0):
-        """Point camera at world_pos and pull it in to ~1/10 current distance."""
-        az = math.radians(self._cam_azimuth)
-        el = math.radians(self._cam_elevation)
-        tx, ty, tz = self._cam_target
-        ex = tx + self._cam_distance * math.cos(el) * math.cos(az)
-        ey = ty + self._cam_distance * math.cos(el) * math.sin(az)
-        ez = tz + self._cam_distance * math.sin(el)
-        px, py, pz = world_pos
-        dist_to_obj = math.sqrt((ex-px)**2 + (ey-py)**2 + (ez-pz)**2)
-        self._cam_target = [px, py, pz]
-        self._cam_distance = max(dist_to_obj / 10.0, min_distance)
+    # Headroom multiplier on the exact bounding-sphere tangent-fit distance:
+    # the focused object fills ~1/1.3 (~75%) of the tighter view dimension.
+    _FOCUS_MARGIN = 1.3
+
+    def _fit_distance(self, radius: float) -> float:
+        """Camera distance at which a bounding sphere of `radius` exactly fits
+        the view (tangent to the narrower FOV axis), times _FOCUS_MARGIN.
+        Mirrors paintGL's gluPerspective(45, w/h, ...); in stereo mode each
+        eye only gets half the widget width."""
+        w = max(self.width(), 1)
+        h = max(self.height(), 1)
+        if self.stereo_mode and w >= 2:
+            w //= 2
+        half_v = math.radians(45.0) / 2.0
+        half_h = math.atan(math.tan(half_v) * (w / h))
+        return radius * self._FOCUS_MARGIN / math.sin(min(half_v, half_h))
+
+    def _bound_radius(self, node: Node) -> float:
+        """Bounding-sphere radius, about node's own world position, of the
+        node plus all its visible descendants — so double-clicking the root of
+        a composite glyph frames the whole glyph. Every primitive geometry is
+        inscribed in the unit sphere (see geometry.py), so a node's max
+        per-axis world radius bounds it."""
+        center = self.world_position(node.id) or (node.translate_x, node.translate_y, node.translate_z)
+        children: dict[int, list[Node]] = {}
+        for n in self._scene.nodes:
+            children.setdefault(n.parent_id, []).append(n)
+        radius = max(self._radius_of(node))
+        stack = list(children.get(node.id, []))
+        visited = {node.id}
+        while stack:
+            n = stack.pop()
+            if n.id in visited:
+                continue
+            visited.add(n.id)
+            if n.type in NON_VISUAL_TYPES or n.type == NODE_TYPE_LINK:
+                continue
+            if not self.show_hidden and n.hide:
+                continue
+            pos = self.world_position(n.id)
+            if pos is not None:
+                d = math.dist(pos, center)
+                radius = max(radius, d + max(self._radius_of(n)))
+            stack.extend(children.get(n.id, []))
+        return radius
+
+    def focus_on(self, world_pos: tuple[float, float, float], radius: float = 1.0):
+        """Center the camera on world_pos, at the distance where a bounding
+        sphere of `radius` is fully in view with headroom. The distance is
+        absolute (not relative to the current camera), so this jumps in from
+        far away but backs OUT when the camera is already closer than the fit
+        distance — including starting inside the object."""
+        self._cam_target = list(world_pos)
+        self._cam_distance = max(self._fit_distance(radius), 1.0)
         self.update()
 
     def focus_on_node(self, node: Node):
-        """Center and zoom toward node, leaving at least 1.5× its radius of headroom."""
+        """Center on node and frame it (and its child glyph structure) fully in view."""
         pos = self.world_position(node.id) or (node.translate_x, node.translate_y, node.translate_z)
-        rx, ry, rz = self._radius_of(node)
-        self.focus_on(pos, min_distance=max(rx, ry, rz) * 1.5)
+        self.focus_on(pos, self._bound_radius(node))
+
+    def follow_node(self) -> Node | None:
+        """The node the camera follows while follow_selected is on: the first
+        selected visual node in scene (table/tree) order, or None."""
+        if not self.selected_node_ids:
+            return None
+        for n in self._scene.nodes:
+            if n.id in self.selected_node_ids and n.type not in NON_VISUAL_TYPES:
+                return n
+        return None
+
+    def _apply_follow_target(self):
+        """Re-center _cam_target on the followed node (called once per frame
+        from paintGL, after rate animation has moved nodes). Distance/azimuth/
+        elevation are left alone so orbit and zoom stay interactive."""
+        node = self.follow_node()
+        if node is None:
+            return
+        pos = self._scene.world_pos(node.id)
+        if pos is not None:
+            self._cam_target = list(pos)
 
     # --- texture management ---
 
@@ -492,6 +559,8 @@ class Viewport(QOpenGLWidget):
         self._tex_mgr.tick(dt_ms)   # advance any playing animated GIFs
         if self._apply_rate_animation(dt_ms):
             self._scene.invalidate()
+        if self.follow_selected:
+            self._apply_follow_target()
         # QPainter's GL paint engine (used by _draw_tags_qpainter) can leave
         # all of this state changed after painter.end() -- restore it every
         # frame rather than relying on the one-time initializeGL()/resizeGL()

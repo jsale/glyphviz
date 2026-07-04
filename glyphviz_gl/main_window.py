@@ -266,6 +266,16 @@ class MainWindow(QMainWindow):
         self._pause_rates_act.triggered.connect(self._toggle_rates_paused)
 
         self._view_menu.addSeparator()
+        self._follow_act = self._view_menu.addAction("&Follow Selected Node")
+        self._follow_act.setCheckable(True)
+        self._follow_act.setChecked(False)
+        self._follow_act.setShortcut("F")
+        self._follow_act.setToolTip(
+            "Keep the camera centered on the selected node as it moves\n"
+            "(the first selected node in the table when several are selected).\n"
+            "Orbit and zoom stay live while following; panning is overridden.  [F]"
+        )
+        self._follow_act.triggered.connect(lambda c: self._set_follow(c))
         self._view_menu.addAction("Reset &Camera").triggered.connect(self._reset_camera)
 
     def _build_manipulate_toolbar(self):
@@ -1265,6 +1275,10 @@ class MainWindow(QMainWindow):
         scale = value / 10.0
         self._scale_label.setText(f"Scale: {scale:.1f}")
         self._viewport.base_scale = scale
+        self._viewport.update()
+
+    def _set_follow(self, checked: bool):
+        self._viewport.follow_selected = checked
         self._viewport.update()
 
     def _set_stereo(self, checked: bool):
