@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 from glyphviz_core.csv_reader import (
     load_node_csv, save_node_csv, save_tag_csv, stamp_node_and_tag_paths,
 )
+from glyphviz_core.pdb_loader import load_pdb_file
 from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA, GEO_MESH
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
@@ -151,6 +152,13 @@ class MainWindow(QMainWindow):
         open_act = file_menu.addAction("&Open Node CSV…")
         open_act.setShortcut("Ctrl+O")
         open_act.triggered.connect(self._open_csv)
+
+        import_pdb_act = file_menu.addAction("Import &PDB File…")
+        import_pdb_act.setToolTip(
+            "Load a .pdb protein structure: atoms become GEO_SPHERE nodes,\n"
+            "bonds (distance-inferred) become link nodes. Replaces the current scene."
+        )
+        import_pdb_act.triggered.connect(self._import_pdb_file)
 
         self._save_act = file_menu.addAction("&Save")
         self._save_act.setShortcut("Ctrl+S")
@@ -986,6 +994,36 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(msg)
         except Exception as exc:
             self.statusBar().showMessage(f"Error: {exc}")
+
+    def _import_pdb_file(self):
+        """File > Import PDB File…: parse a .pdb structure into atom/bond
+        nodes and load it as the current scene (same bulk-replace pattern as
+        _open_csv, since a protein can be thousands of nodes)."""
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Import PDB File", str(Path.home()),
+            "PDB Files (*.pdb);;All Files (*)",
+        )
+        if not path:
+            return
+        try:
+            self._ch_stop()
+            result = load_pdb_file(path)
+            self.nodes = result.nodes
+            self._current_path = None
+            self._current_tag_path = None
+            self._path_is_stamped = False
+            self._save_act.setEnabled(False)
+            self._viewport.set_nodes(self.nodes)
+            self._table.set_nodes(self.nodes)
+            self._update_stats(Path(path).name)
+            self._update_sel_values()
+            self._refresh_scene_settings()
+            self.statusBar().showMessage(
+                f"Imported {result.atom_count} atoms, {result.bond_count} bonds, "
+                f"{result.chain_count} chain(s) from {Path(path).name}"
+            )
+        except Exception as exc:
+            self.statusBar().showMessage(f"PDB import failed: {exc}")
 
     def _browse_texture_folder(self):
         start = (
