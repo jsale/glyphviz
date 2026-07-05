@@ -282,6 +282,14 @@ def node_row(node_id, parent_id, branch_level, tx, ty, tz, sx, sy, sz,
     }
 
 
+def tidy_text(s: str) -> str:
+    """Strip control characters from tag titles. The raw dataset's unknown
+    color/interior value is the mojibake control char \\x97 -- written as-is
+    (and cp1252-encoded) it made the tag CSV unreadable as UTF-8, so the
+    whole tag file silently failed to load."""
+    return "".join("?" if (ord(c) < 32 or 127 <= ord(c) <= 159) else c for c in s)
+
+
 def fmt_money(v: float) -> str:
     return f"${v / 1000:.1f}k" if v >= 1000 else f"${v:.0f}"
 
@@ -291,7 +299,10 @@ def fmt_miles(v: float) -> str:
 
 
 def write_csv(path: Path, fieldnames: list[str], rows: list[dict]):
-    with open(path, "w", newline="") as f:
+    if "title" in fieldnames:
+        for row in rows:
+            row["title"] = tidy_text(str(row["title"]))
+    with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
         w.writerows(rows)
@@ -453,7 +464,7 @@ def build_market_pulse_channels(df: pd.DataFrame, out_dir: Path,
 
     tracks_path = out_dir / "VehicleGalaxy_gv_ch-tracks.csv"
     track_ids = sorted(columns)
-    with open(tracks_path, "w", newline="") as f:
+    with open(tracks_path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["cyclecount"] + [f"ch{t}" for t in track_ids])
         for fr in range(n_frames):
