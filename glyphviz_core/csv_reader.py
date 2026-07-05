@@ -192,54 +192,64 @@ def _load_tag_file(tag_path: Path) -> dict[int, tuple[str, str]]:
         df = pd.read_csv(tag_path)
     except Exception:
         return {}
+    if 'record_id' not in df.columns:
+        return {}
+    n = len(df)
+    record_ids = df['record_id'].tolist()
+    table_ids = df['table_id'].tolist() if 'table_id' in df.columns else [0] * n
+    titles = df['title'].tolist() if 'title' in df.columns else [''] * n
     result: dict[int, tuple[str, str]] = {}
-    for _, row in df.iterrows():
+    for record_id, table_id, title in zip(record_ids, table_ids, titles):
         try:
-            record_id = int(row['record_id'])
-            table_id = int(row.get('table_id', 0))
-            if table_id != 0:
-                continue
-            raw = str(row.get('title', '') or '').strip().strip('"')
-            m = _re.search(
-                r'<a\s+href=["\']?([^"\'>\s]+)["\']?>([^<]*)</a>',
-                raw, _re.IGNORECASE,
-            )
-            if m:
-                link = m.group(1).strip('\'"')
-                text = m.group(2).strip() or raw
-            elif raw.startswith(('http://', 'https://', 'www.', 'ftp://')):
-                link = raw
-                text = raw
-            else:
-                link = ''
-                text = raw
-            result[record_id] = (text, link)
-        except (ValueError, KeyError):
+            record_id = int(record_id)
+            table_id = int(table_id)
+        except (ValueError, TypeError):
             continue
+        if table_id != 0:
+            continue
+        raw = str(title or '').strip().strip('"')
+        m = _re.search(
+            r'<a\s+href=["\']?([^"\'>\s]+)["\']?>([^<]*)</a>',
+            raw, _re.IGNORECASE,
+        )
+        if m:
+            link = m.group(1).strip('\'"')
+            text = m.group(2).strip() or raw
+        elif raw.startswith(('http://', 'https://', 'www.', 'ftp://')):
+            link = raw
+            text = raw
+        else:
+            link = ''
+            text = raw
+        result[record_id] = (text, link)
     return result
 
 
+def _int_col(df: pd.DataFrame, col: str, n: int, default: int) -> list[int]:
+    """Column as a list of Python ints (astype truncates toward zero, matching
+    int()), or n copies of the default when the column is absent."""
+    if col in df.columns:
+        return df[col].astype('int64').tolist()
+    return [default] * n
+
+
+def _float_col(df: pd.DataFrame, col: str, n: int, default: float) -> list[float]:
+    """Column as a list of Python floats, or n copies of the default when absent."""
+    if col in df.columns:
+        return df[col].astype('float64').tolist()
+    return [default] * n
+
+
 def load_node_csv(path: str) -> list[Node]:
+    # Whole columns are converted up front (astype/tolist run in C) and the
+    # per-node loop indexes plain Python lists — iterating pandas rows instead
+    # spends ~98% of load time on Series construction/indexing at 100k rows.
     df = pd.read_csv(path)
     if len(df.columns) and df.columns[0] == 'np_node_id':
         df = df.rename(columns=_GAIAVIZ_NODE_COL_ALIASES)
-    has_ratio = 'ratio' in df.columns
-    has_subspace = 'subspace' in df.columns
-    has_facet = 'facet' in df.columns
-    has_texture_id = 'texture_id' in df.columns
-    has_mesh_id = 'mesh_id' in df.columns
+    n = len(df)
     has_text = 'text' in df.columns
     has_link = 'link' in df.columns
-    has_rotation_mode = 'rotation_mode' in df.columns
-    has_render_mode = 'render_mode' in df.columns
-    has_fog_enabled = 'fog_enabled' in df.columns
-    has_fog_start = 'fog_start' in df.columns
-    has_fog_end = 'fog_end' in df.columns
-    rate_cols = (
-        'translate_rate_x', 'translate_rate_y', 'translate_rate_z',
-        'rotate_rate_x', 'rotate_rate_y', 'rotate_rate_z',
-        'scale_rate_x', 'scale_rate_y', 'scale_rate_z',
-    )
 
     # Fall back to companion tag file only when neither inline column is present.
     tag_data: dict[int, tuple[str, str]] = {}
@@ -248,63 +258,97 @@ def load_node_csv(path: str) -> list[Node]:
         if tag_path:
             tag_data = _load_tag_file(tag_path)
 
+    ids          = df['id'].astype('int64').tolist()
+    types        = df['type'].astype('int64').tolist()
+    parent_ids   = df['parent_id'].astype('int64').tolist()
+    branch_levels = df['branch_level'].astype('int64').tolist()
+    tx = df['translate_x'].astype('float64').tolist()
+    ty = df['translate_y'].astype('float64').tolist()
+    tz = df['translate_z'].astype('float64').tolist()
+    rx = df['rotate_x'].astype('float64').tolist()
+    ry = df['rotate_y'].astype('float64').tolist()
+    rz = df['rotate_z'].astype('float64').tolist()
+    sx = df['scale_x'].astype('float64').tolist()
+    sy = df['scale_y'].astype('float64').tolist()
+    sz = df['scale_z'].astype('float64').tolist()
+    cr = df['color_r'].astype('int64').tolist()
+    cg = df['color_g'].astype('int64').tolist()
+    cb = df['color_b'].astype('int64').tolist()
+    ca = df['color_a'].astype('int64').tolist()
+    geometries = df['geometry'].astype('int64').tolist()
+    hides      = df['hide'].astype('int64').tolist()
+    topos      = df['topo'].astype('int64').tolist()
+
+    ratios      = _float_col(df, 'ratio', n, 0.1)
+    if 'subspace' in df.columns:
+        subspaces = df['subspace'].astype('int64').tolist()
+    elif 'facet' in df.columns:
+        subspaces = (df['facet'].astype('int64') - 1).clip(lower=0).tolist()
+    else:
+        subspaces = [0] * n
+    texture_ids = _int_col(df, 'texture_id', n, 0)
+    mesh_ids    = _int_col(df, 'mesh_id', n, 0)
+    # Missing rotation_mode column means a pre-existing file authored under
+    # ANTz's only-ever convention; default to it so old files keep rendering
+    # exactly as before. New Node() calls elsewhere get EULER_XYZ via the
+    # dataclass default instead.
+    rotation_modes = _int_col(df, 'rotation_mode', n, ROTATION_MODE_HEADING_TILT_ROLL)
+    render_modes   = _int_col(df, 'render_mode', n, RENDER_MODE_NORMAL)
+    fog_enableds   = _int_col(df, 'fog_enabled', n, 0)
+    fog_starts     = _float_col(df, 'fog_start', n, 0.0)
+    fog_ends       = _float_col(df, 'fog_end', n, 0.0)
+    trx = _float_col(df, 'translate_rate_x', n, 0.0)
+    try_ = _float_col(df, 'translate_rate_y', n, 0.0)
+    trz = _float_col(df, 'translate_rate_z', n, 0.0)
+    rrx = _float_col(df, 'rotate_rate_x', n, 0.0)
+    rry = _float_col(df, 'rotate_rate_y', n, 0.0)
+    rrz = _float_col(df, 'rotate_rate_z', n, 0.0)
+    srx = _float_col(df, 'scale_rate_x', n, 0.0)
+    sry = _float_col(df, 'scale_rate_y', n, 0.0)
+    srz = _float_col(df, 'scale_rate_z', n, 0.0)
+
+    # Untracked columns, preserved per-node so save_node_csv can round-trip them.
+    extras_cols = [c for c in df.columns if c not in _TRACKED_COLS]
+    extras_rows = list(zip(*(df[c].tolist() for c in extras_cols))) if extras_cols else None
+
+    text_vals = df['text'].tolist() if has_text else None
+    link_vals = df['link'].tolist() if has_link else None
+
     nodes = []
-    for _, row in df.iterrows():
+    for i in range(n):
         node = Node(
-            id=int(row['id']),
-            type=int(row['type']),
-            parent_id=int(row['parent_id']),
-            branch_level=int(row['branch_level']),
-            translate_x=float(row['translate_x']),
-            translate_y=float(row['translate_y']),
-            translate_z=float(row['translate_z']),
-            rotate_x=float(row['rotate_x']),
-            rotate_y=float(row['rotate_y']),
-            rotate_z=float(row['rotate_z']),
-            scale_x=float(row['scale_x']),
-            scale_y=float(row['scale_y']),
-            scale_z=float(row['scale_z']),
-            color_r=int(row['color_r']),
-            color_g=int(row['color_g']),
-            color_b=int(row['color_b']),
-            color_a=int(row['color_a']),
-            geometry=int(row['geometry']),
-            hide=int(row['hide']),
-            topo=int(row['topo']),
-            ratio=float(row['ratio']) if has_ratio else 0.1,
-            subspace=(
-                int(row['subspace']) if has_subspace
-                else max(int(row['facet']) - 1, 0) if has_facet
-                else 0
-            ),
-            texture_id=int(row['texture_id']) if has_texture_id else 0,
-            mesh_id=int(row['mesh_id']) if has_mesh_id else 0,
-            # Missing column means a pre-existing file authored under ANTz's
-            # only-ever convention; default to it so old files keep rendering
-            # exactly as before. New Node() calls elsewhere get EULER_XYZ via
-            # the dataclass default instead.
-            rotation_mode=(
-                int(row['rotation_mode']) if has_rotation_mode
-                else ROTATION_MODE_HEADING_TILT_ROLL
-            ),
-            render_mode=int(row['render_mode']) if has_render_mode else RENDER_MODE_NORMAL,
-            fog_enabled=int(row['fog_enabled']) if has_fog_enabled else 0,
-            fog_start=float(row['fog_start']) if has_fog_start else 0.0,
-            fog_end=float(row['fog_end']) if has_fog_end else 0.0,
-            **{col: float(row[col]) for col in rate_cols if col in df.columns},
+            id=ids[i],
+            type=types[i],
+            parent_id=parent_ids[i],
+            branch_level=branch_levels[i],
+            translate_x=tx[i], translate_y=ty[i], translate_z=tz[i],
+            rotate_x=rx[i], rotate_y=ry[i], rotate_z=rz[i],
+            scale_x=sx[i], scale_y=sy[i], scale_z=sz[i],
+            color_r=cr[i], color_g=cg[i], color_b=cb[i], color_a=ca[i],
+            geometry=geometries[i],
+            hide=hides[i],
+            topo=topos[i],
+            ratio=ratios[i],
+            subspace=subspaces[i],
+            texture_id=texture_ids[i],
+            mesh_id=mesh_ids[i],
+            rotation_mode=rotation_modes[i],
+            render_mode=render_modes[i],
+            fog_enabled=fog_enableds[i],
+            fog_start=fog_starts[i],
+            fog_end=fog_ends[i],
+            translate_rate_x=trx[i], translate_rate_y=try_[i], translate_rate_z=trz[i],
+            rotate_rate_x=rrx[i], rotate_rate_y=rry[i], rotate_rate_z=rrz[i],
+            scale_rate_x=srx[i], scale_rate_y=sry[i], scale_rate_z=srz[i],
         )
-        # Preserve all untracked columns so save_node_csv can round-trip them.
-        node.extras = {
-            col: row[col]
-            for col in df.columns
-            if col not in _TRACKED_COLS
-        }
+        if extras_rows is not None:
+            node.extras = dict(zip(extras_cols, extras_rows[i]))
         # Populate text / link from inline columns or companion tag file.
         if has_text:
-            v = row.get('text')
+            v = text_vals[i]
             node.text = '' if (v is None or (isinstance(v, float) and pd.isna(v))) else str(v)
         if has_link:
-            v = row.get('link')
+            v = link_vals[i]
             node.link = '' if (v is None or (isinstance(v, float) and pd.isna(v))) else str(v)
         if tag_data and not has_text and not has_link:
             # Match by record_id (column 92) if available, else fall back to id.
