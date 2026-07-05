@@ -1,0 +1,300 @@
+id,table_id,record_id,title
+0,0,1,Used-vehicle auction market | 543k sales Jan 2014 - Jul 2015 | ring runs cheap -> luxury | blue under book / red over book
+1,0,3,Mazda | 8387 sold | med $9.7k | +0.0% vs MMR | 52k mi
+2,0,4,Mazda Mazda3 [Sedan] | 2872 sold | med $9.6k | +0.3% vs MMR | 49k mi
+3,0,5,Mazda Mazda6 [Sedan] | 1509 sold | med $9.1k | +0.0% vs MMR | 59k mi
+4,0,6,Mazda CX-9 [SUV] | 845 sold | med $18.5k | +0.0% vs MMR | 41k mi
+5,0,7,Mazda Mazda5 [Van] | 643 sold | med $10.7k | +0.0% vs MMR | 53k mi
+6,0,8,Mazda CX-5 [SUV] | 507 sold | med $19.2k | +0.0% vs MMR | 23k mi
+7,0,9,Mazda CX-7 [SUV] | 432 sold | med $8.8k | -1.0% vs MMR | 73k mi
+8,0,10,Mazda Mazda2 [Hatchback] | 418 sold | med $8.5k | -0.7% vs MMR | 48k mi
+9,0,11,Mazda Tribute [SUV] | 316 sold | med $2.7k | -3.2% vs MMR | 126k mi
+10,0,12,Mazda MX-5 Miata [Convertible] | 222 sold | med $12.0k | +1.4% vs MMR | 40k mi
+11,0,13,Mazda MPV [Van] | 145 sold | med $1.5k | +0.0% vs MMR | 136k mi
+12,0,14,Mazda Protege [Sedan] | 87 sold | med $1.1k | -4.3% vs MMR | 138k mi
+13,0,15,Mazda Mazdaspeed3 [Hatchback] | 61 sold | med $15.0k | +0.8% vs MMR | 39k mi
+14,0,16,Volkswagen | 12439 sold | med $9.8k | -0.4% vs MMR | 56k mi
+15,0,17,Volkswagen Jetta [Sedan] | 4586 sold | med $8.6k | -0.5% vs MMR | 58k mi
+16,0,18,Volkswagen Passat [Sedan] | 3298 sold | med $10.8k | -0.7% vs MMR | 52k mi
+17,0,19,Volkswagen New Beetle [Hatchback] | 785 sold | med $3.1k | -2.6% vs MMR | 94k mi
+18,0,20,Volkswagen CC [Sedan] | 649 sold | med $13.2k | -0.8% vs MMR | 47k mi
+19,0,21,Volkswagen Tiguan [SUV] | 537 sold | med $14.0k | -0.4% vs MMR | 42k mi
+20,0,22,Volkswagen Beetle [Hatchback] | 460 sold | med $12.2k | +0.0% vs MMR | 28k mi
+21,0,23,Volkswagen GTI [Hatchback] | 415 sold | med $10.1k | +0.7% vs MMR | 67k mi
+22,0,24,Volkswagen Touareg [SUV] | 338 sold | med $7.0k | -0.3% vs MMR | 89k mi
+23,0,25,Volkswagen Golf [Hatchback] | 316 sold | med $9.8k | +0.0% vs MMR | 50k mi
+24,0,26,Volkswagen Routan [Van] | 234 sold | med $9.6k | +1.5% vs MMR | 69k mi
+25,0,27,Volkswagen Jetta SportWagen [Wagon] | 208 sold | med $13.4k | +0.4% vs MMR | 45k mi
+26,0,28,Volkswagen Eos [Convertible] | 190 sold | med $9.9k | +0.5% vs MMR | 59k mi
+27,0,29,Chrysler | 17206 sold | med $10.4k | -0.7% vs MMR | 51k mi
+28,0,30,Chrysler Town and Country [Van] | 5959 sold | med $17.5k | -0.5% vs MMR | 35k mi
+29,0,31,Chrysler 200 [Sedan] | 4048 sold | med $10.7k | -0.5% vs MMR | 36k mi
+30,0,32,Chrysler 300 [Sedan] | 3903 sold | med $10.2k | -0.8% vs MMR | 66k mi
+31,0,33,Chrysler Sebring [Sedan] | 1242 sold | med $2.9k | -3.3% vs MMR | 104k mi
+32,0,34,Chrysler PT Cruiser [Wagon] | 1183 sold | med $2.1k | -6.0% vs MMR | 101k mi
+33,0,35,Chrysler Pacifica [Wagon] | 372 sold | med $3.3k | -6.8% vs MMR | 118k mi
+34,0,36,Chrysler Aspen [SUV] | 228 sold | med $8.5k | +0.7% vs MMR | 106k mi
+35,0,37,Chrysler 300M [Sedan] | 79 sold | med $1.4k | +0.0% vs MMR | 133k mi
+36,0,38,Chrysler Crossfire [Hatchback] | 61 sold | med $5.0k | +8.1% vs MMR | 80k mi
+37,0,39,Chrysler Concorde [Sedan] | 53 sold | med $1.0k | +0.0% vs MMR | 127k mi
+38,0,40,Chrysler town [Other] | 25 sold | med $3.1k | +0.0% vs MMR | 105k mi
+39,0,41,Chevrolet | 59915 sold | med $10.5k | -0.3% vs MMR | 62k mi
+40,0,42,Chevrolet Impala [Sedan] | 7869 sold | med $7.6k | -0.8% vs MMR | 71k mi
+41,0,43,Chevrolet Malibu [Sedan] | 7040 sold | med $9.5k | -0.3% vs MMR | 57k mi
+42,0,44,Chevrolet Silverado 1500 [Truck] | 6352 sold | med $16.8k | +0.0% vs MMR | 74k mi
+43,0,45,Chevrolet Cruze [Sedan] | 6349 sold | med $11.1k | +0.0% vs MMR | 37k mi
+44,0,46,Chevrolet Equinox [SUV] | 4914 sold | med $13.3k | +0.0% vs MMR | 61k mi
+45,0,47,Chevrolet Tahoe [SUV] | 3076 sold | med $14.9k | -0.3% vs MMR | 103k mi
+46,0,48,Chevrolet Suburban [SUV] | 2392 sold | med $16.1k | -0.5% vs MMR | 100k mi
+47,0,49,Chevrolet Traverse [SUV] | 2012 sold | med $15.6k | +0.3% vs MMR | 57k mi
+48,0,50,Chevrolet Camaro [Coupe] | 1953 sold | med $18.8k | +0.0% vs MMR | 35k mi
+49,0,51,Chevrolet Sonic [Sedan] | 1785 sold | med $9.0k | -0.3% vs MMR | 37k mi
+50,0,52,Chevrolet Cobalt [Sedan] | 1635 sold | med $3.4k | -3.3% vs MMR | 101k mi
+51,0,53,Chevrolet Silverado 2500HD [Truck] | 1439 sold | med $19.0k | -0.2% vs MMR | 93k mi
+52,0,54,Dodge | 30630 sold | med $10.5k | -0.5% vs MMR | 63k mi
+53,0,55,Dodge Grand Caravan [Van] | 7888 sold | med $11.4k | -0.4% vs MMR | 61k mi
+54,0,56,Dodge Charger [Sedan] | 4541 sold | med $13.4k | -0.5% vs MMR | 55k mi
+55,0,57,Dodge Avenger [Sedan] | 3961 sold | med $9.6k | +0.0% vs MMR | 51k mi
+56,0,58,Dodge Journey [SUV] | 3111 sold | med $13.2k | -0.3% vs MMR | 44k mi
+57,0,59,Dodge Ram Pickup 1500 [Truck] | 2224 sold | med $8.9k | -2.8% vs MMR | 104k mi
+58,0,60,Dodge Durango [SUV] | 2015 sold | med $12.7k | -0.6% vs MMR | 76k mi
+59,0,61,Dodge Caliber [Wagon] | 1334 sold | med $4.3k | -2.3% vs MMR | 96k mi
+60,0,62,Dodge Challenger [Coupe] | 1196 sold | med $20.0k | +0.3% vs MMR | 29k mi
+61,0,63,Dodge Dart [Sedan] | 1028 sold | med $11.7k | +0.0% vs MMR | 24k mi
+62,0,64,Dodge Nitro [SUV] | 610 sold | med $8.6k | +0.5% vs MMR | 88k mi
+63,0,65,Dodge Dakota [Truck] | 603 sold | med $4.7k | -1.1% vs MMR | 113k mi
+64,0,66,Dodge Ram Pickup 2500 [Truck] | 505 sold | med $15.4k | -1.9% vs MMR | 124k mi
+65,0,67,Honda | 27047 sold | med $11.0k | +0.3% vs MMR | 57k mi
+66,0,68,Honda Accord [Sedan] | 8960 sold | med $11.0k | +0.4% vs MMR | 58k mi
+67,0,69,Honda Civic [Sedan] | 7363 sold | med $9.9k | +0.0% vs MMR | 48k mi
+68,0,70,Honda Odyssey [Van] | 3514 sold | med $10.3k | +0.0% vs MMR | 88k mi
+69,0,71,Honda CR-V [SUV] | 3262 sold | med $14.5k | +0.5% vs MMR | 53k mi
+70,0,72,Honda Pilot [SUV] | 2150 sold | med $19.5k | +0.4% vs MMR | 53k mi
+71,0,73,Honda Fit [Hatchback] | 441 sold | med $9.0k | +0.7% vs MMR | 50k mi
+72,0,74,Honda Element [SUV] | 308 sold | med $5.7k | +1.1% vs MMR | 125k mi
+73,0,75,Honda Crosstour [Hatchback] | 300 sold | med $18.1k | +1.1% vs MMR | 35k mi
+74,0,76,Honda Insight [Hatchback] | 228 sold | med $9.5k | +0.5% vs MMR | 46k mi
+75,0,77,Honda Ridgeline [Truck] | 199 sold | med $16.2k | -0.5% vs MMR | 80k mi
+76,0,78,Honda CR-Z [Hatchback] | 108 sold | med $10.2k | -1.0% vs MMR | 37k mi
+77,0,79,Honda Accord Crosstour [Hatchback] | 106 sold | med $14.3k | +1.1% vs MMR | 60k mi
+78,0,80,Buick | 4942 sold | med $11.1k | -0.4% vs MMR | 71k mi
+79,0,81,Buick LaCrosse [Sedan] | 1186 sold | med $13.5k | +0.0% vs MMR | 57k mi
+80,0,82,Buick Enclave [SUV] | 1070 sold | med $17.0k | +0.5% vs MMR | 69k mi
+81,0,83,Buick Regal [Sedan] | 571 sold | med $12.7k | +0.0% vs MMR | 44k mi
+82,0,84,Buick Lucerne [Sedan] | 496 sold | med $6.4k | -2.5% vs MMR | 92k mi
+83,0,85,Buick LeSabre [Sedan] | 429 sold | med $1.9k | -7.1% vs MMR | 111k mi
+84,0,86,Buick Verano [Sedan] | 382 sold | med $13.0k | -0.4% vs MMR | 29k mi
+85,0,87,Buick Rendezvous [SUV] | 274 sold | med $2.6k | -6.0% vs MMR | 126k mi
+86,0,88,Buick Century [Sedan] | 189 sold | med $1.4k | -10.3% vs MMR | 99k mi
+87,0,89,Buick Park Avenue [Sedan] | 95 sold | med $1.4k | -8.4% vs MMR | 120k mi
+88,0,90,Buick Rainier [SUV] | 95 sold | med $3.4k | -5.9% vs MMR | 120k mi
+89,0,91,Buick Encore [SUV] | 93 sold | med $18.4k | +1.6% vs MMR | 20k mi
+90,0,92,Buick Terraza [Van] | 55 sold | med $3.2k | -4.2% vs MMR | 117k mi
+91,0,93,Hyundai | 21650 sold | med $11.4k | +0.0% vs MMR | 38k mi
+92,0,94,Hyundai Sonata [Sedan] | 6870 sold | med $11.8k | -0.4% vs MMR | 39k mi
+93,0,95,Hyundai Elantra [Sedan] | 6193 sold | med $11.0k | +0.0% vs MMR | 34k mi
+94,0,96,Hyundai Accent [Sedan] | 2014 sold | med $8.9k | -0.8% vs MMR | 39k mi
+95,0,97,Hyundai Santa Fe [SUV] | 1627 sold | med $8.9k | +0.0% vs MMR | 85k mi
+96,0,98,Hyundai Genesis [Sedan] | 902 sold | med $16.9k | +0.0% vs MMR | 41k mi
+97,0,99,Hyundai Tucson [SUV] | 874 sold | med $13.3k | -0.6% vs MMR | 46k mi
+98,0,100,Hyundai Veloster [Hatchback] | 608 sold | med $13.0k | +0.4% vs MMR | 28k mi
+99,0,101,Hyundai Sonata Hybrid [Sedan] | 546 sold | med $14.5k | +0.4% vs MMR | 29k mi
+100,0,102,Hyundai Azera [Sedan] | 314 sold | med $8.8k | +0.0% vs MMR | 54k mi
+101,0,103,Hyundai Santa Fe Sport [SUV] | 304 sold | med $19.4k | +0.0% vs MMR | 21k mi
+102,0,104,Hyundai Genesis Coupe [Coupe] | 294 sold | med $15.4k | +2.1% vs MMR | 30k mi
+103,0,105,Hyundai Elantra GT [Hatchback] | 246 sold | med $13.1k | +0.2% vs MMR | 20k mi
+104,0,106,Nissan | 53749 sold | med $12.0k | -0.4% vs MMR | 40k mi
+105,0,107,Nissan Altima [Sedan] | 19257 sold | med $12.1k | -0.5% vs MMR | 37k mi
+106,0,108,Nissan Maxima [Sedan] | 6523 sold | med $15.1k | -0.6% vs MMR | 47k mi
+107,0,109,Nissan Rogue [SUV] | 5588 sold | med $14.0k | +0.0% vs MMR | 37k mi
+108,0,110,Nissan Sentra [Sedan] | 5424 sold | med $9.7k | -0.5% vs MMR | 39k mi
+109,0,111,Nissan Versa [Sedan] | 3092 sold | med $7.9k | -0.3% vs MMR | 46k mi
+110,0,112,Nissan Murano [SUV] | 2902 sold | med $14.3k | -0.5% vs MMR | 60k mi
+111,0,113,Nissan Pathfinder [SUV] | 2136 sold | med $15.6k | +0.0% vs MMR | 60k mi
+112,0,114,Nissan Leaf [Hatchback] | 1514 sold | med $10.3k | +0.0% vs MMR | 20k mi
+113,0,115,Nissan Frontier [Truck] | 1411 sold | med $14.5k | +0.6% vs MMR | 60k mi
+114,0,116,Nissan Xterra [SUV] | 1249 sold | med $5.9k | -0.3% vs MMR | 107k mi
+115,0,117,Nissan Titan [Truck] | 802 sold | med $11.4k | +0.9% vs MMR | 91k mi
+116,0,118,Nissan Quest [Van] | 801 sold | med $6.7k | -1.0% vs MMR | 72k mi
+117,0,119,Toyota | 39707 sold | med $12.1k | -0.4% vs MMR | 54k mi
+118,0,120,Toyota Camry [Sedan] | 12441 sold | med $12.8k | -0.6% vs MMR | 43k mi
+119,0,121,Toyota Corolla [Sedan] | 7280 sold | med $10.0k | -0.4% vs MMR | 48k mi
+120,0,122,Toyota RAV4 [SUV] | 3208 sold | med $15.0k | -0.3% vs MMR | 42k mi
+121,0,123,Toyota Sienna [Van] | 2857 sold | med $14.8k | +0.0% vs MMR | 67k mi
+122,0,124,Toyota Highlander [SUV] | 2232 sold | med $15.5k | +0.0% vs MMR | 84k mi
+123,0,125,Toyota Prius [Hatchback] | 1839 sold | med $10.9k | -0.4% vs MMR | 63k mi
+124,0,126,Toyota Tundra [Truck] | 1351 sold | med $21.0k | +0.4% vs MMR | 68k mi
+125,0,127,Toyota 4Runner [SUV] | 1330 sold | med $11.5k | +0.8% vs MMR | 112k mi
+126,0,128,Toyota Yaris [Hatchback] | 1227 sold | med $7.9k | -0.6% vs MMR | 54k mi
+127,0,129,Toyota Tacoma [Truck] | 1139 sold | med $23.0k | +0.0% vs MMR | 33k mi
+128,0,130,Toyota Avalon [Sedan] | 1125 sold | med $8.6k | +0.0% vs MMR | 94k mi
+129,0,131,Toyota Camry Hybrid [Sedan] | 598 sold | med $14.9k | -1.5% vs MMR | 58k mi
+130,0,132,Kia | 17945 sold | med $12.2k | +0.0% vs MMR | 35k mi
+131,0,133,Kia Optima [Sedan] | 4372 sold | med $14.3k | +0.0% vs MMR | 31k mi
+132,0,134,Kia Sorento [SUV] | 3400 sold | med $15.9k | +0.0% vs MMR | 38k mi
+133,0,135,Kia Forte [Sedan] | 2750 sold | med $11.1k | +0.0% vs MMR | 31k mi
+134,0,136,Kia Soul [Wagon] | 2742 sold | med $11.5k | +0.0% vs MMR | 29k mi
+135,0,137,Kia Rio [Sedan] | 1466 sold | med $9.4k | -0.8% vs MMR | 29k mi
+136,0,138,Kia Sportage [SUV] | 1204 sold | med $14.6k | +0.0% vs MMR | 34k mi
+137,0,139,Kia Sedona [Van] | 914 sold | med $6.2k | -0.9% vs MMR | 75k mi
+138,0,140,Kia Spectra [Sedan] | 443 sold | med $2.5k | -5.3% vs MMR | 106k mi
+139,0,141,Kia Cadenza [Sedan] | 245 sold | med $20.9k | +0.0% vs MMR | 15k mi
+140,0,142,Kia Rondo [Wagon] | 159 sold | med $3.6k | -7.7% vs MMR | 102k mi
+141,0,143,Kia Amanti [Sedan] | 99 sold | med $2.7k | -3.4% vs MMR | 106k mi
+142,0,144,Kia Borrego [SUV] | 83 sold | med $8.7k | -4.0% vs MMR | 86k mi
+143,0,145,Ford | 92978 sold | med $13.6k | -0.5% vs MMR | 45k mi
+144,0,146,Ford F-150 [Other] | 14510 sold | med $19.0k | -0.4% vs MMR | 58k mi
+145,0,147,Ford Fusion [Sedan] | 12945 sold | med $12.7k | -0.7% vs MMR | 37k mi
+146,0,148,Ford Escape [SUV] | 11863 sold | med $15.0k | -0.4% vs MMR | 41k mi
+147,0,149,Ford Focus [Sedan] | 10319 sold | med $10.2k | -0.9% vs MMR | 38k mi
+148,0,150,Ford Explorer [SUV] | 7576 sold | med $22.5k | -0.9% vs MMR | 45k mi
+149,0,151,Ford Edge [SUV] | 5915 sold | med $19.9k | -0.5% vs MMR | 36k mi
+150,0,152,Ford Mustang [Coupe] | 4919 sold | med $14.0k | -0.4% vs MMR | 48k mi
+151,0,153,Ford Taurus [Sedan] | 4338 sold | med $12.5k | -0.5% vs MMR | 60k mi
+152,0,154,Ford Expedition [SUV] | 2802 sold | med $11.2k | +0.0% vs MMR | 93k mi
+153,0,155,Ford F-250 Super Duty [Truck] | 2557 sold | med $18.2k | -0.4% vs MMR | 95k mi
+154,0,156,Ford Fiesta [Hatchback] | 2375 sold | med $9.5k | -0.4% vs MMR | 32k mi
+155,0,157,Ford Ranger [Truck] | 1860 sold | med $7.5k | -1.5% vs MMR | 81k mi
+156,0,158,Jeep | 15395 sold | med $13.9k | -0.3% vs MMR | 60k mi
+157,0,159,Jeep Grand Cherokee [SUV] | 4623 sold | med $17.5k | -0.5% vs MMR | 71k mi
+158,0,160,Jeep Wrangler [SUV] | 3772 sold | med $21.9k | +0.0% vs MMR | 46k mi
+159,0,161,Jeep Liberty [SUV] | 2548 sold | med $6.9k | +0.0% vs MMR | 91k mi
+160,0,162,Jeep Patriot [SUV] | 1787 sold | med $12.1k | +0.0% vs MMR | 38k mi
+161,0,163,Jeep Compass [SUV] | 1382 sold | med $13.6k | -0.4% vs MMR | 33k mi
+162,0,164,Jeep Commander [SUV] | 671 sold | med $7.5k | -1.6% vs MMR | 108k mi
+163,0,165,Jeep Cherokee [SUV] | 593 sold | med $19.5k | +0.0% vs MMR | 18k mi
+164,0,166,Cadillac | 7473 sold | med $14.4k | -0.3% vs MMR | 80k mi
+165,0,167,Cadillac CTS [Sedan] | 1931 sold | med $9.0k | -0.4% vs MMR | 83k mi
+166,0,168,Cadillac SRX [SUV] | 1328 sold | med $20.9k | +0.0% vs MMR | 46k mi
+167,0,169,Cadillac Escalade [SUV] | 1180 sold | med $19.8k | +0.0% vs MMR | 97k mi
+168,0,170,Cadillac Escalade ESV [SUV] | 625 sold | med $21.0k | +0.4% vs MMR | 95k mi
+169,0,171,Cadillac DeVille [Sedan] | 537 sold | med $1.7k | -5.6% vs MMR | 109k mi
+170,0,172,Cadillac DTS [Sedan] | 512 sold | med $6.7k | -1.2% vs MMR | 95k mi
+171,0,173,Cadillac STS [Sedan] | 332 sold | med $6.0k | -2.0% vs MMR | 99k mi
+172,0,174,Cadillac ATS [Sedan] | 201 sold | med $19.8k | +0.0% vs MMR | 31k mi
+173,0,175,Cadillac CTS Coupe [Coupe] | 158 sold | med $22.6k | +0.2% vs MMR | 35k mi
+174,0,176,Cadillac XTS [Sedan] | 155 sold | med $30.4k | +0.3% vs MMR | 20k mi
+175,0,177,Cadillac Escalade EXT [Truck] | 154 sold | med $18.6k | +1.4% vs MMR | 97k mi
+176,0,178,Cadillac Seville [Sedan] | 131 sold | med $1.4k | -3.3% vs MMR | 111k mi
+177,0,179,Acura | 5873 sold | med $15.0k | +0.3% vs MMR | 71k mi
+178,0,180,Acura TL [Sedan] | 2119 sold | med $11.5k | +0.3% vs MMR | 84k mi
+179,0,181,Acura MDX [SUV] | 1585 sold | med $15.5k | +0.0% vs MMR | 86k mi
+180,0,182,Acura TSX [Sedan] | 1119 sold | med $16.1k | +0.3% vs MMR | 39k mi
+181,0,183,Acura RDX [SUV] | 420 sold | med $19.9k | +0.4% vs MMR | 48k mi
+182,0,184,Acura RSX [Hatchback] | 151 sold | med $4.2k | +3.0% vs MMR | 127k mi
+183,0,185,Acura ILX [Sedan] | 140 sold | med $18.8k | +0.0% vs MMR | 24k mi
+184,0,186,Acura RL [Sedan] | 125 sold | med $4.5k | +1.6% vs MMR | 136k mi
+185,0,187,Acura CL [Coupe] | 85 sold | med $1.9k | +3.1% vs MMR | 147k mi
+186,0,188,Acura ZDX [Hatchback] | 39 sold | med $26.6k | +0.9% vs MMR | 40k mi
+187,0,189,Acura TSX Sport Wagon [Wagon] | 36 sold | med $18.5k | +4.0% vs MMR | 34k mi
+188,0,190,Acura Integra [Hatchback] | 30 sold | med $1.1k | -10.9% vs MMR | 157k mi
+189,0,191,Subaru | 5069 sold | med $16.5k | +0.0% vs MMR | 37k mi
+190,0,192,Subaru Outback [Wagon] | 1405 sold | med $17.8k | +0.9% vs MMR | 45k mi
+191,0,193,Subaru Legacy [Sedan] | 1123 sold | med $14.7k | -0.8% vs MMR | 38k mi
+192,0,194,Subaru Forester [SUV] | 1007 sold | med $17.7k | -0.4% vs MMR | 34k mi
+193,0,195,Subaru Impreza [Sedan] | 949 sold | med $14.0k | -0.3% vs MMR | 46k mi
+194,0,196,Subaru XV Crosstrek [SUV] | 201 sold | med $21.1k | -0.4% vs MMR | 15k mi
+195,0,197,Subaru Impreza WRX [Sedan] | 108 sold | med $24.9k | +0.4% vs MMR | 19k mi
+196,0,198,Subaru B9 Tribeca [SUV] | 87 sold | med $6.5k | +0.0% vs MMR | 120k mi
+197,0,199,Subaru Tribeca [SUV] | 72 sold | med $12.6k | +0.4% vs MMR | 75k mi
+198,0,200,Subaru Baja [Truck] | 42 sold | med $6.0k | -0.6% vs MMR | 137k mi
+199,0,201,Subaru BRZ [Coupe] | 42 sold | med $19.4k | +0.5% vs MMR | 13k mi
+200,0,202,Subaru WRX [Sedan] | 33 sold | med $30.0k | -0.3% vs MMR | 9k mi
+201,0,203,GMC | 10591 sold | med $16.6k | +0.0% vs MMR | 78k mi
+202,0,204,GMC Sierra 1500 [Truck] | 2328 sold | med $19.7k | -0.3% vs MMR | 64k mi
+203,0,205,GMC Acadia [SUV] | 2034 sold | med $16.2k | +0.0% vs MMR | 70k mi
+204,0,206,GMC Yukon [SUV] | 1366 sold | med $15.2k | +0.0% vs MMR | 108k mi
+205,0,207,GMC Yukon XL [SUV] | 1260 sold | med $14.5k | +0.5% vs MMR | 109k mi
+206,0,208,GMC Terrain [SUV] | 1136 sold | med $17.6k | +0.0% vs MMR | 40k mi
+207,0,209,GMC Savana Cargo [Van] | 662 sold | med $20.2k | -0.4% vs MMR | 10k mi
+208,0,210,GMC Envoy [SUV] | 620 sold | med $3.6k | -3.4% vs MMR | 126k mi
+209,0,211,GMC Sierra 2500HD [Truck] | 453 sold | med $23.8k | -0.9% vs MMR | 83k mi
+210,0,212,GMC Envoy XL [SUV] | 236 sold | med $3.5k | -1.7% vs MMR | 135k mi
+211,0,213,GMC Canyon [Truck] | 118 sold | med $9.3k | +0.8% vs MMR | 91k mi
+212,0,214,GMC Envoy XUV [SUV] | 55 sold | med $3.1k | +6.4% vs MMR | 120k mi
+213,0,215,GMC Sonoma [Truck] | 55 sold | med $3.5k | -3.6% vs MMR | 129k mi
+214,0,216,Lincoln | 5683 sold | med $17.5k | -0.7% vs MMR | 39k mi
+215,0,217,Lincoln MKZ [Sedan] | 1704 sold | med $16.8k | -1.3% vs MMR | 31k mi
+216,0,218,Lincoln MKX [SUV] | 1160 sold | med $24.2k | +0.0% vs MMR | 35k mi
+217,0,219,Lincoln MKS [Sedan] | 878 sold | med $22.6k | -0.5% vs MMR | 27k mi
+218,0,220,Lincoln Navigator [SUV] | 821 sold | med $11.1k | +0.0% vs MMR | 98k mi
+219,0,221,Lincoln Town Car [Sedan] | 313 sold | med $3.5k | -3.5% vs MMR | 106k mi
+220,0,222,Lincoln LS [Sedan] | 193 sold | med $1.7k | +1.1% vs MMR | 117k mi
+221,0,223,Lincoln MKT [Wagon] | 172 sold | med $24.4k | -0.6% vs MMR | 33k mi
+222,0,224,Lincoln Aviator [SUV] | 146 sold | med $3.3k | +2.4% vs MMR | 130k mi
+223,0,225,Lincoln Zephyr [Sedan] | 95 sold | med $4.3k | -4.1% vs MMR | 109k mi
+224,0,226,Lincoln Mark LT [Truck] | 76 sold | med $12.3k | -1.7% vs MMR | 105k mi
+225,0,227,Lincoln Continental [Sedan] | 47 sold | med $1.4k | +3.7% vs MMR | 114k mi
+226,0,228,Audi | 5834 sold | med $18.5k | +0.0% vs MMR | 59k mi
+227,0,229,Audi A4 [Sedan] | 2249 sold | med $11.0k | +0.0% vs MMR | 72k mi
+228,0,230,Audi A6 [Sedan] | 818 sold | med $13.2k | +0.0% vs MMR | 76k mi
+229,0,231,Audi Q5 [SUV] | 542 sold | med $27.3k | +0.0% vs MMR | 41k mi
+230,0,232,Audi Q7 [SUV] | 480 sold | med $25.2k | -0.4% vs MMR | 67k mi
+231,0,233,Audi A5 [Coupe] | 359 sold | med $24.0k | +0.0% vs MMR | 36k mi
+232,0,234,Audi A8 [Sedan] | 298 sold | med $25.0k | +0.2% vs MMR | 63k mi
+233,0,235,Audi A3 [Wagon] | 259 sold | med $15.0k | +0.0% vs MMR | 57k mi
+234,0,236,Audi S4 [Sedan] | 197 sold | med $27.0k | +0.6% vs MMR | 56k mi
+235,0,237,Audi S5 [Coupe] | 146 sold | med $31.5k | +0.1% vs MMR | 38k mi
+236,0,238,Audi A7 [Sedan] | 133 sold | med $41.0k | +0.2% vs MMR | 34k mi
+237,0,239,Audi TT [Convertible] | 130 sold | med $6.2k | +2.3% vs MMR | 88k mi
+238,0,240,Audi allroad [Wagon] | 46 sold | med $33.2k | +0.0% vs MMR | 18k mi
+239,0,241,BMW | 20641 sold | med $20.1k | -0.4% vs MMR | 52k mi
+240,0,242,BMW 3 Series [Sedan] | 8177 sold | med $17.0k | -0.2% vs MMR | 51k mi
+241,0,243,BMW 5 Series [Sedan] | 4152 sold | med $24.4k | -0.5% vs MMR | 54k mi
+242,0,244,BMW X5 [SUV] | 2462 sold | med $21.4k | -0.7% vs MMR | 66k mi
+243,0,245,BMW X3 [SUV] | 1251 sold | med $13.1k | -1.0% vs MMR | 73k mi
+244,0,246,BMW 7 Series [Sedan] | 1170 sold | med $11.6k | -0.9% vs MMR | 87k mi
+245,0,247,BMW 6 Series [Convertible] | 676 sold | med $39.0k | +0.0% vs MMR | 45k mi
+246,0,248,BMW 1 Series [Convertible] | 405 sold | med $19.5k | +0.0% vs MMR | 37k mi
+247,0,249,BMW X1 [SUV] | 331 sold | med $28.8k | +1.1% vs MMR | 11k mi
+248,0,250,BMW M3 [Coupe] | 297 sold | med $33.2k | +0.5% vs MMR | 48k mi
+249,0,251,BMW 4 Series [Coupe] | 293 sold | med $41.2k | +0.8% vs MMR | 6k mi
+250,0,252,BMW Z4 [Convertible] | 276 sold | med $26.0k | +0.4% vs MMR | 38k mi
+251,0,253,BMW X6 [SUV] | 263 sold | med $39.0k | -0.8% vs MMR | 40k mi
+252,0,254,Infiniti | 15274 sold | med $20.6k | -0.3% vs MMR | 32k mi
+253,0,255,Infiniti G Sedan [Sedan] | 7417 sold | med $20.0k | -0.3% vs MMR | 28k mi
+254,0,256,Infiniti G Coupe [Coupe] | 1593 sold | med $22.4k | -0.2% vs MMR | 27k mi
+255,0,257,Infiniti G35 [Sedan] | 1121 sold | med $6.5k | +0.0% vs MMR | 114k mi
+256,0,258,Infiniti M [Sedan] | 898 sold | med $24.8k | -0.7% vs MMR | 37k mi
+257,0,259,Infiniti Q50 [Sedan] | 539 sold | med $29.0k | -0.3% vs MMR | 15k mi
+258,0,260,Infiniti QX56 [SUV] | 438 sold | med $20.2k | +0.2% vs MMR | 90k mi
+259,0,261,Infiniti FX [SUV] | 394 sold | med $27.0k | -0.3% vs MMR | 42k mi
+260,0,262,Infiniti FX35 [SUV] | 325 sold | med $10.3k | +0.8% vs MMR | 106k mi
+261,0,263,Infiniti G Convertible [Convertible] | 323 sold | med $25.8k | +0.6% vs MMR | 30k mi
+262,0,264,Infiniti JX [SUV] | 322 sold | med $29.8k | -0.3% vs MMR | 37k mi
+263,0,265,Infiniti M35 [Sedan] | 257 sold | med $9.8k | +0.5% vs MMR | 105k mi
+264,0,266,Infiniti G37 [Coupe] | 215 sold | med $13.5k | -0.5% vs MMR | 73k mi
+265,0,267,Lexus | 11937 sold | med $20.7k | -0.4% vs MMR | 47k mi
+266,0,268,Lexus RX 350 [SUV] | 2380 sold | med $27.8k | -0.4% vs MMR | 34k mi
+267,0,269,Lexus IS 250 [Sedan] | 1939 sold | med $20.8k | -0.5% vs MMR | 35k mi
+268,0,270,Lexus ES 350 [Sedan] | 1921 sold | med $20.4k | -0.7% vs MMR | 33k mi
+269,0,271,Lexus GS 350 [Sedan] | 766 sold | med $31.0k | -0.6% vs MMR | 30k mi
+270,0,272,Lexus LS 460 [Sedan] | 574 sold | med $26.4k | -0.6% vs MMR | 61k mi
+271,0,273,Lexus CT 200h [Hatchback] | 412 sold | med $19.4k | -1.0% vs MMR | 27k mi
+272,0,274,Lexus RX 330 [SUV] | 411 sold | med $8.7k | +1.7% vs MMR | 136k mi
+273,0,275,Lexus LS 430 [Sedan] | 386 sold | med $8.7k | +1.9% vs MMR | 130k mi
+274,0,276,Lexus ES 300 [Sedan] | 357 sold | med $3.3k | -1.0% vs MMR | 151k mi
+275,0,277,Lexus RX 300 [SUV] | 334 sold | med $4.0k | +2.8% vs MMR | 160k mi
+276,0,278,Lexus ES 330 [Sedan] | 309 sold | med $5.9k | +1.1% vs MMR | 126k mi
+277,0,279,Lexus GX 460 [SUV] | 257 sold | med $36.1k | -0.6% vs MMR | 42k mi
+278,0,280,Mercedes-Benz | 17082 sold | med $21.2k | -0.9% vs MMR | 48k mi
+279,0,281,Mercedes-Benz C-Class [Sedan] | 5384 sold | med $19.8k | -1.1% vs MMR | 36k mi
+280,0,282,Mercedes-Benz E-Class [Sedan] | 3861 sold | med $24.8k | -1.0% vs MMR | 43k mi
+281,0,283,Mercedes-Benz M-Class [SUV] | 1903 sold | med $20.0k | -1.1% vs MMR | 64k mi
+282,0,284,Mercedes-Benz S-Class [Sedan] | 1502 sold | med $23.0k | -0.9% vs MMR | 72k mi
+283,0,285,Mercedes-Benz GL-Class [SUV] | 1061 sold | med $26.2k | -0.8% vs MMR | 63k mi
+284,0,286,Mercedes-Benz GLK-Class [SUV] | 857 sold | med $25.2k | -1.0% vs MMR | 36k mi
+285,0,287,Mercedes-Benz CLS-Class [Sedan] | 476 sold | med $25.6k | -0.7% vs MMR | 56k mi
+286,0,288,Mercedes-Benz CLK-Class [Convertible] | 475 sold | med $7.0k | -0.3% vs MMR | 91k mi
+287,0,289,Mercedes-Benz SL-Class [Convertible] | 435 sold | med $21.5k | +0.0% vs MMR | 56k mi
+288,0,290,Mercedes-Benz R-Class [Wagon] | 332 sold | med $9.1k | -0.2% vs MMR | 96k mi
+289,0,291,Mercedes-Benz SLK-Class [Convertible] | 320 sold | med $16.9k | -0.7% vs MMR | 46k mi
+290,0,292,Mercedes-Benz CL-Class [Coupe] | 175 sold | med $25.2k | +1.2% vs MMR | 70k mi
+291,0,293,Ram | 4574 sold | med $24.4k | +0.0% vs MMR | 29k mi
+292,0,294,Ram 1500 [Truck] | 3226 sold | med $23.0k | +0.0% vs MMR | 28k mi
+293,0,295,Ram 2500 [Truck] | 924 sold | med $33.5k | -0.1% vs MMR | 29k mi
+294,0,296,Ram 3500 [Truck] | 253 sold | med $35.5k | -0.5% vs MMR | 45k mi
+295,0,297,Ram Promaster Cargo Van [Van] | 59 sold | med $22.8k | +1.3% vs MMR | 18k mi
+296,0,298,Ram C/V Cargo Van [Van] | 43 sold | med $7.1k | -0.5% vs MMR | 104k mi
+297,0,299,Ram Dakota [Truck] | 37 sold | med $10.9k | +2.3% vs MMR | 73k mi
+298,0,300,Ram C/V Tradesman [Van] | 32 sold | med $8.7k | -2.1% vs MMR | 83k mi

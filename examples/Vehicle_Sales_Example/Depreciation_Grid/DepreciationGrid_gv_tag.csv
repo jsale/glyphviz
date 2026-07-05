@@ -1,0 +1,378 @@
+id,table_id,record_id,title
+0,0,1,Depreciation grid | X: model year | Y: make (cheap -> luxury) | height: median price | color: median miles
+1,0,3,Volkswagen (med $9.8k)
+2,0,4,Volkswagen 1999 | 74 sold | med $1.0k | -6.4% vs MMR | 127k mi
+3,0,5,Volkswagen 2000 | 119 sold | med $1.2k | -8.6% vs MMR | 134k mi
+4,0,6,Volkswagen 2001 | 219 sold | med $1.2k | -8.7% vs MMR | 131k mi
+5,0,7,Volkswagen 2002 | 288 sold | med $1.7k | -6.8% vs MMR | 125k mi
+6,0,8,Volkswagen 2003 | 389 sold | med $2.0k | -6.2% vs MMR | 121k mi
+7,0,9,Volkswagen 2004 | 410 sold | med $2.6k | +0.0% vs MMR | 112k mi
+8,0,10,Volkswagen 2005 | 387 sold | med $3.3k | -1.9% vs MMR | 106k mi
+9,0,11,Volkswagen 2006 | 740 sold | med $3.5k | -2.4% vs MMR | 111k mi
+10,0,12,Volkswagen 2007 | 631 sold | med $4.5k | -1.1% vs MMR | 102k mi
+11,0,13,Volkswagen 2008 | 484 sold | med $5.7k | -0.3% vs MMR | 90k mi
+12,0,14,Volkswagen 2009 | 695 sold | med $7.4k | -0.5% vs MMR | 82k mi
+13,0,15,Volkswagen 2010 | 622 sold | med $8.8k | -0.9% vs MMR | 73k mi
+14,0,16,Volkswagen 2011 | 633 sold | med $9.6k | -0.8% vs MMR | 57k mi
+15,0,17,Volkswagen 2012 | 3033 sold | med $11.2k | -0.3% vs MMR | 36k mi
+16,0,18,Volkswagen 2013 | 2350 sold | med $12.2k | +0.0% vs MMR | 40k mi
+17,0,19,Volkswagen 2014 | 1273 sold | med $13.5k | -0.4% vs MMR | 24k mi
+18,0,20,Volkswagen 2015 | 63 sold | med $15.2k | -3.0% vs MMR | 19k mi
+19,0,21,Mazda (med $9.8k)
+20,0,22,Mazda 2000 | 58 sold | med $1.1k | +15.8% vs MMR | 144k mi
+21,0,23,Mazda 2001 | 105 sold | med $1.4k | -4.3% vs MMR | 142k mi
+22,0,24,Mazda 2002 | 131 sold | med $1.4k | +1.7% vs MMR | 140k mi
+23,0,25,Mazda 2003 | 223 sold | med $2.0k | -4.3% vs MMR | 134k mi
+24,0,26,Mazda 2004 | 293 sold | med $2.4k | -1.0% vs MMR | 131k mi
+25,0,27,Mazda 2005 | 317 sold | med $3.1k | +2.6% vs MMR | 120k mi
+26,0,28,Mazda 2006 | 238 sold | med $3.6k | -1.7% vs MMR | 112k mi
+27,0,29,Mazda 2007 | 210 sold | med $5.2k | -3.4% vs MMR | 105k mi
+28,0,30,Mazda 2008 | 505 sold | med $5.1k | -2.3% vs MMR | 99k mi
+29,0,31,Mazda 2009 | 275 sold | med $6.2k | +1.9% vs MMR | 90k mi
+30,0,32,Mazda 2010 | 647 sold | med $8.0k | -0.3% vs MMR | 73k mi
+31,0,33,Mazda 2011 | 1325 sold | med $10.7k | +0.4% vs MMR | 41k mi
+32,0,34,Mazda 2012 | 1322 sold | med $11.0k | +0.5% vs MMR | 40k mi
+33,0,35,Mazda 2013 | 1493 sold | med $10.8k | +0.0% vs MMR | 45k mi
+34,0,36,Mazda 2014 | 806 sold | med $18.8k | -0.4% vs MMR | 13k mi
+35,0,37,Mazda 2015 | 373 sold | med $18.8k | +0.3% vs MMR | 21k mi
+36,0,38,Chrysler (med $10.4k)
+37,0,39,Chrysler 1999 | 38 sold | med $825 | +12.2% vs MMR | 117k mi
+38,0,40,Chrysler 2000 | 55 sold | med $900 | +7.0% vs MMR | 116k mi
+39,0,41,Chrysler 2001 | 122 sold | med $1.1k | +4.0% vs MMR | 133k mi
+40,0,42,Chrysler 2002 | 125 sold | med $1.2k | -3.9% vs MMR | 124k mi
+41,0,43,Chrysler 2003 | 184 sold | med $1.3k | -12.2% vs MMR | 122k mi
+42,0,44,Chrysler 2004 | 378 sold | med $1.6k | -1.3% vs MMR | 119k mi
+43,0,45,Chrysler 2005 | 982 sold | med $2.9k | -4.5% vs MMR | 117k mi
+44,0,46,Chrysler 2006 | 1270 sold | med $3.7k | -5.1% vs MMR | 111k mi
+45,0,47,Chrysler 2007 | 1323 sold | med $4.0k | -3.0% vs MMR | 109k mi
+46,0,48,Chrysler 2008 | 1293 sold | med $5.7k | -1.1% vs MMR | 98k mi
+47,0,49,Chrysler 2009 | 507 sold | med $6.3k | -0.4% vs MMR | 92k mi
+48,0,50,Chrysler 2010 | 785 sold | med $7.7k | -2.8% vs MMR | 82k mi
+49,0,51,Chrysler 2011 | 541 sold | med $11.2k | +0.0% vs MMR | 56k mi
+50,0,52,Chrysler 2012 | 1483 sold | med $10.8k | -0.5% vs MMR | 50k mi
+51,0,53,Chrysler 2013 | 2881 sold | med $12.5k | +0.0% vs MMR | 38k mi
+52,0,54,Chrysler 2014 | 4729 sold | med $18.7k | -0.5% vs MMR | 24k mi
+53,0,55,Chrysler 2015 | 491 sold | med $16.4k | -0.6% vs MMR | 11k mi
+54,0,56,Dodge (med $10.5k)
+55,0,57,Dodge 1999 | 62 sold | med $1.1k | -0.4% vs MMR | 151k mi
+56,0,58,Dodge 2000 | 40 sold | med $1.1k | -8.4% vs MMR | 138k mi
+57,0,59,Dodge 2001 | 142 sold | med $1.2k | -3.6% vs MMR | 146k mi
+58,0,60,Dodge 2002 | 258 sold | med $1.3k | -9.0% vs MMR | 141k mi
+59,0,61,Dodge 2003 | 487 sold | med $3.1k | -6.0% vs MMR | 138k mi
+60,0,62,Dodge 2004 | 835 sold | med $3.5k | -6.7% vs MMR | 130k mi
+61,0,63,Dodge 2005 | 1469 sold | med $3.4k | -5.9% vs MMR | 124k mi
+62,0,64,Dodge 2006 | 1645 sold | med $5.5k | -4.4% vs MMR | 118k mi
+63,0,65,Dodge 2007 | 1752 sold | med $4.6k | -2.4% vs MMR | 112k mi
+64,0,66,Dodge 2008 | 2293 sold | med $6.1k | -2.1% vs MMR | 104k mi
+65,0,67,Dodge 2009 | 1421 sold | med $6.9k | -1.5% vs MMR | 96k mi
+66,0,68,Dodge 2010 | 2643 sold | med $8.5k | -1.3% vs MMR | 84k mi
+67,0,69,Dodge 2011 | 1604 sold | med $9.9k | +0.0% vs MMR | 69k mi
+68,0,70,Dodge 2012 | 2970 sold | med $10.2k | +0.0% vs MMR | 62k mi
+69,0,71,Dodge 2013 | 5851 sold | med $11.9k | +0.0% vs MMR | 45k mi
+70,0,72,Dodge 2014 | 6851 sold | med $16.8k | +0.0% vs MMR | 21k mi
+71,0,73,Dodge 2015 | 246 sold | med $19.4k | -0.9% vs MMR | 13k mi
+72,0,74,Chevrolet (med $10.6k)
+73,0,75,Chevrolet 1998 | 86 sold | med $900 | +3.7% vs MMR | 156k mi
+74,0,76,Chevrolet 1999 | 201 sold | med $1.2k | -9.6% vs MMR | 159k mi
+75,0,77,Chevrolet 2000 | 389 sold | med $1.6k | -1.6% vs MMR | 154k mi
+76,0,78,Chevrolet 2001 | 624 sold | med $1.9k | -5.1% vs MMR | 152k mi
+77,0,79,Chevrolet 2002 | 1096 sold | med $2.3k | -5.0% vs MMR | 149k mi
+78,0,80,Chevrolet 2003 | 1212 sold | med $3.0k | -3.9% vs MMR | 141k mi
+79,0,81,Chevrolet 2004 | 1661 sold | med $3.7k | -4.4% vs MMR | 137k mi
+80,0,82,Chevrolet 2005 | 2646 sold | med $3.5k | -3.7% vs MMR | 129k mi
+81,0,83,Chevrolet 2006 | 2783 sold | med $3.9k | -2.4% vs MMR | 121k mi
+82,0,84,Chevrolet 2007 | 3947 sold | med $7.0k | -1.1% vs MMR | 115k mi
+83,0,85,Chevrolet 2008 | 3943 sold | med $6.6k | -1.8% vs MMR | 105k mi
+84,0,86,Chevrolet 2009 | 2990 sold | med $7.5k | -0.7% vs MMR | 95k mi
+85,0,87,Chevrolet 2010 | 3675 sold | med $9.0k | +0.0% vs MMR | 83k mi
+86,0,88,Chevrolet 2011 | 5414 sold | med $10.2k | +0.0% vs MMR | 69k mi
+87,0,89,Chevrolet 2012 | 7379 sold | med $11.0k | +0.6% vs MMR | 54k mi
+88,0,90,Chevrolet 2013 | 10904 sold | med $12.0k | +0.0% vs MMR | 48k mi
+89,0,91,Chevrolet 2014 | 9349 sold | med $14.8k | -0.2% vs MMR | 20k mi
+90,0,92,Chevrolet 2015 | 1438 sold | med $29.2k | -0.6% vs MMR | 14k mi
+91,0,93,Honda (med $11.1k)
+92,0,94,Honda 1998 | 255 sold | med $1.1k | -4.0% vs MMR | 176k mi
+93,0,95,Honda 1999 | 292 sold | med $1.4k | +2.0% vs MMR | 173k mi
+94,0,96,Honda 2000 | 429 sold | med $1.5k | -2.9% vs MMR | 170k mi
+95,0,97,Honda 2001 | 543 sold | med $1.7k | -3.3% vs MMR | 161k mi
+96,0,98,Honda 2002 | 732 sold | med $2.1k | +0.0% vs MMR | 159k mi
+97,0,99,Honda 2003 | 1162 sold | med $2.9k | +0.0% vs MMR | 155k mi
+98,0,100,Honda 2004 | 962 sold | med $3.4k | +1.2% vs MMR | 147k mi
+99,0,101,Honda 2005 | 1057 sold | med $4.2k | +0.6% vs MMR | 140k mi
+100,0,102,Honda 2006 | 1114 sold | med $5.3k | +0.6% vs MMR | 127k mi
+101,0,103,Honda 2007 | 1622 sold | med $6.6k | +0.5% vs MMR | 115k mi
+102,0,104,Honda 2008 | 1669 sold | med $8.1k | +0.3% vs MMR | 100k mi
+103,0,105,Honda 2009 | 1246 sold | med $9.4k | +0.3% vs MMR | 88k mi
+104,0,106,Honda 2010 | 1402 sold | med $10.3k | +0.0% vs MMR | 73k mi
+105,0,107,Honda 2011 | 1738 sold | med $13.7k | +0.3% vs MMR | 51k mi
+106,0,108,Honda 2012 | 8684 sold | med $13.4k | +0.4% vs MMR | 34k mi
+107,0,109,Honda 2013 | 2537 sold | med $17.0k | +0.0% vs MMR | 27k mi
+108,0,110,Honda 2014 | 1206 sold | med $19.2k | +0.3% vs MMR | 10k mi
+109,0,111,Honda 2015 | 77 sold | med $19.4k | +0.9% vs MMR | 2k mi
+110,0,112,Hyundai (med $11.4k)
+111,0,113,Hyundai 2001 | 75 sold | med $1.0k | +9.1% vs MMR | 122k mi
+112,0,114,Hyundai 2002 | 186 sold | med $1.2k | +3.2% vs MMR | 136k mi
+113,0,115,Hyundai 2003 | 260 sold | med $1.4k | -3.7% vs MMR | 127k mi
+114,0,116,Hyundai 2004 | 309 sold | med $1.8k | -6.2% vs MMR | 125k mi
+115,0,117,Hyundai 2005 | 419 sold | med $2.4k | -4.2% vs MMR | 116k mi
+116,0,118,Hyundai 2006 | 629 sold | med $3.1k | -5.4% vs MMR | 117k mi
+117,0,119,Hyundai 2007 | 601 sold | med $4.7k | -1.3% vs MMR | 105k mi
+118,0,120,Hyundai 2008 | 535 sold | med $5.2k | -0.6% vs MMR | 97k mi
+119,0,121,Hyundai 2009 | 716 sold | med $6.2k | +0.2% vs MMR | 85k mi
+120,0,122,Hyundai 2010 | 878 sold | med $6.5k | +0.4% vs MMR | 79k mi
+121,0,123,Hyundai 2011 | 1674 sold | med $9.8k | +0.0% vs MMR | 67k mi
+122,0,124,Hyundai 2012 | 4378 sold | med $12.2k | +0.4% vs MMR | 35k mi
+123,0,125,Hyundai 2013 | 7879 sold | med $11.8k | +0.0% vs MMR | 33k mi
+124,0,126,Hyundai 2014 | 2581 sold | med $13.8k | -0.9% vs MMR | 17k mi
+125,0,127,Hyundai 2015 | 504 sold | med $14.9k | -2.9% vs MMR | 8k mi
+126,0,128,Nissan (med $12.0k)
+127,0,129,Nissan 1998 | 74 sold | med $1.0k | +17.4% vs MMR | 163k mi
+128,0,130,Nissan 1999 | 108 sold | med $950 | -1.8% vs MMR | 159k mi
+129,0,131,Nissan 2000 | 270 sold | med $1.4k | -5.1% vs MMR | 160k mi
+130,0,132,Nissan 2001 | 274 sold | med $1.7k | -2.4% vs MMR | 158k mi
+131,0,133,Nissan 2002 | 537 sold | med $2.0k | -2.7% vs MMR | 145k mi
+132,0,134,Nissan 2003 | 729 sold | med $2.5k | -1.7% vs MMR | 143k mi
+133,0,135,Nissan 2004 | 1181 sold | med $3.5k | +0.0% vs MMR | 133k mi
+134,0,136,Nissan 2005 | 1734 sold | med $3.8k | -2.0% vs MMR | 129k mi
+135,0,137,Nissan 2006 | 1773 sold | med $4.7k | -2.0% vs MMR | 118k mi
+136,0,138,Nissan 2007 | 1786 sold | med $5.4k | -1.0% vs MMR | 112k mi
+137,0,139,Nissan 2008 | 1453 sold | med $6.9k | -0.7% vs MMR | 99k mi
+138,0,140,Nissan 2009 | 1320 sold | med $8.4k | -0.9% vs MMR | 89k mi
+139,0,141,Nissan 2010 | 1576 sold | med $9.5k | +0.0% vs MMR | 73k mi
+140,0,142,Nissan 2011 | 5917 sold | med $13.8k | -0.3% vs MMR | 43k mi
+141,0,143,Nissan 2012 | 16878 sold | med $12.6k | +0.0% vs MMR | 36k mi
+142,0,144,Nissan 2013 | 11727 sold | med $13.3k | +0.0% vs MMR | 33k mi
+143,0,145,Nissan 2014 | 5652 sold | med $13.9k | -0.7% vs MMR | 19k mi
+144,0,146,Nissan 2015 | 623 sold | med $13.2k | -2.0% vs MMR | 8k mi
+145,0,147,Kia (med $12.2k)
+146,0,148,Kia 2002 | 61 sold | med $900 | +4.8% vs MMR | 120k mi
+147,0,149,Kia 2003 | 120 sold | med $1.4k | -4.6% vs MMR | 122k mi
+148,0,150,Kia 2004 | 223 sold | med $1.5k | -6.5% vs MMR | 116k mi
+149,0,151,Kia 2005 | 329 sold | med $2.2k | -1.0% vs MMR | 118k mi
+150,0,152,Kia 2006 | 448 sold | med $2.7k | -5.0% vs MMR | 116k mi
+151,0,153,Kia 2007 | 358 sold | med $3.5k | -0.8% vs MMR | 107k mi
+152,0,154,Kia 2008 | 519 sold | med $4.2k | -2.6% vs MMR | 98k mi
+153,0,155,Kia 2009 | 517 sold | med $5.0k | -2.8% vs MMR | 86k mi
+154,0,156,Kia 2010 | 719 sold | med $6.5k | -0.9% vs MMR | 79k mi
+155,0,157,Kia 2011 | 1340 sold | med $9.8k | -0.3% vs MMR | 68k mi
+156,0,158,Kia 2012 | 2588 sold | med $11.8k | +0.0% vs MMR | 40k mi
+157,0,159,Kia 2013 | 3042 sold | med $11.6k | +0.0% vs MMR | 38k mi
+158,0,160,Kia 2014 | 6173 sold | med $14.0k | +0.0% vs MMR | 16k mi
+159,0,161,Kia 2015 | 1482 sold | med $20.2k | +0.0% vs MMR | 12k mi
+160,0,162,Toyota (med $12.2k)
+161,0,163,Toyota 1998 | 251 sold | med $1.2k | -2.2% vs MMR | 182k mi
+162,0,164,Toyota 1999 | 325 sold | med $1.5k | -2.9% vs MMR | 173k mi
+163,0,165,Toyota 2000 | 434 sold | med $1.9k | -1.7% vs MMR | 164k mi
+164,0,166,Toyota 2001 | 450 sold | med $2.7k | -1.3% vs MMR | 166k mi
+165,0,167,Toyota 2002 | 756 sold | med $3.0k | +2.1% vs MMR | 160k mi
+166,0,168,Toyota 2003 | 984 sold | med $3.9k | +0.2% vs MMR | 154k mi
+167,0,169,Toyota 2004 | 1224 sold | med $4.6k | +0.6% vs MMR | 142k mi
+168,0,170,Toyota 2005 | 1344 sold | med $5.0k | +0.0% vs MMR | 133k mi
+169,0,171,Toyota 2006 | 1524 sold | med $6.1k | -0.1% vs MMR | 120k mi
+170,0,172,Toyota 2007 | 2146 sold | med $6.9k | -0.5% vs MMR | 112k mi
+171,0,173,Toyota 2008 | 1707 sold | med $8.9k | +0.4% vs MMR | 102k mi
+172,0,174,Toyota 2009 | 1872 sold | med $7.7k | +0.0% vs MMR | 96k mi
+173,0,175,Toyota 2010 | 2137 sold | med $9.3k | -0.3% vs MMR | 80k mi
+174,0,176,Toyota 2011 | 4140 sold | med $13.0k | +0.0% vs MMR | 51k mi
+175,0,177,Toyota 2012 | 7230 sold | med $14.1k | +0.0% vs MMR | 37k mi
+176,0,178,Toyota 2013 | 6706 sold | med $13.9k | -0.5% vs MMR | 42k mi
+177,0,179,Toyota 2014 | 5813 sold | med $15.7k | -0.6% vs MMR | 19k mi
+178,0,180,Toyota 2015 | 237 sold | med $16.8k | -1.6% vs MMR | 5k mi
+179,0,181,Ford (med $13.6k)
+180,0,182,Ford 1998 | 188 sold | med $1.1k | -2.2% vs MMR | 153k mi
+181,0,183,Ford 1999 | 300 sold | med $1.1k | -5.9% vs MMR | 150k mi
+182,0,184,Ford 2000 | 517 sold | med $1.2k | -5.7% vs MMR | 155k mi
+183,0,185,Ford 2001 | 895 sold | med $1.7k | -7.1% vs MMR | 149k mi
+184,0,186,Ford 2002 | 1326 sold | med $1.9k | -4.8% vs MMR | 144k mi
+185,0,187,Ford 2003 | 1700 sold | med $2.4k | -3.6% vs MMR | 141k mi
+186,0,188,Ford 2004 | 1923 sold | med $3.5k | -2.5% vs MMR | 132k mi
+187,0,189,Ford 2005 | 2505 sold | med $3.9k | -3.5% vs MMR | 123k mi
+188,0,190,Ford 2006 | 3181 sold | med $5.1k | -2.2% vs MMR | 119k mi
+189,0,191,Ford 2007 | 3315 sold | med $6.4k | -0.8% vs MMR | 110k mi
+190,0,192,Ford 2008 | 4082 sold | med $8.0k | -1.1% vs MMR | 105k mi
+191,0,193,Ford 2009 | 2202 sold | med $8.9k | -0.5% vs MMR | 93k mi
+192,0,194,Ford 2010 | 4150 sold | med $12.0k | -0.5% vs MMR | 81k mi
+193,0,195,Ford 2011 | 7745 sold | med $13.3k | -0.5% vs MMR | 67k mi
+194,0,196,Ford 2012 | 15850 sold | med $13.4k | -0.4% vs MMR | 43k mi
+195,0,197,Ford 2013 | 22332 sold | med $16.2k | -0.5% vs MMR | 32k mi
+196,0,198,Ford 2014 | 19496 sold | med $18.5k | -0.5% vs MMR | 24k mi
+197,0,199,Ford 2015 | 990 sold | med $27.5k | -0.3% vs MMR | 16k mi
+198,0,200,Jeep (med $13.9k)
+199,0,201,Jeep 1999 | 78 sold | med $1.3k | -4.8% vs MMR | 172k mi
+200,0,202,Jeep 2000 | 122 sold | med $1.8k | +5.7% vs MMR | 155k mi
+201,0,203,Jeep 2001 | 78 sold | med $2.1k | +0.6% vs MMR | 145k mi
+202,0,204,Jeep 2002 | 359 sold | med $2.2k | -9.8% vs MMR | 142k mi
+203,0,205,Jeep 2003 | 305 sold | med $2.9k | -1.5% vs MMR | 137k mi
+204,0,206,Jeep 2004 | 699 sold | med $3.3k | -3.7% vs MMR | 127k mi
+205,0,207,Jeep 2005 | 768 sold | med $5.0k | -2.0% vs MMR | 115k mi
+206,0,208,Jeep 2006 | 957 sold | med $5.7k | -3.0% vs MMR | 112k mi
+207,0,209,Jeep 2007 | 1224 sold | med $7.5k | -0.7% vs MMR | 99k mi
+208,0,210,Jeep 2008 | 1229 sold | med $9.2k | -0.5% vs MMR | 92k mi
+209,0,211,Jeep 2009 | 502 sold | med $11.8k | +0.4% vs MMR | 80k mi
+210,0,212,Jeep 2010 | 864 sold | med $14.0k | +0.4% vs MMR | 69k mi
+211,0,213,Jeep 2011 | 1333 sold | med $18.5k | +0.4% vs MMR | 56k mi
+212,0,214,Jeep 2012 | 2273 sold | med $20.2k | +0.0% vs MMR | 43k mi
+213,0,215,Jeep 2013 | 892 sold | med $24.9k | +0.3% vs MMR | 32k mi
+214,0,216,Jeep 2014 | 3313 sold | med $19.8k | -0.2% vs MMR | 19k mi
+215,0,217,Jeep 2015 | 332 sold | med $28.1k | -0.5% vs MMR | 10k mi
+216,0,218,Cadillac (med $14.6k)
+217,0,219,Cadillac 1998 | 31 sold | med $950 | -2.7% vs MMR | 119k mi
+218,0,220,Cadillac 1999 | 50 sold | med $1.3k | +15.5% vs MMR | 128k mi
+219,0,221,Cadillac 2000 | 101 sold | med $1.4k | -3.4% vs MMR | 120k mi
+220,0,222,Cadillac 2001 | 92 sold | med $1.3k | -11.3% vs MMR | 109k mi
+221,0,223,Cadillac 2002 | 165 sold | med $2.4k | -2.4% vs MMR | 124k mi
+222,0,224,Cadillac 2003 | 329 sold | med $2.5k | -4.9% vs MMR | 122k mi
+223,0,225,Cadillac 2004 | 377 sold | med $3.5k | -4.0% vs MMR | 119k mi
+224,0,226,Cadillac 2005 | 552 sold | med $4.5k | -3.2% vs MMR | 115k mi
+225,0,227,Cadillac 2006 | 661 sold | med $5.3k | -2.5% vs MMR | 104k mi
+226,0,228,Cadillac 2007 | 959 sold | med $11.0k | -0.7% vs MMR | 103k mi
+227,0,229,Cadillac 2008 | 692 sold | med $11.3k | +0.7% vs MMR | 95k mi
+228,0,230,Cadillac 2009 | 381 sold | med $15.0k | +1.2% vs MMR | 81k mi
+229,0,231,Cadillac 2010 | 402 sold | med $17.4k | +0.5% vs MMR | 73k mi
+230,0,232,Cadillac 2011 | 748 sold | med $20.9k | +0.5% vs MMR | 49k mi
+231,0,233,Cadillac 2012 | 917 sold | med $22.5k | +0.4% vs MMR | 37k mi
+232,0,234,Cadillac 2013 | 594 sold | med $23.6k | +0.0% vs MMR | 38k mi
+233,0,235,Cadillac 2014 | 306 sold | med $33.5k | -0.6% vs MMR | 18k mi
+234,0,236,Cadillac 2015 | 62 sold | med $68.5k | -0.3% vs MMR | 11k mi
+235,0,237,Acura (med $15.0k)
+236,0,238,Acura 1999 | 58 sold | med $1.3k | -3.8% vs MMR | 165k mi
+237,0,239,Acura 2000 | 77 sold | med $1.4k | +0.0% vs MMR | 165k mi
+238,0,240,Acura 2001 | 121 sold | med $2.4k | +1.6% vs MMR | 170k mi
+239,0,241,Acura 2002 | 173 sold | med $2.7k | -1.4% vs MMR | 155k mi
+240,0,242,Acura 2003 | 295 sold | med $3.3k | +2.5% vs MMR | 148k mi
+241,0,243,Acura 2004 | 375 sold | med $4.5k | +2.9% vs MMR | 144k mi
+242,0,244,Acura 2005 | 392 sold | med $5.6k | +1.4% vs MMR | 131k mi
+243,0,245,Acura 2006 | 415 sold | med $7.2k | +0.3% vs MMR | 120k mi
+244,0,246,Acura 2007 | 401 sold | med $10.8k | +0.4% vs MMR | 106k mi
+245,0,247,Acura 2008 | 351 sold | med $11.5k | +0.8% vs MMR | 96k mi
+246,0,248,Acura 2009 | 241 sold | med $13.8k | -0.3% vs MMR | 90k mi
+247,0,249,Acura 2010 | 251 sold | med $16.3k | +0.8% vs MMR | 67k mi
+248,0,250,Acura 2011 | 286 sold | med $19.8k | +0.9% vs MMR | 52k mi
+249,0,251,Acura 2012 | 1885 sold | med $19.0k | +0.0% vs MMR | 34k mi
+250,0,252,Acura 2013 | 293 sold | med $22.6k | +0.0% vs MMR | 28k mi
+251,0,253,Acura 2014 | 183 sold | med $32.0k | +0.0% vs MMR | 15k mi
+252,0,254,GMC (med $16.6k)
+253,0,255,GMC 1999 | 33 sold | med $1.0k | -31.0% vs MMR | 164k mi
+254,0,256,GMC 2000 | 60 sold | med $1.6k | +9.2% vs MMR | 163k mi
+255,0,257,GMC 2001 | 108 sold | med $2.5k | -7.2% vs MMR | 167k mi
+256,0,258,GMC 2002 | 252 sold | med $2.6k | -4.9% vs MMR | 165k mi
+257,0,259,GMC 2003 | 379 sold | med $3.8k | +0.0% vs MMR | 152k mi
+258,0,260,GMC 2004 | 496 sold | med $4.5k | -0.8% vs MMR | 145k mi
+259,0,261,GMC 2005 | 581 sold | med $5.7k | -3.6% vs MMR | 133k mi
+260,0,262,GMC 2006 | 431 sold | med $6.9k | +0.0% vs MMR | 123k mi
+261,0,263,GMC 2007 | 1051 sold | med $12.0k | +0.0% vs MMR | 115k mi
+262,0,264,GMC 2008 | 1019 sold | med $12.9k | +0.4% vs MMR | 103k mi
+263,0,265,GMC 2009 | 566 sold | med $15.3k | +0.7% vs MMR | 93k mi
+264,0,266,GMC 2010 | 668 sold | med $15.9k | +0.7% vs MMR | 80k mi
+265,0,267,GMC 2011 | 1112 sold | med $20.4k | +0.0% vs MMR | 63k mi
+266,0,268,GMC 2012 | 1261 sold | med $22.5k | +0.3% vs MMR | 42k mi
+267,0,269,GMC 2013 | 860 sold | med $25.8k | +0.0% vs MMR | 37k mi
+268,0,270,GMC 2014 | 1444 sold | med $22.2k | -0.5% vs MMR | 14k mi
+269,0,271,GMC 2015 | 241 sold | med $37.8k | -0.6% vs MMR | 14k mi
+270,0,272,Audi (med $18.5k)
+271,0,273,Audi 2001 | 104 sold | med $1.7k | -8.1% vs MMR | 135k mi
+272,0,274,Audi 2002 | 106 sold | med $2.5k | +0.0% vs MMR | 120k mi
+273,0,275,Audi 2003 | 174 sold | med $3.0k | -1.4% vs MMR | 122k mi
+274,0,276,Audi 2004 | 253 sold | med $4.0k | -2.8% vs MMR | 108k mi
+275,0,277,Audi 2005 | 264 sold | med $5.5k | -2.4% vs MMR | 106k mi
+276,0,278,Audi 2006 | 321 sold | med $6.1k | +2.5% vs MMR | 101k mi
+277,0,279,Audi 2007 | 470 sold | med $8.8k | -1.1% vs MMR | 95k mi
+278,0,280,Audi 2008 | 467 sold | med $11.1k | +0.9% vs MMR | 84k mi
+279,0,281,Audi 2009 | 410 sold | med $14.4k | +0.8% vs MMR | 75k mi
+280,0,282,Audi 2010 | 307 sold | med $18.1k | +0.7% vs MMR | 67k mi
+281,0,283,Audi 2011 | 424 sold | med $21.5k | +0.0% vs MMR | 51k mi
+282,0,284,Audi 2012 | 1202 sold | med $26.0k | +0.3% vs MMR | 37k mi
+283,0,285,Audi 2013 | 708 sold | med $29.1k | -0.4% vs MMR | 29k mi
+284,0,286,Audi 2014 | 452 sold | med $39.0k | +0.3% vs MMR | 12k mi
+285,0,287,Audi 2015 | 114 sold | med $26.5k | -0.6% vs MMR | 6k mi
+286,0,288,BMW (med $20.2k)
+287,0,289,BMW 1998 | 56 sold | med $1.6k | +3.4% vs MMR | 150k mi
+288,0,290,BMW 1999 | 96 sold | med $1.6k | -5.4% vs MMR | 143k mi
+289,0,291,BMW 2000 | 211 sold | med $1.9k | +0.0% vs MMR | 143k mi
+290,0,292,BMW 2001 | 315 sold | med $2.7k | -0.9% vs MMR | 135k mi
+291,0,293,BMW 2002 | 380 sold | med $3.4k | +0.0% vs MMR | 131k mi
+292,0,294,BMW 2003 | 531 sold | med $3.7k | -1.5% vs MMR | 127k mi
+293,0,295,BMW 2004 | 758 sold | med $5.0k | -0.7% vs MMR | 117k mi
+294,0,296,BMW 2005 | 681 sold | med $6.1k | +0.0% vs MMR | 114k mi
+295,0,297,BMW 2006 | 1485 sold | med $7.5k | +0.3% vs MMR | 105k mi
+296,0,298,BMW 2007 | 1539 sold | med $9.6k | +0.5% vs MMR | 95k mi
+297,0,299,BMW 2008 | 1791 sold | med $12.1k | +0.7% vs MMR | 85k mi
+298,0,300,BMW 2009 | 897 sold | med $15.0k | -0.4% vs MMR | 72k mi
+299,0,301,BMW 2010 | 632 sold | med $16.8k | +0.0% vs MMR | 67k mi
+300,0,302,BMW 2011 | 2739 sold | med $20.8k | -1.0% vs MMR | 42k mi
+301,0,303,BMW 2012 | 4383 sold | med $29.0k | -0.6% vs MMR | 35k mi
+302,0,304,BMW 2013 | 1797 sold | med $31.6k | -0.4% vs MMR | 30k mi
+303,0,305,BMW 2014 | 1625 sold | med $38.0k | +0.2% vs MMR | 7k mi
+304,0,306,BMW 2015 | 643 sold | med $40.0k | +0.1% vs MMR | 6k mi
+305,0,307,Infiniti (med $20.6k)
+306,0,308,Infiniti 2000 | 30 sold | med $1.6k | +0.6% vs MMR | 163k mi
+307,0,309,Infiniti 2001 | 75 sold | med $1.9k | -7.7% vs MMR | 144k mi
+308,0,310,Infiniti 2002 | 60 sold | med $2.4k | -4.4% vs MMR | 135k mi
+309,0,311,Infiniti 2003 | 288 sold | med $4.0k | -0.3% vs MMR | 135k mi
+310,0,312,Infiniti 2004 | 389 sold | med $5.5k | -0.5% vs MMR | 127k mi
+311,0,313,Infiniti 2005 | 295 sold | med $6.4k | +1.6% vs MMR | 121k mi
+312,0,314,Infiniti 2006 | 436 sold | med $8.5k | +1.3% vs MMR | 115k mi
+313,0,315,Infiniti 2007 | 312 sold | med $9.8k | +0.8% vs MMR | 106k mi
+314,0,316,Infiniti 2008 | 426 sold | med $12.2k | +0.3% vs MMR | 90k mi
+315,0,317,Infiniti 2009 | 195 sold | med $15.0k | +0.9% vs MMR | 74k mi
+316,0,318,Infiniti 2010 | 151 sold | med $20.2k | -0.3% vs MMR | 65k mi
+317,0,319,Infiniti 2011 | 2849 sold | med $19.2k | -0.4% vs MMR | 36k mi
+318,0,320,Infiniti 2012 | 4464 sold | med $20.6k | -0.3% vs MMR | 34k mi
+319,0,321,Infiniti 2013 | 4244 sold | med $22.6k | +0.0% vs MMR | 21k mi
+320,0,322,Infiniti 2014 | 1002 sold | med $31.0k | -0.4% vs MMR | 16k mi
+321,0,323,Lexus (med $20.8k)
+322,0,324,Lexus 1998 | 87 sold | med $2.1k | -5.1% vs MMR | 181k mi
+323,0,325,Lexus 1999 | 179 sold | med $3.1k | +0.8% vs MMR | 171k mi
+324,0,326,Lexus 2000 | 129 sold | med $3.7k | +3.1% vs MMR | 167k mi
+325,0,327,Lexus 2001 | 198 sold | med $4.3k | +2.5% vs MMR | 163k mi
+326,0,328,Lexus 2002 | 362 sold | med $5.2k | +1.6% vs MMR | 142k mi
+327,0,329,Lexus 2003 | 247 sold | med $5.7k | +1.9% vs MMR | 138k mi
+328,0,330,Lexus 2004 | 625 sold | med $8.4k | +1.0% vs MMR | 133k mi
+329,0,331,Lexus 2005 | 230 sold | med $8.4k | +2.2% vs MMR | 127k mi
+330,0,332,Lexus 2006 | 611 sold | med $9.8k | +0.3% vs MMR | 114k mi
+331,0,333,Lexus 2007 | 933 sold | med $11.3k | +0.0% vs MMR | 103k mi
+332,0,334,Lexus 2008 | 760 sold | med $13.9k | +0.0% vs MMR | 92k mi
+333,0,335,Lexus 2009 | 293 sold | med $15.7k | -0.4% vs MMR | 77k mi
+334,0,336,Lexus 2010 | 611 sold | med $19.5k | -0.6% vs MMR | 62k mi
+335,0,337,Lexus 2011 | 1029 sold | med $21.4k | -0.5% vs MMR | 42k mi
+336,0,338,Lexus 2012 | 2757 sold | med $23.6k | -0.7% vs MMR | 30k mi
+337,0,339,Lexus 2013 | 2070 sold | med $30.6k | -0.8% vs MMR | 23k mi
+338,0,340,Lexus 2014 | 615 sold | med $31.8k | -0.9% vs MMR | 14k mi
+339,0,341,Lexus 2015 | 96 sold | med $39.5k | -1.0% vs MMR | 6k mi
+340,0,342,Mercedes-Benz (med $21.2k)
+341,0,343,Mercedes-Benz 1998 | 63 sold | med $1.5k | -3.5% vs MMR | 155k mi
+342,0,344,Mercedes-Benz 1999 | 95 sold | med $2.1k | +0.0% vs MMR | 148k mi
+343,0,345,Mercedes-Benz 2000 | 160 sold | med $2.4k | +0.0% vs MMR | 141k mi
+344,0,346,Mercedes-Benz 2001 | 263 sold | med $2.6k | +0.0% vs MMR | 129k mi
+345,0,347,Mercedes-Benz 2002 | 350 sold | med $2.9k | +0.4% vs MMR | 127k mi
+346,0,348,Mercedes-Benz 2003 | 553 sold | med $4.3k | +1.1% vs MMR | 115k mi
+347,0,349,Mercedes-Benz 2004 | 388 sold | med $5.0k | -1.5% vs MMR | 108k mi
+348,0,350,Mercedes-Benz 2005 | 593 sold | med $6.7k | +0.9% vs MMR | 102k mi
+349,0,351,Mercedes-Benz 2006 | 1131 sold | med $8.0k | +0.0% vs MMR | 102k mi
+350,0,352,Mercedes-Benz 2007 | 1081 sold | med $13.0k | +0.6% vs MMR | 94k mi
+351,0,353,Mercedes-Benz 2008 | 1323 sold | med $13.8k | +0.0% vs MMR | 87k mi
+352,0,354,Mercedes-Benz 2009 | 813 sold | med $16.8k | +0.0% vs MMR | 73k mi
+353,0,355,Mercedes-Benz 2010 | 952 sold | med $20.0k | +0.0% vs MMR | 63k mi
+354,0,356,Mercedes-Benz 2011 | 1634 sold | med $23.5k | -1.2% vs MMR | 44k mi
+355,0,357,Mercedes-Benz 2012 | 3274 sold | med $24.2k | -1.2% vs MMR | 32k mi
+356,0,358,Mercedes-Benz 2013 | 3116 sold | med $27.8k | -1.3% vs MMR | 23k mi
+357,0,359,Mercedes-Benz 2014 | 1041 sold | med $36.5k | -1.1% vs MMR | 12k mi
+358,0,360,Mercedes-Benz 2015 | 132 sold | med $39.5k | -3.6% vs MMR | 9k mi
+359,0,361,1998
+360,0,362,1999
+361,0,363,2000
+362,0,364,2001
+363,0,365,2002
+364,0,366,2003
+365,0,367,2004
+366,0,368,2005
+367,0,369,2006
+368,0,370,2007
+369,0,371,2008
+370,0,372,2009
+371,0,373,2010
+372,0,374,2011
+373,0,375,2012
+374,0,376,2013
+375,0,377,2014
+376,0,378,2015
