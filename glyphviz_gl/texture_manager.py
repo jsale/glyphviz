@@ -3,8 +3,9 @@ TextureManager — loads image files from a directory into OpenGL texture object
 assigning 1-based integer IDs that match the ANTz/GaiaViz texture_id convention.
 
 Images are sorted alphanumerically; texture_id 1 is the first file, 2 the second,
-etc.  Only the default folder (media/ next to the loaded CSV) is searched
-automatically; an additional folder can be loaded via load_folder().
+etc.  Two folders are searched automatically: media/ next to the app itself
+at startup, then media/ next to the loaded CSV (which takes precedence); any
+other folder can be loaded via load_folder().
 
 Multi-frame GIFs are detected automatically and played back using their own
 embedded per-frame delays (see tick()), independent of the channel/track

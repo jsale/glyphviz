@@ -46,10 +46,11 @@ _AUDIO_TICK_MS = 33   # redraw rate while Channels playback is audio-driven (~30
 
 
 def _app_dir() -> Path:
-    """Directory treated as 'next to the executable' for K-key autosave: the
-    frozen executable's folder (e.g. PyInstaller), or the folder containing
-    main.py when running from source. No ANTz-style usr/csv/ subfolder yet —
-    that's a future convention, not implemented here."""
+    """Directory treated as 'next to the executable' (K-key autosave, default
+    media/ folder): the frozen executable's folder (e.g. PyInstaller), or the
+    folder containing main.py when running from source. No ANTz-style
+    usr/csv/ subfolder yet — that's a future convention, not implemented
+    here."""
     if getattr(sys, 'frozen', False):
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parents[1]
@@ -141,6 +142,7 @@ class MainWindow(QMainWindow):
         self._viewport.nodesManipulated.connect(self._on_viewport_manipulated)
         self._viewport.bgToggleRequested.connect(self._on_scene_bg_toggle_bw)
         self._viewport.renderModeCycleRequested.connect(self._on_scene_render_mode_cycle)
+        self._viewport.glInitialized.connect(self._load_default_media)
         self.setCentralWidget(self._viewport)
         # Link self.nodes into the viewport scene so appends stay in sync.
         self._viewport.set_nodes(self.nodes)
@@ -1045,6 +1047,23 @@ class MainWindow(QMainWindow):
         )
         if folder:
             self._apply_texture_folder(Path(folder))
+
+    def _load_default_media(self):
+        """Load textures from a media/ folder next to the app itself (the
+        frozen executable's folder, or main.py's when running from source) as
+        the startup default, matching ANTz's app-relative usr/images
+        convention. Runs on the viewport's glInitialized signal — any earlier
+        and the GL uploads silently produce zero textures. A media/ folder
+        next to a subsequently opened CSV still takes precedence (_open_csv);
+        the guard below keeps a context recreation from clobbering it."""
+        if self._viewport.texture_folder is not None:
+            return
+        folder = _app_dir() / "media"
+        if folder.is_dir():
+            self._apply_texture_folder(folder, silent=True)
+            self.statusBar().showMessage(
+                f"Loaded {self._viewport.texture_count} texture(s) from app media/ folder"
+            )
 
     def _apply_texture_folder(self, folder: Path, silent: bool = False):
         try:

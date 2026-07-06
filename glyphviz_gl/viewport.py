@@ -110,6 +110,13 @@ class Viewport(QOpenGLWidget):
     renderModeCycleRequested = Signal()  # 8 → cycle scene render mode
     quickSaveRequested = Signal()        # K → silent auto-save node+tag CSV
 
+    # Emitted from initializeGL once the GL context exists. Texture uploads
+    # before this point silently produce zero textures (makeCurrent() is a
+    # no-op on an uninitialized widget), so startup texture loading must wait
+    # for it. Re-emitted if the context is ever recreated (widget reparent,
+    # screen change).
+    glInitialized = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._scene = Scene([])
@@ -549,6 +556,7 @@ class Viewport(QOpenGLWidget):
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         self._geo.setup()
+        self.glInitialized.emit()
 
     def resizeGL(self, w, h):
         if h == 0:
