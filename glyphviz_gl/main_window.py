@@ -586,6 +586,8 @@ class MainWindow(QMainWindow):
 
         self._new_geo = QComboBox()
         for geo_id in range(GEO_COUNT):
+            if geo_id == GEO_MESH:
+                continue  # each imported mesh gets its own entry (_add_mesh_combo_entry)
             self._new_geo.addItem(GEO_NAMES[geo_id], geo_id)
         self._new_geo.setCurrentIndex(max(self._new_geo.findData(GEO_OCTA), 0))
 
@@ -889,6 +891,8 @@ class MainWindow(QMainWindow):
 
         self._insp_geo = QComboBox()
         for geo_id in range(GEO_COUNT):
+            if geo_id == GEO_MESH:
+                continue  # each imported mesh gets its own entry (_add_mesh_combo_entry)
             self._insp_geo.addItem(GEO_NAMES[geo_id], geo_id)
         self._insp_geo.currentIndexChanged.connect(self._on_insp_geo_changed)
 
@@ -1221,6 +1225,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Mesh import failed: {exc}")
             return
         name = self._viewport.mesh_name(mesh_id)
+        self._add_mesh_combo_entry(mesh_id)
 
         if len(self._selected_nodes) == 1:
             node = self._selected_nodes[0]
@@ -1243,6 +1248,40 @@ class MainWindow(QMainWindow):
             geometry=GEO_MESH, hide=0, topo=0, mesh_id=mesh_id,
         ))
         self.statusBar().showMessage(f"Imported mesh '{name}' (id {mesh_id}) as new node {new_id}.")
+
+    # --- Imported-mesh entries in the geometry dropdowns ---
+    #
+    # Built-in geometries store a plain int geo_id as the combo item's data;
+    # each imported mesh gets its own item whose data is the (GEO_MESH,
+    # mesh_id) tuple, so picking it sets BOTH fields on the node — GEO_MESH
+    # alone renders as the sphere fallback when mesh_id doesn't name a
+    # loaded mesh (see GeoRenderer.draw).
+
+    def _mesh_combo_label(self, mesh_id: int) -> str:
+        name = self._viewport.mesh_name(mesh_id)
+        return f"Mesh {mesh_id}: {name}" if name else f"Mesh {mesh_id} (not loaded)"
+
+    def _add_mesh_combo_entry(self, mesh_id: int):
+        """Add (or re-label) this mesh's entry in every geometry dropdown."""
+        data = (GEO_MESH, mesh_id)
+        label = self._mesh_combo_label(mesh_id)
+        for combo in (self._new_geo, self._insp_geo):
+            idx = next((i for i in range(combo.count()) if combo.itemData(i) == data), -1)
+            if idx >= 0:
+                combo.setItemText(idx, label)
+            else:
+                combo.addItem(label, data)
+
+    def _geo_combo_index(self, combo: QComboBox, geo: int, mesh_id: int) -> int:
+        """Combo index showing this node's geometry. For GEO_MESH nodes whose
+        mesh_id has no entry yet (a CSV saved with meshes, reopened before
+        re-importing the files), a '(not loaded)' entry is added on demand so
+        the inspector doesn't misreport the geometry as Cube Wire."""
+        if geo != GEO_MESH:
+            return combo.findData(geo)
+        self._add_mesh_combo_entry(mesh_id)
+        data = (GEO_MESH, mesh_id)
+        return next((i for i in range(combo.count()) if combo.itemData(i) == data), -1)
 
     def _clear_textures(self):
         self._viewport.clear_textures()
@@ -1635,7 +1674,7 @@ class MainWindow(QMainWindow):
             sb.blockSignals(True)
             sb.setValue(val)
             sb.blockSignals(False)
-        idx = self._insp_geo.findData(node.geometry)
+        idx = self._geo_combo_index(self._insp_geo, node.geometry, node.mesh_id)
         self._insp_geo.blockSignals(True)
         self._insp_geo.setCurrentIndex(max(idx, 0))
         self._insp_geo.blockSignals(False)
@@ -1710,7 +1749,7 @@ class MainWindow(QMainWindow):
             sb.setValue(val)
             sb.blockSignals(False)
 
-        idx = self._insp_geo.findData(primary.geometry)
+        idx = self._geo_combo_index(self._insp_geo, primary.geometry, primary.mesh_id)
         self._insp_geo.blockSignals(True)
         self._insp_geo.setCurrentIndex(max(idx, 0))
         self._insp_geo.blockSignals(False)
@@ -1810,9 +1849,12 @@ class MainWindow(QMainWindow):
     def _on_insp_geo_changed(self, _idx: int):
         if not self._selected_nodes:
             return
-        geo = self._insp_geo.currentData()
+        data = self._insp_geo.currentData()
+        geo, mesh_id = data if isinstance(data, tuple) else (data, None)
         for node in self._selected_nodes:
             node.geometry = geo
+            if mesh_id is not None:
+                node.mesh_id = mesh_id
         self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._update_sel_values()
         self._viewport.scene_invalidate()
@@ -2211,8 +2253,11 @@ class MainWindow(QMainWindow):
     def _new_object_defaults(self):
         """Current geometry/topology/scale/color from the New Object Defaults
         panel, applied to every node created via New Node/New Child/N/Shift+N."""
+        data = self._new_geo.currentData()
+        geo, mesh_id = data if isinstance(data, tuple) else (data, 0)
         return (
-            self._new_geo.currentData(),
+            geo,
+            mesh_id,
             self._new_topo.currentData(),
             self._new_scale_x.value(),
             self._new_scale_y.value(),
@@ -2234,14 +2279,14 @@ class MainWindow(QMainWindow):
         """Create a new root-level node using the New Object Defaults, stepping +10 along X from the last one."""
         next_x = self._next_root_x()
         new_id = max((n.id for n in self.nodes), default=0) + 1
-        geo, topo, sx, sy, sz, color = self._new_object_defaults()
+        geo, mesh_id, topo, sx, sy, sz, color = self._new_object_defaults()
         self._add_node_to_scene(Node(
             id=new_id, type=5, parent_id=0, branch_level=0,
             translate_x=next_x, translate_y=0.0, translate_z=0.0,
             rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
             scale_x=sx, scale_y=sy, scale_z=sz,
             color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
-            geometry=geo, hide=0, topo=topo,
+            geometry=geo, hide=0, topo=topo, mesh_id=mesh_id,
         ))
 
     def _create_child_node(self):
@@ -2257,7 +2302,7 @@ class MainWindow(QMainWindow):
         parent = self._selected_nodes[0]
         sibling_count = sum(1 for n in self.nodes if n.parent_id == parent.id)
         new_id = max((n.id for n in self.nodes), default=0) + 1
-        geo, topo, sx, sy, sz, color = self._new_object_defaults()
+        geo, mesh_id, topo, sx, sy, sz, color = self._new_object_defaults()
         self._add_node_to_scene(Node(
             id=new_id, type=5, parent_id=parent.id,
             branch_level=parent.branch_level + 1,
@@ -2265,7 +2310,7 @@ class MainWindow(QMainWindow):
             rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
             scale_x=sx, scale_y=sy, scale_z=sz,
             color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
-            geometry=geo, hide=0, topo=topo,
+            geometry=geo, hide=0, topo=topo, mesh_id=mesh_id,
         ), select_new=False)
 
     def _add_node_to_scene(self, node: Node, select_new: bool = True):

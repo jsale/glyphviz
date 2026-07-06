@@ -44,7 +44,7 @@ extensions with no ANTz/GaiaViz equivalent.
 | 20 | Grid Wire | `GEO_GRID_WIRE` | Wireframe; solid pair is `GEO_GRID` |
 | 21 | Grid | `GEO_GRID` | Flat square in the local XY plane, normal along +Z — matches ANTz's Grid node (topo=Plane, geometry=Square) |
 | 22 | Point | `GEO_POINT` | Fixed-pixel-size `GL_POINTS` sprite; size driven by the node's `ratio` field |
-| 23 | Mesh (Imported) | `GEO_MESH` | **GlyphViz extension** — arbitrary triangle mesh imported via `glyphviz_core/mesh_loader.py` (OBJ/STL/PLY/glTF), selected per-node by `Node.mesh_id` rather than a fixed shape |
+| 23 | Mesh (Imported) | `GEO_MESH` | **GlyphViz extension** — arbitrary triangle mesh imported via `glyphviz_core/mesh_loader.py` (OBJ/STL/PLY/glTF), selected per-node by `Node.mesh_id` rather than a fixed shape. Each imported mesh gets its own entry in the geometry dropdowns ("Mesh 1: name", "Mesh 2: name", …); picking one sets both `geometry` and `mesh_id` |
 | 24 | Circle | `GEO_CIRCLE` | **GlyphViz extension** — flat 2-D marker, world-space plate (like Grid), compiled to display lists for scatter-plot-scale performance |
 | 25 | Cross | `GEO_CROSS` | **GlyphViz extension** — same idea as Circle |
 | 26 | Star | `GEO_STAR` | **GlyphViz extension** — same idea as Circle |

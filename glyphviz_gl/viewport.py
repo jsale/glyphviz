@@ -208,6 +208,7 @@ class Viewport(QOpenGLWidget):
         self._geo = GeoRenderer()
         self._next_mesh_id = 1
         self._mesh_names: dict[int, str] = {}   # mesh_id -> source filename, for the UI
+        self._mesh_paths: dict[str, int] = {}   # resolved source path -> mesh_id, to dedupe re-imports
         self._tex_mgr = TextureManager()
         self._video_mgr = VideoManager()
         self._last_tex_tick = time.perf_counter()
@@ -444,14 +445,22 @@ class Viewport(QOpenGLWidget):
 
     def load_mesh_file(self, path: str) -> int:
         """Import an OBJ/STL/etc. file (glyphviz_core.mesh_loader) and compile
-        it into a new GEO_MESH display list. Must be called while the OpenGL
+        it into a GEO_MESH display list. Must be called while the OpenGL
         context is current (safe from the main thread after the widget has
-        been shown). Returns the new mesh_id (1, 2, 3, ... in import order)."""
+        been shown). Returns the mesh_id (1, 2, 3, ... in import order).
+
+        Re-importing a file that was already imported reuses its existing
+        mesh_id — the file is re-read and its display list rebuilt (so edits
+        on disk show up), but no duplicate mesh entry is created."""
         data = _load_mesh_data(path)
+        key = str(Path(path).resolve())
         self.makeCurrent()
         self._geo.setup()
-        mesh_id = self._next_mesh_id
-        self._next_mesh_id += 1
+        mesh_id = self._mesh_paths.get(key)
+        if mesh_id is None:
+            mesh_id = self._next_mesh_id
+            self._next_mesh_id += 1
+            self._mesh_paths[key] = mesh_id
         self._geo.register_mesh(mesh_id, data)
         self._mesh_names[mesh_id] = data.name
         self._assets_rev += 1   # baked glCallList references resolve by id — rebake
