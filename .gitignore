@@ -18,6 +18,10 @@ gaiaviz-skill/
 # disposable/regeneratable; ratings.csv — the design journal — stays tracked)
 hyperglyph_lab/output/
 
+# PyInstaller build output
+build/
+dist/
+
 # Jupyter autosave checkpoints
 .ipynb_checkpoints/
 
