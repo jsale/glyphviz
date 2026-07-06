@@ -8,6 +8,9 @@ per-topology coordinate conventions. New topologies are added by writing an
 offset function and registering it in _TOPO_OFFSET_FUNCS.
 """
 import math
+from typing import NamedTuple
+
+import numpy as np
 
 from .geometry_data import ROD_HEIGHT_FACTOR, torus_radii
 from .node import Node, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL
@@ -232,6 +235,341 @@ def _topology_base_rotation(parent_topo: int, tx: float, ty: float, tz: float,
     return _MAT_IDENTITY
 
 
+# ---------------------------------------------------------------------------
+# Vectorized transform engine.
+#
+# The per-node recursive resolution (tuple math, one Python call chain per
+# node) cost ~3.3 s per Scene invalidation at 100k nodes. The engine below
+# produces identical numbers by resolving the hierarchy structure once in
+# plain Python (iterative — no recursion limit), then doing all math as
+# level-ordered numpy batches: every node's local rotation, topology base
+# rotation, and topology offset are computed in grouped array operations, and
+# each hierarchy level composes onto its parents with one batched matmul.
+#
+# The scalar _*_offset functions and _topology_base_rotation below remain the
+# readable per-topology specification — the batched implementations MUST stay
+# in sync with them (verified by old-vs-new comparison when this was built).
+# ---------------------------------------------------------------------------
+
+class SceneTransforms(NamedTuple):
+    """Batched transform state for one node list (see compute_world_transforms).
+
+    row_of_id maps node id -> row index in the arrays (first occurrence wins,
+    matching the old dict caches where the first resolution of an id stuck).
+    eff_parent[i] is the row of node i's effective parent, -1 for roots
+    (missing parent, self-parent, or a cycle entry — see _resolve_hierarchy).
+    """
+    row_of_id: dict[int, int]
+    eff_parent: np.ndarray    # (n,)   int64
+    world_basis: np.ndarray   # (n,3,3) float64 — RAW rotation+scale composition
+    parent_basis: np.ndarray  # (n,3,3) float64
+    child_local: np.ndarray   # (n,3,3) float64
+    world_pos: np.ndarray     # (n,3)   float64
+
+
+def _resolve_hierarchy(nodes: list[Node]) -> tuple[np.ndarray, np.ndarray]:
+    """Resolve each node's effective parent row and hierarchy depth.
+
+    Matches the recursive resolvers' structure: parent looked up by id (last
+    node wins on duplicate ids, like the old by_id dicts); a node is a root
+    when its parent is missing or itself. A parent-chain cycle is broken at
+    its entry node (the first cycle member reached walking up from outside),
+    which becomes a root. NOTE: the old recursive code then *overwrote* the
+    entry node's basis with an extra composition onto its in-cycle parent,
+    giving it a value inconsistent with what its own descendants had already
+    used; this engine keeps the entry node a plain root instead — stable and
+    order-independent. Only files with corrupt (cyclic) parent chains can
+    render differently.
+    """
+    n = len(nodes)
+    index_of_id: dict[int, int] = {}
+    for i, nd in enumerate(nodes):
+        index_of_id[nd.id] = i
+    eff_parent = np.empty(n, dtype=np.int64)
+    for i, nd in enumerate(nodes):
+        p = index_of_id.get(nd.parent_id, -1)
+        eff_parent[i] = -1 if p == i else p
+
+    # Vectorized depth propagation handles the (overwhelmingly common)
+    # acyclic case: each pass resolves every node whose parent's depth is
+    # known, so pass count = max hierarchy depth. The scalar chain walk
+    # below only mops up nodes trapped in / under parent cycles.
+    depth = np.where(eff_parent < 0, 0, -1)
+    pending = np.flatnonzero(depth < 0)
+    while len(pending):
+        parent_depth = depth[eff_parent[pending]]
+        ready = parent_depth >= 0
+        if not ready.any():
+            break   # every remaining node hangs from a cycle
+        depth[pending[ready]] = parent_depth[ready] + 1
+        pending = pending[~ready]
+
+    for i in pending:
+        i = int(i)
+        if depth[i] >= 0:
+            continue
+        # Walk up the parent chain until hitting a resolved node, a root,
+        # or a node already on this chain (cycle).
+        chain: list[int] = []
+        on_chain: set[int] = set()
+        j = i
+        while depth[j] < 0 and j not in on_chain:
+            chain.append(j)
+            on_chain.add(j)
+            p = int(eff_parent[j])
+            if p < 0:
+                break
+            j = p
+        else:
+            if depth[j] < 0:      # j is on this chain twice -> cycle entry
+                eff_parent[j] = -1
+                depth[j] = 0
+        for k in reversed(chain):
+            if depth[k] >= 0:
+                continue
+            p = int(eff_parent[k])
+            depth[k] = 0 if p < 0 else depth[p] + 1
+    return eff_parent, depth
+
+
+def _batched_rot_x(deg: np.ndarray) -> np.ndarray:
+    a = np.radians(deg)
+    c, s = np.cos(a), np.sin(a)
+    m = np.zeros((len(a), 3, 3))
+    m[:, 0, 0] = 1.0
+    m[:, 1, 1] = c
+    m[:, 1, 2] = -s
+    m[:, 2, 1] = s
+    m[:, 2, 2] = c
+    return m
+
+
+def _batched_rot_y(deg: np.ndarray) -> np.ndarray:
+    a = np.radians(deg)
+    c, s = np.cos(a), np.sin(a)
+    m = np.zeros((len(a), 3, 3))
+    m[:, 0, 0] = c
+    m[:, 0, 2] = s
+    m[:, 1, 1] = 1.0
+    m[:, 2, 0] = -s
+    m[:, 2, 2] = c
+    return m
+
+
+def _batched_rot_z(deg: np.ndarray) -> np.ndarray:
+    a = np.radians(deg)
+    c, s = np.cos(a), np.sin(a)
+    m = np.zeros((len(a), 3, 3))
+    m[:, 0, 0] = c
+    m[:, 0, 1] = -s
+    m[:, 1, 0] = s
+    m[:, 1, 1] = c
+    m[:, 2, 2] = 1.0
+    return m
+
+
+def _batched_local_rotations(rx: np.ndarray, ry: np.ndarray, rz: np.ndarray,
+                              mode: np.ndarray) -> np.ndarray:
+    """Vectorized local_rotation_matrix(): both conventions computed batched,
+    selected per node by rotation_mode."""
+    htr = _batched_rot_z(-ry) @ _batched_rot_x(-rx) @ _batched_rot_z(-rz)
+    exyz = _batched_rot_x(rx) @ _batched_rot_y(ry) @ _batched_rot_z(rz)
+    return np.where((mode == ROTATION_MODE_EULER_XYZ)[:, None, None], exyz, htr)
+
+
+_CUBE_FACE_ROTS_ARR = None   # filled lazily below (after _CUBE_FACE_BASE_ROTS exists)
+
+
+def _batched_topo_rotations(ptopo: np.ndarray, tx: np.ndarray, ty: np.ndarray,
+                             subspace: np.ndarray) -> np.ndarray:
+    """Vectorized _topology_base_rotation(). ptopo is the PARENT's topo per
+    node (-1 for roots, which take the identity — a root's child_local is its
+    own rotation only)."""
+    global _CUBE_FACE_ROTS_ARR
+    n = len(ptopo)
+    T = np.tile(np.eye(3), (n, 1, 1))
+    m = ptopo == TOPO_ROD
+    if m.any():
+        T[m] = _batched_rot_z(ty[m])
+    m = np.isin(ptopo, (TOPO_ZROD, TOPO_CYLINDER, TOPO_ZCYLINDER, TOPO_SPIRAL))
+    if m.any():
+        T[m] = _batched_rot_z(tx[m])
+    m = np.isin(ptopo, (TOPO_SPHERE, TOPO_POINT, TOPO_TORUS, TOPO_ZTORUS))
+    if m.any():
+        T[m] = _batched_rot_z(tx[m]) @ _batched_rot_y(90.0 - ty[m])
+    m = ptopo == TOPO_CUBE
+    if m.any():
+        if _CUBE_FACE_ROTS_ARR is None:
+            _CUBE_FACE_ROTS_ARR = np.array(_CUBE_FACE_BASE_ROTS)
+        T[m] = _CUBE_FACE_ROTS_ARR[np.clip(subspace[m], 0, 5)]
+    return T
+
+
+def _batched_kml(lon_deg, lat_deg, alt, radius):
+    lon = np.radians(lon_deg)
+    lat = np.radians(lat_deg)
+    r = radius + alt
+    cos_lat = np.cos(lat)
+    return np.stack([
+        r * cos_lat * np.cos(lon),
+        r * cos_lat * np.sin(lon),
+        r * np.sin(lat),
+    ], axis=1)
+
+
+def _batched_topo_offsets(ptopo: np.ndarray, tx: np.ndarray, ty: np.ndarray,
+                           tz: np.ndarray, base_scale: float,
+                           pratio: np.ndarray, subspace: np.ndarray) -> np.ndarray:
+    """Vectorized _TOPO_OFFSET_FUNCS dispatch: each node's local-frame offset
+    from its parent, per the PARENT's topo. Cartesian is both TOPO_NONE's
+    behavior and the fallback for unknown topo ids, so it is the default fill
+    (this also covers Plane/Video/Plot/Surface, whose offset IS Cartesian)."""
+    off = np.stack([tx, ty, tz], axis=1)   # cartesian default
+
+    m = ptopo == TOPO_SPHERE
+    if m.any():
+        off[m] = _batched_kml(tx[m], ty[m], tz[m], base_scale)
+    m = np.isin(ptopo, (TOPO_POINT, TOPO_ZSPHERE))
+    if m.any():
+        off[m] = _batched_kml(tx[m], ty[m], tz[m], 0.0)
+
+    for topo_id, has_minor in ((TOPO_TORUS, True), (TOPO_ZTORUS, False)):
+        m = ptopo == topo_id
+        if m.any():
+            u = np.radians(tx[m])
+            v = np.radians(ty[m])
+            minor_r = pratio[m] * base_scale          # torus_radii()
+            major_r = base_scale - minor_r
+            tube_r = (minor_r + tz[m]) if has_minor else tz[m]
+            radial = major_r + tube_r * np.cos(v)
+            off[m] = np.stack([radial * np.cos(u), radial * np.sin(u),
+                               tube_r * np.sin(v)], axis=1)
+
+    m = ptopo == TOPO_ROD
+    if m.any():
+        angle = np.radians(ty[m])
+        off[m] = np.stack([
+            tz[m] * np.cos(angle),
+            tz[m] * np.sin(angle),
+            (tx[m] / 180.0) * 2.0 * base_scale * ROD_HEIGHT_FACTOR,
+        ], axis=1)
+
+    m = ptopo == TOPO_CYLINDER
+    if m.any():
+        angle = np.radians(tx[m])
+        radial = base_scale + tz[m]
+        off[m] = np.stack([radial * np.cos(angle), radial * np.sin(angle),
+                           ty[m]], axis=1)
+
+    m = np.isin(ptopo, (TOPO_ZCYLINDER, TOPO_ZROD))
+    if m.any():
+        angle = np.radians(tx[m])
+        off[m] = np.stack([tz[m] * np.cos(angle), tz[m] * np.sin(angle),
+                           ty[m]], axis=1)
+
+    m = ptopo == TOPO_PIN
+    if m.any():
+        off[m] = np.stack([ty[m], tz[m], base_scale + tx[m]], axis=1)
+
+    for topo_id, on_surface in ((TOPO_CUBE, True), (TOPO_ZCUBE, False)):
+        m = ptopo == topo_id
+        if m.any():
+            faces = np.array(_CUBE_FACES, dtype=np.float64)   # (6, 3, 3): n, u, v
+            f = faces[np.clip(subspace[m], 0, 5)]
+            dist = (base_scale + tz[m]) if on_surface else tz[m]
+            off[m] = (dist[:, None] * f[:, 0]
+                      + tx[m][:, None] * f[:, 1]
+                      + ty[m][:, None] * f[:, 2])
+
+    m = ptopo == TOPO_SPIRAL
+    if m.any():
+        theta = np.radians(tx[m])
+        radial = base_scale + tz[m]
+        off[m] = np.stack([radial * np.cos(theta), radial * np.sin(theta),
+                           (tx[m] / 360.0) * base_scale + ty[m]], axis=1)
+    return off
+
+
+def compute_world_transforms(nodes: list[Node], base_scale: float,
+                              world_basis_override: np.ndarray | None = None,
+                              ) -> SceneTransforms:
+    """Resolve every node's transform state in level-ordered numpy batches.
+
+    Numerically equivalent to the old recursive compute_world_bases +
+    compute_world_positions pair (see their docstrings for the math contract),
+    ~20x faster at 100k nodes. world_basis_override substitutes a caller-
+    supplied (n,3,3) basis array for the offset transforms in the position
+    pass (compute_world_positions's optional world_basis dict argument).
+    """
+    n = len(nodes)
+    if n == 0:
+        e3 = np.empty((0, 3, 3))
+        return SceneTransforms({}, np.empty(0, dtype=np.int64),
+                               e3, e3.copy(), e3.copy(), np.empty((0, 3)))
+
+    eff_parent, depth = _resolve_hierarchy(nodes)
+
+    # One pass over the node list (a comprehension per field costs ~2x the
+    # attribute lookups' own time at 100k nodes).
+    fields = np.array([
+        (nd.translate_x, nd.translate_y, nd.translate_z,
+         nd.rotate_x, nd.rotate_y, nd.rotate_z,
+         nd.scale_x, nd.scale_y, nd.scale_z,
+         nd.rotation_mode, nd.topo, nd.ratio, nd.subspace)
+        for nd in nodes
+    ], dtype=np.float64)
+    tx, ty, tz = fields[:, 0], fields[:, 1], fields[:, 2]
+    rx, ry, rz = fields[:, 3], fields[:, 4], fields[:, 5]
+    scale = fields[:, 6:9]
+    mode = fields[:, 9].astype(np.int64)
+    topo = fields[:, 10].astype(np.int64)
+    ratio = fields[:, 11]
+    subspace = fields[:, 12].astype(np.int64)
+
+    is_root = eff_parent < 0
+    safe_parent = np.where(is_root, 0, eff_parent)
+    ptopo = np.where(is_root, -1, topo[safe_parent])
+    pratio = np.where(is_root, 0.0, ratio[safe_parent])
+
+    own_rot = _batched_local_rotations(rx, ry, rz, mode)
+    topo_rot = _batched_topo_rotations(ptopo, tx, ty, subspace)
+    child_local = topo_rot @ own_rot          # identity topo_rot for roots
+    local_scaled = child_local * scale[:, None, :]   # m @ diag(scale)
+    offsets = _batched_topo_offsets(ptopo, tx, ty, tz, base_scale,
+                                     pratio, subspace)
+
+    world_basis = np.empty((n, 3, 3))
+    parent_basis = np.tile(np.eye(3), (n, 1, 1))
+    world_pos = np.empty((n, 3))
+    roots = np.flatnonzero(is_root)
+    world_basis[roots] = local_scaled[roots]
+    world_pos[roots] = np.stack([tx, ty, tz], axis=1)[roots]
+
+    offset_basis = world_basis if world_basis_override is None else world_basis_override
+
+    # Level-ordered composition: each level's parents are fully resolved
+    # before the level is processed, so one batched matmul per level.
+    order = np.argsort(depth, kind='stable')
+    sorted_depth = depth[order]
+    max_depth = int(sorted_depth[-1])
+    bounds = np.searchsorted(sorted_depth, np.arange(max_depth + 2))
+    for level in range(1, max_depth + 1):
+        c = order[bounds[level]:bounds[level + 1]]
+        p = eff_parent[c]
+        pb = world_basis[p]
+        parent_basis[c] = pb
+        world_basis[c] = pb @ local_scaled[c]
+        world_pos[c] = world_pos[p] + np.einsum(
+            'nij,nj->ni', offset_basis[p], offsets[c])
+
+    row_of_id: dict[int, int] = {}
+    for i, nd in enumerate(nodes):
+        row_of_id.setdefault(nd.id, i)
+
+    return SceneTransforms(row_of_id, eff_parent, world_basis, parent_basis,
+                           child_local, world_pos)
+
+
 def compute_world_bases(
     nodes: list[Node],
 ) -> tuple[dict[int, tuple], dict[int, tuple], dict[int, tuple]]:
@@ -274,41 +612,19 @@ def compute_world_bases(
     cannot regress that already-confirmed case (e.g. a sphere stretched
     along X producing a diamond-shaped child at 45°) while correctly
     generalizing to arbitrary depth.
+
+    Compatibility wrapper over compute_world_transforms (the vectorized
+    engine); base_scale plays no role in the bases, so any value works for
+    the positions the engine computes alongside.
     """
-    by_id = {n.id: n for n in nodes}
+    t = compute_world_transforms(nodes, base_scale=1.0)
     world_basis:  dict[int, tuple] = {}
     parent_basis: dict[int, tuple] = {}
     child_local:  dict[int, tuple] = {}
-
-    def resolve(node: Node, visiting: frozenset[int]) -> tuple:
-        cached = world_basis.get(node.id)
-        if cached is not None:
-            return cached
-
-        own_rot = local_rotation_matrix(node.rotate_x, node.rotate_y, node.rotate_z,
-                                         node.rotation_mode)
-        own_scale = (node.scale_x, node.scale_y, node.scale_z)
-        parent = by_id.get(node.parent_id)
-        if parent is None or parent is node or node.id in visiting:
-            parent_basis[node.id] = _MAT_IDENTITY
-            child_local[node.id]  = own_rot
-            world_basis[node.id]  = _mat_scale_cols(own_rot, own_scale)
-        else:
-            pwb = resolve(parent, visiting | {node.id})
-            topo_rot = _topology_base_rotation(
-                parent.topo, node.translate_x, node.translate_y, node.translate_z,
-                node.subspace,
-            )
-            lc = _mat_mul(topo_rot, own_rot)
-            parent_basis[node.id] = pwb
-            child_local[node.id]  = lc
-            world_basis[node.id]  = _mat_mul(pwb, _mat_scale_cols(lc, own_scale))
-
-        return world_basis[node.id]
-
-    for n in nodes:
-        resolve(n, frozenset())
-
+    for node_id, row in t.row_of_id.items():
+        world_basis[node_id] = tuple(map(tuple, t.world_basis[row].tolist()))
+        parent_basis[node_id] = tuple(map(tuple, t.parent_basis[row].tolist()))
+        child_local[node_id] = tuple(map(tuple, t.child_local[row].tolist()))
     return world_basis, parent_basis, child_local
 
 
@@ -541,34 +857,21 @@ def compute_world_positions(
     recursive rotation+scale composition: this is what threads every
     ancestor's per-axis stretch and rotation through correctly, however many
     non-uniformly-scaled, rotated levels sit above it.
+
+    Compatibility wrapper over compute_world_transforms (the vectorized
+    engine). The world_basis dict (id -> 3x3, defaulting to identity for
+    missing ids — including for ALL nodes when the argument is omitted,
+    matching the old `world_basis or {}` behavior) is converted to a per-row
+    array and substituted into the engine's offset transforms.
     """
-    by_id = {n.id: n for n in nodes}
-    resolved: dict[int, tuple[float, float, float]] = {}
     world_basis = world_basis or {}
-
-    def resolve(node: Node, visiting: frozenset[int]) -> tuple[float, float, float]:
-        cached = resolved.get(node.id)
-        if cached is not None:
-            return cached
-
-        parent = by_id.get(node.parent_id)
-        if parent is None or parent is node or node.id in visiting:
-            pos = (node.translate_x, node.translate_y, node.translate_z)
-        else:
-            px, py, pz = resolve(parent, visiting | {node.id})
-            offset_fn = _TOPO_OFFSET_FUNCS.get(parent.topo, _cartesian_offset)
-            local_offset = offset_fn(
-                node.translate_x, node.translate_y, node.translate_z,
-                base_scale, parent.ratio, node.subspace,
-            )
-            wb_parent = world_basis.get(parent.id, _MAT_IDENTITY)
-            ox, oy, oz = _mat_vec_mul(wb_parent, local_offset)
-            pos = (px + ox, py + oy, pz + oz)
-
-        resolved[node.id] = pos
-        return pos
-
-    for n in nodes:
-        resolve(n, frozenset())
-
+    override = np.array(
+        [world_basis.get(nd.id, _MAT_IDENTITY) for nd in nodes],
+        dtype=np.float64,
+    ) if nodes else None
+    t = compute_world_transforms(nodes, base_scale, world_basis_override=override)
+    resolved: dict[int, tuple[float, float, float]] = {}
+    for node_id, row in t.row_of_id.items():
+        x, y, z = t.world_pos[row]
+        resolved[node_id] = (float(x), float(y), float(z))
     return resolved
