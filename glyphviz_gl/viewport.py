@@ -166,7 +166,7 @@ class Viewport(QOpenGLWidget):
         self._pick_rbo = 0
         self._pick_fbo_size = (0, 0)
 
-        self.show_tags = True
+        self.show_tags = False   # off by default (Jeff's preference); toggle with T
         self.show_tags_selected_only = False
         # Per-string QStaticText cache: text layout is computed once per
         # unique string instead of on every drawText call, which halves the

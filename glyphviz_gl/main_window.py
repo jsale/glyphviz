@@ -245,7 +245,7 @@ class MainWindow(QMainWindow):
 
         self._tags_act = self._view_menu.addAction("Show Tag &Labels")
         self._tags_act.setCheckable(True)
-        self._tags_act.setChecked(True)
+        self._tags_act.setChecked(False)   # matches Viewport.show_tags default
         self._tags_act.setToolTip("Toggle tag text display  [T]")
         self._tags_act.triggered.connect(lambda c: self._set_tags(c))
 
@@ -382,7 +382,7 @@ class MainWindow(QMainWindow):
         self._cb_hidden.toggled.connect(self._set_hidden)
 
         self._cb_tags = QCheckBox("Show Tag Labels")
-        self._cb_tags.setChecked(True)
+        self._cb_tags.setChecked(False)   # matches Viewport.show_tags default
         self._cb_tags.setToolTip("Toggle tag text display in 3D view  [T]")
         self._cb_tags.toggled.connect(self._set_tags)
 
