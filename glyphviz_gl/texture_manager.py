@@ -18,7 +18,8 @@ from OpenGL.GL import *
 from PySide6.QtGui import QImage, QImageReader
 
 _IMAGE_EXTS = frozenset({
-    '.png', '.jpg', '.jpeg', '.bmp', '.tga', '.gif', '.tif', '.tiff', '.webp',
+    '.png', '.jpg', '.jpeg', '.jfif', '.bmp', '.tga', '.gif', '.tif', '.tiff',
+    '.webp',
 })
 
 # Guard against a malformed/zero frame delay spinning the loop too fast.
