@@ -1476,15 +1476,16 @@ class MainWindow(QMainWindow):
         current_data = self._sel_value.currentData()
         self._sel_value.blockSignals(True)
         self._sel_value.clear()
-        if self.nodes:
+        nodes = self._selectable_nodes()
+        if nodes:
             if criterion == "Branch Level":
-                for lv in sorted(set(n.branch_level for n in self.nodes)):
+                for lv in sorted(set(n.branch_level for n in nodes)):
                     self._sel_value.addItem(str(lv), lv)
             elif criterion == "Geometry":
-                for g in sorted(set(n.geometry for n in self.nodes)):
+                for g in sorted(set(n.geometry for n in nodes)):
                     self._sel_value.addItem(f"{g}: {GEO_NAMES.get(g, f'Geo {g}')}", g)
             elif criterion == "Topology":
-                for t in sorted(set(n.topo for n in self.nodes)):
+                for t in sorted(set(n.topo for n in nodes)):
                     self._sel_value.addItem(f"{t}: {TOPO_NAMES.get(t, f'Topo {t}')}", t)
         if current_data is not None:
             idx = self._sel_value.findData(current_data)
@@ -1492,17 +1493,27 @@ class MainWindow(QMainWindow):
                 self._sel_value.setCurrentIndex(idx)
         self._sel_value.blockSignals(False)
 
+    def _selectable_nodes(self) -> list[Node]:
+        """Nodes the bulk-selection commands (Select All/Invert/Select By)
+        operate on: visual objects only. World/Camera/Grid config nodes are
+        excluded — sweeping the invisible World node into Select All meant a
+        bulk color edit silently changed the scene background (its color IS
+        the background). Explicitly clicking such a row in the table still
+        selects and edits it."""
+        return [n for n in self.nodes if n.type not in NON_VISUAL_TYPES]
+
     def _on_select_by(self):
         criterion = self._sel_criterion.currentText()
         value = self._sel_value.currentData()
         if value is None:
             return
+        nodes = self._selectable_nodes()
         if criterion == "Branch Level":
-            ids = {n.id for n in self.nodes if n.branch_level == value}
+            ids = {n.id for n in nodes if n.branch_level == value}
         elif criterion == "Geometry":
-            ids = {n.id for n in self.nodes if n.geometry == value}
+            ids = {n.id for n in nodes if n.geometry == value}
         elif criterion == "Topology":
-            ids = {n.id for n in self.nodes if n.topo == value}
+            ids = {n.id for n in nodes if n.topo == value}
         else:
             return
         if self._sel_cumulative.isChecked():
@@ -1511,7 +1522,7 @@ class MainWindow(QMainWindow):
             self._table.select_by_ids(ids)
 
     def _on_select_all(self):
-        self._table.select_by_ids({n.id for n in self.nodes})
+        self._table.select_by_ids({n.id for n in self._selectable_nodes()})
 
     def _on_deselect_all(self):
         self._table.select_by_ids(set())
@@ -1519,11 +1530,11 @@ class MainWindow(QMainWindow):
     def _on_invert_selection(self):
         """Ctrl+I: select every table row that is not currently selected."""
         selected_ids = {n.id for n in self._selected_nodes}
-        self._table.select_by_ids({n.id for n in self.nodes} - selected_ids)
+        self._table.select_by_ids({n.id for n in self._selectable_nodes()} - selected_ids)
 
     def _on_select_all_toggle(self):
         """Ctrl+A: select all when nothing (or a partial set) is selected; deselect all otherwise."""
-        if len(self._selected_nodes) < len(self.nodes):
+        if len(self._selected_nodes) < len(self._selectable_nodes()):
             self._on_select_all()
         else:
             self._on_deselect_all()
