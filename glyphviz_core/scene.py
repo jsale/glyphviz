@@ -80,6 +80,15 @@ class Scene:
         self._dirty = True
         self._revision += 1
 
+    def touch(self):
+        """Bump the revision counter WITHOUT invalidating cached transforms.
+
+        For edits that change what the renderer must draw but not where
+        anything sits (e.g. hide flags): a renderer keyed on _revision rebakes
+        its retained state, while the transform recompute (~0.4 s at 100k
+        nodes) is skipped because node placement is untouched."""
+        self._revision += 1
+
     def register_node(self, node: Node):
         """Called after a node is appended directly to self.nodes — keeps _by_id in sync."""
         self._by_id[node.id] = node

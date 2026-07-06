@@ -129,6 +129,10 @@ class MainWindow(QMainWindow):
         self._viewport.nodeClicked.connect(self._on_viewport_pick)
         self._viewport.nodeClickedAdditive.connect(self._on_viewport_pick_additive)
         self._viewport.nodesSelected.connect(self._on_viewport_nodes_selected)
+        self._viewport.nodesSelectedAdditive.connect(self._on_viewport_nodes_selected_additive)
+        self._viewport.hideSelectedRequested.connect(self._hide_selected)
+        self._viewport.showAllRequested.connect(self._show_all)
+        self._viewport.isolateSelectedRequested.connect(self._isolate_selected)
         self._viewport.navParent.connect(self._nav_parent)
         self._viewport.navChild.connect(self._nav_child)
         self._viewport.navNextSibling.connect(self._nav_next_sibling)
@@ -190,6 +194,12 @@ class MainWindow(QMainWindow):
         paste_act.setShortcut("Ctrl+V")
         paste_act.setToolTip("Paste the copied subtree as a new sibling, with fresh ids.")
         paste_act.triggered.connect(self._paste_clipboard)
+
+        edit_menu.addSeparator()
+        invert_act = edit_menu.addAction("&Invert Selection")
+        invert_act.setShortcut("Ctrl+I")
+        invert_act.setToolTip("Select every node that is not currently selected.")
+        invert_act.triggered.connect(self._on_invert_selection)
 
         tex_menu = mb.addMenu("&Textures")
 
@@ -653,6 +663,13 @@ class MainWindow(QMainWindow):
         all_none_layout.addWidget(self._sel_all_btn)
         all_none_layout.addWidget(self._sel_none_btn)
 
+        self._sel_invert_btn = QPushButton("Invert Selection")
+        self._sel_invert_btn.setToolTip(
+            "Select every node that is not currently selected  (Ctrl+I)\n"
+            "Selected spheres → everything except those spheres, etc."
+        )
+        self._sel_invert_btn.clicked.connect(self._on_invert_selection)
+
         self._sel_criterion = QComboBox()
         self._sel_criterion.addItems(["Branch Level", "Geometry", "Topology"])
         self._sel_criterion.currentIndexChanged.connect(self._update_sel_values)
@@ -662,10 +679,67 @@ class MainWindow(QMainWindow):
         self._sel_btn = QPushButton("Select All Matching")
         self._sel_btn.clicked.connect(self._on_select_by)
 
+        self._sel_cumulative = QCheckBox("Add to current selection")
+        self._sel_cumulative.setChecked(False)
+        self._sel_cumulative.setToolTip(
+            "When checked, Select All Matching ADDS to the current selection\n"
+            "instead of replacing it — e.g. select all spheres, then all\n"
+            "cylinders, and keep both sets selected.\n"
+            "(Ctrl+click and Ctrl+Shift+drag in the 3D view are always additive.)"
+        )
+
         sel_layout.addRow(all_none_widget)
+        sel_layout.addRow(self._sel_invert_btn)
         sel_layout.addRow("By:", self._sel_criterion)
         sel_layout.addRow("Value:", self._sel_value)
         sel_layout.addRow(self._sel_btn)
+        sel_layout.addRow(self._sel_cumulative)
+
+        # --- Visibility group ---
+        # All four operate on the per-node hide flag (the table's Hide column,
+        # saved to CSV). Hiding is strictly per-node: a hidden parent never
+        # hides its children — each node's own flag alone decides.
+        vis_grp = QGroupBox("Visibility")
+        vis_layout = QVBoxLayout(vis_grp)
+
+        self._btn_hide_sel = QPushButton("Hide Selected")
+        self._btn_hide_sel.setToolTip(
+            "Hide the selected node(s)  [H]\n"
+            "Sets each node's own hide flag — children of a hidden node\n"
+            "stay visible unless hidden themselves. The selection is kept,\n"
+            "so Show Selected undoes this immediately."
+        )
+        self._btn_hide_sel.clicked.connect(self._hide_selected)
+
+        self._btn_show_sel = QPushButton("Show Selected")
+        self._btn_show_sel.setToolTip(
+            "Clear the hide flag on the selected node(s).\n"
+            "Tip: check 'Show Hidden Nodes' (Display group) to see and\n"
+            "select hidden nodes in the 3D view; the table always shows them."
+        )
+        self._btn_show_sel.clicked.connect(self._show_selected)
+
+        self._btn_isolate = QPushButton("Show Only Selected")
+        self._btn_isolate.setToolTip(
+            "Isolate the selection: hide every other node in one step  [I]\n"
+            "(equivalent to Invert Selection + Hide Selected, without\n"
+            "disturbing the current selection)."
+        )
+        self._btn_isolate.clicked.connect(self._isolate_selected)
+
+        self._btn_show_all = QPushButton("Show All")
+        self._btn_show_all.setToolTip(
+            "Clear the hide flag on every node in the scene  [Shift+H]"
+        )
+        self._btn_show_all.clicked.connect(self._show_all)
+
+        for btn in (self._btn_hide_sel, self._btn_show_sel, self._btn_isolate):
+            btn.setEnabled(False)   # enabled once there's a selection
+
+        vis_layout.addWidget(self._btn_hide_sel)
+        vis_layout.addWidget(self._btn_show_sel)
+        vis_layout.addWidget(self._btn_isolate)
+        vis_layout.addWidget(self._btn_show_all)
 
         # --- Selected Node / Selection inspector ---
         self._insp_grp = QGroupBox("Selected Node")
@@ -938,6 +1012,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(create_grp)
         layout.addWidget(delete_grp)
         layout.addWidget(sel_grp)
+        layout.addWidget(vis_grp)
         layout.addWidget(self._insp_grp)
         layout.addWidget(self._ch_grp)
         layout.addStretch()
@@ -1391,7 +1466,10 @@ class MainWindow(QMainWindow):
             ids = {n.id for n in self.nodes if n.topo == value}
         else:
             return
-        self._table.select_by_ids(ids)
+        if self._sel_cumulative.isChecked():
+            self._table.select_add_ids(ids)
+        else:
+            self._table.select_by_ids(ids)
 
     def _on_select_all(self):
         self._table.select_by_ids({n.id for n in self.nodes})
@@ -1399,12 +1477,77 @@ class MainWindow(QMainWindow):
     def _on_deselect_all(self):
         self._table.select_by_ids(set())
 
+    def _on_invert_selection(self):
+        """Ctrl+I: select every table row that is not currently selected."""
+        selected_ids = {n.id for n in self._selected_nodes}
+        self._table.select_by_ids({n.id for n in self.nodes} - selected_ids)
+
     def _on_select_all_toggle(self):
         """Ctrl+A: select all when nothing (or a partial set) is selected; deselect all otherwise."""
         if len(self._selected_nodes) < len(self.nodes):
             self._on_select_all()
         else:
             self._on_deselect_all()
+
+    # --- Visibility (per-node hide flag; see the Visibility group tooltips) ---
+
+    def _after_visibility_change(self, changed_ids, message: str):
+        """Shared tail for the hide/show operations: repaint (rebake the
+        retained list without a transform recompute — hide doesn't move
+        anything), refresh the table's Hide column, and update the
+        visible-count statusbar stat."""
+        self._table.refresh_nodes(changed_ids)
+        self._viewport.scene_touch()
+        self._update_stats()
+        self.statusBar().showMessage(message)
+
+    def _hide_selected(self):
+        if not self._selected_nodes:
+            self.statusBar().showMessage("No selection to hide.")
+            return
+        for node in self._selected_nodes:
+            node.hide = 1
+        # Selection is deliberately kept: hidden-but-selected nodes stay
+        # pickable/manipulable (matching ANTz), and Show Selected undoes this.
+        self._after_visibility_change(
+            [n.id for n in self._selected_nodes],
+            f"{len(self._selected_nodes)} node(s) hidden.")
+
+    def _show_selected(self):
+        if not self._selected_nodes:
+            self.statusBar().showMessage("No selection to show.")
+            return
+        for node in self._selected_nodes:
+            node.hide = 0
+        self._after_visibility_change(
+            [n.id for n in self._selected_nodes],
+            f"{len(self._selected_nodes)} node(s) shown.")
+
+    def _isolate_selected(self):
+        """Show only the selected nodes: clear their hide flags, set everyone
+        else's. World/camera/grid rows are never drawn, so their flags are
+        left untouched rather than silently rewritten in the saved CSV."""
+        if not self._selected_nodes:
+            self.statusBar().showMessage("No selection to isolate.")
+            return
+        selected_ids = {n.id for n in self._selected_nodes}
+        changed = []
+        for node in self.nodes:
+            if node.type in NON_VISUAL_TYPES:
+                continue
+            new_hide = 0 if node.id in selected_ids else 1
+            if node.hide != new_hide:
+                node.hide = new_hide
+                changed.append(node.id)
+        self._after_visibility_change(
+            changed, f"Showing only the {len(selected_ids)} selected node(s).")
+
+    def _show_all(self):
+        changed = [n.id for n in self.nodes if n.hide]
+        for node in self.nodes:
+            node.hide = 0
+        self._after_visibility_change(
+            changed, f"All nodes shown ({len(changed)} unhidden).")
 
     # --- viewport pick callbacks ---
 
@@ -1420,6 +1563,10 @@ class MainWindow(QMainWindow):
         """Rubber-band or click-on-empty: replace selection with the given ID set."""
         self._table.select_by_ids(set(node_ids))
 
+    def _on_viewport_nodes_selected_additive(self, node_ids: object):
+        """Ctrl+Shift+drag rubber-band: add the region's nodes to the selection."""
+        self._table.select_add_ids(set(node_ids))
+
     # --- table selection → inspector + viewport highlight ---
 
     def _on_table_selection(self):
@@ -1431,6 +1578,8 @@ class MainWindow(QMainWindow):
         for btn in self._mode_buttons.values():
             btn.setEnabled(has_selection)
         self._btn_delete.setEnabled(has_selection)
+        for btn in (self._btn_hide_sel, self._btn_show_sel, self._btn_isolate):
+            btn.setEnabled(has_selection)
         if not has_selection and self._gizmo_mode is not None:
             self._set_gizmo_mode(None)
 

@@ -270,6 +270,24 @@ class NodeTableView(QTableView):
         if rows:
             self.scrollTo(self._model.index(rows[0], 0))
 
+    def select_add_ids(self, node_ids: set[int]):
+        """Add the given node IDs to the current selection without clearing it
+        (cumulative Select-By / Ctrl+rubber-band semantics)."""
+        rows = sorted(
+            row for nid in node_ids
+            if (row := self._model.row_of_id(nid)) is not None
+        )
+        if not rows:
+            return
+        last_col = self._model.columnCount() - 1
+        selection = QItemSelection()
+        for start, end in _merge_runs(rows):
+            selection.select(self._model.index(start, 0),
+                             self._model.index(end, last_col))
+        self.selectionModel().select(
+            selection, QItemSelectionModel.SelectionFlag.Select)
+        self.scrollTo(self._model.index(rows[0], 0))
+
     def refresh_node(self, node_id: int):
         """Notify the model that a node's data has changed in-place."""
         row = self._model.row_of_id(node_id)

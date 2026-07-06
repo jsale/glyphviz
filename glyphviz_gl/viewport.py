@@ -83,6 +83,8 @@ class Viewport(QOpenGLWidget):
     # Rubber-band release OR click-on-empty-space: replace selection with this set
     # (empty set = clear all).  Also used by Select-By to push a set of IDs.
     nodesSelected = Signal(object)   # carries set[int]
+    # Ctrl+rubber-band release: ADD this set to the current selection
+    nodesSelectedAdditive = Signal(object)   # carries set[int]
 
     # Emitted after a Move/Rotate/Size mouse-drag mutates node transforms.
     nodesManipulated = Signal(object)   # carries set[int] of changed node ids
@@ -109,6 +111,11 @@ class Viewport(QOpenGLWidget):
     bgToggleRequested = Signal()         # B → toggle background black/white
     renderModeCycleRequested = Signal()  # 8 → cycle scene render mode
     quickSaveRequested = Signal()        # K → silent auto-save node+tag CSV
+
+    # Visibility hotkeys (handled by MainWindow, which owns the hide logic)
+    hideSelectedRequested = Signal()     # H       → hide selected nodes
+    showAllRequested = Signal()          # Shift+H → clear every hide flag
+    isolateSelectedRequested = Signal()  # I       → show only selected nodes
 
     # Emitted from initializeGL once the GL context exists. Texture uploads
     # before this point silently produce zero textures (makeCurrent() is a
@@ -231,6 +238,13 @@ class Viewport(QOpenGLWidget):
         """Mark scene transforms stale and request a repaint.
         Call this whenever node data (position, rotation, scale, topo) changes."""
         self._scene.invalidate()
+        self.update()
+
+    def scene_touch(self):
+        """Request a repaint with a retained-list rebake but no transform
+        recompute — for edits that change draw content without moving
+        anything (hide flags). See Scene.touch()."""
+        self._scene.touch()
         self.update()
 
     def register_node(self, node: Node):
@@ -1622,6 +1636,15 @@ class Viewport(QOpenGLWidget):
         elif event.key() == Qt.Key.Key_K:
             self.quickSaveRequested.emit()
             event.accept()
+        elif event.key() == Qt.Key.Key_H:
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                self.showAllRequested.emit()
+            else:
+                self.hideSelectedRequested.emit()
+            event.accept()
+        elif event.key() == Qt.Key.Key_I:
+            self.isolateSelectedRequested.emit()
+            event.accept()
         else:
             super().keyPressEvent(event)
 
@@ -1680,7 +1703,13 @@ class Viewport(QOpenGLWidget):
                         max(self._rubber_start.x(), self._rubber_end.x()),
                         max(self._rubber_start.y(), self._rubber_end.y()),
                     )
-                    self.nodesSelected.emit(ids)
+                    # Ctrl+Shift+drag adds to the selection (mirrors
+                    # Ctrl+click's additive single-node semantics);
+                    # plain Shift+drag replaces it.
+                    if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                        self.nodesSelectedAdditive.emit(ids)
+                    else:
+                        self.nodesSelected.emit(ids)
             self._rubber_start = None
             self._rubber_end = None
             self.update()
