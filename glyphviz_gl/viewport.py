@@ -5,7 +5,7 @@ import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from PySide6.QtCore import Qt, QEvent, QPoint, QRect, Signal, QTimer
-from PySide6.QtGui import QColor, QPainter
+from PySide6.QtGui import QColor, QPainter, QStaticText
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from pathlib import Path
@@ -34,6 +34,10 @@ _DRAG_THRESHOLD = 4  # pixels — less than this counts as a click, not a drag
 # on-screen tags every frame can dominate frame time even after they're
 # individually cheap to project. Ordinary tag counts (tens to low hundreds)
 # never hit this; it only engages on pathological cases.
+#
+# Deliberately NOT applied in show_tags_selected_only mode: selecting is an
+# explicit user scoping action, so every selected tag draws even when that
+# costs frame rate (Jeff's call — see _project_tagged_nodes).
 _MAX_TAGS_PER_FRAME = 500
 
 # ANTz rate convention (translate_rate_x/y/z, rotate_rate_x/y/z, scale_rate_x/y/z):
@@ -164,6 +168,12 @@ class Viewport(QOpenGLWidget):
 
         self.show_tags = True
         self.show_tags_selected_only = False
+        # Per-string QStaticText cache: text layout is computed once per
+        # unique string instead of on every drawText call, which halves the
+        # per-frame cost of painting thousands of tags. Keyed by tag text;
+        # cleared on scene load (see set_nodes) and size-guarded in
+        # _paint_tags against pathological churn.
+        self._tag_text_cache: dict[str, QStaticText] = {}
 
         # Cached camera matrices for tag world→screen projection (updated each frame).
         self._mv_matrix: np.ndarray | None = None
@@ -237,6 +247,7 @@ class Viewport(QOpenGLWidget):
     def set_nodes(self, nodes: list[Node]):
         self._draw_limit = None   # new scene → show everything
         self._assets_rev += 1     # new Scene restarts its revision counter — force a scene-list rebuild
+        self._tag_text_cache.clear()
         self._scene = Scene(nodes, self._base_scale)
         self._scene._ensure()   # pre-compute so camera init can read positions
         self._update_render_timer_state()
@@ -1069,8 +1080,14 @@ class Viewport(QOpenGLWidget):
         the given camera matrices into the (vx, vy, vw, vh) viewport sub-rect
         (Qt widget coordinates). Used for both the full-widget single-eye
         view and each half-width stereo eye view."""
-        tagged: list[tuple[str, int, int]] = []
-        mvp = pr @ mv   # hoisted out of the loop -- same combined matrix for every node
+        # Selected-only mode draws every selected tag, uncapped: the user
+        # explicitly scoped the set, so completeness beats frame rate there.
+        # The cap only guards the unscoped all-tags mode.
+        cap = None if self.show_tags_selected_only else _MAX_TAGS_PER_FRAME
+
+        # Pass 1: collect eligible (text, world-pos) pairs in scene order.
+        texts: list[str] = []
+        positions: list[tuple[float, float, float]] = []
         visible_count = 0
         for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
@@ -1087,29 +1104,59 @@ class Viewport(QOpenGLWidget):
             if self.show_tags_selected_only and node.id not in self.selected_node_ids:
                 continue
             wp = self._scene.world_pos(node.id) or (node.translate_x, node.translate_y, node.translate_z)
-            try:
-                v = np.array([wp[0], wp[1], wp[2], 1.0])
-                clip = mvp @ v
-                if clip[3] <= 0:
-                    continue
-                ndc = clip[:3] / clip[3]
-                if not (-1.0 <= ndc[0] <= 1.0 and -1.0 <= ndc[1] <= 1.0 and -1.0 <= ndc[2] <= 1.0):
-                    continue
-                sx = vx + int((ndc[0] + 1.0) / 2.0 * vw)
-                sy = vy + int((1.0 - (ndc[1] + 1.0) / 2.0) * vh)   # Y-flip for Qt
-                tagged.append((node.text, sx, sy))
-                if len(tagged) >= _MAX_TAGS_PER_FRAME:
-                    break   # safety valve -- see _MAX_TAGS_PER_FRAME
-            except Exception:
-                continue
+            texts.append(node.text)
+            positions.append(wp)
+        if not texts:
+            return []
+
+        # Pass 2: project every candidate in one batched matrix multiply —
+        # per-node 4x4 @ 4-vec numpy calls cost seconds at tens of thousands
+        # of tags, the batch is milliseconds.
+        mvp = pr @ mv
+        pos = np.ones((len(positions), 4), dtype=np.float64)
+        pos[:, :3] = positions
+        clip = pos @ mvp.T
+        w_clip = clip[:, 3]
+        with np.errstate(divide='ignore', invalid='ignore'):
+            ndc = clip[:, :3] / w_clip[:, None]
+        on_screen = (
+            (w_clip > 0)
+            & (ndc[:, 0] >= -1.0) & (ndc[:, 0] <= 1.0)
+            & (ndc[:, 1] >= -1.0) & (ndc[:, 1] <= 1.0)
+            & (ndc[:, 2] >= -1.0) & (ndc[:, 2] <= 1.0)
+        )
+        sx_all = vx + ((ndc[:, 0] + 1.0) / 2.0 * vw).astype(np.int64)
+        sy_all = vy + ((1.0 - (ndc[:, 1] + 1.0) / 2.0) * vh).astype(np.int64)  # Y-flip for Qt
+
+        tagged: list[tuple[str, int, int]] = []
+        for i in np.flatnonzero(on_screen):
+            tagged.append((texts[i], int(sx_all[i]), int(sy_all[i])))
+            if cap is not None and len(tagged) >= cap:
+                break   # safety valve -- see _MAX_TAGS_PER_FRAME
         return tagged
 
     def _paint_tags(self, painter: QPainter, tagged: list[tuple[str, int, int]]):
+        # Two single-pen passes (shadow, then face) over cached QStaticText:
+        # per-tag setPen switching plus per-call text layout is what made
+        # thousands of tags cost seconds per frame. drawStaticText anchors at
+        # the TOP-left, drawText at the baseline — subtract the ascent to
+        # keep the exact placement the old drawText calls had.
+        cache = self._tag_text_cache
+        if len(cache) > 100_000:
+            cache.clear()   # size guard against per-frame text churn
+        statics = []
         for text, sx, sy in tagged:
-            painter.setPen(QColor(0, 0, 0, 200))
-            painter.drawText(sx + 6, sy + 1, text)
-            painter.setPen(QColor(255, 255, 200, 230))
-            painter.drawText(sx + 5, sy, text)
+            st = cache.get(text)
+            if st is None:
+                st = cache[text] = QStaticText(text)
+            statics.append((st, sx, sy))
+        top_offset = painter.fontMetrics().ascent()
+        painter.setPen(QColor(0, 0, 0, 200))
+        for st, sx, sy in statics:
+            painter.drawStaticText(sx + 6, sy + 1 - top_offset, st)
+        painter.setPen(QColor(255, 255, 200, 230))
+        for st, sx, sy in statics:
+            painter.drawStaticText(sx + 5, sy - top_offset, st)
 
     def _draw_tags_qpainter(self):
         """Project tagged nodes to screen space and draw text with QPainter overlay."""
