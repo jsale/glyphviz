@@ -344,8 +344,7 @@ class MainWindow(QMainWindow):
         }
 
     def _on_viewport_manipulated(self, node_ids: object):
-        for nid in node_ids:
-            self._table.refresh_node(nid)
+        self._table.refresh_nodes(node_ids)
         if len(self._selected_nodes) == 1:
             self._refresh_inspector(self._selected_nodes[0])
         elif len(self._selected_nodes) > 1:
@@ -1611,7 +1610,7 @@ class MainWindow(QMainWindow):
                 node.translate_x += dx
                 node.translate_y += dy
                 node.translate_z += dz
-                self._table.refresh_node(node.id)
+            self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.scene_invalidate()
 
     def _on_insp_rotation_changed(self, _value: float):
@@ -1637,7 +1636,7 @@ class MainWindow(QMainWindow):
                 node.rotate_x += drx
                 node.rotate_y += dry
                 node.rotate_z += drz
-                self._table.refresh_node(node.id)
+            self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.scene_invalidate()
 
     def _on_insp_geo_changed(self, _idx: int):
@@ -1646,7 +1645,7 @@ class MainWindow(QMainWindow):
         geo = self._insp_geo.currentData()
         for node in self._selected_nodes:
             node.geometry = geo
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._update_sel_values()
         self._viewport.scene_invalidate()
 
@@ -1667,7 +1666,7 @@ class MainWindow(QMainWindow):
             node.scale_x = sx
             node.scale_y = sy
             node.scale_z = sz
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.scene_invalidate()
 
     def _on_insp_ratio_changed(self, value: float):
@@ -1675,7 +1674,7 @@ class MainWindow(QMainWindow):
             return
         for node in self._selected_nodes:
             node.ratio = value
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.scene_invalidate()
 
     def _on_insp_texture_id_changed(self, value: float):
@@ -1684,7 +1683,7 @@ class MainWindow(QMainWindow):
         tex_id = int(value)
         for node in self._selected_nodes:
             node.texture_id = tex_id
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.scene_invalidate()
 
     def _on_insp_translate_rate_changed(self, _value: float):
@@ -1697,7 +1696,7 @@ class MainWindow(QMainWindow):
             node.translate_rate_x = rx
             node.translate_rate_y = ry
             node.translate_rate_z = rz
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.refresh_animation_state()
         self._viewport.scene_invalidate()
 
@@ -1711,7 +1710,7 @@ class MainWindow(QMainWindow):
             node.rotate_rate_x = rx
             node.rotate_rate_y = ry
             node.rotate_rate_z = rz
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.refresh_animation_state()
         self._viewport.scene_invalidate()
 
@@ -1725,7 +1724,7 @@ class MainWindow(QMainWindow):
             node.scale_rate_x = rx
             node.scale_rate_y = ry
             node.scale_rate_z = rz
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.refresh_animation_state()
         self._viewport.scene_invalidate()
 
@@ -1748,7 +1747,7 @@ class MainWindow(QMainWindow):
         topo = self._insp_topo.currentData()
         for node in self._selected_nodes:
             node.topo = topo
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._update_sel_values()
         self._viewport.scene_invalidate()
 
@@ -1758,7 +1757,7 @@ class MainWindow(QMainWindow):
         subspace = self._insp_subspace.currentData()
         for node in self._selected_nodes:
             node.subspace = subspace
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.scene_invalidate()
 
     def _on_insp_rotation_mode_changed(self, _idx: int):
@@ -1767,7 +1766,7 @@ class MainWindow(QMainWindow):
         rotation_mode = self._insp_rotation_mode.currentData()
         for node in self._selected_nodes:
             node.rotation_mode = rotation_mode
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.scene_invalidate()
 
     def _on_insp_color(self):
@@ -1786,7 +1785,7 @@ class MainWindow(QMainWindow):
             node.color_g = color.green()
             node.color_b = color.blue()
             node.color_a = color.alpha()
-            self._table.refresh_node(node.id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._refresh_color_btn(self._selected_nodes[0])
         self._viewport.scene_invalidate()
 
