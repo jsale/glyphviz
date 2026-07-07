@@ -30,6 +30,11 @@ fixed layout you learn once and can then read at a glance on any org:
                       normalized to the org's own peak -- the *shape* of a
                       campaign (rise, peak, collapse, resurgence)
 
+Hierarchy: the tagged center octahedron IS the branch-level-0 root (so
+Tab-through-root-objects reads each org's summary), the wire ring is its
+BL1 child, and beads/spires/sparkline hang off the ring at BL2 (bin
+points BL3). Zero killed/wounded counts omit their sphere entirely.
+
 Scene 2 -- Event_Cloud/  (node + tag; one node per incident, ~205k)
 --------------------------------------------------------------------
 No aggregation: every GTD incident is one octahedron.
@@ -50,7 +55,8 @@ No aggregation: every GTD incident is one octahedron.
 
 Scene 3 -- Org_Event_Network/  (node + tag)
 --------------------------------------------
-Scenes 1 + 2 combined: the top N organizations (default 16) float as
+Scenes 1 + 2 combined (including the Blue Marble map plane from its own
+media/ folder): the top N organizations (default 16) float as
 rosettes on a ring high above their full event cloud, and type-7 link
 lines tie each org to its most lethal events (default 400/org -- links are
 drawn per-frame, so unlimited links on a 12k-attack org would kill the
@@ -109,24 +115,39 @@ ATTACK_SHORT = {
     7: "Infrastructure Attack", 8: "Unarmed Assault", 9: "Unknown",
 }
 
-# --- Rosette layout (all children of a hidden unit-scale anchor, Cartesian
-# offsets in the X/Z plane so the glyph faces a viewer looking down -Y;
-# raw scales stay >= 0.2 everywhere -- the renderer floors below that) ---
-RING_R = 2.6                 # attack-type bead ring radius
-RING_RATIO = 0.02            # hairline wire torus behind the beads
-BEAD_MIN, BEAD_SPAN = 0.22, 0.9
+# --- Rosette layout ---
+# Hierarchy (Tab-navigation friendly: the BL0 root is the tagged, visible
+# center octahedron, so tabbing root-to-root reads each org's summary):
+#   BL0  center octahedron        scale = log(total attacks)  <- org tag
+#   BL1  wire toroid ring          raw scale RING_R / center scale, so the
+#                                  ring is the same world size on every org
+#   BL2  beads / spires / plot     children of the toroid
+# Scale cascades multiplicatively down the hierarchy, so BL2 sizes and
+# offsets are expressed in ring units (world value / RING_R). The renderer
+# floors each node's OWN raw scale at 0.2 before the parent multiplies it,
+# so no BL2 element can render smaller than 0.2 * RING_R = 0.52 world --
+# the MIN/SPAN ramps below are calibrated to that floor.
+RING_R = 2.6                 # world radius of the bead ring
+RING_RATIO = 0.02            # hairline wire torus through the beads
 CENTER_MIN, CENTER_SPAN = 0.55, 0.95
-KILLED_Z, WOUNDED_Z = 4.2, 6.6
-CASUALTY_MIN, CASUALTY_SPAN = 0.2, 1.1
-REACH_Z = -4.4
-REACH_MIN, REACH_SPAN = 0.25, 1.0
-SPARK_Z = -8.2               # plot anchor under the glyph
+# BL2 raw ramps (multiply by RING_R for world size: 0.52 .. ~1.3)
+BEAD_MIN, BEAD_SPAN = 0.2, 0.22
+CASUALTY_MIN, CASUALTY_SPAN = 0.2, 0.3
+REACH_MIN, REACH_SPAN = 0.2, 0.28
+# Spire/plot world distances from the glyph center. Round 3 pulled these
+# in from 4.2 / 6.6 / -4.4 / -8.2 (they floated too far off the ring); a
+# straight halving collided -- the killed sphere (radius up to 1.3) sank
+# into the biggest orgs' center octahedra (radius up to 1.5) -- so these
+# sit at ~2/3, the closest spacing where worst-case glyphs still clear.
+KILLED_Z, WOUNDED_Z = 2.9, 4.9
+REACH_Z = -2.9
+SPARK_Z = -5.2               # plot anchor under the glyph
 SPARK_HALF_W = 3.3           # sparkline spans x -3.3..+3.3
 SPARK_H = 2.2                # peak bin height
 BIN_YEARS = 5
 YEAR_LO, YEAR_HI = 1970, 2020
 N_BINS = (YEAR_HI - YEAR_LO) // BIN_YEARS + 1     # 11 bins
-GRID_DX, GRID_DZ = 10.5, 18.5
+GRID_DX, GRID_DZ = 10.5, 14.0
 
 # --- Event cloud ---
 Z_PER_YEAR = 2.0             # date axis: 1970-2020 -> 0..102 world units
@@ -151,7 +172,7 @@ NET_RING_R = 115.0           # org rosettes on this ring...
 NET_RING_Z = 135.0           # ...this far above the 1970 map plane
 LINK_RATIO = 0.008           # per-frame drawn lines: keep them hairline
 LINK_ALPHA = 70
-BEACON_Z = 8.6               # org-colored beacon above the wounded sphere
+BEACON_Z = 6.2               # org-colored beacon above the wounded sphere (world)
 
 NODE_FIELDS = [
     "id", "type", "parent_id", "branch_level", "child_id",
@@ -329,74 +350,95 @@ class Norms:
 
 def build_rosette(nodes, tags, next_id, gname, st, tcounts, tbins,
                   norms: Norms, x, y, z, beacon_rgb=None):
-    """Append one org rosette; returns (next_id, center_node_id)."""
-    anchor = next_id
-    nodes.append(node_row(anchor, 0, 0, x, y, z, 1.0, (0, 0, 0),
-                          GEO_POINT, TOPO_NONE, hide=1))
-    nid = anchor + 1
+    """Append one org rosette; returns (next_id, root_node_id).
 
-    # Center octahedron: total volume + dominant attack type
+    The BL0 root is the center octahedron itself (visible + tagged, so
+    Tab-through-roots reads each org). The BL1 toroid compensates the
+    root's varying scale (raw = RING_R / c_scale) so every ring renders at
+    world radius RING_R; every BL2 child then lives in "ring units" -- its
+    offsets and sizes are multiplied by RING_R via the scale cascade.
+    The toroid is stood upright to face the viewer with rotate_x = -90:
+    Heading/Tilt/Roll builds Rx(-rx), so -90 maps ring-local +Y to world
+    +Z (up) and the ring is the local XY unit circle.
+    """
     dom = int(st["dominant_type"])
-    center_id = nid
+    root = next_id
     c_scale = CENTER_MIN + CENTER_SPAN * logn(st["attacks"], norms.max_attacks)
-    nodes.append(node_row(nid, anchor, 1, 0, 0, 0, c_scale, ATTACK_RGB[dom],
+    nodes.append(node_row(root, 0, 0, x, y, z, c_scale, ATTACK_RGB[dom],
                           GEO_OCTA, TOPO_NONE))
-    tags.append({"id": len(tags), "table_id": 0, "record_id": nid, "title": (
+    tags.append({"id": len(tags), "table_id": 0, "record_id": root, "title": (
         f"{gname} | {st['attacks']:.0f} attacks {st['year_lo']:.0f}-{st['year_hi']:.0f}"
         f" | {st['killed']:.0f} killed {st['wounded']:.0f} wounded"
         f" | dominant: {ATTACK_SHORT[dom]} | top target: {st['top_target']}"
         f" | suicide {fmt_pct(st['suicide'])} | success {fmt_pct(st['success'])}")})
+    nid = root + 1
+
+    # BL1: vertical hairline ring, world radius RING_R on every org
+    ring_id = nid
+    nodes.append(node_row(ring_id, root, 1, 0, 0, 0, RING_R / c_scale,
+                          (90, 95, 105), GEO_TORUS_WIRE, TOPO_NONE, alpha=120,
+                          ratio=RING_RATIO, rx=-90))
+    tags.append({"id": len(tags), "table_id": 0, "record_id": ring_id,
+                 "title": (f"{gname} | attack-type ring (clockwise from 12: "
+                           f"Assassination, Armed Assault, Bombing, Hijacking, "
+                           f"Barricade, Kidnapping, Infrastructure, Unarmed, "
+                           f"Unknown)")})
     nid += 1
 
-    # Vertical hairline ring the beads sit on (rotate 90 about X -> X/Z plane)
-    nodes.append(node_row(nid, anchor, 1, 0, 0, 0, RING_R, (90, 95, 105),
-                          GEO_TORUS_WIRE, TOPO_NONE, alpha=120,
-                          ratio=RING_RATIO, rx=90))
-    nid += 1
+    def spire(world_z: float) -> tuple[float, float, float]:
+        """Ring-local offset for a point at (0, 0, world_z) from the center."""
+        return (0.0, world_z / RING_R, 0.0)
 
-    # Attack-type beads at fixed clock positions (type 1 at 12 o'clock)
+    # BL2: attack-type beads at fixed clock positions on the ring itself
+    # (type 1 at 12 o'clock; local XY unit circle = the rendered ring)
     for atype in range(1, 10):
         cnt = int(tcounts[atype])
         if cnt == 0:
             continue
         theta = math.radians(90 - (atype - 1) * 40)
         b = BEAD_MIN + BEAD_SPAN * logn(cnt, norms.max_type)
-        nodes.append(node_row(nid, anchor, 1, RING_R * math.cos(theta), 0,
-                              RING_R * math.sin(theta), b, ATTACK_RGB[atype],
+        nodes.append(node_row(nid, ring_id, 2, math.cos(theta),
+                              math.sin(theta), 0.0, b, ATTACK_RGB[atype],
                               GEO_OCTA, TOPO_NONE))
         tags.append({"id": len(tags), "table_id": 0, "record_id": nid,
                      "title": f"{gname} | {ATTACK_SHORT[atype]}: {cnt} attacks"})
         nid += 1
 
-    # Casualty spire: killed (solid red) with wounded (wire orange) above
-    k = CASUALTY_MIN + CASUALTY_SPAN * logn(st["killed"], norms.max_killed)
-    nodes.append(node_row(nid, anchor, 1, 0, 0, KILLED_Z, k, (255, 40, 40),
-                          GEO_SPHERE, TOPO_NONE))
-    tags.append({"id": len(tags), "table_id": 0, "record_id": nid,
-                 "title": f"{gname} | {st['killed']:.0f} killed"})
-    nid += 1
-    w = CASUALTY_MIN + CASUALTY_SPAN * logn(st["wounded"], norms.max_wounded)
-    nodes.append(node_row(nid, anchor, 1, 0, 0, WOUNDED_Z, w, (255, 150, 0),
-                          GEO_SPHERE_WIRE, TOPO_NONE))
-    tags.append({"id": len(tags), "table_id": 0, "record_id": nid,
-                 "title": f"{gname} | {st['wounded']:.0f} wounded"})
-    nid += 1
+    # BL2 casualty spire above the ring: killed (solid red), wounded (wire
+    # orange). Zero counts leave a gap, same as absent bead types -- the
+    # 0.2 raw-scale floor would otherwise render "0" as a 0.52-world sphere.
+    if st["killed"] > 0:
+        k = CASUALTY_MIN + CASUALTY_SPAN * logn(st["killed"], norms.max_killed)
+        nodes.append(node_row(nid, ring_id, 2, *spire(KILLED_Z), k,
+                              (255, 40, 40), GEO_SPHERE, TOPO_NONE))
+        tags.append({"id": len(tags), "table_id": 0, "record_id": nid,
+                     "title": f"{gname} | {st['killed']:.0f} killed"})
+        nid += 1
+    if st["wounded"] > 0:
+        w = CASUALTY_MIN + CASUALTY_SPAN * logn(st["wounded"], norms.max_wounded)
+        nodes.append(node_row(nid, ring_id, 2, *spire(WOUNDED_Z), w,
+                              (255, 150, 0), GEO_SPHERE_WIRE, TOPO_NONE))
+        tags.append({"id": len(tags), "table_id": 0, "record_id": nid,
+                     "title": f"{gname} | {st['wounded']:.0f} wounded"})
+        nid += 1
 
-    # Reach sphere: how many countries the org has struck
+    # BL2 reach sphere below: how many countries the org has struck
     r = REACH_MIN + REACH_SPAN * logn(st["countries"], norms.max_countries)
-    nodes.append(node_row(nid, anchor, 1, 0, 0, REACH_Z, r, (80, 140, 255),
-                          GEO_SPHERE_WIRE, TOPO_NONE))
+    nodes.append(node_row(nid, ring_id, 2, *spire(REACH_Z), r,
+                          (80, 140, 255), GEO_SPHERE_WIRE, TOPO_NONE))
     tags.append({"id": len(tags), "table_id": 0, "record_id": nid, "title": (
         f"{gname} | struck in {st['countries']:.0f} "
         f"{'country' if st['countries'] == 1 else 'countries'}"
         f" | most: {st['top_country']}")})
     nid += 1
 
-    # Activity sparkline: Plot-topology polyline, 5-year bins, own-peak scale
+    # BL2 activity sparkline anchor. Raw scale 1/RING_R makes its own world
+    # scale exactly 1.0, so the BL3 bin points keep plain world-unit offsets
+    # and the 0.2-scale points render at 0.2 world -- no floor distortion.
     peak = max(int(tbins.max()), 1)
     peak_bin = int(tbins.idxmax())
     plot_id = nid
-    nodes.append(node_row(plot_id, anchor, 1, 0, 0, SPARK_Z, 0.2,
+    nodes.append(node_row(plot_id, ring_id, 2, *spire(SPARK_Z), 1.0 / RING_R,
                           (120, 125, 135), GEO_POINT, TOPO_PLOT, ratio=0.05))
     tags.append({"id": len(tags), "table_id": 0, "record_id": plot_id, "title": (
         f"{gname} | activity {YEAR_LO}-{YEAR_HI} in {BIN_YEARS}-yr bins | peak "
@@ -408,22 +450,24 @@ def build_rosette(nodes, tags, next_id, gname, st, tcounts, tbins,
         cnt = int(tbins[i])
         h = SPARK_H * logn(cnt, peak) if cnt else 0.0
         shade = (235, 235, 240) if cnt else (100, 100, 110)
-        nodes.append(node_row(nid, plot_id, 2, -SPARK_HALF_W + i * step, 0, h,
-                              0.2, shade, GEO_OCTA, TOPO_NONE))
+        # Anchor local +Y is world +Z (inherited toroid rotation), so bin
+        # height rides the local Y axis.
+        nodes.append(node_row(nid, plot_id, 3, -SPARK_HALF_W + i * step, h,
+                              0.0, 0.2, shade, GEO_OCTA, TOPO_NONE))
         tags.append({"id": len(tags), "table_id": 0, "record_id": nid, "title":
                      f"{gname} | {YEAR_LO + i * BIN_YEARS}-"
                      f"{min(YEAR_LO + i * BIN_YEARS + 4, YEAR_HI)}: {cnt} attacks"})
         nid += 1
 
-    # Org-colored beacon (network scene): ties the rosette to its link cone
+    # BL2 org-colored beacon (network scene): ties rosette to its link cone
     if beacon_rgb is not None:
-        nodes.append(node_row(nid, anchor, 1, 0, 0, BEACON_Z, 0.6, beacon_rgb,
-                              GEO_OCTA, TOPO_NONE))
+        nodes.append(node_row(nid, ring_id, 2, *spire(BEACON_Z), 0.6 / RING_R,
+                              beacon_rgb, GEO_OCTA, TOPO_NONE))
         tags.append({"id": len(tags), "table_id": 0, "record_id": nid,
                      "title": f"{gname} | link-line color beacon"})
         nid += 1
 
-    return nid, center_id
+    return nid, root
 
 
 # ===========================================================================
@@ -556,7 +600,7 @@ def build_network(df, stats, type_counts, bins, out_dir: Path,
           f"<= {links_per_org} links each")
 
     nodes, tags = [], []
-    next_id = add_map_furniture(nodes, tags, 1, textured=False)
+    next_id = add_map_furniture(nodes, tags, 1, textured=True)
     next_id, id_of_event = event_nodes(ev, nodes, tags, next_id)
 
     # Org rosettes on a ring high above the cloud + org-colored link hues
