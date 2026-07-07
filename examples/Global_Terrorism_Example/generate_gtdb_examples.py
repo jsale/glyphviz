@@ -43,6 +43,11 @@ No aggregation: every GTD incident is one octahedron.
   Incidents with no coordinates fall back to their country's centroid
   (computed from the geocoded incidents in the same country).
 
+  A NASA Blue Marble world map (media/bluemarble-2048.png, 2:1
+  equirectangular) underlies the cloud on a solid textured Grid plane that
+  exactly covers lon -180..180 / lat -90..90. GlyphViz auto-loads the
+  media/ folder next to the node CSV, so the map is texture_id=1.
+
 Scene 3 -- Org_Event_Network/  (node + tag)
 --------------------------------------------
 Scenes 1 + 2 combined: the top N organizations (default 16) float as
@@ -81,7 +86,7 @@ import pandas as pd
 GEO_SPHERE_WIRE, GEO_SPHERE = 2, 3
 GEO_TORUS_WIRE = 6
 GEO_OCTA = 11
-GEO_GRID_WIRE = 20
+GEO_GRID_WIRE, GEO_GRID = 20, 21
 GEO_POINT = 22
 TOPO_NONE, TOPO_PLOT = 0, 16
 NODE_TYPE_PIN, NODE_TYPE_LINK = 5, 7
@@ -127,6 +132,19 @@ GRID_DX, GRID_DZ = 10.5, 18.5
 Z_PER_YEAR = 2.0             # date axis: 1970-2020 -> 0..102 world units
 EVENT_MIN, EVENT_SPAN = 0.2, 1.3
 CAS_CAP = 500.0              # casualties that saturate the size ramp (log)
+# World-map plane under the cloud. Every GlyphViz glyph fits within radius
+# 1.0, so the flat Grid square is inscribed in the unit sphere: corners at
+# radius 1.0 -> edge half-extent 1/sqrt(2) (geometry_data.GRID_HALF_EXTENT).
+# Spanning +/-180 deg of longitude therefore takes scale 180*sqrt(2) ~ 254.56
+# (not 180, and not 360), and +/-90 deg latitude takes 90*sqrt(2) ~ 127.28.
+MAP_SCALE_X = 180.0 * math.sqrt(2.0)
+MAP_SCALE_Y = 90.0 * math.sqrt(2.0)
+MAP_Z = -0.5                 # just below the 1970 events to avoid z-fighting
+MAP_TEXTURE_ID = 1           # first image in the media/ folder next to the
+                             # node CSV (bluemarble-2048.png, a 2:1
+                             # equirectangular NASA Blue Marble, auto-loads
+                             # as texture 1; textures modulate node color,
+                             # so the map plane must stay white)
 
 # --- Org/Event network ---
 NET_RING_R = 115.0           # org rosettes on this ring...
@@ -141,7 +159,7 @@ NODE_FIELDS = [
     "rotate_x", "rotate_y", "rotate_z",
     "scale_x", "scale_y", "scale_z",
     "color_r", "color_g", "color_b", "color_a",
-    "geometry", "hide", "topo", "ratio",
+    "geometry", "hide", "topo", "ratio", "texture_id",
 ]
 TAG_FIELDS = ["id", "table_id", "record_id", "title"]
 
@@ -263,7 +281,7 @@ def tidy_text(s: str) -> str:
 
 def node_row(node_id, parent_id, branch_level, tx, ty, tz, s, color, geometry,
              topo, *, node_type=NODE_TYPE_PIN, child_id=0, alpha=255, hide=0,
-             ratio=0.1, rx=0.0, sy=None, sz=None):
+             ratio=0.1, rx=0.0, sy=None, sz=None, texture_id=0):
     return {
         "id": node_id, "type": node_type, "parent_id": parent_id,
         "branch_level": branch_level, "child_id": child_id,
@@ -275,6 +293,7 @@ def node_row(node_id, parent_id, branch_level, tx, ty, tz, s, color, geometry,
         "color_r": color[0], "color_g": color[1], "color_b": color[2],
         "color_a": alpha,
         "geometry": geometry, "hide": hide, "topo": topo, "ratio": ratio,
+        "texture_id": texture_id,
     }
 
 
@@ -481,12 +500,26 @@ def event_nodes(df, nodes, tags, start_id) -> int:
     return nid, id_of_event
 
 
-def add_map_furniture(nodes, tags, next_id) -> int:
-    """Ground grid at 1970 plus decade markers up the date axis."""
-    nodes.append(node_row(next_id, 0, 0, 0, 10, -0.5, 195.0, (55, 60, 75),
-                          GEO_GRID_WIRE, TOPO_NONE, alpha=130, sy=100.0, sz=1.0))
+def add_map_furniture(nodes, tags, next_id, *, textured: bool) -> int:
+    """World-map plane at 1970 plus decade markers up the date axis.
+
+    The plane exactly covers lon -180..180 / lat -90..90 (see the MAP_SCALE
+    comment up top for the sqrt(2) factor). With *textured* it's a solid
+    white grid showing texture 1 -- the equirectangular world map from the
+    media/ folder next to the node CSV; otherwise a dark wire placeholder
+    with the same footprint, so dropping a map in media/ and setting
+    texture_id=1 later lines up with no other change."""
+    if textured:
+        nodes.append(node_row(next_id, 0, 0, 0, 0, MAP_Z, MAP_SCALE_X,
+                              (255, 255, 255), GEO_GRID, TOPO_NONE,
+                              sy=MAP_SCALE_Y, sz=1.0,
+                              texture_id=MAP_TEXTURE_ID))
+    else:
+        nodes.append(node_row(next_id, 0, 0, 0, 0, MAP_Z, MAP_SCALE_X,
+                              (55, 60, 75), GEO_GRID_WIRE, TOPO_NONE,
+                              alpha=130, sy=MAP_SCALE_Y, sz=1.0))
     tags.append({"id": len(tags), "table_id": 0, "record_id": next_id, "title": (
-        "GTD EVENT CLOUD | X longitude, Y latitude, Z date (1970 at the grid, "
+        "GTD EVENT CLOUD | X longitude, Y latitude, Z date (1970 at the map, "
         "2 units/yr) | color = attack type | size = killed + wounded (log)")})
     next_id += 1
     for decade in range(YEAR_LO, YEAR_HI + 1, 10):
@@ -503,7 +536,7 @@ def build_event_cloud(df, out_dir: Path, max_events: int):
     out_dir.mkdir(parents=True, exist_ok=True)
     ev = df if not max_events else df.nlargest(max_events, "casualties")
     nodes, tags = [], []
-    next_id = add_map_furniture(nodes, tags, 1)
+    next_id = add_map_furniture(nodes, tags, 1, textured=True)
     next_id, _ = event_nodes(ev, nodes, tags, next_id)
     write_csv(out_dir / "EventCloud_gv_node.csv", NODE_FIELDS, nodes)
     write_csv(out_dir / "EventCloud_gv_tag.csv", TAG_FIELDS, tags)
@@ -523,7 +556,7 @@ def build_network(df, stats, type_counts, bins, out_dir: Path,
           f"<= {links_per_org} links each")
 
     nodes, tags = [], []
-    next_id = add_map_furniture(nodes, tags, 1)
+    next_id = add_map_furniture(nodes, tags, 1, textured=False)
     next_id, id_of_event = event_nodes(ev, nodes, tags, next_id)
 
     # Org rosettes on a ring high above the cloud + org-colored link hues
