@@ -32,3 +32,9 @@ dist/
 Thumbs.db
 .DS_Store
 .claude/
+
+# GTDB example: the two big scenes ship zipped (Event_Cloud.zip /
+# Org_Event_Network.zip); the unzipped working copies stay local-only.
+# Regenerate everything with examples/Global_Terrorism_Example/generate_gtdb_examples.py
+examples/Global_Terrorism_Example/Event_Cloud/
+examples/Global_Terrorism_Example/Org_Event_Network/
