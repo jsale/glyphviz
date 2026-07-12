@@ -25,12 +25,24 @@ def load_wav_mono(path: str | Path) -> tuple[np.ndarray, int]:
         channels = w.getnchannels()
         sample_width = w.getsampwidth()
         raw = w.readframes(n)
-    dtype = {1: np.uint8, 2: np.int16, 4: np.int32}[sample_width]
-    x = np.frombuffer(raw, dtype=dtype).astype(np.float64)
+    if sample_width == 3:
+        # 24-bit PCM — NumPy has no int24 dtype; sign-extend each 3-byte
+        # little-endian sample to int32 by appending a sign byte (0x00 or 0xFF).
+        n_samples = len(raw) // 3
+        b = np.frombuffer(raw, dtype=np.uint8).reshape(n_samples, 3)
+        sign = np.where(b[:, 2] & 0x80, np.uint8(0xFF), np.uint8(0x00)).reshape(-1, 1)
+        x = np.hstack([b, sign]).view('<i4').flatten().astype(np.float64)
+        x /= 2 ** 23
+    else:
+        dtype = {1: np.uint8, 2: np.int16, 4: np.int32}[sample_width]
+        x = np.frombuffer(raw, dtype=dtype).astype(np.float64)
+        if sample_width == 1:
+            x = (x - 128.0) / 128.0   # uint8 is unsigned: 0..255 → -1..1
+        else:
+            x /= float(2 ** (sample_width * 8 - 1))
     if channels > 1:
         x = x.reshape(-1, channels).mean(axis=1)
-    max_val = float(2 ** (sample_width * 8 - 1))
-    return x / max_val, sr
+    return x, sr
 
 
 def band_edges(n_bands: int, f_lo: float, f_hi: float) -> np.ndarray:
