@@ -3,8 +3,15 @@ import numpy as np
 from .node import Node
 
 # Maps attribute names from the ch-map to Node dataclass fields.
-# Attributes not listed here are skipped (e.g. translate_rate_* which require
-# velocity integration — a future feature).
+# Attributes not listed here are skipped.
+#
+# The *_rate attributes set a per-cycle velocity that the viewport integrates
+# (Viewport._animate_rates, 60 cycles/s) — so a channel driving e.g.
+# rotate_rate_z sets how fast the node spins each frame, and the spin itself
+# accumulates in rotate_z outside the engine's control. reset() restores the
+# rate to its CSV value (normally 0, stopping the motion) but deliberately not
+# the integrated position/rotation/scale — those stay wherever the animation
+# left them, matching how hand-authored ANTz rate fields behave on load.
 _ATTR_TO_FIELD: dict[str, str] = {
     'translate_x': 'translate_x',
     'translate_y': 'translate_y',
@@ -15,6 +22,15 @@ _ATTR_TO_FIELD: dict[str, str] = {
     'scale_x': 'scale_x',
     'scale_y': 'scale_y',
     'scale_z': 'scale_z',
+    'translate_rate_x': 'translate_rate_x',
+    'translate_rate_y': 'translate_rate_y',
+    'translate_rate_z': 'translate_rate_z',
+    'rotate_rate_x': 'rotate_rate_x',
+    'rotate_rate_y': 'rotate_rate_y',
+    'rotate_rate_z': 'rotate_rate_z',
+    'scale_rate_x': 'scale_rate_x',
+    'scale_rate_y': 'scale_rate_y',
+    'scale_rate_z': 'scale_rate_z',
     'color_r': 'color_r',
     'color_g': 'color_g',
     'color_b': 'color_b',

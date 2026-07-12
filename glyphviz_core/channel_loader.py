@@ -31,7 +31,10 @@ def find_audio_file(node_csv_path: str) -> Path | None:
     rel = manifests[0].read_text(encoding='utf-8').strip()
     if not rel:
         return None
-    audio_path = d / rel
+    # resolve() before the existence check: a rel path with many ".."
+    # segments can push the unresolved string past Windows' MAX_PATH limit,
+    # making is_file() report False for a file that exists.
+    audio_path = (d / rel).resolve()
     return audio_path if audio_path.is_file() else None
 
 
