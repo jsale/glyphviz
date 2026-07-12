@@ -1,0 +1,2471 @@
+id,table_id,record_id,title
+0,0,1,"GTD CAMPAIGN PULSE 1970-2020 | top 100 orgs, most active top-left | Channels playback: each frame = half a month | rosette size = trailing-12-month attacks vs the org's own peak (full size = at its peak, nub = dormant) | ring spin speed = current intensity, total turns = cumulative attacks | cursor below: position = date, height = attacks/month by these orgs | play at ~15-30 FPS"
+1,0,2,Taliban | 11982 attacks 1995-2020 | 54118 killed 44977 wounded | dominant: Bombing/Explosion | top target: Police | suicide 7% | success 88%
+2,0,3,"Taliban | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+3,0,4,Taliban | Assassination: 717 attacks
+4,0,5,Taliban | Armed Assault: 3004 attacks
+5,0,6,Taliban | Bombing/Explosion: 3759 attacks
+6,0,7,Taliban | Hijacking: 25 attacks
+7,0,8,Taliban | Hostage (Barricade): 29 attacks
+8,0,9,Taliban | Kidnapping: 1121 attacks
+9,0,10,Taliban | Infrastructure Attack: 308 attacks
+10,0,11,Taliban | Unarmed Assault: 36 attacks
+11,0,12,Taliban | Unknown: 2983 attacks
+12,0,13,Taliban | 54118 killed
+13,0,14,Taliban | 44977 wounded
+14,0,15,Taliban | struck in 4 countries | most: Afghanistan
+15,0,16,Taliban | activity 1970-2020 in 5-yr bins | peak 2015-2019: 5824 attacks
+16,0,17,Taliban | 1970-1974: 0 attacks
+17,0,18,Taliban | 1975-1979: 0 attacks
+18,0,19,Taliban | 1980-1984: 0 attacks
+19,0,20,Taliban | 1985-1989: 0 attacks
+20,0,21,Taliban | 1990-1994: 0 attacks
+21,0,22,Taliban | 1995-1999: 4 attacks
+22,0,23,Taliban | 2000-2004: 116 attacks
+23,0,24,Taliban | 2005-2009: 1019 attacks
+24,0,25,Taliban | 2010-2014: 3133 attacks
+25,0,26,Taliban | 2015-2019: 5824 attacks
+26,0,27,Taliban | 2020-2020: 1886 attacks
+27,0,28,Islamic State of Iraq and the Levant (ISIL) | 7254 attacks 2013-2020 | 43352 killed 34739 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 20% | success 86%
+28,0,29,"Islamic State of Iraq and the Levant (ISIL) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+29,0,30,Islamic State of Iraq and the Levant (ISIL) | Assassination: 189 attacks
+30,0,31,Islamic State of Iraq and the Levant (ISIL) | Armed Assault: 721 attacks
+31,0,32,Islamic State of Iraq and the Levant (ISIL) | Bombing/Explosion: 4445 attacks
+32,0,33,Islamic State of Iraq and the Levant (ISIL) | Hijacking: 4 attacks
+33,0,34,Islamic State of Iraq and the Levant (ISIL) | Hostage (Barricade): 27 attacks
+34,0,35,Islamic State of Iraq and the Levant (ISIL) | Kidnapping: 719 attacks
+35,0,36,Islamic State of Iraq and the Levant (ISIL) | Infrastructure Attack: 101 attacks
+36,0,37,Islamic State of Iraq and the Levant (ISIL) | Unknown: 1048 attacks
+37,0,38,Islamic State of Iraq and the Levant (ISIL) | 43352 killed
+38,0,39,Islamic State of Iraq and the Levant (ISIL) | 34739 wounded
+39,0,40,Islamic State of Iraq and the Levant (ISIL) | struck in 29 countries | most: Iraq
+40,0,41,Islamic State of Iraq and the Levant (ISIL) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 5239 attacks
+41,0,42,Islamic State of Iraq and the Levant (ISIL) | 1970-1974: 0 attacks
+42,0,43,Islamic State of Iraq and the Levant (ISIL) | 1975-1979: 0 attacks
+43,0,44,Islamic State of Iraq and the Levant (ISIL) | 1980-1984: 0 attacks
+44,0,45,Islamic State of Iraq and the Levant (ISIL) | 1985-1989: 0 attacks
+45,0,46,Islamic State of Iraq and the Levant (ISIL) | 1990-1994: 0 attacks
+46,0,47,Islamic State of Iraq and the Levant (ISIL) | 1995-1999: 0 attacks
+47,0,48,Islamic State of Iraq and the Levant (ISIL) | 2000-2004: 0 attacks
+48,0,49,Islamic State of Iraq and the Levant (ISIL) | 2005-2009: 0 attacks
+49,0,50,Islamic State of Iraq and the Levant (ISIL) | 2010-2014: 1628 attacks
+50,0,51,Islamic State of Iraq and the Levant (ISIL) | 2015-2019: 5239 attacks
+51,0,52,Islamic State of Iraq and the Levant (ISIL) | 2020-2020: 387 attacks
+52,0,53,Shining Path (SL) | 4564 attacks 1978-2020 | 11608 killed 3039 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 0% | success 95%
+53,0,54,"Shining Path (SL) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+54,0,55,Shining Path (SL) | Assassination: 834 attacks
+55,0,56,Shining Path (SL) | Armed Assault: 1153 attacks
+56,0,57,Shining Path (SL) | Bombing/Explosion: 2165 attacks
+57,0,58,Shining Path (SL) | Hijacking: 3 attacks
+58,0,59,Shining Path (SL) | Hostage (Barricade): 24 attacks
+59,0,60,Shining Path (SL) | Kidnapping: 55 attacks
+60,0,61,Shining Path (SL) | Infrastructure Attack: 169 attacks
+61,0,62,Shining Path (SL) | Unarmed Assault: 1 attacks
+62,0,63,Shining Path (SL) | Unknown: 160 attacks
+63,0,64,Shining Path (SL) | 11608 killed
+64,0,65,Shining Path (SL) | 3039 wounded
+65,0,66,Shining Path (SL) | struck in 6 countries | most: Peru
+66,0,67,Shining Path (SL) | activity 1970-2020 in 5-yr bins | peak 1985-1989: 1890 attacks
+67,0,68,Shining Path (SL) | 1970-1974: 0 attacks
+68,0,69,Shining Path (SL) | 1975-1979: 2 attacks
+69,0,70,Shining Path (SL) | 1980-1984: 1356 attacks
+70,0,71,Shining Path (SL) | 1985-1989: 1890 attacks
+71,0,72,Shining Path (SL) | 1990-1994: 1157 attacks
+72,0,73,Shining Path (SL) | 1995-1999: 96 attacks
+73,0,74,Shining Path (SL) | 2000-2004: 9 attacks
+74,0,75,Shining Path (SL) | 2005-2009: 9 attacks
+75,0,76,Shining Path (SL) | 2010-2014: 30 attacks
+76,0,77,Shining Path (SL) | 2015-2019: 14 attacks
+77,0,78,Shining Path (SL) | 2020-2020: 1 attacks
+78,0,79,Al-Shabaab | 4419 attacks 2007-2020 | 12277 killed 9908 wounded | dominant: Bombing/Explosion | top target: Military | suicide 6% | success 90%
+79,0,80,"Al-Shabaab | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+80,0,81,Al-Shabaab | Assassination: 459 attacks
+81,0,82,Al-Shabaab | Armed Assault: 1290 attacks
+82,0,83,Al-Shabaab | Bombing/Explosion: 1655 attacks
+83,0,84,Al-Shabaab | Hijacking: 37 attacks
+84,0,85,Al-Shabaab | Hostage (Barricade): 31 attacks
+85,0,86,Al-Shabaab | Kidnapping: 394 attacks
+86,0,87,Al-Shabaab | Infrastructure Attack: 92 attacks
+87,0,88,Al-Shabaab | Unarmed Assault: 9 attacks
+88,0,89,Al-Shabaab | Unknown: 452 attacks
+89,0,90,Al-Shabaab | 12277 killed
+90,0,91,Al-Shabaab | 9908 wounded
+91,0,92,Al-Shabaab | struck in 6 countries | most: Somalia
+92,0,93,Al-Shabaab | activity 1970-2020 in 5-yr bins | peak 2015-2019: 2347 attacks
+93,0,94,Al-Shabaab | 1970-1974: 0 attacks
+94,0,95,Al-Shabaab | 1975-1979: 0 attacks
+95,0,96,Al-Shabaab | 1980-1984: 0 attacks
+96,0,97,Al-Shabaab | 1985-1989: 0 attacks
+97,0,98,Al-Shabaab | 1990-1994: 0 attacks
+98,0,99,Al-Shabaab | 1995-1999: 0 attacks
+99,0,100,Al-Shabaab | 2000-2004: 0 attacks
+100,0,101,Al-Shabaab | 2005-2009: 112 attacks
+101,0,102,Al-Shabaab | 2010-2014: 1668 attacks
+102,0,103,Al-Shabaab | 2015-2019: 2347 attacks
+103,0,104,Al-Shabaab | 2020-2020: 292 attacks
+104,0,105,New People's Army (NPA) | 3395 attacks 1970-2020 | 4841 killed 3797 wounded | dominant: Armed Assault | top target: Military | suicide 0% | success 87%
+105,0,106,"New People's Army (NPA) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+106,0,107,New People's Army (NPA) | Assassination: 454 attacks
+107,0,108,New People's Army (NPA) | Armed Assault: 1393 attacks
+108,0,109,New People's Army (NPA) | Bombing/Explosion: 577 attacks
+109,0,110,New People's Army (NPA) | Hijacking: 17 attacks
+110,0,111,New People's Army (NPA) | Hostage (Barricade): 53 attacks
+111,0,112,New People's Army (NPA) | Kidnapping: 261 attacks
+112,0,113,New People's Army (NPA) | Infrastructure Attack: 425 attacks
+113,0,114,New People's Army (NPA) | Unarmed Assault: 2 attacks
+114,0,115,New People's Army (NPA) | Unknown: 213 attacks
+115,0,116,New People's Army (NPA) | 4841 killed
+116,0,117,New People's Army (NPA) | 3797 wounded
+117,0,118,New People's Army (NPA) | struck in 3 countries | most: Philippines
+118,0,119,New People's Army (NPA) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 1332 attacks
+119,0,120,New People's Army (NPA) | 1970-1974: 3 attacks
+120,0,121,New People's Army (NPA) | 1975-1979: 23 attacks
+121,0,122,New People's Army (NPA) | 1980-1984: 53 attacks
+122,0,123,New People's Army (NPA) | 1985-1989: 532 attacks
+123,0,124,New People's Army (NPA) | 1990-1994: 353 attacks
+124,0,125,New People's Army (NPA) | 1995-1999: 14 attacks
+125,0,126,New People's Army (NPA) | 2000-2004: 70 attacks
+126,0,127,New People's Army (NPA) | 2005-2009: 183 attacks
+127,0,128,New People's Army (NPA) | 2010-2014: 687 attacks
+128,0,129,New People's Army (NPA) | 2015-2019: 1332 attacks
+129,0,130,New People's Army (NPA) | 2020-2020: 145 attacks
+130,0,131,Farabundo Marti National Liberation Front (FMLN) | 3351 attacks 1978-1994 | 8065 killed 4065 wounded | dominant: Armed Assault | top target: Military | suicide 0% | success 99%
+131,0,132,"Farabundo Marti National Liberation Front (FMLN) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+132,0,133,Farabundo Marti National Liberation Front (FMLN) | Assassination: 128 attacks
+133,0,134,Farabundo Marti National Liberation Front (FMLN) | Armed Assault: 1594 attacks
+134,0,135,Farabundo Marti National Liberation Front (FMLN) | Bombing/Explosion: 1408 attacks
+135,0,136,Farabundo Marti National Liberation Front (FMLN) | Hostage (Barricade): 55 attacks
+136,0,137,Farabundo Marti National Liberation Front (FMLN) | Kidnapping: 51 attacks
+137,0,138,Farabundo Marti National Liberation Front (FMLN) | Infrastructure Attack: 92 attacks
+138,0,139,Farabundo Marti National Liberation Front (FMLN) | Unknown: 23 attacks
+139,0,140,Farabundo Marti National Liberation Front (FMLN) | 8065 killed
+140,0,141,Farabundo Marti National Liberation Front (FMLN) | 4065 wounded
+141,0,142,Farabundo Marti National Liberation Front (FMLN) | struck in 5 countries | most: El Salvador
+142,0,143,Farabundo Marti National Liberation Front (FMLN) | activity 1970-2020 in 5-yr bins | peak 1985-1989: 1491 attacks
+143,0,144,Farabundo Marti National Liberation Front (FMLN) | 1970-1974: 0 attacks
+144,0,145,Farabundo Marti National Liberation Front (FMLN) | 1975-1979: 1 attacks
+145,0,146,Farabundo Marti National Liberation Front (FMLN) | 1980-1984: 1177 attacks
+146,0,147,Farabundo Marti National Liberation Front (FMLN) | 1985-1989: 1491 attacks
+147,0,148,Farabundo Marti National Liberation Front (FMLN) | 1990-1994: 682 attacks
+148,0,149,Farabundo Marti National Liberation Front (FMLN) | 1995-1999: 0 attacks
+149,0,150,Farabundo Marti National Liberation Front (FMLN) | 2000-2004: 0 attacks
+150,0,151,Farabundo Marti National Liberation Front (FMLN) | 2005-2009: 0 attacks
+151,0,152,Farabundo Marti National Liberation Front (FMLN) | 2010-2014: 0 attacks
+152,0,153,Farabundo Marti National Liberation Front (FMLN) | 2015-2019: 0 attacks
+153,0,154,Farabundo Marti National Liberation Front (FMLN) | 2020-2020: 0 attacks
+154,0,155,Boko Haram | 3320 attacks 2009-2020 | 25528 killed 11929 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 16% | success 92%
+155,0,156,"Boko Haram | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+156,0,157,Boko Haram | Assassination: 69 attacks
+157,0,158,Boko Haram | Armed Assault: 1373 attacks
+158,0,159,Boko Haram | Bombing/Explosion: 1011 attacks
+159,0,160,Boko Haram | Hijacking: 6 attacks
+160,0,161,Boko Haram | Hostage (Barricade): 15 attacks
+161,0,162,Boko Haram | Kidnapping: 358 attacks
+162,0,163,Boko Haram | Infrastructure Attack: 219 attacks
+163,0,164,Boko Haram | Unknown: 269 attacks
+164,0,165,Boko Haram | 25528 killed
+165,0,166,Boko Haram | 11929 wounded
+166,0,167,Boko Haram | struck in 6 countries | most: Nigeria
+167,0,168,Boko Haram | activity 1970-2020 in 5-yr bins | peak 2015-2019: 1712 attacks
+168,0,169,Boko Haram | 1970-1974: 0 attacks
+169,0,170,Boko Haram | 1975-1979: 0 attacks
+170,0,171,Boko Haram | 1980-1984: 0 attacks
+171,0,172,Boko Haram | 1985-1989: 0 attacks
+172,0,173,Boko Haram | 1990-1994: 0 attacks
+173,0,174,Boko Haram | 1995-1999: 0 attacks
+174,0,175,Boko Haram | 2000-2004: 0 attacks
+175,0,176,Boko Haram | 2005-2009: 10 attacks
+176,0,177,Boko Haram | 2010-2014: 1299 attacks
+177,0,178,Boko Haram | 2015-2019: 1712 attacks
+178,0,179,Boko Haram | 2020-2020: 299 attacks
+179,0,180,Houthi extremists (Ansar Allah) | 3196 attacks 2006-2020 | 6420 killed 6786 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 0% | success 78%
+180,0,181,"Houthi extremists (Ansar Allah) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+181,0,182,Houthi extremists (Ansar Allah) | Assassination: 71 attacks
+182,0,183,Houthi extremists (Ansar Allah) | Armed Assault: 369 attacks
+183,0,184,Houthi extremists (Ansar Allah) | Bombing/Explosion: 1678 attacks
+184,0,185,Houthi extremists (Ansar Allah) | Hijacking: 4 attacks
+185,0,186,Houthi extremists (Ansar Allah) | Hostage (Barricade): 11 attacks
+186,0,187,Houthi extremists (Ansar Allah) | Kidnapping: 490 attacks
+187,0,188,Houthi extremists (Ansar Allah) | Infrastructure Attack: 45 attacks
+188,0,189,Houthi extremists (Ansar Allah) | Unarmed Assault: 4 attacks
+189,0,190,Houthi extremists (Ansar Allah) | Unknown: 524 attacks
+190,0,191,Houthi extremists (Ansar Allah) | 6420 killed
+191,0,192,Houthi extremists (Ansar Allah) | 6786 wounded
+192,0,193,Houthi extremists (Ansar Allah) | struck in 2 countries | most: Yemen
+193,0,194,Houthi extremists (Ansar Allah) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 2595 attacks
+194,0,195,Houthi extremists (Ansar Allah) | 1970-1974: 0 attacks
+195,0,196,Houthi extremists (Ansar Allah) | 1975-1979: 0 attacks
+196,0,197,Houthi extremists (Ansar Allah) | 1980-1984: 0 attacks
+197,0,198,Houthi extremists (Ansar Allah) | 1985-1989: 0 attacks
+198,0,199,Houthi extremists (Ansar Allah) | 1990-1994: 0 attacks
+199,0,200,Houthi extremists (Ansar Allah) | 1995-1999: 0 attacks
+200,0,201,Houthi extremists (Ansar Allah) | 2000-2004: 0 attacks
+201,0,202,Houthi extremists (Ansar Allah) | 2005-2009: 6 attacks
+202,0,203,Houthi extremists (Ansar Allah) | 2010-2014: 198 attacks
+203,0,204,Houthi extremists (Ansar Allah) | 2015-2019: 2595 attacks
+204,0,205,Houthi extremists (Ansar Allah) | 2020-2020: 397 attacks
+205,0,206,Irish Republican Army (IRA) | 2670 attacks 1970-2011 | 1796 killed 3742 wounded | dominant: Bombing/Explosion | top target: Military | suicide 0% | success 85%
+206,0,207,"Irish Republican Army (IRA) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+207,0,208,Irish Republican Army (IRA) | Assassination: 858 attacks
+208,0,209,Irish Republican Army (IRA) | Armed Assault: 302 attacks
+209,0,210,Irish Republican Army (IRA) | Bombing/Explosion: 1154 attacks
+210,0,211,Irish Republican Army (IRA) | Hijacking: 3 attacks
+211,0,212,Irish Republican Army (IRA) | Hostage (Barricade): 8 attacks
+212,0,213,Irish Republican Army (IRA) | Kidnapping: 41 attacks
+213,0,214,Irish Republican Army (IRA) | Infrastructure Attack: 289 attacks
+214,0,215,Irish Republican Army (IRA) | Unarmed Assault: 2 attacks
+215,0,216,Irish Republican Army (IRA) | Unknown: 13 attacks
+216,0,217,Irish Republican Army (IRA) | 1796 killed
+217,0,218,Irish Republican Army (IRA) | 3742 wounded
+218,0,219,Irish Republican Army (IRA) | struck in 13 countries | most: United Kingdom
+219,0,220,Irish Republican Army (IRA) | activity 1970-2020 in 5-yr bins | peak 1990-1994: 640 attacks
+220,0,221,Irish Republican Army (IRA) | 1970-1974: 453 attacks
+221,0,222,Irish Republican Army (IRA) | 1975-1979: 572 attacks
+222,0,223,Irish Republican Army (IRA) | 1980-1984: 504 attacks
+223,0,224,Irish Republican Army (IRA) | 1985-1989: 433 attacks
+224,0,225,Irish Republican Army (IRA) | 1990-1994: 640 attacks
+225,0,226,Irish Republican Army (IRA) | 1995-1999: 53 attacks
+226,0,227,Irish Republican Army (IRA) | 2000-2004: 10 attacks
+227,0,228,Irish Republican Army (IRA) | 2005-2009: 4 attacks
+228,0,229,Irish Republican Army (IRA) | 2010-2014: 1 attacks
+229,0,230,Irish Republican Army (IRA) | 2015-2019: 0 attacks
+230,0,231,Irish Republican Army (IRA) | 2020-2020: 0 attacks
+231,0,232,Kurdistan Workers' Party (PKK) | 2582 attacks 1984-2020 | 5391 killed 5992 wounded | dominant: Armed Assault | top target: Military | suicide 1% | success 94%
+232,0,233,"Kurdistan Workers' Party (PKK) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+233,0,234,Kurdistan Workers' Party (PKK) | Assassination: 130 attacks
+234,0,235,Kurdistan Workers' Party (PKK) | Armed Assault: 938 attacks
+235,0,236,Kurdistan Workers' Party (PKK) | Bombing/Explosion: 911 attacks
+236,0,237,Kurdistan Workers' Party (PKK) | Hijacking: 4 attacks
+237,0,238,Kurdistan Workers' Party (PKK) | Hostage (Barricade): 7 attacks
+238,0,239,Kurdistan Workers' Party (PKK) | Kidnapping: 152 attacks
+239,0,240,Kurdistan Workers' Party (PKK) | Infrastructure Attack: 279 attacks
+240,0,241,Kurdistan Workers' Party (PKK) | Unarmed Assault: 11 attacks
+241,0,242,Kurdistan Workers' Party (PKK) | Unknown: 150 attacks
+242,0,243,Kurdistan Workers' Party (PKK) | 5391 killed
+243,0,244,Kurdistan Workers' Party (PKK) | 5992 wounded
+244,0,245,Kurdistan Workers' Party (PKK) | struck in 15 countries | most: Turkey
+245,0,246,Kurdistan Workers' Party (PKK) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 1070 attacks
+246,0,247,Kurdistan Workers' Party (PKK) | 1970-1974: 0 attacks
+247,0,248,Kurdistan Workers' Party (PKK) | 1975-1979: 0 attacks
+248,0,249,Kurdistan Workers' Party (PKK) | 1980-1984: 3 attacks
+249,0,250,Kurdistan Workers' Party (PKK) | 1985-1989: 113 attacks
+250,0,251,Kurdistan Workers' Party (PKK) | 1990-1994: 745 attacks
+251,0,252,Kurdistan Workers' Party (PKK) | 1995-1999: 211 attacks
+252,0,253,Kurdistan Workers' Party (PKK) | 2000-2004: 18 attacks
+253,0,254,Kurdistan Workers' Party (PKK) | 2005-2009: 89 attacks
+254,0,255,Kurdistan Workers' Party (PKK) | 2010-2014: 277 attacks
+255,0,256,Kurdistan Workers' Party (PKK) | 2015-2019: 1070 attacks
+256,0,257,Kurdistan Workers' Party (PKK) | 2020-2020: 56 attacks
+257,0,258,Revolutionary Armed Forces of Colombia (FARC) | 2490 attacks 1975-2016 | 5661 killed 4356 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 0% | success 93%
+258,0,259,"Revolutionary Armed Forces of Colombia (FARC) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+259,0,260,Revolutionary Armed Forces of Colombia (FARC) | Assassination: 195 attacks
+260,0,261,Revolutionary Armed Forces of Colombia (FARC) | Armed Assault: 732 attacks
+261,0,262,Revolutionary Armed Forces of Colombia (FARC) | Bombing/Explosion: 927 attacks
+262,0,263,Revolutionary Armed Forces of Colombia (FARC) | Hijacking: 9 attacks
+263,0,264,Revolutionary Armed Forces of Colombia (FARC) | Hostage (Barricade): 7 attacks
+264,0,265,Revolutionary Armed Forces of Colombia (FARC) | Kidnapping: 326 attacks
+265,0,266,Revolutionary Armed Forces of Colombia (FARC) | Infrastructure Attack: 123 attacks
+266,0,267,Revolutionary Armed Forces of Colombia (FARC) | Unarmed Assault: 5 attacks
+267,0,268,Revolutionary Armed Forces of Colombia (FARC) | Unknown: 166 attacks
+268,0,269,Revolutionary Armed Forces of Colombia (FARC) | 5661 killed
+269,0,270,Revolutionary Armed Forces of Colombia (FARC) | 4356 wounded
+270,0,271,Revolutionary Armed Forces of Colombia (FARC) | struck in 6 countries | most: Colombia
+271,0,272,Revolutionary Armed Forces of Colombia (FARC) | activity 1970-2020 in 5-yr bins | peak 2010-2014: 556 attacks
+272,0,273,Revolutionary Armed Forces of Colombia (FARC) | 1970-1974: 0 attacks
+273,0,274,Revolutionary Armed Forces of Colombia (FARC) | 1975-1979: 106 attacks
+274,0,275,Revolutionary Armed Forces of Colombia (FARC) | 1980-1984: 298 attacks
+275,0,276,Revolutionary Armed Forces of Colombia (FARC) | 1985-1989: 215 attacks
+276,0,277,Revolutionary Armed Forces of Colombia (FARC) | 1990-1994: 268 attacks
+277,0,278,Revolutionary Armed Forces of Colombia (FARC) | 1995-1999: 362 attacks
+278,0,279,Revolutionary Armed Forces of Colombia (FARC) | 2000-2004: 313 attacks
+279,0,280,Revolutionary Armed Forces of Colombia (FARC) | 2005-2009: 280 attacks
+280,0,281,Revolutionary Armed Forces of Colombia (FARC) | 2010-2014: 556 attacks
+281,0,282,Revolutionary Armed Forces of Colombia (FARC) | 2015-2019: 92 attacks
+282,0,283,Revolutionary Armed Forces of Colombia (FARC) | 2020-2020: 0 attacks
+283,0,284,Communist Party of India - Maoist (CPI-Maoist) | 2093 attacks 2005-2020 | 2530 killed 1816 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 0% | success 94%
+284,0,285,"Communist Party of India - Maoist (CPI-Maoist) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+285,0,286,Communist Party of India - Maoist (CPI-Maoist) | Assassination: 58 attacks
+286,0,287,Communist Party of India - Maoist (CPI-Maoist) | Armed Assault: 604 attacks
+287,0,288,Communist Party of India - Maoist (CPI-Maoist) | Bombing/Explosion: 619 attacks
+288,0,289,Communist Party of India - Maoist (CPI-Maoist) | Hijacking: 8 attacks
+289,0,290,Communist Party of India - Maoist (CPI-Maoist) | Hostage (Barricade): 16 attacks
+290,0,291,Communist Party of India - Maoist (CPI-Maoist) | Kidnapping: 361 attacks
+291,0,292,Communist Party of India - Maoist (CPI-Maoist) | Infrastructure Attack: 320 attacks
+292,0,293,Communist Party of India - Maoist (CPI-Maoist) | Unarmed Assault: 33 attacks
+293,0,294,Communist Party of India - Maoist (CPI-Maoist) | Unknown: 74 attacks
+294,0,295,Communist Party of India - Maoist (CPI-Maoist) | 2530 killed
+295,0,296,Communist Party of India - Maoist (CPI-Maoist) | 1816 wounded
+296,0,297,Communist Party of India - Maoist (CPI-Maoist) | struck in 2 countries | most: India
+297,0,298,Communist Party of India - Maoist (CPI-Maoist) | activity 1970-2020 in 5-yr bins | peak 2010-2014: 1045 attacks
+298,0,299,Communist Party of India - Maoist (CPI-Maoist) | 1970-1974: 0 attacks
+299,0,300,Communist Party of India - Maoist (CPI-Maoist) | 1975-1979: 0 attacks
+300,0,301,Communist Party of India - Maoist (CPI-Maoist) | 1980-1984: 0 attacks
+301,0,302,Communist Party of India - Maoist (CPI-Maoist) | 1985-1989: 0 attacks
+302,0,303,Communist Party of India - Maoist (CPI-Maoist) | 1990-1994: 0 attacks
+303,0,304,Communist Party of India - Maoist (CPI-Maoist) | 1995-1999: 0 attacks
+304,0,305,Communist Party of India - Maoist (CPI-Maoist) | 2000-2004: 0 attacks
+305,0,306,Communist Party of India - Maoist (CPI-Maoist) | 2005-2009: 545 attacks
+306,0,307,Communist Party of India - Maoist (CPI-Maoist) | 2010-2014: 1045 attacks
+307,0,308,Communist Party of India - Maoist (CPI-Maoist) | 2015-2019: 448 attacks
+308,0,309,Communist Party of India - Maoist (CPI-Maoist) | 2020-2020: 55 attacks
+309,0,310,Maoists | 2091 attacks 1979-2020 | 1849 killed 1751 wounded | dominant: Bombing/Explosion | top target: Police | suicide 0% | success 80%
+310,0,311,"Maoists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+311,0,312,Maoists | Assassination: 70 attacks
+312,0,313,Maoists | Armed Assault: 404 attacks
+313,0,314,Maoists | Bombing/Explosion: 896 attacks
+314,0,315,Maoists | Hijacking: 4 attacks
+315,0,316,Maoists | Hostage (Barricade): 21 attacks
+316,0,317,Maoists | Kidnapping: 359 attacks
+317,0,318,Maoists | Infrastructure Attack: 258 attacks
+318,0,319,Maoists | Unarmed Assault: 25 attacks
+319,0,320,Maoists | Unknown: 54 attacks
+320,0,321,Maoists | 1849 killed
+321,0,322,Maoists | 1751 wounded
+322,0,323,Maoists | struck in 4 countries | most: India
+323,0,324,Maoists | activity 1970-2020 in 5-yr bins | peak 2015-2019: 1098 attacks
+324,0,325,Maoists | 1970-1974: 0 attacks
+325,0,326,Maoists | 1975-1979: 1 attacks
+326,0,327,Maoists | 1980-1984: 2 attacks
+327,0,328,Maoists | 1985-1989: 4 attacks
+328,0,329,Maoists | 1990-1994: 3 attacks
+329,0,330,Maoists | 1995-1999: 8 attacks
+330,0,331,Maoists | 2000-2004: 125 attacks
+331,0,332,Maoists | 2005-2009: 122 attacks
+332,0,333,Maoists | 2010-2014: 617 attacks
+333,0,334,Maoists | 2015-2019: 1098 attacks
+334,0,335,Maoists | 2020-2020: 111 attacks
+335,0,336,Basque Fatherland and Freedom (ETA) | 2024 attacks 1970-2011 | 819 killed 2345 wounded | dominant: Bombing/Explosion | top target: Business | suicide 0% | success 85%
+336,0,337,"Basque Fatherland and Freedom (ETA) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+337,0,338,Basque Fatherland and Freedom (ETA) | Assassination: 471 attacks
+338,0,339,Basque Fatherland and Freedom (ETA) | Armed Assault: 167 attacks
+339,0,340,Basque Fatherland and Freedom (ETA) | Bombing/Explosion: 1201 attacks
+340,0,341,Basque Fatherland and Freedom (ETA) | Hostage (Barricade): 5 attacks
+341,0,342,Basque Fatherland and Freedom (ETA) | Kidnapping: 77 attacks
+342,0,343,Basque Fatherland and Freedom (ETA) | Infrastructure Attack: 86 attacks
+343,0,344,Basque Fatherland and Freedom (ETA) | Unknown: 17 attacks
+344,0,345,Basque Fatherland and Freedom (ETA) | 819 killed
+345,0,346,Basque Fatherland and Freedom (ETA) | 2345 wounded
+346,0,347,Basque Fatherland and Freedom (ETA) | struck in 7 countries | most: Spain
+347,0,348,Basque Fatherland and Freedom (ETA) | activity 1970-2020 in 5-yr bins | peak 1980-1984: 498 attacks
+348,0,349,Basque Fatherland and Freedom (ETA) | 1970-1974: 22 attacks
+349,0,350,Basque Fatherland and Freedom (ETA) | 1975-1979: 407 attacks
+350,0,351,Basque Fatherland and Freedom (ETA) | 1980-1984: 498 attacks
+351,0,352,Basque Fatherland and Freedom (ETA) | 1985-1989: 470 attacks
+352,0,353,Basque Fatherland and Freedom (ETA) | 1990-1994: 256 attacks
+353,0,354,Basque Fatherland and Freedom (ETA) | 1995-1999: 135 attacks
+354,0,355,Basque Fatherland and Freedom (ETA) | 2000-2004: 142 attacks
+355,0,356,Basque Fatherland and Freedom (ETA) | 2005-2009: 92 attacks
+356,0,357,Basque Fatherland and Freedom (ETA) | 2010-2014: 2 attacks
+357,0,358,Basque Fatherland and Freedom (ETA) | 2015-2019: 0 attacks
+358,0,359,Basque Fatherland and Freedom (ETA) | 2020-2020: 0 attacks
+359,0,360,National Liberation Army of Colombia (ELN) | 1815 attacks 1972-2020 | 1847 killed 1653 wounded | dominant: Bombing/Explosion | top target: Utilities | suicide 0% | success 93%
+360,0,361,"National Liberation Army of Colombia (ELN) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+361,0,362,National Liberation Army of Colombia (ELN) | Assassination: 98 attacks
+362,0,363,National Liberation Army of Colombia (ELN) | Armed Assault: 400 attacks
+363,0,364,National Liberation Army of Colombia (ELN) | Bombing/Explosion: 789 attacks
+364,0,365,National Liberation Army of Colombia (ELN) | Hijacking: 14 attacks
+365,0,366,National Liberation Army of Colombia (ELN) | Hostage (Barricade): 16 attacks
+366,0,367,National Liberation Army of Colombia (ELN) | Kidnapping: 379 attacks
+367,0,368,National Liberation Army of Colombia (ELN) | Infrastructure Attack: 60 attacks
+368,0,369,National Liberation Army of Colombia (ELN) | Unarmed Assault: 1 attacks
+369,0,370,National Liberation Army of Colombia (ELN) | Unknown: 58 attacks
+370,0,371,National Liberation Army of Colombia (ELN) | 1847 killed
+371,0,372,National Liberation Army of Colombia (ELN) | 1653 wounded
+372,0,373,National Liberation Army of Colombia (ELN) | struck in 3 countries | most: Colombia
+373,0,374,National Liberation Army of Colombia (ELN) | activity 1970-2020 in 5-yr bins | peak 1985-1989: 459 attacks
+374,0,375,National Liberation Army of Colombia (ELN) | 1970-1974: 5 attacks
+375,0,376,National Liberation Army of Colombia (ELN) | 1975-1979: 29 attacks
+376,0,377,National Liberation Army of Colombia (ELN) | 1980-1984: 82 attacks
+377,0,378,National Liberation Army of Colombia (ELN) | 1985-1989: 459 attacks
+378,0,379,National Liberation Army of Colombia (ELN) | 1990-1994: 306 attacks
+379,0,380,National Liberation Army of Colombia (ELN) | 1995-1999: 264 attacks
+380,0,381,National Liberation Army of Colombia (ELN) | 2000-2004: 111 attacks
+381,0,382,National Liberation Army of Colombia (ELN) | 2005-2009: 23 attacks
+382,0,383,National Liberation Army of Colombia (ELN) | 2010-2014: 97 attacks
+383,0,384,National Liberation Army of Colombia (ELN) | 2015-2019: 384 attacks
+384,0,385,National Liberation Army of Colombia (ELN) | 2020-2020: 55 attacks
+385,0,386,Liberation Tigers of Tamil Eelam (LTTE) | 1602 attacks 1975-2010 | 10778 killed 10696 wounded | dominant: Bombing/Explosion | top target: Military | suicide 7% | success 95%
+386,0,387,"Liberation Tigers of Tamil Eelam (LTTE) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+387,0,388,Liberation Tigers of Tamil Eelam (LTTE) | Assassination: 131 attacks
+388,0,389,Liberation Tigers of Tamil Eelam (LTTE) | Armed Assault: 627 attacks
+389,0,390,Liberation Tigers of Tamil Eelam (LTTE) | Bombing/Explosion: 661 attacks
+390,0,391,Liberation Tigers of Tamil Eelam (LTTE) | Hijacking: 8 attacks
+391,0,392,Liberation Tigers of Tamil Eelam (LTTE) | Hostage (Barricade): 1 attacks
+392,0,393,Liberation Tigers of Tamil Eelam (LTTE) | Kidnapping: 51 attacks
+393,0,394,Liberation Tigers of Tamil Eelam (LTTE) | Infrastructure Attack: 11 attacks
+394,0,395,Liberation Tigers of Tamil Eelam (LTTE) | Unarmed Assault: 3 attacks
+395,0,396,Liberation Tigers of Tamil Eelam (LTTE) | Unknown: 109 attacks
+396,0,397,Liberation Tigers of Tamil Eelam (LTTE) | 10778 killed
+397,0,398,Liberation Tigers of Tamil Eelam (LTTE) | 10696 wounded
+398,0,399,Liberation Tigers of Tamil Eelam (LTTE) | struck in 4 countries | most: Sri Lanka
+399,0,400,Liberation Tigers of Tamil Eelam (LTTE) | activity 1970-2020 in 5-yr bins | peak 2005-2009: 464 attacks
+400,0,401,Liberation Tigers of Tamil Eelam (LTTE) | 1970-1974: 0 attacks
+401,0,402,Liberation Tigers of Tamil Eelam (LTTE) | 1975-1979: 4 attacks
+402,0,403,Liberation Tigers of Tamil Eelam (LTTE) | 1980-1984: 4 attacks
+403,0,404,Liberation Tigers of Tamil Eelam (LTTE) | 1985-1989: 271 attacks
+404,0,405,Liberation Tigers of Tamil Eelam (LTTE) | 1990-1994: 352 attacks
+405,0,406,Liberation Tigers of Tamil Eelam (LTTE) | 1995-1999: 392 attacks
+406,0,407,Liberation Tigers of Tamil Eelam (LTTE) | 2000-2004: 113 attacks
+407,0,408,Liberation Tigers of Tamil Eelam (LTTE) | 2005-2009: 464 attacks
+408,0,409,Liberation Tigers of Tamil Eelam (LTTE) | 2010-2014: 2 attacks
+409,0,410,Liberation Tigers of Tamil Eelam (LTTE) | 2015-2019: 0 attacks
+410,0,411,Liberation Tigers of Tamil Eelam (LTTE) | 2020-2020: 0 attacks
+411,0,412,Tehrik-i-Taliban Pakistan (TTP) | 1490 attacks 2007-2020 | 6344 killed 10015 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 13% | success 93%
+412,0,413,"Tehrik-i-Taliban Pakistan (TTP) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+413,0,414,Tehrik-i-Taliban Pakistan (TTP) | Assassination: 144 attacks
+414,0,415,Tehrik-i-Taliban Pakistan (TTP) | Armed Assault: 403 attacks
+415,0,416,Tehrik-i-Taliban Pakistan (TTP) | Bombing/Explosion: 703 attacks
+416,0,417,Tehrik-i-Taliban Pakistan (TTP) | Hijacking: 3 attacks
+417,0,418,Tehrik-i-Taliban Pakistan (TTP) | Hostage (Barricade): 8 attacks
+418,0,419,Tehrik-i-Taliban Pakistan (TTP) | Kidnapping: 140 attacks
+419,0,420,Tehrik-i-Taliban Pakistan (TTP) | Infrastructure Attack: 48 attacks
+420,0,421,Tehrik-i-Taliban Pakistan (TTP) | Unarmed Assault: 4 attacks
+421,0,422,Tehrik-i-Taliban Pakistan (TTP) | Unknown: 37 attacks
+422,0,423,Tehrik-i-Taliban Pakistan (TTP) | 6344 killed
+423,0,424,Tehrik-i-Taliban Pakistan (TTP) | 10015 wounded
+424,0,425,Tehrik-i-Taliban Pakistan (TTP) | struck in 3 countries | most: Pakistan
+425,0,426,Tehrik-i-Taliban Pakistan (TTP) | activity 1970-2020 in 5-yr bins | peak 2010-2014: 782 attacks
+426,0,427,Tehrik-i-Taliban Pakistan (TTP) | 1970-1974: 0 attacks
+427,0,428,Tehrik-i-Taliban Pakistan (TTP) | 1975-1979: 0 attacks
+428,0,429,Tehrik-i-Taliban Pakistan (TTP) | 1980-1984: 0 attacks
+429,0,430,Tehrik-i-Taliban Pakistan (TTP) | 1985-1989: 0 attacks
+430,0,431,Tehrik-i-Taliban Pakistan (TTP) | 1990-1994: 0 attacks
+431,0,432,Tehrik-i-Taliban Pakistan (TTP) | 1995-1999: 0 attacks
+432,0,433,Tehrik-i-Taliban Pakistan (TTP) | 2000-2004: 0 attacks
+433,0,434,Tehrik-i-Taliban Pakistan (TTP) | 2005-2009: 270 attacks
+434,0,435,Tehrik-i-Taliban Pakistan (TTP) | 2010-2014: 782 attacks
+435,0,436,Tehrik-i-Taliban Pakistan (TTP) | 2015-2019: 417 attacks
+436,0,437,Tehrik-i-Taliban Pakistan (TTP) | 2020-2020: 21 attacks
+437,0,438,Palestinians | 1123 attacks 1970-2002 | 520 killed 1621 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 0% | success 80%
+438,0,439,"Palestinians | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+439,0,440,Palestinians | Assassination: 296 attacks
+440,0,441,Palestinians | Armed Assault: 206 attacks
+441,0,442,Palestinians | Bombing/Explosion: 475 attacks
+442,0,443,Palestinians | Hijacking: 5 attacks
+443,0,444,Palestinians | Hostage (Barricade): 5 attacks
+444,0,445,Palestinians | Kidnapping: 28 attacks
+445,0,446,Palestinians | Infrastructure Attack: 47 attacks
+446,0,447,Palestinians | Unarmed Assault: 41 attacks
+447,0,448,Palestinians | Unknown: 20 attacks
+448,0,449,Palestinians | 520 killed
+449,0,450,Palestinians | 1621 wounded
+450,0,451,Palestinians | struck in 23 countries | most: West Bank and Gaza Strip
+451,0,452,Palestinians | activity 1970-2020 in 5-yr bins | peak 1990-1994: 467 attacks
+452,0,453,Palestinians | 1970-1974: 16 attacks
+453,0,454,Palestinians | 1975-1979: 138 attacks
+454,0,455,Palestinians | 1980-1984: 315 attacks
+455,0,456,Palestinians | 1985-1989: 142 attacks
+456,0,457,Palestinians | 1990-1994: 467 attacks
+457,0,458,Palestinians | 1995-1999: 22 attacks
+458,0,459,Palestinians | 2000-2004: 23 attacks
+459,0,460,Palestinians | 2005-2009: 0 attacks
+460,0,461,Palestinians | 2010-2014: 0 attacks
+461,0,462,Palestinians | 2015-2019: 0 attacks
+462,0,463,Palestinians | 2020-2020: 0 attacks
+463,0,464,Al-Qaida in the Arabian Peninsula (AQAP) | 1113 attacks 2004-2020 | 3738 killed 3249 wounded | dominant: Bombing/Explosion | top target: Military | suicide 12% | success 88%
+464,0,465,"Al-Qaida in the Arabian Peninsula (AQAP) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+465,0,466,Al-Qaida in the Arabian Peninsula (AQAP) | Assassination: 187 attacks
+466,0,467,Al-Qaida in the Arabian Peninsula (AQAP) | Armed Assault: 325 attacks
+467,0,468,Al-Qaida in the Arabian Peninsula (AQAP) | Bombing/Explosion: 404 attacks
+468,0,469,Al-Qaida in the Arabian Peninsula (AQAP) | Hijacking: 2 attacks
+469,0,470,Al-Qaida in the Arabian Peninsula (AQAP) | Hostage (Barricade): 5 attacks
+470,0,471,Al-Qaida in the Arabian Peninsula (AQAP) | Kidnapping: 83 attacks
+471,0,472,Al-Qaida in the Arabian Peninsula (AQAP) | Infrastructure Attack: 11 attacks
+472,0,473,Al-Qaida in the Arabian Peninsula (AQAP) | Unarmed Assault: 1 attacks
+473,0,474,Al-Qaida in the Arabian Peninsula (AQAP) | Unknown: 95 attacks
+474,0,475,Al-Qaida in the Arabian Peninsula (AQAP) | 3738 killed
+475,0,476,Al-Qaida in the Arabian Peninsula (AQAP) | 3249 wounded
+476,0,477,Al-Qaida in the Arabian Peninsula (AQAP) | struck in 6 countries | most: Yemen
+477,0,478,Al-Qaida in the Arabian Peninsula (AQAP) | activity 1970-2020 in 5-yr bins | peak 2010-2014: 762 attacks
+478,0,479,Al-Qaida in the Arabian Peninsula (AQAP) | 1970-1974: 0 attacks
+479,0,480,Al-Qaida in the Arabian Peninsula (AQAP) | 1975-1979: 0 attacks
+480,0,481,Al-Qaida in the Arabian Peninsula (AQAP) | 1980-1984: 0 attacks
+481,0,482,Al-Qaida in the Arabian Peninsula (AQAP) | 1985-1989: 0 attacks
+482,0,483,Al-Qaida in the Arabian Peninsula (AQAP) | 1990-1994: 0 attacks
+483,0,484,Al-Qaida in the Arabian Peninsula (AQAP) | 1995-1999: 0 attacks
+484,0,485,Al-Qaida in the Arabian Peninsula (AQAP) | 2000-2004: 4 attacks
+485,0,486,Al-Qaida in the Arabian Peninsula (AQAP) | 2005-2009: 4 attacks
+486,0,487,Al-Qaida in the Arabian Peninsula (AQAP) | 2010-2014: 762 attacks
+487,0,488,Al-Qaida in the Arabian Peninsula (AQAP) | 2015-2019: 331 attacks
+488,0,489,Al-Qaida in the Arabian Peninsula (AQAP) | 2020-2020: 12 attacks
+489,0,490,Fulani extremists | 1099 attacks 2002-2020 | 5070 killed 1243 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 97%
+490,0,491,"Fulani extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+491,0,492,Fulani extremists | Assassination: 33 attacks
+492,0,493,Fulani extremists | Armed Assault: 774 attacks
+493,0,494,Fulani extremists | Bombing/Explosion: 1 attacks
+494,0,495,Fulani extremists | Hijacking: 1 attacks
+495,0,496,Fulani extremists | Hostage (Barricade): 7 attacks
+496,0,497,Fulani extremists | Kidnapping: 174 attacks
+497,0,498,Fulani extremists | Infrastructure Attack: 54 attacks
+498,0,499,Fulani extremists | Unarmed Assault: 2 attacks
+499,0,500,Fulani extremists | Unknown: 53 attacks
+500,0,501,Fulani extremists | 5070 killed
+501,0,502,Fulani extremists | 1243 wounded
+502,0,503,Fulani extremists | struck in 6 countries | most: Nigeria
+503,0,504,Fulani extremists | activity 1970-2020 in 5-yr bins | peak 2015-2019: 756 attacks
+504,0,505,Fulani extremists | 1970-1974: 0 attacks
+505,0,506,Fulani extremists | 1975-1979: 0 attacks
+506,0,507,Fulani extremists | 1980-1984: 0 attacks
+507,0,508,Fulani extremists | 1985-1989: 0 attacks
+508,0,509,Fulani extremists | 1990-1994: 0 attacks
+509,0,510,Fulani extremists | 1995-1999: 0 attacks
+510,0,511,Fulani extremists | 2000-2004: 1 attacks
+511,0,512,Fulani extremists | 2005-2009: 0 attacks
+512,0,513,Fulani extremists | 2010-2014: 180 attacks
+513,0,514,Fulani extremists | 2015-2019: 756 attacks
+514,0,515,Fulani extremists | 2020-2020: 162 attacks
+515,0,516,Separatists | 927 attacks 1980-2020 | 1062 killed 1634 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 0% | success 93%
+516,0,517,"Separatists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+517,0,518,Separatists | Assassination: 46 attacks
+518,0,519,Separatists | Armed Assault: 290 attacks
+519,0,520,Separatists | Bombing/Explosion: 358 attacks
+520,0,521,Separatists | Hijacking: 3 attacks
+521,0,522,Separatists | Hostage (Barricade): 5 attacks
+522,0,523,Separatists | Kidnapping: 130 attacks
+523,0,524,Separatists | Infrastructure Attack: 71 attacks
+524,0,525,Separatists | Unarmed Assault: 1 attacks
+525,0,526,Separatists | Unknown: 23 attacks
+526,0,527,Separatists | 1062 killed
+527,0,528,Separatists | 1634 wounded
+528,0,529,Separatists | struck in 30 countries | most: Thailand
+529,0,530,Separatists | activity 1970-2020 in 5-yr bins | peak 2015-2019: 382 attacks
+530,0,531,Separatists | 1970-1974: 0 attacks
+531,0,532,Separatists | 1975-1979: 0 attacks
+532,0,533,Separatists | 1980-1984: 25 attacks
+533,0,534,Separatists | 1985-1989: 86 attacks
+534,0,535,Separatists | 1990-1994: 2 attacks
+535,0,536,Separatists | 1995-1999: 68 attacks
+536,0,537,Separatists | 2000-2004: 23 attacks
+537,0,538,Separatists | 2005-2009: 7 attacks
+538,0,539,Separatists | 2010-2014: 258 attacks
+539,0,540,Separatists | 2015-2019: 382 attacks
+540,0,541,Separatists | 2020-2020: 76 attacks
+541,0,542,Muslim extremists | 924 attacks 1979-2020 | 2397 killed 2823 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 2% | success 91%
+542,0,543,"Muslim extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+543,0,544,Muslim extremists | Assassination: 49 attacks
+544,0,545,Muslim extremists | Armed Assault: 295 attacks
+545,0,546,Muslim extremists | Bombing/Explosion: 310 attacks
+546,0,547,Muslim extremists | Hijacking: 5 attacks
+547,0,548,Muslim extremists | Hostage (Barricade): 8 attacks
+548,0,549,Muslim extremists | Kidnapping: 104 attacks
+549,0,550,Muslim extremists | Infrastructure Attack: 81 attacks
+550,0,551,Muslim extremists | Unarmed Assault: 11 attacks
+551,0,552,Muslim extremists | Unknown: 61 attacks
+552,0,553,Muslim extremists | 2397 killed
+553,0,554,Muslim extremists | 2823 wounded
+554,0,555,Muslim extremists | struck in 57 countries | most: Mali
+555,0,556,Muslim extremists | activity 1970-2020 in 5-yr bins | peak 2015-2019: 448 attacks
+556,0,557,Muslim extremists | 1970-1974: 0 attacks
+557,0,558,Muslim extremists | 1975-1979: 1 attacks
+558,0,559,Muslim extremists | 1980-1984: 1 attacks
+559,0,560,Muslim extremists | 1985-1989: 8 attacks
+560,0,561,Muslim extremists | 1990-1994: 9 attacks
+561,0,562,Muslim extremists | 1995-1999: 16 attacks
+562,0,563,Muslim extremists | 2000-2004: 49 attacks
+563,0,564,Muslim extremists | 2005-2009: 16 attacks
+564,0,565,Muslim extremists | 2010-2014: 260 attacks
+565,0,566,Muslim extremists | 2015-2019: 448 attacks
+566,0,567,Muslim extremists | 2020-2020: 116 attacks
+567,0,568,Nicaraguan Democratic Force (FDN) | 895 attacks 1983-1987 | 6662 killed 734 wounded | dominant: Armed Assault | top target: Military | suicide 0% | success 99%
+568,0,569,"Nicaraguan Democratic Force (FDN) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+569,0,570,Nicaraguan Democratic Force (FDN) | Assassination: 4 attacks
+570,0,571,Nicaraguan Democratic Force (FDN) | Armed Assault: 728 attacks
+571,0,572,Nicaraguan Democratic Force (FDN) | Bombing/Explosion: 117 attacks
+572,0,573,Nicaraguan Democratic Force (FDN) | Hostage (Barricade): 2 attacks
+573,0,574,Nicaraguan Democratic Force (FDN) | Kidnapping: 14 attacks
+574,0,575,Nicaraguan Democratic Force (FDN) | Infrastructure Attack: 29 attacks
+575,0,576,Nicaraguan Democratic Force (FDN) | Unknown: 1 attacks
+576,0,577,Nicaraguan Democratic Force (FDN) | 6662 killed
+577,0,578,Nicaraguan Democratic Force (FDN) | 734 wounded
+578,0,579,Nicaraguan Democratic Force (FDN) | struck in 3 countries | most: Nicaragua
+579,0,580,Nicaraguan Democratic Force (FDN) | activity 1970-2020 in 5-yr bins | peak 1985-1989: 463 attacks
+580,0,581,Nicaraguan Democratic Force (FDN) | 1970-1974: 0 attacks
+581,0,582,Nicaraguan Democratic Force (FDN) | 1975-1979: 0 attacks
+582,0,583,Nicaraguan Democratic Force (FDN) | 1980-1984: 432 attacks
+583,0,584,Nicaraguan Democratic Force (FDN) | 1985-1989: 463 attacks
+584,0,585,Nicaraguan Democratic Force (FDN) | 1990-1994: 0 attacks
+585,0,586,Nicaraguan Democratic Force (FDN) | 1995-1999: 0 attacks
+586,0,587,Nicaraguan Democratic Force (FDN) | 2000-2004: 0 attacks
+587,0,588,Nicaraguan Democratic Force (FDN) | 2005-2009: 0 attacks
+588,0,589,Nicaraguan Democratic Force (FDN) | 2010-2014: 0 attacks
+589,0,590,Nicaraguan Democratic Force (FDN) | 2015-2019: 0 attacks
+590,0,591,Nicaraguan Democratic Force (FDN) | 2020-2020: 0 attacks
+591,0,592,Manuel Rodriguez Patriotic Front (FPMR) | 830 attacks 1984-1997 | 93 killed 304 wounded | dominant: Bombing/Explosion | top target: Utilities | suicide 0% | success 94%
+592,0,593,"Manuel Rodriguez Patriotic Front (FPMR) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+593,0,594,Manuel Rodriguez Patriotic Front (FPMR) | Assassination: 22 attacks
+594,0,595,Manuel Rodriguez Patriotic Front (FPMR) | Armed Assault: 96 attacks
+595,0,596,Manuel Rodriguez Patriotic Front (FPMR) | Bombing/Explosion: 640 attacks
+596,0,597,Manuel Rodriguez Patriotic Front (FPMR) | Hijacking: 1 attacks
+597,0,598,Manuel Rodriguez Patriotic Front (FPMR) | Hostage (Barricade): 25 attacks
+598,0,599,Manuel Rodriguez Patriotic Front (FPMR) | Kidnapping: 5 attacks
+599,0,600,Manuel Rodriguez Patriotic Front (FPMR) | Infrastructure Attack: 32 attacks
+600,0,601,Manuel Rodriguez Patriotic Front (FPMR) | Unknown: 9 attacks
+601,0,602,Manuel Rodriguez Patriotic Front (FPMR) | 93 killed
+602,0,603,Manuel Rodriguez Patriotic Front (FPMR) | 304 wounded
+603,0,604,Manuel Rodriguez Patriotic Front (FPMR) | struck in 2 countries | most: Chile
+604,0,605,Manuel Rodriguez Patriotic Front (FPMR) | activity 1970-2020 in 5-yr bins | peak 1985-1989: 626 attacks
+605,0,606,Manuel Rodriguez Patriotic Front (FPMR) | 1970-1974: 0 attacks
+606,0,607,Manuel Rodriguez Patriotic Front (FPMR) | 1975-1979: 0 attacks
+607,0,608,Manuel Rodriguez Patriotic Front (FPMR) | 1980-1984: 102 attacks
+608,0,609,Manuel Rodriguez Patriotic Front (FPMR) | 1985-1989: 626 attacks
+609,0,610,Manuel Rodriguez Patriotic Front (FPMR) | 1990-1994: 94 attacks
+610,0,611,Manuel Rodriguez Patriotic Front (FPMR) | 1995-1999: 8 attacks
+611,0,612,Manuel Rodriguez Patriotic Front (FPMR) | 2000-2004: 0 attacks
+612,0,613,Manuel Rodriguez Patriotic Front (FPMR) | 2005-2009: 0 attacks
+613,0,614,Manuel Rodriguez Patriotic Front (FPMR) | 2010-2014: 0 attacks
+614,0,615,Manuel Rodriguez Patriotic Front (FPMR) | 2015-2019: 0 attacks
+615,0,616,Manuel Rodriguez Patriotic Front (FPMR) | 2020-2020: 0 attacks
+616,0,617,Sikh Extremists | 716 attacks 1981-2017 | 2813 killed 2152 wounded | dominant: Assassination | top target: Private Citizens & Property | suicide 0% | success 94%
+617,0,618,"Sikh Extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+618,0,619,Sikh Extremists | Assassination: 300 attacks
+619,0,620,Sikh Extremists | Armed Assault: 218 attacks
+620,0,621,Sikh Extremists | Bombing/Explosion: 126 attacks
+621,0,622,Sikh Extremists | Hijacking: 6 attacks
+622,0,623,Sikh Extremists | Kidnapping: 15 attacks
+623,0,624,Sikh Extremists | Infrastructure Attack: 32 attacks
+624,0,625,Sikh Extremists | Unknown: 19 attacks
+625,0,626,Sikh Extremists | 2813 killed
+626,0,627,Sikh Extremists | 2152 wounded
+627,0,628,Sikh Extremists | struck in 5 countries | most: India
+628,0,629,Sikh Extremists | activity 1970-2020 in 5-yr bins | peak 1985-1989: 360 attacks
+629,0,630,Sikh Extremists | 1970-1974: 0 attacks
+630,0,631,Sikh Extremists | 1975-1979: 0 attacks
+631,0,632,Sikh Extremists | 1980-1984: 66 attacks
+632,0,633,Sikh Extremists | 1985-1989: 360 attacks
+633,0,634,Sikh Extremists | 1990-1994: 289 attacks
+634,0,635,Sikh Extremists | 1995-1999: 0 attacks
+635,0,636,Sikh Extremists | 2000-2004: 0 attacks
+636,0,637,Sikh Extremists | 2005-2009: 0 attacks
+637,0,638,Sikh Extremists | 2010-2014: 0 attacks
+638,0,639,Sikh Extremists | 2015-2019: 1 attacks
+639,0,640,Sikh Extremists | 2020-2020: 0 attacks
+640,0,641,Corsican National Liberation Front (FLNC) | 641 attacks 1974-2020 | 13 killed 104 wounded | dominant: Bombing/Explosion | top target: Business | suicide 0% | success 97%
+641,0,642,"Corsican National Liberation Front (FLNC) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+642,0,643,Corsican National Liberation Front (FLNC) | Assassination: 10 attacks
+643,0,644,Corsican National Liberation Front (FLNC) | Armed Assault: 11 attacks
+644,0,645,Corsican National Liberation Front (FLNC) | Bombing/Explosion: 597 attacks
+645,0,646,Corsican National Liberation Front (FLNC) | Hostage (Barricade): 4 attacks
+646,0,647,Corsican National Liberation Front (FLNC) | Kidnapping: 1 attacks
+647,0,648,Corsican National Liberation Front (FLNC) | Infrastructure Attack: 17 attacks
+648,0,649,Corsican National Liberation Front (FLNC) | Unknown: 1 attacks
+649,0,650,Corsican National Liberation Front (FLNC) | 13 killed
+650,0,651,Corsican National Liberation Front (FLNC) | 104 wounded
+651,0,652,Corsican National Liberation Front (FLNC) | struck in 2 countries | most: France
+652,0,653,Corsican National Liberation Front (FLNC) | activity 1970-2020 in 5-yr bins | peak 1975-1979: 148 attacks
+653,0,654,Corsican National Liberation Front (FLNC) | 1970-1974: 1 attacks
+654,0,655,Corsican National Liberation Front (FLNC) | 1975-1979: 148 attacks
+655,0,656,Corsican National Liberation Front (FLNC) | 1980-1984: 82 attacks
+656,0,657,Corsican National Liberation Front (FLNC) | 1985-1989: 100 attacks
+657,0,658,Corsican National Liberation Front (FLNC) | 1990-1994: 129 attacks
+658,0,659,Corsican National Liberation Front (FLNC) | 1995-1999: 57 attacks
+659,0,660,Corsican National Liberation Front (FLNC) | 2000-2004: 23 attacks
+660,0,661,Corsican National Liberation Front (FLNC) | 2005-2009: 37 attacks
+661,0,662,Corsican National Liberation Front (FLNC) | 2010-2014: 62 attacks
+662,0,663,Corsican National Liberation Front (FLNC) | 2015-2019: 1 attacks
+663,0,664,Corsican National Liberation Front (FLNC) | 2020-2020: 1 attacks
+664,0,665,Al-Qaida in Iraq | 638 attacks 2003-2013 | 4381 killed 10343 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 20% | success 98%
+665,0,666,"Al-Qaida in Iraq | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+666,0,667,Al-Qaida in Iraq | Assassination: 24 attacks
+667,0,668,Al-Qaida in Iraq | Armed Assault: 79 attacks
+668,0,669,Al-Qaida in Iraq | Bombing/Explosion: 501 attacks
+669,0,670,Al-Qaida in Iraq | Kidnapping: 21 attacks
+670,0,671,Al-Qaida in Iraq | Infrastructure Attack: 5 attacks
+671,0,672,Al-Qaida in Iraq | Unknown: 8 attacks
+672,0,673,Al-Qaida in Iraq | 4381 killed
+673,0,674,Al-Qaida in Iraq | 10343 wounded
+674,0,675,Al-Qaida in Iraq | struck in 4 countries | most: Iraq
+675,0,676,Al-Qaida in Iraq | activity 1970-2020 in 5-yr bins | peak 2010-2014: 453 attacks
+676,0,677,Al-Qaida in Iraq | 1970-1974: 0 attacks
+677,0,678,Al-Qaida in Iraq | 1975-1979: 0 attacks
+678,0,679,Al-Qaida in Iraq | 1980-1984: 0 attacks
+679,0,680,Al-Qaida in Iraq | 1985-1989: 0 attacks
+680,0,681,Al-Qaida in Iraq | 1990-1994: 0 attacks
+681,0,682,Al-Qaida in Iraq | 1995-1999: 0 attacks
+682,0,683,Al-Qaida in Iraq | 2000-2004: 7 attacks
+683,0,684,Al-Qaida in Iraq | 2005-2009: 178 attacks
+684,0,685,Al-Qaida in Iraq | 2010-2014: 453 attacks
+685,0,686,Al-Qaida in Iraq | 2015-2019: 0 attacks
+686,0,687,Al-Qaida in Iraq | 2020-2020: 0 attacks
+687,0,688,Donetsk People's Republic | 636 attacks 2014-2020 | 1663 killed 1523 wounded | dominant: Bombing/Explosion | top target: Military | suicide 0% | success 93%
+688,0,689,"Donetsk People's Republic | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+689,0,690,Donetsk People's Republic | Assassination: 1 attacks
+690,0,691,Donetsk People's Republic | Armed Assault: 189 attacks
+691,0,692,Donetsk People's Republic | Bombing/Explosion: 301 attacks
+692,0,693,Donetsk People's Republic | Hostage (Barricade): 3 attacks
+693,0,694,Donetsk People's Republic | Kidnapping: 74 attacks
+694,0,695,Donetsk People's Republic | Infrastructure Attack: 31 attacks
+695,0,696,Donetsk People's Republic | Unarmed Assault: 3 attacks
+696,0,697,Donetsk People's Republic | Unknown: 34 attacks
+697,0,698,Donetsk People's Republic | 1663 killed
+698,0,699,Donetsk People's Republic | 1523 wounded
+699,0,700,Donetsk People's Republic | struck in 1 country | most: Ukraine
+700,0,701,Donetsk People's Republic | activity 1970-2020 in 5-yr bins | peak 2010-2014: 332 attacks
+701,0,702,Donetsk People's Republic | 1970-1974: 0 attacks
+702,0,703,Donetsk People's Republic | 1975-1979: 0 attacks
+703,0,704,Donetsk People's Republic | 1980-1984: 0 attacks
+704,0,705,Donetsk People's Republic | 1985-1989: 0 attacks
+705,0,706,Donetsk People's Republic | 1990-1994: 0 attacks
+706,0,707,Donetsk People's Republic | 1995-1999: 0 attacks
+707,0,708,Donetsk People's Republic | 2000-2004: 0 attacks
+708,0,709,Donetsk People's Republic | 2005-2009: 0 attacks
+709,0,710,Donetsk People's Republic | 2010-2014: 332 attacks
+710,0,711,Donetsk People's Republic | 2015-2019: 296 attacks
+711,0,712,Donetsk People's Republic | 2020-2020: 8 attacks
+712,0,713,Khorasan Chapter of the Islamic State | 614 attacks 2014-2020 | 3824 killed 6018 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 19% | success 89%
+713,0,714,"Khorasan Chapter of the Islamic State | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+714,0,715,Khorasan Chapter of the Islamic State | Assassination: 54 attacks
+715,0,716,Khorasan Chapter of the Islamic State | Armed Assault: 133 attacks
+716,0,717,Khorasan Chapter of the Islamic State | Bombing/Explosion: 308 attacks
+717,0,718,Khorasan Chapter of the Islamic State | Hijacking: 1 attacks
+718,0,719,Khorasan Chapter of the Islamic State | Hostage (Barricade): 6 attacks
+719,0,720,Khorasan Chapter of the Islamic State | Kidnapping: 66 attacks
+720,0,721,Khorasan Chapter of the Islamic State | Infrastructure Attack: 19 attacks
+721,0,722,Khorasan Chapter of the Islamic State | Unknown: 27 attacks
+722,0,723,Khorasan Chapter of the Islamic State | 3824 killed
+723,0,724,Khorasan Chapter of the Islamic State | 6018 wounded
+724,0,725,Khorasan Chapter of the Islamic State | struck in 3 countries | most: Afghanistan
+725,0,726,Khorasan Chapter of the Islamic State | activity 1970-2020 in 5-yr bins | peak 2015-2019: 558 attacks
+726,0,727,Khorasan Chapter of the Islamic State | 1970-1974: 0 attacks
+727,0,728,Khorasan Chapter of the Islamic State | 1975-1979: 0 attacks
+728,0,729,Khorasan Chapter of the Islamic State | 1980-1984: 0 attacks
+729,0,730,Khorasan Chapter of the Islamic State | 1985-1989: 0 attacks
+730,0,731,Khorasan Chapter of the Islamic State | 1990-1994: 0 attacks
+731,0,732,Khorasan Chapter of the Islamic State | 1995-1999: 0 attacks
+732,0,733,Khorasan Chapter of the Islamic State | 2000-2004: 0 attacks
+733,0,734,Khorasan Chapter of the Islamic State | 2005-2009: 0 attacks
+734,0,735,Khorasan Chapter of the Islamic State | 2010-2014: 2 attacks
+735,0,736,Khorasan Chapter of the Islamic State | 2015-2019: 558 attacks
+736,0,737,Khorasan Chapter of the Islamic State | 2020-2020: 54 attacks
+737,0,738,African National Congress (South Africa) | 607 attacks 1976-1996 | 636 killed 1696 wounded | dominant: Bombing/Explosion | top target: Police | suicide 0% | success 91%
+738,0,739,"African National Congress (South Africa) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+739,0,740,African National Congress (South Africa) | Assassination: 70 attacks
+740,0,741,African National Congress (South Africa) | Armed Assault: 53 attacks
+741,0,742,African National Congress (South Africa) | Bombing/Explosion: 398 attacks
+742,0,743,African National Congress (South Africa) | Infrastructure Attack: 1 attacks
+743,0,744,African National Congress (South Africa) | Unarmed Assault: 1 attacks
+744,0,745,African National Congress (South Africa) | Unknown: 84 attacks
+745,0,746,African National Congress (South Africa) | 636 killed
+746,0,747,African National Congress (South Africa) | 1696 wounded
+747,0,748,African National Congress (South Africa) | struck in 7 countries | most: South Africa
+748,0,749,African National Congress (South Africa) | activity 1970-2020 in 5-yr bins | peak 1985-1989: 393 attacks
+749,0,750,African National Congress (South Africa) | 1970-1974: 0 attacks
+750,0,751,African National Congress (South Africa) | 1975-1979: 27 attacks
+751,0,752,African National Congress (South Africa) | 1980-1984: 152 attacks
+752,0,753,African National Congress (South Africa) | 1985-1989: 393 attacks
+753,0,754,African National Congress (South Africa) | 1990-1994: 33 attacks
+754,0,755,African National Congress (South Africa) | 1995-1999: 2 attacks
+755,0,756,African National Congress (South Africa) | 2000-2004: 0 attacks
+756,0,757,African National Congress (South Africa) | 2005-2009: 0 attacks
+757,0,758,African National Congress (South Africa) | 2010-2014: 0 attacks
+758,0,759,African National Congress (South Africa) | 2015-2019: 0 attacks
+759,0,760,African National Congress (South Africa) | 2020-2020: 0 attacks
+760,0,761,Abu Sayyaf Group (ASG) | 591 attacks 1994-2020 | 858 killed 1691 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 1% | success 88%
+761,0,762,"Abu Sayyaf Group (ASG) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+762,0,763,Abu Sayyaf Group (ASG) | Assassination: 16 attacks
+763,0,764,Abu Sayyaf Group (ASG) | Armed Assault: 123 attacks
+764,0,765,Abu Sayyaf Group (ASG) | Bombing/Explosion: 224 attacks
+765,0,766,Abu Sayyaf Group (ASG) | Hijacking: 11 attacks
+766,0,767,Abu Sayyaf Group (ASG) | Hostage (Barricade): 2 attacks
+767,0,768,Abu Sayyaf Group (ASG) | Kidnapping: 203 attacks
+768,0,769,Abu Sayyaf Group (ASG) | Infrastructure Attack: 4 attacks
+769,0,770,Abu Sayyaf Group (ASG) | Unknown: 8 attacks
+770,0,771,Abu Sayyaf Group (ASG) | 858 killed
+771,0,772,Abu Sayyaf Group (ASG) | 1691 wounded
+772,0,773,Abu Sayyaf Group (ASG) | struck in 2 countries | most: Philippines
+773,0,774,Abu Sayyaf Group (ASG) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 266 attacks
+774,0,775,Abu Sayyaf Group (ASG) | 1970-1974: 0 attacks
+775,0,776,Abu Sayyaf Group (ASG) | 1975-1979: 0 attacks
+776,0,777,Abu Sayyaf Group (ASG) | 1980-1984: 0 attacks
+777,0,778,Abu Sayyaf Group (ASG) | 1985-1989: 0 attacks
+778,0,779,Abu Sayyaf Group (ASG) | 1990-1994: 7 attacks
+779,0,780,Abu Sayyaf Group (ASG) | 1995-1999: 38 attacks
+780,0,781,Abu Sayyaf Group (ASG) | 2000-2004: 60 attacks
+781,0,782,Abu Sayyaf Group (ASG) | 2005-2009: 61 attacks
+782,0,783,Abu Sayyaf Group (ASG) | 2010-2014: 147 attacks
+783,0,784,Abu Sayyaf Group (ASG) | 2015-2019: 266 attacks
+784,0,785,Abu Sayyaf Group (ASG) | 2020-2020: 12 attacks
+785,0,786,Palestinian Extremists | 583 attacks 1991-2020 | 315 killed 635 wounded | dominant: Armed Assault | top target: Military | suicide 2% | success 62%
+786,0,787,"Palestinian Extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+787,0,788,Palestinian Extremists | Assassination: 7 attacks
+788,0,789,Palestinian Extremists | Armed Assault: 405 attacks
+789,0,790,Palestinian Extremists | Bombing/Explosion: 82 attacks
+790,0,791,Palestinian Extremists | Hostage (Barricade): 1 attacks
+791,0,792,Palestinian Extremists | Infrastructure Attack: 21 attacks
+792,0,793,Palestinian Extremists | Unarmed Assault: 67 attacks
+793,0,794,Palestinian Extremists | 315 killed
+794,0,795,Palestinian Extremists | 635 wounded
+795,0,796,Palestinian Extremists | struck in 5 countries | most: West Bank and Gaza Strip
+796,0,797,Palestinian Extremists | activity 1970-2020 in 5-yr bins | peak 2015-2019: 473 attacks
+797,0,798,Palestinian Extremists | 1970-1974: 0 attacks
+798,0,799,Palestinian Extremists | 1975-1979: 0 attacks
+799,0,800,Palestinian Extremists | 1980-1984: 0 attacks
+800,0,801,Palestinian Extremists | 1985-1989: 0 attacks
+801,0,802,Palestinian Extremists | 1990-1994: 4 attacks
+802,0,803,Palestinian Extremists | 1995-1999: 5 attacks
+803,0,804,Palestinian Extremists | 2000-2004: 13 attacks
+804,0,805,Palestinian Extremists | 2005-2009: 7 attacks
+805,0,806,Palestinian Extremists | 2010-2014: 43 attacks
+806,0,807,Palestinian Extremists | 2015-2019: 473 attacks
+807,0,808,Palestinian Extremists | 2020-2020: 38 attacks
+808,0,809,Sinai Province of the Islamic State | 558 attacks 2014-2020 | 1914 killed 1382 wounded | dominant: Bombing/Explosion | top target: Military | suicide 7% | success 90%
+809,0,810,"Sinai Province of the Islamic State | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+810,0,811,Sinai Province of the Islamic State | Assassination: 23 attacks
+811,0,812,Sinai Province of the Islamic State | Armed Assault: 151 attacks
+812,0,813,Sinai Province of the Islamic State | Bombing/Explosion: 277 attacks
+813,0,814,Sinai Province of the Islamic State | Hijacking: 6 attacks
+814,0,815,Sinai Province of the Islamic State | Hostage (Barricade): 1 attacks
+815,0,816,Sinai Province of the Islamic State | Kidnapping: 70 attacks
+816,0,817,Sinai Province of the Islamic State | Infrastructure Attack: 8 attacks
+817,0,818,Sinai Province of the Islamic State | Unknown: 22 attacks
+818,0,819,Sinai Province of the Islamic State | 1914 killed
+819,0,820,Sinai Province of the Islamic State | 1382 wounded
+820,0,821,Sinai Province of the Islamic State | struck in 3 countries | most: Egypt
+821,0,822,Sinai Province of the Islamic State | activity 1970-2020 in 5-yr bins | peak 2015-2019: 492 attacks
+822,0,823,Sinai Province of the Islamic State | 1970-1974: 0 attacks
+823,0,824,Sinai Province of the Islamic State | 1975-1979: 0 attacks
+824,0,825,Sinai Province of the Islamic State | 1980-1984: 0 attacks
+825,0,826,Sinai Province of the Islamic State | 1985-1989: 0 attacks
+826,0,827,Sinai Province of the Islamic State | 1990-1994: 0 attacks
+827,0,828,Sinai Province of the Islamic State | 1995-1999: 0 attacks
+828,0,829,Sinai Province of the Islamic State | 2000-2004: 0 attacks
+829,0,830,Sinai Province of the Islamic State | 2005-2009: 0 attacks
+830,0,831,Sinai Province of the Islamic State | 2010-2014: 19 attacks
+831,0,832,Sinai Province of the Islamic State | 2015-2019: 492 attacks
+832,0,833,Sinai Province of the Islamic State | 2020-2020: 47 attacks
+833,0,834,Tupac Amaru Revolutionary Movement (MRTA) | 557 attacks 1984-1997 | 560 killed 551 wounded | dominant: Bombing/Explosion | top target: Business | suicide 0% | success 96%
+834,0,835,"Tupac Amaru Revolutionary Movement (MRTA) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+835,0,836,Tupac Amaru Revolutionary Movement (MRTA) | Assassination: 20 attacks
+836,0,837,Tupac Amaru Revolutionary Movement (MRTA) | Armed Assault: 67 attacks
+837,0,838,Tupac Amaru Revolutionary Movement (MRTA) | Bombing/Explosion: 375 attacks
+838,0,839,Tupac Amaru Revolutionary Movement (MRTA) | Hijacking: 2 attacks
+839,0,840,Tupac Amaru Revolutionary Movement (MRTA) | Hostage (Barricade): 37 attacks
+840,0,841,Tupac Amaru Revolutionary Movement (MRTA) | Kidnapping: 14 attacks
+841,0,842,Tupac Amaru Revolutionary Movement (MRTA) | Infrastructure Attack: 12 attacks
+842,0,843,Tupac Amaru Revolutionary Movement (MRTA) | Unknown: 30 attacks
+843,0,844,Tupac Amaru Revolutionary Movement (MRTA) | 560 killed
+844,0,845,Tupac Amaru Revolutionary Movement (MRTA) | 551 wounded
+845,0,846,Tupac Amaru Revolutionary Movement (MRTA) | struck in 4 countries | most: Peru
+846,0,847,Tupac Amaru Revolutionary Movement (MRTA) | activity 1970-2020 in 5-yr bins | peak 1985-1989: 374 attacks
+847,0,848,Tupac Amaru Revolutionary Movement (MRTA) | 1970-1974: 0 attacks
+848,0,849,Tupac Amaru Revolutionary Movement (MRTA) | 1975-1979: 0 attacks
+849,0,850,Tupac Amaru Revolutionary Movement (MRTA) | 1980-1984: 7 attacks
+850,0,851,Tupac Amaru Revolutionary Movement (MRTA) | 1985-1989: 374 attacks
+851,0,852,Tupac Amaru Revolutionary Movement (MRTA) | 1990-1994: 167 attacks
+852,0,853,Tupac Amaru Revolutionary Movement (MRTA) | 1995-1999: 9 attacks
+853,0,854,Tupac Amaru Revolutionary Movement (MRTA) | 2000-2004: 0 attacks
+854,0,855,Tupac Amaru Revolutionary Movement (MRTA) | 2005-2009: 0 attacks
+855,0,856,Tupac Amaru Revolutionary Movement (MRTA) | 2010-2014: 0 attacks
+856,0,857,Tupac Amaru Revolutionary Movement (MRTA) | 2015-2019: 0 attacks
+857,0,858,Tupac Amaru Revolutionary Movement (MRTA) | 2020-2020: 0 attacks
+858,0,859,M-19 (Movement of April 19) | 555 attacks 1976-1997 | 1323 killed 502 wounded | dominant: Armed Assault | top target: Military | suicide 0% | success 95%
+859,0,860,"M-19 (Movement of April 19) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+860,0,861,M-19 (Movement of April 19) | Assassination: 24 attacks
+861,0,862,M-19 (Movement of April 19) | Armed Assault: 248 attacks
+862,0,863,M-19 (Movement of April 19) | Bombing/Explosion: 130 attacks
+863,0,864,M-19 (Movement of April 19) | Hijacking: 4 attacks
+864,0,865,M-19 (Movement of April 19) | Hostage (Barricade): 43 attacks
+865,0,866,M-19 (Movement of April 19) | Kidnapping: 53 attacks
+866,0,867,M-19 (Movement of April 19) | Infrastructure Attack: 30 attacks
+867,0,868,M-19 (Movement of April 19) | Unknown: 23 attacks
+868,0,869,M-19 (Movement of April 19) | 1323 killed
+869,0,870,M-19 (Movement of April 19) | 502 wounded
+870,0,871,M-19 (Movement of April 19) | struck in 8 countries | most: Colombia
+871,0,872,M-19 (Movement of April 19) | activity 1970-2020 in 5-yr bins | peak 1980-1984: 257 attacks
+872,0,873,M-19 (Movement of April 19) | 1970-1974: 0 attacks
+873,0,874,M-19 (Movement of April 19) | 1975-1979: 66 attacks
+874,0,875,M-19 (Movement of April 19) | 1980-1984: 257 attacks
+875,0,876,M-19 (Movement of April 19) | 1985-1989: 226 attacks
+876,0,877,M-19 (Movement of April 19) | 1990-1994: 2 attacks
+877,0,878,M-19 (Movement of April 19) | 1995-1999: 4 attacks
+878,0,879,M-19 (Movement of April 19) | 2000-2004: 0 attacks
+879,0,880,M-19 (Movement of April 19) | 2005-2009: 0 attacks
+880,0,881,M-19 (Movement of April 19) | 2010-2014: 0 attacks
+881,0,882,M-19 (Movement of April 19) | 2015-2019: 0 attacks
+882,0,883,M-19 (Movement of April 19) | 2020-2020: 0 attacks
+883,0,884,Bangsamoro Islamic Freedom Movement (BIFM) | 538 attacks 2012-2020 | 379 killed 888 wounded | dominant: Bombing/Explosion | top target: Military | suicide 0% | success 75%
+884,0,885,"Bangsamoro Islamic Freedom Movement (BIFM) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+885,0,886,Bangsamoro Islamic Freedom Movement (BIFM) | Assassination: 7 attacks
+886,0,887,Bangsamoro Islamic Freedom Movement (BIFM) | Armed Assault: 176 attacks
+887,0,888,Bangsamoro Islamic Freedom Movement (BIFM) | Bombing/Explosion: 312 attacks
+888,0,889,Bangsamoro Islamic Freedom Movement (BIFM) | Hostage (Barricade): 1 attacks
+889,0,890,Bangsamoro Islamic Freedom Movement (BIFM) | Kidnapping: 14 attacks
+890,0,891,Bangsamoro Islamic Freedom Movement (BIFM) | Infrastructure Attack: 11 attacks
+891,0,892,Bangsamoro Islamic Freedom Movement (BIFM) | Unknown: 17 attacks
+892,0,893,Bangsamoro Islamic Freedom Movement (BIFM) | 379 killed
+893,0,894,Bangsamoro Islamic Freedom Movement (BIFM) | 888 wounded
+894,0,895,Bangsamoro Islamic Freedom Movement (BIFM) | struck in 1 country | most: Philippines
+895,0,896,Bangsamoro Islamic Freedom Movement (BIFM) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 332 attacks
+896,0,897,Bangsamoro Islamic Freedom Movement (BIFM) | 1970-1974: 0 attacks
+897,0,898,Bangsamoro Islamic Freedom Movement (BIFM) | 1975-1979: 0 attacks
+898,0,899,Bangsamoro Islamic Freedom Movement (BIFM) | 1980-1984: 0 attacks
+899,0,900,Bangsamoro Islamic Freedom Movement (BIFM) | 1985-1989: 0 attacks
+900,0,901,Bangsamoro Islamic Freedom Movement (BIFM) | 1990-1994: 0 attacks
+901,0,902,Bangsamoro Islamic Freedom Movement (BIFM) | 1995-1999: 0 attacks
+902,0,903,Bangsamoro Islamic Freedom Movement (BIFM) | 2000-2004: 0 attacks
+903,0,904,Bangsamoro Islamic Freedom Movement (BIFM) | 2005-2009: 0 attacks
+904,0,905,Bangsamoro Islamic Freedom Movement (BIFM) | 2010-2014: 178 attacks
+905,0,906,Bangsamoro Islamic Freedom Movement (BIFM) | 2015-2019: 332 attacks
+906,0,907,Bangsamoro Islamic Freedom Movement (BIFM) | 2020-2020: 28 attacks
+907,0,908,Hamas (Islamic Resistance Movement) | 471 attacks 1989-2020 | 857 killed 2819 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 13% | success 82%
+908,0,909,"Hamas (Islamic Resistance Movement) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+909,0,910,Hamas (Islamic Resistance Movement) | Assassination: 27 attacks
+910,0,911,Hamas (Islamic Resistance Movement) | Armed Assault: 103 attacks
+911,0,912,Hamas (Islamic Resistance Movement) | Bombing/Explosion: 298 attacks
+912,0,913,Hamas (Islamic Resistance Movement) | Hostage (Barricade): 1 attacks
+913,0,914,Hamas (Islamic Resistance Movement) | Kidnapping: 18 attacks
+914,0,915,Hamas (Islamic Resistance Movement) | Infrastructure Attack: 8 attacks
+915,0,916,Hamas (Islamic Resistance Movement) | Unarmed Assault: 11 attacks
+916,0,917,Hamas (Islamic Resistance Movement) | Unknown: 5 attacks
+917,0,918,Hamas (Islamic Resistance Movement) | 857 killed
+918,0,919,Hamas (Islamic Resistance Movement) | 2819 wounded
+919,0,920,Hamas (Islamic Resistance Movement) | struck in 4 countries | most: West Bank and Gaza Strip
+920,0,921,Hamas (Islamic Resistance Movement) | activity 1970-2020 in 5-yr bins | peak 2000-2004: 109 attacks
+921,0,922,Hamas (Islamic Resistance Movement) | 1970-1974: 0 attacks
+922,0,923,Hamas (Islamic Resistance Movement) | 1975-1979: 0 attacks
+923,0,924,Hamas (Islamic Resistance Movement) | 1980-1984: 0 attacks
+924,0,925,Hamas (Islamic Resistance Movement) | 1985-1989: 2 attacks
+925,0,926,Hamas (Islamic Resistance Movement) | 1990-1994: 62 attacks
+926,0,927,Hamas (Islamic Resistance Movement) | 1995-1999: 26 attacks
+927,0,928,Hamas (Islamic Resistance Movement) | 2000-2004: 109 attacks
+928,0,929,Hamas (Islamic Resistance Movement) | 2005-2009: 82 attacks
+929,0,930,Hamas (Islamic Resistance Movement) | 2010-2014: 84 attacks
+930,0,931,Hamas (Islamic Resistance Movement) | 2015-2019: 94 attacks
+931,0,932,Hamas (Islamic Resistance Movement) | 2020-2020: 12 attacks
+932,0,933,Allied Democratic Forces (ADF) | 435 attacks 1997-2020 | 2419 killed 556 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 95%
+933,0,934,"Allied Democratic Forces (ADF) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+934,0,935,Allied Democratic Forces (ADF) | Assassination: 10 attacks
+935,0,936,Allied Democratic Forces (ADF) | Armed Assault: 187 attacks
+936,0,937,Allied Democratic Forces (ADF) | Bombing/Explosion: 14 attacks
+937,0,938,Allied Democratic Forces (ADF) | Hostage (Barricade): 4 attacks
+938,0,939,Allied Democratic Forces (ADF) | Kidnapping: 120 attacks
+939,0,940,Allied Democratic Forces (ADF) | Infrastructure Attack: 16 attacks
+940,0,941,Allied Democratic Forces (ADF) | Unknown: 84 attacks
+941,0,942,Allied Democratic Forces (ADF) | 2419 killed
+942,0,943,Allied Democratic Forces (ADF) | 556 wounded
+943,0,944,Allied Democratic Forces (ADF) | struck in 2 countries | most: Democratic Republic of the Congo
+944,0,945,Allied Democratic Forces (ADF) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 252 attacks
+945,0,946,Allied Democratic Forces (ADF) | 1970-1974: 0 attacks
+946,0,947,Allied Democratic Forces (ADF) | 1975-1979: 0 attacks
+947,0,948,Allied Democratic Forces (ADF) | 1980-1984: 0 attacks
+948,0,949,Allied Democratic Forces (ADF) | 1985-1989: 0 attacks
+949,0,950,Allied Democratic Forces (ADF) | 1990-1994: 0 attacks
+950,0,951,Allied Democratic Forces (ADF) | 1995-1999: 28 attacks
+951,0,952,Allied Democratic Forces (ADF) | 2000-2004: 11 attacks
+952,0,953,Allied Democratic Forces (ADF) | 2005-2009: 1 attacks
+953,0,954,Allied Democratic Forces (ADF) | 2010-2014: 42 attacks
+954,0,955,Allied Democratic Forces (ADF) | 2015-2019: 252 attacks
+955,0,956,Allied Democratic Forces (ADF) | 2020-2020: 101 attacks
+956,0,957,People's Liberation Front (JVP) | 433 attacks 1987-1990 | 859 killed 979 wounded | dominant: Armed Assault | top target: Government (General) | suicide 0% | success 95%
+957,0,958,"People's Liberation Front (JVP) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+958,0,959,People's Liberation Front (JVP) | Assassination: 131 attacks
+959,0,960,People's Liberation Front (JVP) | Armed Assault: 140 attacks
+960,0,961,People's Liberation Front (JVP) | Bombing/Explosion: 95 attacks
+961,0,962,People's Liberation Front (JVP) | Kidnapping: 2 attacks
+962,0,963,People's Liberation Front (JVP) | Infrastructure Attack: 63 attacks
+963,0,964,People's Liberation Front (JVP) | Unknown: 2 attacks
+964,0,965,People's Liberation Front (JVP) | 859 killed
+965,0,966,People's Liberation Front (JVP) | 979 wounded
+966,0,967,People's Liberation Front (JVP) | struck in 1 country | most: Sri Lanka
+967,0,968,People's Liberation Front (JVP) | activity 1970-2020 in 5-yr bins | peak 1985-1989: 423 attacks
+968,0,969,People's Liberation Front (JVP) | 1970-1974: 0 attacks
+969,0,970,People's Liberation Front (JVP) | 1975-1979: 0 attacks
+970,0,971,People's Liberation Front (JVP) | 1980-1984: 0 attacks
+971,0,972,People's Liberation Front (JVP) | 1985-1989: 423 attacks
+972,0,973,People's Liberation Front (JVP) | 1990-1994: 10 attacks
+973,0,974,People's Liberation Front (JVP) | 1995-1999: 0 attacks
+974,0,975,People's Liberation Front (JVP) | 2000-2004: 0 attacks
+975,0,976,People's Liberation Front (JVP) | 2005-2009: 0 attacks
+976,0,977,People's Liberation Front (JVP) | 2010-2014: 0 attacks
+977,0,978,People's Liberation Front (JVP) | 2015-2019: 0 attacks
+978,0,979,People's Liberation Front (JVP) | 2020-2020: 0 attacks
+979,0,980,National Union for the Total Independence of Angola (UNITA) | 432 attacks 1978-2017 | 2726 killed 2297 wounded | dominant: Bombing/Explosion | top target: Utilities | suicide 0% | success 98%
+980,0,981,"National Union for the Total Independence of Angola (UNITA) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+981,0,982,National Union for the Total Independence of Angola (UNITA) | Assassination: 6 attacks
+982,0,983,National Union for the Total Independence of Angola (UNITA) | Armed Assault: 111 attacks
+983,0,984,National Union for the Total Independence of Angola (UNITA) | Bombing/Explosion: 241 attacks
+984,0,985,National Union for the Total Independence of Angola (UNITA) | Hostage (Barricade): 1 attacks
+985,0,986,National Union for the Total Independence of Angola (UNITA) | Kidnapping: 26 attacks
+986,0,987,National Union for the Total Independence of Angola (UNITA) | Infrastructure Attack: 16 attacks
+987,0,988,National Union for the Total Independence of Angola (UNITA) | Unarmed Assault: 1 attacks
+988,0,989,National Union for the Total Independence of Angola (UNITA) | Unknown: 30 attacks
+989,0,990,National Union for the Total Independence of Angola (UNITA) | 2726 killed
+990,0,991,National Union for the Total Independence of Angola (UNITA) | 2297 wounded
+991,0,992,National Union for the Total Independence of Angola (UNITA) | struck in 3 countries | most: Angola
+992,0,993,National Union for the Total Independence of Angola (UNITA) | activity 1970-2020 in 5-yr bins | peak 1990-1994: 229 attacks
+993,0,994,National Union for the Total Independence of Angola (UNITA) | 1970-1974: 0 attacks
+994,0,995,National Union for the Total Independence of Angola (UNITA) | 1975-1979: 2 attacks
+995,0,996,National Union for the Total Independence of Angola (UNITA) | 1980-1984: 18 attacks
+996,0,997,National Union for the Total Independence of Angola (UNITA) | 1985-1989: 33 attacks
+997,0,998,National Union for the Total Independence of Angola (UNITA) | 1990-1994: 229 attacks
+998,0,999,National Union for the Total Independence of Angola (UNITA) | 1995-1999: 62 attacks
+999,0,1000,National Union for the Total Independence of Angola (UNITA) | 2000-2004: 87 attacks
+1000,0,1001,National Union for the Total Independence of Angola (UNITA) | 2005-2009: 0 attacks
+1001,0,1002,National Union for the Total Independence of Angola (UNITA) | 2010-2014: 0 attacks
+1002,0,1003,National Union for the Total Independence of Angola (UNITA) | 2015-2019: 1 attacks
+1003,0,1004,National Union for the Total Independence of Angola (UNITA) | 2020-2020: 0 attacks
+1004,0,1005,Hezbollah | 415 attacks 1983-2020 | 1273 killed 2179 wounded | dominant: Bombing/Explosion | top target: Military | suicide 3% | success 90%
+1005,0,1006,"Hezbollah | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1006,0,1007,Hezbollah | Assassination: 24 attacks
+1007,0,1008,Hezbollah | Armed Assault: 44 attacks
+1008,0,1009,Hezbollah | Bombing/Explosion: 297 attacks
+1009,0,1010,Hezbollah | Hijacking: 4 attacks
+1010,0,1011,Hezbollah | Kidnapping: 36 attacks
+1011,0,1012,Hezbollah | Infrastructure Attack: 3 attacks
+1012,0,1013,Hezbollah | Unarmed Assault: 2 attacks
+1013,0,1014,Hezbollah | Unknown: 5 attacks
+1014,0,1015,Hezbollah | 1273 killed
+1015,0,1016,Hezbollah | 2179 wounded
+1016,0,1017,Hezbollah | struck in 19 countries | most: Lebanon
+1017,0,1018,Hezbollah | activity 1970-2020 in 5-yr bins | peak 1995-1999: 115 attacks
+1018,0,1019,Hezbollah | 1970-1974: 0 attacks
+1019,0,1020,Hezbollah | 1975-1979: 0 attacks
+1020,0,1021,Hezbollah | 1980-1984: 26 attacks
+1021,0,1022,Hezbollah | 1985-1989: 77 attacks
+1022,0,1023,Hezbollah | 1990-1994: 110 attacks
+1023,0,1024,Hezbollah | 1995-1999: 115 attacks
+1024,0,1025,Hezbollah | 2000-2004: 20 attacks
+1025,0,1026,Hezbollah | 2005-2009: 28 attacks
+1026,0,1027,Hezbollah | 2010-2014: 27 attacks
+1027,0,1028,Hezbollah | 2015-2019: 10 attacks
+1028,0,1029,Hezbollah | 2020-2020: 2 attacks
+1029,0,1030,United Liberation Front of Assam (ULFA) | 391 attacks 1988-2020 | 627 killed 2174 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 1% | success 90%
+1030,0,1031,"United Liberation Front of Assam (ULFA) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1031,0,1032,United Liberation Front of Assam (ULFA) | Assassination: 10 attacks
+1032,0,1033,United Liberation Front of Assam (ULFA) | Armed Assault: 63 attacks
+1033,0,1034,United Liberation Front of Assam (ULFA) | Bombing/Explosion: 272 attacks
+1034,0,1035,United Liberation Front of Assam (ULFA) | Kidnapping: 38 attacks
+1035,0,1036,United Liberation Front of Assam (ULFA) | Infrastructure Attack: 4 attacks
+1036,0,1037,United Liberation Front of Assam (ULFA) | Unknown: 4 attacks
+1037,0,1038,United Liberation Front of Assam (ULFA) | 627 killed
+1038,0,1039,United Liberation Front of Assam (ULFA) | 2174 wounded
+1039,0,1040,United Liberation Front of Assam (ULFA) | struck in 1 country | most: India
+1040,0,1041,United Liberation Front of Assam (ULFA) | activity 1970-2020 in 5-yr bins | peak 2005-2009: 144 attacks
+1041,0,1042,United Liberation Front of Assam (ULFA) | 1970-1974: 0 attacks
+1042,0,1043,United Liberation Front of Assam (ULFA) | 1975-1979: 0 attacks
+1043,0,1044,United Liberation Front of Assam (ULFA) | 1980-1984: 0 attacks
+1044,0,1045,United Liberation Front of Assam (ULFA) | 1985-1989: 3 attacks
+1045,0,1046,United Liberation Front of Assam (ULFA) | 1990-1994: 21 attacks
+1046,0,1047,United Liberation Front of Assam (ULFA) | 1995-1999: 30 attacks
+1047,0,1048,United Liberation Front of Assam (ULFA) | 2000-2004: 35 attacks
+1048,0,1049,United Liberation Front of Assam (ULFA) | 2005-2009: 144 attacks
+1049,0,1050,United Liberation Front of Assam (ULFA) | 2010-2014: 67 attacks
+1050,0,1051,United Liberation Front of Assam (ULFA) | 2015-2019: 79 attacks
+1051,0,1052,United Liberation Front of Assam (ULFA) | 2020-2020: 12 attacks
+1052,0,1053,Algerian Islamic Extremists | 373 attacks 1998-2008 | 551 killed 671 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 0% | success 89%
+1053,0,1054,"Algerian Islamic Extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1054,0,1055,Algerian Islamic Extremists | Assassination: 13 attacks
+1055,0,1056,Algerian Islamic Extremists | Armed Assault: 110 attacks
+1056,0,1057,Algerian Islamic Extremists | Bombing/Explosion: 219 attacks
+1057,0,1058,Algerian Islamic Extremists | Kidnapping: 8 attacks
+1058,0,1059,Algerian Islamic Extremists | Infrastructure Attack: 2 attacks
+1059,0,1060,Algerian Islamic Extremists | Unknown: 21 attacks
+1060,0,1061,Algerian Islamic Extremists | 551 killed
+1061,0,1062,Algerian Islamic Extremists | 671 wounded
+1062,0,1063,Algerian Islamic Extremists | struck in 1 country | most: Algeria
+1063,0,1064,Algerian Islamic Extremists | activity 1970-2020 in 5-yr bins | peak 2005-2009: 200 attacks
+1064,0,1065,Algerian Islamic Extremists | 1970-1974: 0 attacks
+1065,0,1066,Algerian Islamic Extremists | 1975-1979: 0 attacks
+1066,0,1067,Algerian Islamic Extremists | 1980-1984: 0 attacks
+1067,0,1068,Algerian Islamic Extremists | 1985-1989: 0 attacks
+1068,0,1069,Algerian Islamic Extremists | 1990-1994: 0 attacks
+1069,0,1070,Algerian Islamic Extremists | 1995-1999: 41 attacks
+1070,0,1071,Algerian Islamic Extremists | 2000-2004: 132 attacks
+1071,0,1072,Algerian Islamic Extremists | 2005-2009: 200 attacks
+1072,0,1073,Algerian Islamic Extremists | 2010-2014: 0 attacks
+1073,0,1074,Algerian Islamic Extremists | 2015-2019: 0 attacks
+1074,0,1075,Algerian Islamic Extremists | 2020-2020: 0 attacks
+1075,0,1076,Narco-Terrorists | 369 attacks 1984-2019 | 492 killed 811 wounded | dominant: Bombing/Explosion | top target: Police | suicide 0% | success 95%
+1076,0,1077,"Narco-Terrorists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1077,0,1078,Narco-Terrorists | Assassination: 124 attacks
+1078,0,1079,Narco-Terrorists | Armed Assault: 31 attacks
+1079,0,1080,Narco-Terrorists | Bombing/Explosion: 201 attacks
+1080,0,1081,Narco-Terrorists | Hijacking: 3 attacks
+1081,0,1082,Narco-Terrorists | Kidnapping: 4 attacks
+1082,0,1083,Narco-Terrorists | Infrastructure Attack: 1 attacks
+1083,0,1084,Narco-Terrorists | Unknown: 5 attacks
+1084,0,1085,Narco-Terrorists | 492 killed
+1085,0,1086,Narco-Terrorists | 811 wounded
+1086,0,1087,Narco-Terrorists | struck in 6 countries | most: Colombia
+1087,0,1088,Narco-Terrorists | activity 1970-2020 in 5-yr bins | peak 1990-1994: 222 attacks
+1088,0,1089,Narco-Terrorists | 1970-1974: 0 attacks
+1089,0,1090,Narco-Terrorists | 1975-1979: 0 attacks
+1090,0,1091,Narco-Terrorists | 1980-1984: 7 attacks
+1091,0,1092,Narco-Terrorists | 1985-1989: 137 attacks
+1092,0,1093,Narco-Terrorists | 1990-1994: 222 attacks
+1093,0,1094,Narco-Terrorists | 1995-1999: 2 attacks
+1094,0,1095,Narco-Terrorists | 2000-2004: 0 attacks
+1095,0,1096,Narco-Terrorists | 2005-2009: 0 attacks
+1096,0,1097,Narco-Terrorists | 2010-2014: 0 attacks
+1097,0,1098,Narco-Terrorists | 2015-2019: 1 attacks
+1098,0,1099,Narco-Terrorists | 2020-2020: 0 attacks
+1099,0,1100,Moro Islamic Liberation Front (MILF) | 369 attacks 1986-2019 | 749 killed 1545 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 1% | success 92%
+1100,0,1101,"Moro Islamic Liberation Front (MILF) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1101,0,1102,Moro Islamic Liberation Front (MILF) | Assassination: 3 attacks
+1102,0,1103,Moro Islamic Liberation Front (MILF) | Armed Assault: 112 attacks
+1103,0,1104,Moro Islamic Liberation Front (MILF) | Bombing/Explosion: 180 attacks
+1104,0,1105,Moro Islamic Liberation Front (MILF) | Hijacking: 1 attacks
+1105,0,1106,Moro Islamic Liberation Front (MILF) | Kidnapping: 37 attacks
+1106,0,1107,Moro Islamic Liberation Front (MILF) | Infrastructure Attack: 13 attacks
+1107,0,1108,Moro Islamic Liberation Front (MILF) | Unknown: 23 attacks
+1108,0,1109,Moro Islamic Liberation Front (MILF) | 749 killed
+1109,0,1110,Moro Islamic Liberation Front (MILF) | 1545 wounded
+1110,0,1111,Moro Islamic Liberation Front (MILF) | struck in 1 country | most: Philippines
+1111,0,1112,Moro Islamic Liberation Front (MILF) | activity 1970-2020 in 5-yr bins | peak 2000-2004: 163 attacks
+1112,0,1113,Moro Islamic Liberation Front (MILF) | 1970-1974: 0 attacks
+1113,0,1114,Moro Islamic Liberation Front (MILF) | 1975-1979: 0 attacks
+1114,0,1115,Moro Islamic Liberation Front (MILF) | 1980-1984: 0 attacks
+1115,0,1116,Moro Islamic Liberation Front (MILF) | 1985-1989: 21 attacks
+1116,0,1117,Moro Islamic Liberation Front (MILF) | 1990-1994: 3 attacks
+1117,0,1118,Moro Islamic Liberation Front (MILF) | 1995-1999: 27 attacks
+1118,0,1119,Moro Islamic Liberation Front (MILF) | 2000-2004: 163 attacks
+1119,0,1120,Moro Islamic Liberation Front (MILF) | 2005-2009: 114 attacks
+1120,0,1121,Moro Islamic Liberation Front (MILF) | 2010-2014: 26 attacks
+1121,0,1122,Moro Islamic Liberation Front (MILF) | 2015-2019: 15 attacks
+1122,0,1123,Moro Islamic Liberation Front (MILF) | 2020-2020: 0 attacks
+1123,0,1124,Tripoli Province of the Islamic State | 361 attacks 2014-2020 | 552 killed 583 wounded | dominant: Kidnapping | top target: Private Citizens & Property | suicide 15% | success 87%
+1124,0,1125,"Tripoli Province of the Islamic State | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1125,0,1126,Tripoli Province of the Islamic State | Assassination: 9 attacks
+1126,0,1127,Tripoli Province of the Islamic State | Armed Assault: 24 attacks
+1127,0,1128,Tripoli Province of the Islamic State | Bombing/Explosion: 118 attacks
+1128,0,1129,Tripoli Province of the Islamic State | Hijacking: 9 attacks
+1129,0,1130,Tripoli Province of the Islamic State | Hostage (Barricade): 4 attacks
+1130,0,1131,Tripoli Province of the Islamic State | Kidnapping: 126 attacks
+1131,0,1132,Tripoli Province of the Islamic State | Infrastructure Attack: 23 attacks
+1132,0,1133,Tripoli Province of the Islamic State | Unarmed Assault: 1 attacks
+1133,0,1134,Tripoli Province of the Islamic State | Unknown: 47 attacks
+1134,0,1135,Tripoli Province of the Islamic State | 552 killed
+1135,0,1136,Tripoli Province of the Islamic State | 583 wounded
+1136,0,1137,Tripoli Province of the Islamic State | struck in 2 countries | most: Libya
+1137,0,1138,Tripoli Province of the Islamic State | activity 1970-2020 in 5-yr bins | peak 2015-2019: 356 attacks
+1138,0,1139,Tripoli Province of the Islamic State | 1970-1974: 0 attacks
+1139,0,1140,Tripoli Province of the Islamic State | 1975-1979: 0 attacks
+1140,0,1141,Tripoli Province of the Islamic State | 1980-1984: 0 attacks
+1141,0,1142,Tripoli Province of the Islamic State | 1985-1989: 0 attacks
+1142,0,1143,Tripoli Province of the Islamic State | 1990-1994: 0 attacks
+1143,0,1144,Tripoli Province of the Islamic State | 1995-1999: 0 attacks
+1144,0,1145,Tripoli Province of the Islamic State | 2000-2004: 0 attacks
+1145,0,1146,Tripoli Province of the Islamic State | 2005-2009: 0 attacks
+1146,0,1147,Tripoli Province of the Islamic State | 2010-2014: 4 attacks
+1147,0,1148,Tripoli Province of the Islamic State | 2015-2019: 356 attacks
+1148,0,1149,Tripoli Province of the Islamic State | 2020-2020: 1 attacks
+1149,0,1150,Lord's Resistance Army (LRA) | 340 attacks 1994-2020 | 3123 killed 593 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 97%
+1150,0,1151,"Lord's Resistance Army (LRA) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1151,0,1152,Lord's Resistance Army (LRA) | Assassination: 5 attacks
+1152,0,1153,Lord's Resistance Army (LRA) | Armed Assault: 125 attacks
+1153,0,1154,Lord's Resistance Army (LRA) | Bombing/Explosion: 10 attacks
+1154,0,1155,Lord's Resistance Army (LRA) | Hostage (Barricade): 1 attacks
+1155,0,1156,Lord's Resistance Army (LRA) | Kidnapping: 116 attacks
+1156,0,1157,Lord's Resistance Army (LRA) | Infrastructure Attack: 24 attacks
+1157,0,1158,Lord's Resistance Army (LRA) | Unarmed Assault: 2 attacks
+1158,0,1159,Lord's Resistance Army (LRA) | Unknown: 57 attacks
+1159,0,1160,Lord's Resistance Army (LRA) | 3123 killed
+1160,0,1161,Lord's Resistance Army (LRA) | 593 wounded
+1161,0,1162,Lord's Resistance Army (LRA) | struck in 5 countries | most: Uganda
+1162,0,1163,Lord's Resistance Army (LRA) | activity 1970-2020 in 5-yr bins | peak 2000-2004: 85 attacks
+1163,0,1164,Lord's Resistance Army (LRA) | 1970-1974: 0 attacks
+1164,0,1165,Lord's Resistance Army (LRA) | 1975-1979: 0 attacks
+1165,0,1166,Lord's Resistance Army (LRA) | 1980-1984: 0 attacks
+1166,0,1167,Lord's Resistance Army (LRA) | 1985-1989: 0 attacks
+1167,0,1168,Lord's Resistance Army (LRA) | 1990-1994: 2 attacks
+1168,0,1169,Lord's Resistance Army (LRA) | 1995-1999: 37 attacks
+1169,0,1170,Lord's Resistance Army (LRA) | 2000-2004: 85 attacks
+1170,0,1171,Lord's Resistance Army (LRA) | 2005-2009: 69 attacks
+1171,0,1172,Lord's Resistance Army (LRA) | 2010-2014: 62 attacks
+1172,0,1173,Lord's Resistance Army (LRA) | 2015-2019: 84 attacks
+1173,0,1174,Lord's Resistance Army (LRA) | 2020-2020: 1 attacks
+1174,0,1175,Protestant extremists | 335 attacks 1970-2013 | 345 killed 155 wounded | dominant: Assassination | top target: Private Citizens & Property | suicide 0% | success 93%
+1175,0,1176,"Protestant extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1176,0,1177,Protestant extremists | Assassination: 230 attacks
+1177,0,1178,Protestant extremists | Armed Assault: 41 attacks
+1178,0,1179,Protestant extremists | Bombing/Explosion: 46 attacks
+1179,0,1180,Protestant extremists | Hostage (Barricade): 1 attacks
+1180,0,1181,Protestant extremists | Kidnapping: 5 attacks
+1181,0,1182,Protestant extremists | Infrastructure Attack: 6 attacks
+1182,0,1183,Protestant extremists | Unarmed Assault: 4 attacks
+1183,0,1184,Protestant extremists | Unknown: 2 attacks
+1184,0,1185,Protestant extremists | 345 killed
+1185,0,1186,Protestant extremists | 155 wounded
+1186,0,1187,Protestant extremists | struck in 3 countries | most: United Kingdom
+1187,0,1188,Protestant extremists | activity 1970-2020 in 5-yr bins | peak 1970-1974: 111 attacks
+1188,0,1189,Protestant extremists | 1970-1974: 111 attacks
+1189,0,1190,Protestant extremists | 1975-1979: 88 attacks
+1190,0,1191,Protestant extremists | 1980-1984: 29 attacks
+1191,0,1192,Protestant extremists | 1985-1989: 22 attacks
+1192,0,1193,Protestant extremists | 1990-1994: 61 attacks
+1193,0,1194,Protestant extremists | 1995-1999: 7 attacks
+1194,0,1195,Protestant extremists | 2000-2004: 14 attacks
+1195,0,1196,Protestant extremists | 2005-2009: 2 attacks
+1196,0,1197,Protestant extremists | 2010-2014: 1 attacks
+1197,0,1198,Protestant extremists | 2015-2019: 0 attacks
+1198,0,1199,Protestant extremists | 2020-2020: 0 attacks
+1199,0,1200,Chechen Rebels | 327 attacks 1992-2016 | 1616 killed 2727 wounded | dominant: Bombing/Explosion | top target: Military | suicide 7% | success 87%
+1200,0,1201,"Chechen Rebels | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1201,0,1202,Chechen Rebels | Assassination: 19 attacks
+1202,0,1203,Chechen Rebels | Armed Assault: 80 attacks
+1203,0,1204,Chechen Rebels | Bombing/Explosion: 194 attacks
+1204,0,1205,Chechen Rebels | Hijacking: 3 attacks
+1205,0,1206,Chechen Rebels | Hostage (Barricade): 4 attacks
+1206,0,1207,Chechen Rebels | Kidnapping: 9 attacks
+1207,0,1208,Chechen Rebels | Infrastructure Attack: 13 attacks
+1208,0,1209,Chechen Rebels | Unarmed Assault: 1 attacks
+1209,0,1210,Chechen Rebels | Unknown: 4 attacks
+1210,0,1211,Chechen Rebels | 1616 killed
+1211,0,1212,Chechen Rebels | 2727 wounded
+1212,0,1213,Chechen Rebels | struck in 4 countries | most: Russia
+1213,0,1214,Chechen Rebels | activity 1970-2020 in 5-yr bins | peak 2000-2004: 272 attacks
+1214,0,1215,Chechen Rebels | 1970-1974: 0 attacks
+1215,0,1216,Chechen Rebels | 1975-1979: 0 attacks
+1216,0,1217,Chechen Rebels | 1980-1984: 0 attacks
+1217,0,1218,Chechen Rebels | 1985-1989: 0 attacks
+1218,0,1219,Chechen Rebels | 1990-1994: 2 attacks
+1219,0,1220,Chechen Rebels | 1995-1999: 27 attacks
+1220,0,1221,Chechen Rebels | 2000-2004: 272 attacks
+1221,0,1222,Chechen Rebels | 2005-2009: 23 attacks
+1222,0,1223,Chechen Rebels | 2010-2014: 1 attacks
+1223,0,1224,Chechen Rebels | 2015-2019: 2 attacks
+1224,0,1225,Chechen Rebels | 2020-2020: 0 attacks
+1225,0,1226,Death Squad | 326 attacks 1978-2001 | 813 killed 103 wounded | dominant: Assassination | top target: Private Citizens & Property | suicide 0% | success 97%
+1226,0,1227,"Death Squad | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1227,0,1228,Death Squad | Assassination: 257 attacks
+1228,0,1229,Death Squad | Armed Assault: 38 attacks
+1229,0,1230,Death Squad | Bombing/Explosion: 11 attacks
+1230,0,1231,Death Squad | Kidnapping: 18 attacks
+1231,0,1232,Death Squad | Unknown: 2 attacks
+1232,0,1233,Death Squad | 813 killed
+1233,0,1234,Death Squad | 103 wounded
+1234,0,1235,Death Squad | struck in 9 countries | most: Colombia
+1235,0,1236,Death Squad | activity 1970-2020 in 5-yr bins | peak 1985-1989: 168 attacks
+1236,0,1237,Death Squad | 1970-1974: 0 attacks
+1237,0,1238,Death Squad | 1975-1979: 2 attacks
+1238,0,1239,Death Squad | 1980-1984: 73 attacks
+1239,0,1240,Death Squad | 1985-1989: 168 attacks
+1240,0,1241,Death Squad | 1990-1994: 57 attacks
+1241,0,1242,Death Squad | 1995-1999: 24 attacks
+1242,0,1243,Death Squad | 2000-2004: 2 attacks
+1243,0,1244,Death Squad | 2005-2009: 0 attacks
+1244,0,1245,Death Squad | 2010-2014: 0 attacks
+1245,0,1246,Death Squad | 2015-2019: 0 attacks
+1246,0,1247,Death Squad | 2020-2020: 0 attacks
+1247,0,1248,Baloch Republican Army (BRA) | 321 attacks 2007-2019 | 202 killed 613 wounded | dominant: Bombing/Explosion | top target: Utilities | suicide 0% | success 93%
+1248,0,1249,"Baloch Republican Army (BRA) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1249,0,1250,Baloch Republican Army (BRA) | Assassination: 5 attacks
+1250,0,1251,Baloch Republican Army (BRA) | Armed Assault: 41 attacks
+1251,0,1252,Baloch Republican Army (BRA) | Bombing/Explosion: 264 attacks
+1252,0,1253,Baloch Republican Army (BRA) | Hijacking: 1 attacks
+1253,0,1254,Baloch Republican Army (BRA) | Hostage (Barricade): 1 attacks
+1254,0,1255,Baloch Republican Army (BRA) | Kidnapping: 5 attacks
+1255,0,1256,Baloch Republican Army (BRA) | Infrastructure Attack: 2 attacks
+1256,0,1257,Baloch Republican Army (BRA) | Unknown: 2 attacks
+1257,0,1258,Baloch Republican Army (BRA) | 202 killed
+1258,0,1259,Baloch Republican Army (BRA) | 613 wounded
+1259,0,1260,Baloch Republican Army (BRA) | struck in 1 country | most: Pakistan
+1260,0,1261,Baloch Republican Army (BRA) | activity 1970-2020 in 5-yr bins | peak 2010-2014: 170 attacks
+1261,0,1262,Baloch Republican Army (BRA) | 1970-1974: 0 attacks
+1262,0,1263,Baloch Republican Army (BRA) | 1975-1979: 0 attacks
+1263,0,1264,Baloch Republican Army (BRA) | 1980-1984: 0 attacks
+1264,0,1265,Baloch Republican Army (BRA) | 1985-1989: 0 attacks
+1265,0,1266,Baloch Republican Army (BRA) | 1990-1994: 0 attacks
+1266,0,1267,Baloch Republican Army (BRA) | 1995-1999: 0 attacks
+1267,0,1268,Baloch Republican Army (BRA) | 2000-2004: 0 attacks
+1268,0,1269,Baloch Republican Army (BRA) | 2005-2009: 26 attacks
+1269,0,1270,Baloch Republican Army (BRA) | 2010-2014: 170 attacks
+1270,0,1271,Baloch Republican Army (BRA) | 2015-2019: 125 attacks
+1271,0,1272,Baloch Republican Army (BRA) | 2020-2020: 0 attacks
+1272,0,1273,Mozambique National Resistance Movement (MNR) | 313 attacks 1979-2020 | 2564 killed 1235 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 97%
+1273,0,1274,"Mozambique National Resistance Movement (MNR) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1274,0,1275,Mozambique National Resistance Movement (MNR) | Assassination: 12 attacks
+1275,0,1276,Mozambique National Resistance Movement (MNR) | Armed Assault: 191 attacks
+1276,0,1277,Mozambique National Resistance Movement (MNR) | Bombing/Explosion: 40 attacks
+1277,0,1278,Mozambique National Resistance Movement (MNR) | Hijacking: 1 attacks
+1278,0,1279,Mozambique National Resistance Movement (MNR) | Hostage (Barricade): 5 attacks
+1279,0,1280,Mozambique National Resistance Movement (MNR) | Kidnapping: 23 attacks
+1280,0,1281,Mozambique National Resistance Movement (MNR) | Infrastructure Attack: 27 attacks
+1281,0,1282,Mozambique National Resistance Movement (MNR) | Unarmed Assault: 1 attacks
+1282,0,1283,Mozambique National Resistance Movement (MNR) | Unknown: 13 attacks
+1283,0,1284,Mozambique National Resistance Movement (MNR) | 2564 killed
+1284,0,1285,Mozambique National Resistance Movement (MNR) | 1235 wounded
+1285,0,1286,Mozambique National Resistance Movement (MNR) | struck in 5 countries | most: Mozambique
+1286,0,1287,Mozambique National Resistance Movement (MNR) | activity 1970-2020 in 5-yr bins | peak 1985-1989: 97 attacks
+1287,0,1288,Mozambique National Resistance Movement (MNR) | 1970-1974: 0 attacks
+1288,0,1289,Mozambique National Resistance Movement (MNR) | 1975-1979: 5 attacks
+1289,0,1290,Mozambique National Resistance Movement (MNR) | 1980-1984: 13 attacks
+1290,0,1291,Mozambique National Resistance Movement (MNR) | 1985-1989: 97 attacks
+1291,0,1292,Mozambique National Resistance Movement (MNR) | 1990-1994: 83 attacks
+1292,0,1293,Mozambique National Resistance Movement (MNR) | 1995-1999: 1 attacks
+1293,0,1294,Mozambique National Resistance Movement (MNR) | 2000-2004: 0 attacks
+1294,0,1295,Mozambique National Resistance Movement (MNR) | 2005-2009: 0 attacks
+1295,0,1296,Mozambique National Resistance Movement (MNR) | 2010-2014: 41 attacks
+1296,0,1297,Mozambique National Resistance Movement (MNR) | 2015-2019: 72 attacks
+1297,0,1298,Mozambique National Resistance Movement (MNR) | 2020-2020: 1 attacks
+1298,0,1299,Movement of the Revolutionary Left (MIR) (Chile) | 306 attacks 1976-1994 | 45 killed 86 wounded | dominant: Bombing/Explosion | top target: Business | suicide 0% | success 94%
+1299,0,1300,"Movement of the Revolutionary Left (MIR) (Chile) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1300,0,1301,Movement of the Revolutionary Left (MIR) (Chile) | Assassination: 13 attacks
+1301,0,1302,Movement of the Revolutionary Left (MIR) (Chile) | Armed Assault: 41 attacks
+1302,0,1303,Movement of the Revolutionary Left (MIR) (Chile) | Bombing/Explosion: 222 attacks
+1303,0,1304,Movement of the Revolutionary Left (MIR) (Chile) | Hostage (Barricade): 1 attacks
+1304,0,1305,Movement of the Revolutionary Left (MIR) (Chile) | Kidnapping: 2 attacks
+1305,0,1306,Movement of the Revolutionary Left (MIR) (Chile) | Infrastructure Attack: 21 attacks
+1306,0,1307,Movement of the Revolutionary Left (MIR) (Chile) | Unknown: 6 attacks
+1307,0,1308,Movement of the Revolutionary Left (MIR) (Chile) | 45 killed
+1308,0,1309,Movement of the Revolutionary Left (MIR) (Chile) | 86 wounded
+1309,0,1310,Movement of the Revolutionary Left (MIR) (Chile) | struck in 2 countries | most: Chile
+1310,0,1311,Movement of the Revolutionary Left (MIR) (Chile) | activity 1970-2020 in 5-yr bins | peak 1980-1984: 232 attacks
+1311,0,1312,Movement of the Revolutionary Left (MIR) (Chile) | 1970-1974: 0 attacks
+1312,0,1313,Movement of the Revolutionary Left (MIR) (Chile) | 1975-1979: 31 attacks
+1313,0,1314,Movement of the Revolutionary Left (MIR) (Chile) | 1980-1984: 232 attacks
+1314,0,1315,Movement of the Revolutionary Left (MIR) (Chile) | 1985-1989: 35 attacks
+1315,0,1316,Movement of the Revolutionary Left (MIR) (Chile) | 1990-1994: 8 attacks
+1316,0,1317,Movement of the Revolutionary Left (MIR) (Chile) | 1995-1999: 0 attacks
+1317,0,1318,Movement of the Revolutionary Left (MIR) (Chile) | 2000-2004: 0 attacks
+1318,0,1319,Movement of the Revolutionary Left (MIR) (Chile) | 2005-2009: 0 attacks
+1319,0,1320,Movement of the Revolutionary Left (MIR) (Chile) | 2010-2014: 0 attacks
+1320,0,1321,Movement of the Revolutionary Left (MIR) (Chile) | 2015-2019: 0 attacks
+1321,0,1322,Movement of the Revolutionary Left (MIR) (Chile) | 2020-2020: 0 attacks
+1322,0,1323,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 300 attacks 2015-2020 | 11 killed 83 wounded | dominant: Bombing/Explosion | top target: Telecommunication | suicide 0% | success 69%
+1323,0,1324,"Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1324,0,1325,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | Assassination: 16 attacks
+1325,0,1326,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | Armed Assault: 10 attacks
+1326,0,1327,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | Bombing/Explosion: 139 attacks
+1327,0,1328,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | Hostage (Barricade): 1 attacks
+1328,0,1329,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | Kidnapping: 12 attacks
+1329,0,1330,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | Infrastructure Attack: 121 attacks
+1330,0,1331,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | Unarmed Assault: 1 attacks
+1331,0,1332,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 11 killed
+1332,0,1333,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 83 wounded
+1333,0,1334,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | struck in 1 country | most: Nepal
+1334,0,1335,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 279 attacks
+1335,0,1336,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 1970-1974: 0 attacks
+1336,0,1337,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 1975-1979: 0 attacks
+1337,0,1338,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 1980-1984: 0 attacks
+1338,0,1339,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 1985-1989: 0 attacks
+1339,0,1340,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 1990-1994: 0 attacks
+1340,0,1341,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 1995-1999: 0 attacks
+1341,0,1342,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 2000-2004: 0 attacks
+1342,0,1343,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 2005-2009: 0 attacks
+1343,0,1344,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 2010-2014: 0 attacks
+1344,0,1345,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 2015-2019: 279 attacks
+1345,0,1346,Communist Party of Nepal - Maoist (CPN-Maoist-Chand) | 2020-2020: 21 attacks
+1346,0,1347,Muslim Militants | 294 attacks 1983-2009 | 695 killed 1016 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 96%
+1347,0,1348,"Muslim Militants | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1348,0,1349,Muslim Militants | Assassination: 33 attacks
+1349,0,1350,Muslim Militants | Armed Assault: 103 attacks
+1350,0,1351,Muslim Militants | Bombing/Explosion: 57 attacks
+1351,0,1352,Muslim Militants | Hijacking: 2 attacks
+1352,0,1353,Muslim Militants | Kidnapping: 9 attacks
+1353,0,1354,Muslim Militants | Infrastructure Attack: 71 attacks
+1354,0,1355,Muslim Militants | Unarmed Assault: 3 attacks
+1355,0,1356,Muslim Militants | Unknown: 16 attacks
+1356,0,1357,Muslim Militants | 695 killed
+1357,0,1358,Muslim Militants | 1016 wounded
+1358,0,1359,Muslim Militants | struck in 18 countries | most: India
+1359,0,1360,Muslim Militants | activity 1970-2020 in 5-yr bins | peak 1990-1994: 204 attacks
+1360,0,1361,Muslim Militants | 1970-1974: 0 attacks
+1361,0,1362,Muslim Militants | 1975-1979: 0 attacks
+1362,0,1363,Muslim Militants | 1980-1984: 4 attacks
+1363,0,1364,Muslim Militants | 1985-1989: 13 attacks
+1364,0,1365,Muslim Militants | 1990-1994: 204 attacks
+1365,0,1366,Muslim Militants | 1995-1999: 52 attacks
+1366,0,1367,Muslim Militants | 2000-2004: 19 attacks
+1367,0,1368,Muslim Militants | 2005-2009: 2 attacks
+1368,0,1369,Muslim Militants | 2010-2014: 0 attacks
+1369,0,1370,Muslim Militants | 2015-2019: 0 attacks
+1370,0,1371,Muslim Militants | 2020-2020: 0 attacks
+1371,0,1372,Popular Liberation Army (EPL) | 289 attacks 1973-2020 | 524 killed 153 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 96%
+1372,0,1373,"Popular Liberation Army (EPL) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1373,0,1374,Popular Liberation Army (EPL) | Assassination: 39 attacks
+1374,0,1375,Popular Liberation Army (EPL) | Armed Assault: 107 attacks
+1375,0,1376,Popular Liberation Army (EPL) | Bombing/Explosion: 36 attacks
+1376,0,1377,Popular Liberation Army (EPL) | Hijacking: 1 attacks
+1377,0,1378,Popular Liberation Army (EPL) | Hostage (Barricade): 17 attacks
+1378,0,1379,Popular Liberation Army (EPL) | Kidnapping: 57 attacks
+1379,0,1380,Popular Liberation Army (EPL) | Infrastructure Attack: 9 attacks
+1380,0,1381,Popular Liberation Army (EPL) | Unknown: 23 attacks
+1381,0,1382,Popular Liberation Army (EPL) | 524 killed
+1382,0,1383,Popular Liberation Army (EPL) | 153 wounded
+1383,0,1384,Popular Liberation Army (EPL) | struck in 2 countries | most: Colombia
+1384,0,1385,Popular Liberation Army (EPL) | activity 1970-2020 in 5-yr bins | peak 1985-1989: 107 attacks
+1385,0,1386,Popular Liberation Army (EPL) | 1970-1974: 1 attacks
+1386,0,1387,Popular Liberation Army (EPL) | 1975-1979: 49 attacks
+1387,0,1388,Popular Liberation Army (EPL) | 1980-1984: 67 attacks
+1388,0,1389,Popular Liberation Army (EPL) | 1985-1989: 107 attacks
+1389,0,1390,Popular Liberation Army (EPL) | 1990-1994: 20 attacks
+1390,0,1391,Popular Liberation Army (EPL) | 1995-1999: 7 attacks
+1391,0,1392,Popular Liberation Army (EPL) | 2000-2004: 6 attacks
+1392,0,1393,Popular Liberation Army (EPL) | 2005-2009: 1 attacks
+1393,0,1394,Popular Liberation Army (EPL) | 2010-2014: 2 attacks
+1394,0,1395,Popular Liberation Army (EPL) | 2015-2019: 23 attacks
+1395,0,1396,Popular Liberation Army (EPL) | 2020-2020: 6 attacks
+1396,0,1397,Gunmen | 280 attacks 1980-2011 | 513 killed 353 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 91%
+1397,0,1398,"Gunmen | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1398,0,1399,Gunmen | Assassination: 74 attacks
+1399,0,1400,Gunmen | Armed Assault: 166 attacks
+1400,0,1401,Gunmen | Bombing/Explosion: 6 attacks
+1401,0,1402,Gunmen | Kidnapping: 30 attacks
+1402,0,1403,Gunmen | Infrastructure Attack: 3 attacks
+1403,0,1404,Gunmen | Unknown: 1 attacks
+1404,0,1405,Gunmen | 513 killed
+1405,0,1406,Gunmen | 353 wounded
+1406,0,1407,Gunmen | struck in 50 countries | most: Iraq
+1407,0,1408,Gunmen | activity 1970-2020 in 5-yr bins | peak 2010-2014: 123 attacks
+1408,0,1409,Gunmen | 1970-1974: 0 attacks
+1409,0,1410,Gunmen | 1975-1979: 0 attacks
+1410,0,1411,Gunmen | 1980-1984: 7 attacks
+1411,0,1412,Gunmen | 1985-1989: 4 attacks
+1412,0,1413,Gunmen | 1990-1994: 3 attacks
+1413,0,1414,Gunmen | 1995-1999: 29 attacks
+1414,0,1415,Gunmen | 2000-2004: 100 attacks
+1415,0,1416,Gunmen | 2005-2009: 14 attacks
+1416,0,1417,Gunmen | 2010-2014: 123 attacks
+1417,0,1418,Gunmen | 2015-2019: 0 attacks
+1418,0,1419,Gunmen | 2020-2020: 0 attacks
+1419,0,1420,Hizbul Mujahideen (HM) | 279 attacks 1990-2020 | 477 killed 809 wounded | dominant: Armed Assault | top target: Police | suicide 1% | success 92%
+1420,0,1421,"Hizbul Mujahideen (HM) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1421,0,1422,Hizbul Mujahideen (HM) | Assassination: 22 attacks
+1422,0,1423,Hizbul Mujahideen (HM) | Armed Assault: 120 attacks
+1423,0,1424,Hizbul Mujahideen (HM) | Bombing/Explosion: 72 attacks
+1424,0,1425,Hizbul Mujahideen (HM) | Hostage (Barricade): 3 attacks
+1425,0,1426,Hizbul Mujahideen (HM) | Kidnapping: 42 attacks
+1426,0,1427,Hizbul Mujahideen (HM) | Infrastructure Attack: 13 attacks
+1427,0,1428,Hizbul Mujahideen (HM) | Unarmed Assault: 3 attacks
+1428,0,1429,Hizbul Mujahideen (HM) | Unknown: 4 attacks
+1429,0,1430,Hizbul Mujahideen (HM) | 477 killed
+1430,0,1431,Hizbul Mujahideen (HM) | 809 wounded
+1431,0,1432,Hizbul Mujahideen (HM) | struck in 1 country | most: India
+1432,0,1433,Hizbul Mujahideen (HM) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 138 attacks
+1433,0,1434,Hizbul Mujahideen (HM) | 1970-1974: 0 attacks
+1434,0,1435,Hizbul Mujahideen (HM) | 1975-1979: 0 attacks
+1435,0,1436,Hizbul Mujahideen (HM) | 1980-1984: 0 attacks
+1436,0,1437,Hizbul Mujahideen (HM) | 1985-1989: 0 attacks
+1437,0,1438,Hizbul Mujahideen (HM) | 1990-1994: 11 attacks
+1438,0,1439,Hizbul Mujahideen (HM) | 1995-1999: 10 attacks
+1439,0,1440,Hizbul Mujahideen (HM) | 2000-2004: 38 attacks
+1440,0,1441,Hizbul Mujahideen (HM) | 2005-2009: 23 attacks
+1441,0,1442,Hizbul Mujahideen (HM) | 2010-2014: 49 attacks
+1442,0,1443,Hizbul Mujahideen (HM) | 2015-2019: 138 attacks
+1443,0,1444,Hizbul Mujahideen (HM) | 2020-2020: 10 attacks
+1444,0,1445,Al-Nusrah Front | 276 attacks 2012-2017 | 2977 killed 2281 wounded | dominant: Bombing/Explosion | top target: Military | suicide 29% | success 97%
+1445,0,1446,"Al-Nusrah Front | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1446,0,1447,Al-Nusrah Front | Assassination: 6 attacks
+1447,0,1448,Al-Nusrah Front | Armed Assault: 19 attacks
+1448,0,1449,Al-Nusrah Front | Bombing/Explosion: 167 attacks
+1449,0,1450,Al-Nusrah Front | Hostage (Barricade): 2 attacks
+1450,0,1451,Al-Nusrah Front | Kidnapping: 54 attacks
+1451,0,1452,Al-Nusrah Front | Infrastructure Attack: 1 attacks
+1452,0,1453,Al-Nusrah Front | Unarmed Assault: 2 attacks
+1453,0,1454,Al-Nusrah Front | Unknown: 25 attacks
+1454,0,1455,Al-Nusrah Front | 2977 killed
+1455,0,1456,Al-Nusrah Front | 2281 wounded
+1456,0,1457,Al-Nusrah Front | struck in 3 countries | most: Syria
+1457,0,1458,Al-Nusrah Front | activity 1970-2020 in 5-yr bins | peak 2010-2014: 138 attacks
+1458,0,1459,Al-Nusrah Front | 1970-1974: 0 attacks
+1459,0,1460,Al-Nusrah Front | 1975-1979: 0 attacks
+1460,0,1461,Al-Nusrah Front | 1980-1984: 0 attacks
+1461,0,1462,Al-Nusrah Front | 1985-1989: 0 attacks
+1462,0,1463,Al-Nusrah Front | 1990-1994: 0 attacks
+1463,0,1464,Al-Nusrah Front | 1995-1999: 0 attacks
+1464,0,1465,Al-Nusrah Front | 2000-2004: 0 attacks
+1465,0,1466,Al-Nusrah Front | 2005-2009: 0 attacks
+1466,0,1467,Al-Nusrah Front | 2010-2014: 138 attacks
+1467,0,1468,Al-Nusrah Front | 2015-2019: 138 attacks
+1468,0,1469,Al-Nusrah Front | 2020-2020: 0 attacks
+1469,0,1470,Ulster Volunteer Force (UVF) | 270 attacks 1970-2017 | 367 killed 28 wounded | dominant: Assassination | top target: Private Citizens & Property | suicide 0% | success 96%
+1470,0,1471,"Ulster Volunteer Force (UVF) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1471,0,1472,Ulster Volunteer Force (UVF) | Assassination: 157 attacks
+1472,0,1473,Ulster Volunteer Force (UVF) | Armed Assault: 43 attacks
+1473,0,1474,Ulster Volunteer Force (UVF) | Bombing/Explosion: 59 attacks
+1474,0,1475,Ulster Volunteer Force (UVF) | Hijacking: 1 attacks
+1475,0,1476,Ulster Volunteer Force (UVF) | Kidnapping: 3 attacks
+1476,0,1477,Ulster Volunteer Force (UVF) | Infrastructure Attack: 2 attacks
+1477,0,1478,Ulster Volunteer Force (UVF) | Unarmed Assault: 3 attacks
+1478,0,1479,Ulster Volunteer Force (UVF) | Unknown: 2 attacks
+1479,0,1480,Ulster Volunteer Force (UVF) | 367 killed
+1480,0,1481,Ulster Volunteer Force (UVF) | 28 wounded
+1481,0,1482,Ulster Volunteer Force (UVF) | struck in 2 countries | most: United Kingdom
+1482,0,1483,Ulster Volunteer Force (UVF) | activity 1970-2020 in 5-yr bins | peak 1975-1979: 87 attacks
+1483,0,1484,Ulster Volunteer Force (UVF) | 1970-1974: 83 attacks
+1484,0,1485,Ulster Volunteer Force (UVF) | 1975-1979: 87 attacks
+1485,0,1486,Ulster Volunteer Force (UVF) | 1980-1984: 18 attacks
+1486,0,1487,Ulster Volunteer Force (UVF) | 1985-1989: 19 attacks
+1487,0,1488,Ulster Volunteer Force (UVF) | 1990-1994: 40 attacks
+1488,0,1489,Ulster Volunteer Force (UVF) | 1995-1999: 7 attacks
+1489,0,1490,Ulster Volunteer Force (UVF) | 2000-2004: 6 attacks
+1490,0,1491,Ulster Volunteer Force (UVF) | 2005-2009: 2 attacks
+1491,0,1492,Ulster Volunteer Force (UVF) | 2010-2014: 3 attacks
+1492,0,1493,Ulster Volunteer Force (UVF) | 2015-2019: 5 attacks
+1493,0,1494,Ulster Volunteer Force (UVF) | 2020-2020: 0 attacks
+1494,0,1495,Neo-Nazi extremists | 267 attacks 1970-2020 | 50 killed 507 wounded | dominant: Infrastructure Attack | top target: Private Citizens & Property | suicide 0% | success 93%
+1495,0,1496,"Neo-Nazi extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1496,0,1497,Neo-Nazi extremists | Assassination: 18 attacks
+1497,0,1498,Neo-Nazi extremists | Armed Assault: 64 attacks
+1498,0,1499,Neo-Nazi extremists | Bombing/Explosion: 23 attacks
+1499,0,1500,Neo-Nazi extremists | Hostage (Barricade): 1 attacks
+1500,0,1501,Neo-Nazi extremists | Infrastructure Attack: 95 attacks
+1501,0,1502,Neo-Nazi extremists | Unarmed Assault: 18 attacks
+1502,0,1503,Neo-Nazi extremists | Unknown: 48 attacks
+1503,0,1504,Neo-Nazi extremists | 50 killed
+1504,0,1505,Neo-Nazi extremists | 507 wounded
+1505,0,1506,Neo-Nazi extremists | struck in 26 countries | most: Germany
+1506,0,1507,Neo-Nazi extremists | activity 1970-2020 in 5-yr bins | peak 1990-1994: 196 attacks
+1507,0,1508,Neo-Nazi extremists | 1970-1974: 2 attacks
+1508,0,1509,Neo-Nazi extremists | 1975-1979: 3 attacks
+1509,0,1510,Neo-Nazi extremists | 1980-1984: 4 attacks
+1510,0,1511,Neo-Nazi extremists | 1985-1989: 1 attacks
+1511,0,1512,Neo-Nazi extremists | 1990-1994: 196 attacks
+1512,0,1513,Neo-Nazi extremists | 1995-1999: 20 attacks
+1513,0,1514,Neo-Nazi extremists | 2000-2004: 5 attacks
+1514,0,1515,Neo-Nazi extremists | 2005-2009: 5 attacks
+1515,0,1516,Neo-Nazi extremists | 2010-2014: 1 attacks
+1516,0,1517,Neo-Nazi extremists | 2015-2019: 26 attacks
+1517,0,1518,Neo-Nazi extremists | 2020-2020: 4 attacks
+1518,0,1519,Al-Qaida in the Islamic Maghreb (AQIM) | 265 attacks 2007-2020 | 921 killed 1329 wounded | dominant: Bombing/Explosion | top target: Military | suicide 12% | success 93%
+1519,0,1520,"Al-Qaida in the Islamic Maghreb (AQIM) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1520,0,1521,Al-Qaida in the Islamic Maghreb (AQIM) | Assassination: 14 attacks
+1521,0,1522,Al-Qaida in the Islamic Maghreb (AQIM) | Armed Assault: 56 attacks
+1522,0,1523,Al-Qaida in the Islamic Maghreb (AQIM) | Bombing/Explosion: 147 attacks
+1523,0,1524,Al-Qaida in the Islamic Maghreb (AQIM) | Hijacking: 1 attacks
+1524,0,1525,Al-Qaida in the Islamic Maghreb (AQIM) | Hostage (Barricade): 3 attacks
+1525,0,1526,Al-Qaida in the Islamic Maghreb (AQIM) | Kidnapping: 32 attacks
+1526,0,1527,Al-Qaida in the Islamic Maghreb (AQIM) | Infrastructure Attack: 1 attacks
+1527,0,1528,Al-Qaida in the Islamic Maghreb (AQIM) | Unknown: 11 attacks
+1528,0,1529,Al-Qaida in the Islamic Maghreb (AQIM) | 921 killed
+1529,0,1530,Al-Qaida in the Islamic Maghreb (AQIM) | 1329 wounded
+1530,0,1531,Al-Qaida in the Islamic Maghreb (AQIM) | struck in 10 countries | most: Algeria
+1531,0,1532,Al-Qaida in the Islamic Maghreb (AQIM) | activity 1970-2020 in 5-yr bins | peak 2005-2009: 147 attacks
+1532,0,1533,Al-Qaida in the Islamic Maghreb (AQIM) | 1970-1974: 0 attacks
+1533,0,1534,Al-Qaida in the Islamic Maghreb (AQIM) | 1975-1979: 0 attacks
+1534,0,1535,Al-Qaida in the Islamic Maghreb (AQIM) | 1980-1984: 0 attacks
+1535,0,1536,Al-Qaida in the Islamic Maghreb (AQIM) | 1985-1989: 0 attacks
+1536,0,1537,Al-Qaida in the Islamic Maghreb (AQIM) | 1990-1994: 0 attacks
+1537,0,1538,Al-Qaida in the Islamic Maghreb (AQIM) | 1995-1999: 0 attacks
+1538,0,1539,Al-Qaida in the Islamic Maghreb (AQIM) | 2000-2004: 0 attacks
+1539,0,1540,Al-Qaida in the Islamic Maghreb (AQIM) | 2005-2009: 147 attacks
+1540,0,1541,Al-Qaida in the Islamic Maghreb (AQIM) | 2010-2014: 74 attacks
+1541,0,1542,Al-Qaida in the Islamic Maghreb (AQIM) | 2015-2019: 42 attacks
+1542,0,1543,Al-Qaida in the Islamic Maghreb (AQIM) | 2020-2020: 2 attacks
+1543,0,1544,Ulster Freedom Fighters (UFF) | 263 attacks 1972-2020 | 202 killed 66 wounded | dominant: Assassination | top target: Private Citizens & Property | suicide 0% | success 79%
+1544,0,1545,"Ulster Freedom Fighters (UFF) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1545,0,1546,Ulster Freedom Fighters (UFF) | Assassination: 157 attacks
+1546,0,1547,Ulster Freedom Fighters (UFF) | Armed Assault: 31 attacks
+1547,0,1548,Ulster Freedom Fighters (UFF) | Bombing/Explosion: 33 attacks
+1548,0,1549,Ulster Freedom Fighters (UFF) | Infrastructure Attack: 37 attacks
+1549,0,1550,Ulster Freedom Fighters (UFF) | Unarmed Assault: 3 attacks
+1550,0,1551,Ulster Freedom Fighters (UFF) | Unknown: 2 attacks
+1551,0,1552,Ulster Freedom Fighters (UFF) | 202 killed
+1552,0,1553,Ulster Freedom Fighters (UFF) | 66 wounded
+1553,0,1554,Ulster Freedom Fighters (UFF) | struck in 2 countries | most: United Kingdom
+1554,0,1555,Ulster Freedom Fighters (UFF) | activity 1970-2020 in 5-yr bins | peak 1990-1994: 80 attacks
+1555,0,1556,Ulster Freedom Fighters (UFF) | 1970-1974: 57 attacks
+1556,0,1557,Ulster Freedom Fighters (UFF) | 1975-1979: 38 attacks
+1557,0,1558,Ulster Freedom Fighters (UFF) | 1980-1984: 17 attacks
+1558,0,1559,Ulster Freedom Fighters (UFF) | 1985-1989: 47 attacks
+1559,0,1560,Ulster Freedom Fighters (UFF) | 1990-1994: 80 attacks
+1560,0,1561,Ulster Freedom Fighters (UFF) | 1995-1999: 5 attacks
+1561,0,1562,Ulster Freedom Fighters (UFF) | 2000-2004: 9 attacks
+1562,0,1563,Ulster Freedom Fighters (UFF) | 2005-2009: 1 attacks
+1563,0,1564,Ulster Freedom Fighters (UFF) | 2010-2014: 1 attacks
+1564,0,1565,Ulster Freedom Fighters (UFF) | 2015-2019: 5 attacks
+1565,0,1566,Ulster Freedom Fighters (UFF) | 2020-2020: 3 attacks
+1566,0,1567,Al-Gama'at al-Islamiyya (IG) | 259 attacks 1991-1998 | 492 killed 347 wounded | dominant: Assassination | top target: Police | suicide 0% | success 90%
+1567,0,1568,"Al-Gama'at al-Islamiyya (IG) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1568,0,1569,Al-Gama'at al-Islamiyya (IG) | Assassination: 125 attacks
+1569,0,1570,Al-Gama'at al-Islamiyya (IG) | Armed Assault: 107 attacks
+1570,0,1571,Al-Gama'at al-Islamiyya (IG) | Bombing/Explosion: 14 attacks
+1571,0,1572,Al-Gama'at al-Islamiyya (IG) | Infrastructure Attack: 10 attacks
+1572,0,1573,Al-Gama'at al-Islamiyya (IG) | Unknown: 3 attacks
+1573,0,1574,Al-Gama'at al-Islamiyya (IG) | 492 killed
+1574,0,1575,Al-Gama'at al-Islamiyya (IG) | 347 wounded
+1575,0,1576,Al-Gama'at al-Islamiyya (IG) | struck in 3 countries | most: Egypt
+1576,0,1577,Al-Gama'at al-Islamiyya (IG) | activity 1970-2020 in 5-yr bins | peak 1995-1999: 148 attacks
+1577,0,1578,Al-Gama'at al-Islamiyya (IG) | 1970-1974: 0 attacks
+1578,0,1579,Al-Gama'at al-Islamiyya (IG) | 1975-1979: 0 attacks
+1579,0,1580,Al-Gama'at al-Islamiyya (IG) | 1980-1984: 0 attacks
+1580,0,1581,Al-Gama'at al-Islamiyya (IG) | 1985-1989: 0 attacks
+1581,0,1582,Al-Gama'at al-Islamiyya (IG) | 1990-1994: 111 attacks
+1582,0,1583,Al-Gama'at al-Islamiyya (IG) | 1995-1999: 148 attacks
+1583,0,1584,Al-Gama'at al-Islamiyya (IG) | 2000-2004: 0 attacks
+1584,0,1585,Al-Gama'at al-Islamiyya (IG) | 2005-2009: 0 attacks
+1585,0,1586,Al-Gama'at al-Islamiyya (IG) | 2010-2014: 0 attacks
+1586,0,1587,Al-Gama'at al-Islamiyya (IG) | 2015-2019: 0 attacks
+1587,0,1588,Al-Gama'at al-Islamiyya (IG) | 2020-2020: 0 attacks
+1588,0,1589,Dev Sol | 252 attacks 1979-1996 | 123 killed 131 wounded | dominant: Bombing/Explosion | top target: Business | suicide 0% | success 90%
+1589,0,1590,"Dev Sol | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1590,0,1591,Dev Sol | Assassination: 43 attacks
+1591,0,1592,Dev Sol | Armed Assault: 30 attacks
+1592,0,1593,Dev Sol | Bombing/Explosion: 128 attacks
+1593,0,1594,Dev Sol | Hijacking: 1 attacks
+1594,0,1595,Dev Sol | Hostage (Barricade): 3 attacks
+1595,0,1596,Dev Sol | Kidnapping: 1 attacks
+1596,0,1597,Dev Sol | Infrastructure Attack: 44 attacks
+1597,0,1598,Dev Sol | Unknown: 2 attacks
+1598,0,1599,Dev Sol | 123 killed
+1599,0,1600,Dev Sol | 131 wounded
+1600,0,1601,Dev Sol | struck in 7 countries | most: Turkey
+1601,0,1602,Dev Sol | activity 1970-2020 in 5-yr bins | peak 1990-1994: 209 attacks
+1602,0,1603,Dev Sol | 1970-1974: 0 attacks
+1603,0,1604,Dev Sol | 1975-1979: 1 attacks
+1604,0,1605,Dev Sol | 1980-1984: 8 attacks
+1605,0,1606,Dev Sol | 1985-1989: 21 attacks
+1606,0,1607,Dev Sol | 1990-1994: 209 attacks
+1607,0,1608,Dev Sol | 1995-1999: 13 attacks
+1608,0,1609,Dev Sol | 2000-2004: 0 attacks
+1609,0,1610,Dev Sol | 2005-2009: 0 attacks
+1610,0,1611,Dev Sol | 2010-2014: 0 attacks
+1611,0,1612,Dev Sol | 2015-2019: 0 attacks
+1612,0,1613,Dev Sol | 2020-2020: 0 attacks
+1613,0,1614,Lashkar-e-Taiba (LeT) | 240 attacks 1996-2020 | 1037 killed 2054 wounded | dominant: Armed Assault | top target: Police | suicide 10% | success 92%
+1614,0,1615,"Lashkar-e-Taiba (LeT) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1615,0,1616,Lashkar-e-Taiba (LeT) | Assassination: 11 attacks
+1616,0,1617,Lashkar-e-Taiba (LeT) | Armed Assault: 122 attacks
+1617,0,1618,Lashkar-e-Taiba (LeT) | Bombing/Explosion: 68 attacks
+1618,0,1619,Lashkar-e-Taiba (LeT) | Hijacking: 4 attacks
+1619,0,1620,Lashkar-e-Taiba (LeT) | Hostage (Barricade): 3 attacks
+1620,0,1621,Lashkar-e-Taiba (LeT) | Kidnapping: 24 attacks
+1621,0,1622,Lashkar-e-Taiba (LeT) | Infrastructure Attack: 7 attacks
+1622,0,1623,Lashkar-e-Taiba (LeT) | Unarmed Assault: 1 attacks
+1623,0,1624,Lashkar-e-Taiba (LeT) | 1037 killed
+1624,0,1625,Lashkar-e-Taiba (LeT) | 2054 wounded
+1625,0,1626,Lashkar-e-Taiba (LeT) | struck in 3 countries | most: India
+1626,0,1627,Lashkar-e-Taiba (LeT) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 95 attacks
+1627,0,1628,Lashkar-e-Taiba (LeT) | 1970-1974: 0 attacks
+1628,0,1629,Lashkar-e-Taiba (LeT) | 1975-1979: 0 attacks
+1629,0,1630,Lashkar-e-Taiba (LeT) | 1980-1984: 0 attacks
+1630,0,1631,Lashkar-e-Taiba (LeT) | 1985-1989: 0 attacks
+1631,0,1632,Lashkar-e-Taiba (LeT) | 1990-1994: 0 attacks
+1632,0,1633,Lashkar-e-Taiba (LeT) | 1995-1999: 8 attacks
+1633,0,1634,Lashkar-e-Taiba (LeT) | 2000-2004: 53 attacks
+1634,0,1635,Lashkar-e-Taiba (LeT) | 2005-2009: 37 attacks
+1635,0,1636,Lashkar-e-Taiba (LeT) | 2010-2014: 31 attacks
+1636,0,1637,Lashkar-e-Taiba (LeT) | 2015-2019: 95 attacks
+1637,0,1638,Lashkar-e-Taiba (LeT) | 2020-2020: 16 attacks
+1638,0,1639,Anti-Abortion extremists | 237 attacks 1977-2020 | 8 killed 34 wounded | dominant: Infrastructure Attack | top target: Abortion Related | suicide 0% | success 85%
+1639,0,1640,"Anti-Abortion extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1640,0,1641,Anti-Abortion extremists | Assassination: 3 attacks
+1641,0,1642,Anti-Abortion extremists | Armed Assault: 6 attacks
+1642,0,1643,Anti-Abortion extremists | Bombing/Explosion: 36 attacks
+1643,0,1644,Anti-Abortion extremists | Hostage (Barricade): 1 attacks
+1644,0,1645,Anti-Abortion extremists | Infrastructure Attack: 189 attacks
+1645,0,1646,Anti-Abortion extremists | Unarmed Assault: 2 attacks
+1646,0,1647,Anti-Abortion extremists | 8 killed
+1647,0,1648,Anti-Abortion extremists | 34 wounded
+1648,0,1649,Anti-Abortion extremists | struck in 2 countries | most: United States
+1649,0,1650,Anti-Abortion extremists | activity 1970-2020 in 5-yr bins | peak 1995-1999: 62 attacks
+1650,0,1651,Anti-Abortion extremists | 1970-1974: 0 attacks
+1651,0,1652,Anti-Abortion extremists | 1975-1979: 11 attacks
+1652,0,1653,Anti-Abortion extremists | 1980-1984: 26 attacks
+1653,0,1654,Anti-Abortion extremists | 1985-1989: 51 attacks
+1654,0,1655,Anti-Abortion extremists | 1990-1994: 52 attacks
+1655,0,1656,Anti-Abortion extremists | 1995-1999: 62 attacks
+1656,0,1657,Anti-Abortion extremists | 2000-2004: 10 attacks
+1657,0,1658,Anti-Abortion extremists | 2005-2009: 10 attacks
+1658,0,1659,Anti-Abortion extremists | 2010-2014: 6 attacks
+1659,0,1660,Anti-Abortion extremists | 2015-2019: 7 attacks
+1660,0,1661,Anti-Abortion extremists | 2020-2020: 2 attacks
+1661,0,1662,Palestinian Islamic Jihad (PIJ) | 237 attacks 1989-2020 | 307 killed 1199 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 18% | success 87%
+1662,0,1663,"Palestinian Islamic Jihad (PIJ) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1663,0,1664,Palestinian Islamic Jihad (PIJ) | Assassination: 12 attacks
+1664,0,1665,Palestinian Islamic Jihad (PIJ) | Armed Assault: 27 attacks
+1665,0,1666,Palestinian Islamic Jihad (PIJ) | Bombing/Explosion: 195 attacks
+1666,0,1667,Palestinian Islamic Jihad (PIJ) | Infrastructure Attack: 2 attacks
+1667,0,1668,Palestinian Islamic Jihad (PIJ) | Unarmed Assault: 1 attacks
+1668,0,1669,Palestinian Islamic Jihad (PIJ) | 307 killed
+1669,0,1670,Palestinian Islamic Jihad (PIJ) | 1199 wounded
+1670,0,1671,Palestinian Islamic Jihad (PIJ) | struck in 2 countries | most: Israel
+1671,0,1672,Palestinian Islamic Jihad (PIJ) | activity 1970-2020 in 5-yr bins | peak 2005-2009: 88 attacks
+1672,0,1673,Palestinian Islamic Jihad (PIJ) | 1970-1974: 0 attacks
+1673,0,1674,Palestinian Islamic Jihad (PIJ) | 1975-1979: 0 attacks
+1674,0,1675,Palestinian Islamic Jihad (PIJ) | 1980-1984: 0 attacks
+1675,0,1676,Palestinian Islamic Jihad (PIJ) | 1985-1989: 2 attacks
+1676,0,1677,Palestinian Islamic Jihad (PIJ) | 1990-1994: 21 attacks
+1677,0,1678,Palestinian Islamic Jihad (PIJ) | 1995-1999: 6 attacks
+1678,0,1679,Palestinian Islamic Jihad (PIJ) | 2000-2004: 50 attacks
+1679,0,1680,Palestinian Islamic Jihad (PIJ) | 2005-2009: 88 attacks
+1680,0,1681,Palestinian Islamic Jihad (PIJ) | 2010-2014: 23 attacks
+1681,0,1682,Palestinian Islamic Jihad (PIJ) | 2015-2019: 33 attacks
+1682,0,1683,Palestinian Islamic Jihad (PIJ) | 2020-2020: 14 attacks
+1683,0,1684,Armed Islamic Group (GIA) | 236 attacks 1994-2006 | 1465 killed 1357 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 94%
+1684,0,1685,"Armed Islamic Group (GIA) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1685,0,1686,Armed Islamic Group (GIA) | Assassination: 49 attacks
+1686,0,1687,Armed Islamic Group (GIA) | Armed Assault: 87 attacks
+1687,0,1688,Armed Islamic Group (GIA) | Bombing/Explosion: 66 attacks
+1688,0,1689,Armed Islamic Group (GIA) | Hijacking: 1 attacks
+1689,0,1690,Armed Islamic Group (GIA) | Kidnapping: 9 attacks
+1690,0,1691,Armed Islamic Group (GIA) | Infrastructure Attack: 12 attacks
+1691,0,1692,Armed Islamic Group (GIA) | Unknown: 12 attacks
+1692,0,1693,Armed Islamic Group (GIA) | 1465 killed
+1693,0,1694,Armed Islamic Group (GIA) | 1357 wounded
+1694,0,1695,Armed Islamic Group (GIA) | struck in 4 countries | most: Algeria
+1695,0,1696,Armed Islamic Group (GIA) | activity 1970-2020 in 5-yr bins | peak 1995-1999: 121 attacks
+1696,0,1697,Armed Islamic Group (GIA) | 1970-1974: 0 attacks
+1697,0,1698,Armed Islamic Group (GIA) | 1975-1979: 0 attacks
+1698,0,1699,Armed Islamic Group (GIA) | 1980-1984: 0 attacks
+1699,0,1700,Armed Islamic Group (GIA) | 1985-1989: 0 attacks
+1700,0,1701,Armed Islamic Group (GIA) | 1990-1994: 33 attacks
+1701,0,1702,Armed Islamic Group (GIA) | 1995-1999: 121 attacks
+1702,0,1703,Armed Islamic Group (GIA) | 2000-2004: 79 attacks
+1703,0,1704,Armed Islamic Group (GIA) | 2005-2009: 3 attacks
+1704,0,1705,Armed Islamic Group (GIA) | 2010-2014: 0 attacks
+1705,0,1706,Armed Islamic Group (GIA) | 2015-2019: 0 attacks
+1706,0,1707,Armed Islamic Group (GIA) | 2020-2020: 0 attacks
+1707,0,1708,Nicaraguan Resistance | 231 attacks 1987-1990 | 588 killed 328 wounded | dominant: Armed Assault | top target: Military | suicide 0% | success 100%
+1708,0,1709,"Nicaraguan Resistance | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1709,0,1710,Nicaraguan Resistance | Assassination: 1 attacks
+1710,0,1711,Nicaraguan Resistance | Armed Assault: 164 attacks
+1711,0,1712,Nicaraguan Resistance | Bombing/Explosion: 55 attacks
+1712,0,1713,Nicaraguan Resistance | Hostage (Barricade): 2 attacks
+1713,0,1714,Nicaraguan Resistance | Kidnapping: 4 attacks
+1714,0,1715,Nicaraguan Resistance | Infrastructure Attack: 1 attacks
+1715,0,1716,Nicaraguan Resistance | Unknown: 4 attacks
+1716,0,1717,Nicaraguan Resistance | 588 killed
+1717,0,1718,Nicaraguan Resistance | 328 wounded
+1718,0,1719,Nicaraguan Resistance | struck in 2 countries | most: Nicaragua
+1719,0,1720,Nicaraguan Resistance | activity 1970-2020 in 5-yr bins | peak 1985-1989: 226 attacks
+1720,0,1721,Nicaraguan Resistance | 1970-1974: 0 attacks
+1721,0,1722,Nicaraguan Resistance | 1975-1979: 0 attacks
+1722,0,1723,Nicaraguan Resistance | 1980-1984: 0 attacks
+1723,0,1724,Nicaraguan Resistance | 1985-1989: 226 attacks
+1724,0,1725,Nicaraguan Resistance | 1990-1994: 5 attacks
+1725,0,1726,Nicaraguan Resistance | 1995-1999: 0 attacks
+1726,0,1727,Nicaraguan Resistance | 2000-2004: 0 attacks
+1727,0,1728,Nicaraguan Resistance | 2005-2009: 0 attacks
+1728,0,1729,Nicaraguan Resistance | 2010-2014: 0 attacks
+1729,0,1730,Nicaraguan Resistance | 2015-2019: 0 attacks
+1730,0,1731,Nicaraguan Resistance | 2020-2020: 0 attacks
+1731,0,1732,Janjaweed | 218 attacks 2004-2020 | 526 killed 393 wounded | dominant: Kidnapping | top target: Private Citizens & Property | suicide 0% | success 99%
+1732,0,1733,"Janjaweed | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1733,0,1734,Janjaweed | Assassination: 1 attacks
+1734,0,1735,Janjaweed | Armed Assault: 77 attacks
+1735,0,1736,Janjaweed | Hijacking: 9 attacks
+1736,0,1737,Janjaweed | Hostage (Barricade): 3 attacks
+1737,0,1738,Janjaweed | Kidnapping: 84 attacks
+1738,0,1739,Janjaweed | Infrastructure Attack: 18 attacks
+1739,0,1740,Janjaweed | Unarmed Assault: 15 attacks
+1740,0,1741,Janjaweed | Unknown: 11 attacks
+1741,0,1742,Janjaweed | 526 killed
+1742,0,1743,Janjaweed | 393 wounded
+1743,0,1744,Janjaweed | struck in 2 countries | most: Sudan
+1744,0,1745,Janjaweed | activity 1970-2020 in 5-yr bins | peak 2015-2019: 110 attacks
+1745,0,1746,Janjaweed | 1970-1974: 0 attacks
+1746,0,1747,Janjaweed | 1975-1979: 0 attacks
+1747,0,1748,Janjaweed | 1980-1984: 0 attacks
+1748,0,1749,Janjaweed | 1985-1989: 0 attacks
+1749,0,1750,Janjaweed | 1990-1994: 0 attacks
+1750,0,1751,Janjaweed | 1995-1999: 0 attacks
+1751,0,1752,Janjaweed | 2000-2004: 1 attacks
+1752,0,1753,Janjaweed | 2005-2009: 7 attacks
+1753,0,1754,Janjaweed | 2010-2014: 97 attacks
+1754,0,1755,Janjaweed | 2015-2019: 110 attacks
+1755,0,1756,Janjaweed | 2020-2020: 3 attacks
+1756,0,1757,Tamils | 217 attacks 1982-2001 | 1483 killed 928 wounded | dominant: Bombing/Explosion | top target: Military | suicide 0% | success 95%
+1757,0,1758,"Tamils | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1758,0,1759,Tamils | Assassination: 34 attacks
+1759,0,1760,Tamils | Armed Assault: 40 attacks
+1760,0,1761,Tamils | Bombing/Explosion: 89 attacks
+1761,0,1762,Tamils | Hijacking: 3 attacks
+1762,0,1763,Tamils | Hostage (Barricade): 1 attacks
+1763,0,1764,Tamils | Kidnapping: 16 attacks
+1764,0,1765,Tamils | Infrastructure Attack: 7 attacks
+1765,0,1766,Tamils | Unarmed Assault: 1 attacks
+1766,0,1767,Tamils | Unknown: 26 attacks
+1767,0,1768,Tamils | 1483 killed
+1768,0,1769,Tamils | 928 wounded
+1769,0,1770,Tamils | struck in 2 countries | most: Sri Lanka
+1770,0,1771,Tamils | activity 1970-2020 in 5-yr bins | peak 1985-1989: 174 attacks
+1771,0,1772,Tamils | 1970-1974: 0 attacks
+1772,0,1773,Tamils | 1975-1979: 0 attacks
+1773,0,1774,Tamils | 1980-1984: 40 attacks
+1774,0,1775,Tamils | 1985-1989: 174 attacks
+1775,0,1776,Tamils | 1990-1994: 1 attacks
+1776,0,1777,Tamils | 1995-1999: 0 attacks
+1777,0,1778,Tamils | 2000-2004: 2 attacks
+1778,0,1779,Tamils | 2005-2009: 0 attacks
+1779,0,1780,Tamils | 2010-2014: 0 attacks
+1780,0,1781,Tamils | 2015-2019: 0 attacks
+1781,0,1782,Tamils | 2020-2020: 0 attacks
+1782,0,1783,Red Brigades | 217 attacks 1974-1990 | 69 killed 131 wounded | dominant: Armed Assault | top target: Business | suicide 0% | success 92%
+1783,0,1784,"Red Brigades | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1784,0,1785,Red Brigades | Assassination: 59 attacks
+1785,0,1786,Red Brigades | Armed Assault: 76 attacks
+1786,0,1787,Red Brigades | Bombing/Explosion: 37 attacks
+1787,0,1788,Red Brigades | Hostage (Barricade): 9 attacks
+1788,0,1789,Red Brigades | Kidnapping: 13 attacks
+1789,0,1790,Red Brigades | Infrastructure Attack: 19 attacks
+1790,0,1791,Red Brigades | Unarmed Assault: 1 attacks
+1791,0,1792,Red Brigades | Unknown: 3 attacks
+1792,0,1793,Red Brigades | 69 killed
+1793,0,1794,Red Brigades | 131 wounded
+1794,0,1795,Red Brigades | struck in 3 countries | most: Italy
+1795,0,1796,Red Brigades | activity 1970-2020 in 5-yr bins | peak 1975-1979: 153 attacks
+1796,0,1797,Red Brigades | 1970-1974: 4 attacks
+1797,0,1798,Red Brigades | 1975-1979: 153 attacks
+1798,0,1799,Red Brigades | 1980-1984: 54 attacks
+1799,0,1800,Red Brigades | 1985-1989: 5 attacks
+1800,0,1801,Red Brigades | 1990-1994: 1 attacks
+1801,0,1802,Red Brigades | 1995-1999: 0 attacks
+1802,0,1803,Red Brigades | 2000-2004: 0 attacks
+1803,0,1804,Red Brigades | 2005-2009: 0 attacks
+1804,0,1805,Red Brigades | 2010-2014: 0 attacks
+1805,0,1806,Red Brigades | 2015-2019: 0 attacks
+1806,0,1807,Red Brigades | 2020-2020: 0 attacks
+1807,0,1808,Salafist Group for Preaching and Fighting (GSPC) | 214 attacks 1999-2008 | 590 killed 423 wounded | dominant: Armed Assault | top target: Military | suicide 0% | success 94%
+1808,0,1809,"Salafist Group for Preaching and Fighting (GSPC) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1809,0,1810,Salafist Group for Preaching and Fighting (GSPC) | Assassination: 18 attacks
+1810,0,1811,Salafist Group for Preaching and Fighting (GSPC) | Armed Assault: 94 attacks
+1811,0,1812,Salafist Group for Preaching and Fighting (GSPC) | Bombing/Explosion: 80 attacks
+1812,0,1813,Salafist Group for Preaching and Fighting (GSPC) | Kidnapping: 17 attacks
+1813,0,1814,Salafist Group for Preaching and Fighting (GSPC) | Infrastructure Attack: 1 attacks
+1814,0,1815,Salafist Group for Preaching and Fighting (GSPC) | Unknown: 4 attacks
+1815,0,1816,Salafist Group for Preaching and Fighting (GSPC) | 590 killed
+1816,0,1817,Salafist Group for Preaching and Fighting (GSPC) | 423 wounded
+1817,0,1818,Salafist Group for Preaching and Fighting (GSPC) | struck in 3 countries | most: Algeria
+1818,0,1819,Salafist Group for Preaching and Fighting (GSPC) | activity 1970-2020 in 5-yr bins | peak 2005-2009: 111 attacks
+1819,0,1820,Salafist Group for Preaching and Fighting (GSPC) | 1970-1974: 0 attacks
+1820,0,1821,Salafist Group for Preaching and Fighting (GSPC) | 1975-1979: 0 attacks
+1821,0,1822,Salafist Group for Preaching and Fighting (GSPC) | 1980-1984: 0 attacks
+1822,0,1823,Salafist Group for Preaching and Fighting (GSPC) | 1985-1989: 0 attacks
+1823,0,1824,Salafist Group for Preaching and Fighting (GSPC) | 1990-1994: 0 attacks
+1824,0,1825,Salafist Group for Preaching and Fighting (GSPC) | 1995-1999: 6 attacks
+1825,0,1826,Salafist Group for Preaching and Fighting (GSPC) | 2000-2004: 97 attacks
+1826,0,1827,Salafist Group for Preaching and Fighting (GSPC) | 2005-2009: 111 attacks
+1827,0,1828,Salafist Group for Preaching and Fighting (GSPC) | 2010-2014: 0 attacks
+1828,0,1829,Salafist Group for Preaching and Fighting (GSPC) | 2015-2019: 0 attacks
+1829,0,1830,Salafist Group for Preaching and Fighting (GSPC) | 2020-2020: 0 attacks
+1830,0,1831,Luhansk People's Republic | 214 attacks 2014-2020 | 252 killed 409 wounded | dominant: Bombing/Explosion | top target: Military | suicide 0% | success 92%
+1831,0,1832,"Luhansk People's Republic | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1832,0,1833,Luhansk People's Republic | Assassination: 1 attacks
+1833,0,1834,Luhansk People's Republic | Armed Assault: 63 attacks
+1834,0,1835,Luhansk People's Republic | Bombing/Explosion: 112 attacks
+1835,0,1836,Luhansk People's Republic | Hostage (Barricade): 1 attacks
+1836,0,1837,Luhansk People's Republic | Kidnapping: 16 attacks
+1837,0,1838,Luhansk People's Republic | Infrastructure Attack: 12 attacks
+1838,0,1839,Luhansk People's Republic | Unarmed Assault: 1 attacks
+1839,0,1840,Luhansk People's Republic | Unknown: 8 attacks
+1840,0,1841,Luhansk People's Republic | 252 killed
+1841,0,1842,Luhansk People's Republic | 409 wounded
+1842,0,1843,Luhansk People's Republic | struck in 1 country | most: Ukraine
+1843,0,1844,Luhansk People's Republic | activity 1970-2020 in 5-yr bins | peak 2010-2014: 110 attacks
+1844,0,1845,Luhansk People's Republic | 1970-1974: 0 attacks
+1845,0,1846,Luhansk People's Republic | 1975-1979: 0 attacks
+1846,0,1847,Luhansk People's Republic | 1980-1984: 0 attacks
+1847,0,1848,Luhansk People's Republic | 1985-1989: 0 attacks
+1848,0,1849,Luhansk People's Republic | 1990-1994: 0 attacks
+1849,0,1850,Luhansk People's Republic | 1995-1999: 0 attacks
+1850,0,1851,Luhansk People's Republic | 2000-2004: 0 attacks
+1851,0,1852,Luhansk People's Republic | 2005-2009: 0 attacks
+1852,0,1853,Luhansk People's Republic | 2010-2014: 110 attacks
+1853,0,1854,Luhansk People's Republic | 2015-2019: 100 attacks
+1854,0,1855,Luhansk People's Republic | 2020-2020: 4 attacks
+1855,0,1856,First of October Antifascist Resistance Group (GRAPO) | 210 attacks 1975-2000 | 86 killed 87 wounded | dominant: Bombing/Explosion | top target: Business | suicide 0% | success 89%
+1856,0,1857,"First of October Antifascist Resistance Group (GRAPO) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1857,0,1858,First of October Antifascist Resistance Group (GRAPO) | Assassination: 52 attacks
+1858,0,1859,First of October Antifascist Resistance Group (GRAPO) | Armed Assault: 28 attacks
+1859,0,1860,First of October Antifascist Resistance Group (GRAPO) | Bombing/Explosion: 114 attacks
+1860,0,1861,First of October Antifascist Resistance Group (GRAPO) | Hostage (Barricade): 4 attacks
+1861,0,1862,First of October Antifascist Resistance Group (GRAPO) | Kidnapping: 6 attacks
+1862,0,1863,First of October Antifascist Resistance Group (GRAPO) | Infrastructure Attack: 5 attacks
+1863,0,1864,First of October Antifascist Resistance Group (GRAPO) | Unknown: 1 attacks
+1864,0,1865,First of October Antifascist Resistance Group (GRAPO) | 86 killed
+1865,0,1866,First of October Antifascist Resistance Group (GRAPO) | 87 wounded
+1866,0,1867,First of October Antifascist Resistance Group (GRAPO) | struck in 4 countries | most: Spain
+1867,0,1868,First of October Antifascist Resistance Group (GRAPO) | activity 1970-2020 in 5-yr bins | peak 1975-1979: 100 attacks
+1868,0,1869,First of October Antifascist Resistance Group (GRAPO) | 1970-1974: 0 attacks
+1869,0,1870,First of October Antifascist Resistance Group (GRAPO) | 1975-1979: 100 attacks
+1870,0,1871,First of October Antifascist Resistance Group (GRAPO) | 1980-1984: 59 attacks
+1871,0,1872,First of October Antifascist Resistance Group (GRAPO) | 1985-1989: 9 attacks
+1872,0,1873,First of October Antifascist Resistance Group (GRAPO) | 1990-1994: 24 attacks
+1873,0,1874,First of October Antifascist Resistance Group (GRAPO) | 1995-1999: 4 attacks
+1874,0,1875,First of October Antifascist Resistance Group (GRAPO) | 2000-2004: 14 attacks
+1875,0,1876,First of October Antifascist Resistance Group (GRAPO) | 2005-2009: 0 attacks
+1876,0,1877,First of October Antifascist Resistance Group (GRAPO) | 2010-2014: 0 attacks
+1877,0,1878,First of October Antifascist Resistance Group (GRAPO) | 2015-2019: 0 attacks
+1878,0,1879,First of October Antifascist Resistance Group (GRAPO) | 2020-2020: 0 attacks
+1879,0,1880,Sandinista National Liberation Front (FSLN) | 209 attacks 1970-1996 | 241 killed 127 wounded | dominant: Unknown | top target: Business | suicide 0% | success 97%
+1880,0,1881,"Sandinista National Liberation Front (FSLN) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1881,0,1882,Sandinista National Liberation Front (FSLN) | Assassination: 38 attacks
+1882,0,1883,Sandinista National Liberation Front (FSLN) | Armed Assault: 38 attacks
+1883,0,1884,Sandinista National Liberation Front (FSLN) | Bombing/Explosion: 31 attacks
+1884,0,1885,Sandinista National Liberation Front (FSLN) | Hostage (Barricade): 10 attacks
+1885,0,1886,Sandinista National Liberation Front (FSLN) | Kidnapping: 13 attacks
+1886,0,1887,Sandinista National Liberation Front (FSLN) | Infrastructure Attack: 11 attacks
+1887,0,1888,Sandinista National Liberation Front (FSLN) | Unarmed Assault: 1 attacks
+1888,0,1889,Sandinista National Liberation Front (FSLN) | Unknown: 67 attacks
+1889,0,1890,Sandinista National Liberation Front (FSLN) | 241 killed
+1890,0,1891,Sandinista National Liberation Front (FSLN) | 127 wounded
+1891,0,1892,Sandinista National Liberation Front (FSLN) | struck in 3 countries | most: Nicaragua
+1892,0,1893,Sandinista National Liberation Front (FSLN) | activity 1970-2020 in 5-yr bins | peak 1975-1979: 195 attacks
+1893,0,1894,Sandinista National Liberation Front (FSLN) | 1970-1974: 2 attacks
+1894,0,1895,Sandinista National Liberation Front (FSLN) | 1975-1979: 195 attacks
+1895,0,1896,Sandinista National Liberation Front (FSLN) | 1980-1984: 0 attacks
+1896,0,1897,Sandinista National Liberation Front (FSLN) | 1985-1989: 0 attacks
+1897,0,1898,Sandinista National Liberation Front (FSLN) | 1990-1994: 10 attacks
+1898,0,1899,Sandinista National Liberation Front (FSLN) | 1995-1999: 2 attacks
+1899,0,1900,Sandinista National Liberation Front (FSLN) | 2000-2004: 0 attacks
+1900,0,1901,Sandinista National Liberation Front (FSLN) | 2005-2009: 0 attacks
+1901,0,1902,Sandinista National Liberation Front (FSLN) | 2010-2014: 0 attacks
+1902,0,1903,Sandinista National Liberation Front (FSLN) | 2015-2019: 0 attacks
+1903,0,1904,Sandinista National Liberation Front (FSLN) | 2020-2020: 0 attacks
+1904,0,1905,Baloch Liberation Army (BLA) | 207 attacks 2005-2020 | 419 killed 543 wounded | dominant: Bombing/Explosion | top target: Military | suicide 2% | success 95%
+1905,0,1906,"Baloch Liberation Army (BLA) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1906,0,1907,Baloch Liberation Army (BLA) | Assassination: 16 attacks
+1907,0,1908,Baloch Liberation Army (BLA) | Armed Assault: 59 attacks
+1908,0,1909,Baloch Liberation Army (BLA) | Bombing/Explosion: 109 attacks
+1909,0,1910,Baloch Liberation Army (BLA) | Hostage (Barricade): 3 attacks
+1910,0,1911,Baloch Liberation Army (BLA) | Kidnapping: 17 attacks
+1911,0,1912,Baloch Liberation Army (BLA) | Infrastructure Attack: 1 attacks
+1912,0,1913,Baloch Liberation Army (BLA) | Unknown: 2 attacks
+1913,0,1914,Baloch Liberation Army (BLA) | 419 killed
+1914,0,1915,Baloch Liberation Army (BLA) | 543 wounded
+1915,0,1916,Baloch Liberation Army (BLA) | struck in 1 country | most: Pakistan
+1916,0,1917,Baloch Liberation Army (BLA) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 79 attacks
+1917,0,1918,Baloch Liberation Army (BLA) | 1970-1974: 0 attacks
+1918,0,1919,Baloch Liberation Army (BLA) | 1975-1979: 0 attacks
+1919,0,1920,Baloch Liberation Army (BLA) | 1980-1984: 0 attacks
+1920,0,1921,Baloch Liberation Army (BLA) | 1985-1989: 0 attacks
+1921,0,1922,Baloch Liberation Army (BLA) | 1990-1994: 0 attacks
+1922,0,1923,Baloch Liberation Army (BLA) | 1995-1999: 0 attacks
+1923,0,1924,Baloch Liberation Army (BLA) | 2000-2004: 0 attacks
+1924,0,1925,Baloch Liberation Army (BLA) | 2005-2009: 52 attacks
+1925,0,1926,Baloch Liberation Army (BLA) | 2010-2014: 67 attacks
+1926,0,1927,Baloch Liberation Army (BLA) | 2015-2019: 79 attacks
+1927,0,1928,Baloch Liberation Army (BLA) | 2020-2020: 9 attacks
+1928,0,1929,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 206 attacks 1986-2003 | 391 killed 119 wounded | dominant: Bombing/Explosion | top target: Utilities | suicide 0% | success 95%
+1929,0,1930,"Simon Bolivar Guerrilla Coordinating Board (CGSB) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1930,0,1931,Simon Bolivar Guerrilla Coordinating Board (CGSB) | Assassination: 10 attacks
+1931,0,1932,Simon Bolivar Guerrilla Coordinating Board (CGSB) | Armed Assault: 71 attacks
+1932,0,1933,Simon Bolivar Guerrilla Coordinating Board (CGSB) | Bombing/Explosion: 96 attacks
+1933,0,1934,Simon Bolivar Guerrilla Coordinating Board (CGSB) | Hostage (Barricade): 2 attacks
+1934,0,1935,Simon Bolivar Guerrilla Coordinating Board (CGSB) | Kidnapping: 19 attacks
+1935,0,1936,Simon Bolivar Guerrilla Coordinating Board (CGSB) | Infrastructure Attack: 2 attacks
+1936,0,1937,Simon Bolivar Guerrilla Coordinating Board (CGSB) | Unknown: 6 attacks
+1937,0,1938,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 391 killed
+1938,0,1939,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 119 wounded
+1939,0,1940,Simon Bolivar Guerrilla Coordinating Board (CGSB) | struck in 2 countries | most: Colombia
+1940,0,1941,Simon Bolivar Guerrilla Coordinating Board (CGSB) | activity 1970-2020 in 5-yr bins | peak 1990-1994: 154 attacks
+1941,0,1942,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 1970-1974: 0 attacks
+1942,0,1943,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 1975-1979: 0 attacks
+1943,0,1944,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 1980-1984: 0 attacks
+1944,0,1945,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 1985-1989: 50 attacks
+1945,0,1946,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 1990-1994: 154 attacks
+1946,0,1947,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 1995-1999: 0 attacks
+1947,0,1948,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 2000-2004: 2 attacks
+1948,0,1949,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 2005-2009: 0 attacks
+1949,0,1950,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 2010-2014: 0 attacks
+1950,0,1951,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 2015-2019: 0 attacks
+1951,0,1952,Simon Bolivar Guerrilla Coordinating Board (CGSB) | 2020-2020: 0 attacks
+1952,0,1953,Baloch Liberation Front (BLF) | 203 attacks 2009-2020 | 295 killed 306 wounded | dominant: Armed Assault | top target: Military | suicide 0% | success 90%
+1953,0,1954,"Baloch Liberation Front (BLF) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1954,0,1955,Baloch Liberation Front (BLF) | Assassination: 14 attacks
+1955,0,1956,Baloch Liberation Front (BLF) | Armed Assault: 84 attacks
+1956,0,1957,Baloch Liberation Front (BLF) | Bombing/Explosion: 69 attacks
+1957,0,1958,Baloch Liberation Front (BLF) | Hijacking: 1 attacks
+1958,0,1959,Baloch Liberation Front (BLF) | Hostage (Barricade): 3 attacks
+1959,0,1960,Baloch Liberation Front (BLF) | Kidnapping: 21 attacks
+1960,0,1961,Baloch Liberation Front (BLF) | Infrastructure Attack: 5 attacks
+1961,0,1962,Baloch Liberation Front (BLF) | Unarmed Assault: 1 attacks
+1962,0,1963,Baloch Liberation Front (BLF) | Unknown: 5 attacks
+1963,0,1964,Baloch Liberation Front (BLF) | 295 killed
+1964,0,1965,Baloch Liberation Front (BLF) | 306 wounded
+1965,0,1966,Baloch Liberation Front (BLF) | struck in 1 country | most: Pakistan
+1966,0,1967,Baloch Liberation Front (BLF) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 122 attacks
+1967,0,1968,Baloch Liberation Front (BLF) | 1970-1974: 0 attacks
+1968,0,1969,Baloch Liberation Front (BLF) | 1975-1979: 0 attacks
+1969,0,1970,Baloch Liberation Front (BLF) | 1980-1984: 0 attacks
+1970,0,1971,Baloch Liberation Front (BLF) | 1985-1989: 0 attacks
+1971,0,1972,Baloch Liberation Front (BLF) | 1990-1994: 0 attacks
+1972,0,1973,Baloch Liberation Front (BLF) | 1995-1999: 0 attacks
+1973,0,1974,Baloch Liberation Front (BLF) | 2000-2004: 0 attacks
+1974,0,1975,Baloch Liberation Front (BLF) | 2005-2009: 4 attacks
+1975,0,1976,Baloch Liberation Front (BLF) | 2010-2014: 72 attacks
+1976,0,1977,Baloch Liberation Front (BLF) | 2015-2019: 122 attacks
+1977,0,1978,Baloch Liberation Front (BLF) | 2020-2020: 5 attacks
+1978,0,1979,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 200 attacks 2017-2020 | 855 killed 600 wounded | dominant: Armed Assault | top target: Military | suicide 6% | success 94%
+1979,0,1980,"Jamaat Nusrat al-Islam wal Muslimin (JNIM) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+1980,0,1981,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | Assassination: 4 attacks
+1981,0,1982,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | Armed Assault: 71 attacks
+1982,0,1983,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | Bombing/Explosion: 70 attacks
+1983,0,1984,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | Hijacking: 2 attacks
+1984,0,1985,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | Hostage (Barricade): 2 attacks
+1985,0,1986,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | Kidnapping: 26 attacks
+1986,0,1987,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | Infrastructure Attack: 6 attacks
+1987,0,1988,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | Unknown: 19 attacks
+1988,0,1989,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 855 killed
+1989,0,1990,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 600 wounded
+1990,0,1991,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | struck in 4 countries | most: Mali
+1991,0,1992,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | activity 1970-2020 in 5-yr bins | peak 2015-2019: 152 attacks
+1992,0,1993,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 1970-1974: 0 attacks
+1993,0,1994,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 1975-1979: 0 attacks
+1994,0,1995,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 1980-1984: 0 attacks
+1995,0,1996,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 1985-1989: 0 attacks
+1996,0,1997,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 1990-1994: 0 attacks
+1997,0,1998,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 1995-1999: 0 attacks
+1998,0,1999,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 2000-2004: 0 attacks
+1999,0,2000,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 2005-2009: 0 attacks
+2000,0,2001,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 2010-2014: 0 attacks
+2001,0,2002,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 2015-2019: 152 attacks
+2002,0,2003,Jamaat Nusrat al-Islam wal Muslimin (JNIM) | 2020-2020: 48 attacks
+2003,0,2004,Revolutionary Armed Forces of Colombia (FARC) dissidents | 198 attacks 2017-2020 | 169 killed 203 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 0% | success 86%
+2004,0,2005,"Revolutionary Armed Forces of Colombia (FARC) dissidents | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2005,0,2006,Revolutionary Armed Forces of Colombia (FARC) dissidents | Assassination: 20 attacks
+2006,0,2007,Revolutionary Armed Forces of Colombia (FARC) dissidents | Armed Assault: 45 attacks
+2007,0,2008,Revolutionary Armed Forces of Colombia (FARC) dissidents | Bombing/Explosion: 72 attacks
+2008,0,2009,Revolutionary Armed Forces of Colombia (FARC) dissidents | Hijacking: 11 attacks
+2009,0,2010,Revolutionary Armed Forces of Colombia (FARC) dissidents | Hostage (Barricade): 3 attacks
+2010,0,2011,Revolutionary Armed Forces of Colombia (FARC) dissidents | Kidnapping: 37 attacks
+2011,0,2012,Revolutionary Armed Forces of Colombia (FARC) dissidents | Infrastructure Attack: 6 attacks
+2012,0,2013,Revolutionary Armed Forces of Colombia (FARC) dissidents | Unknown: 4 attacks
+2013,0,2014,Revolutionary Armed Forces of Colombia (FARC) dissidents | 169 killed
+2014,0,2015,Revolutionary Armed Forces of Colombia (FARC) dissidents | 203 wounded
+2015,0,2016,Revolutionary Armed Forces of Colombia (FARC) dissidents | struck in 2 countries | most: Colombia
+2016,0,2017,Revolutionary Armed Forces of Colombia (FARC) dissidents | activity 1970-2020 in 5-yr bins | peak 2015-2019: 140 attacks
+2017,0,2018,Revolutionary Armed Forces of Colombia (FARC) dissidents | 1970-1974: 0 attacks
+2018,0,2019,Revolutionary Armed Forces of Colombia (FARC) dissidents | 1975-1979: 0 attacks
+2019,0,2020,Revolutionary Armed Forces of Colombia (FARC) dissidents | 1980-1984: 0 attacks
+2020,0,2021,Revolutionary Armed Forces of Colombia (FARC) dissidents | 1985-1989: 0 attacks
+2021,0,2022,Revolutionary Armed Forces of Colombia (FARC) dissidents | 1990-1994: 0 attacks
+2022,0,2023,Revolutionary Armed Forces of Colombia (FARC) dissidents | 1995-1999: 0 attacks
+2023,0,2024,Revolutionary Armed Forces of Colombia (FARC) dissidents | 2000-2004: 0 attacks
+2024,0,2025,Revolutionary Armed Forces of Colombia (FARC) dissidents | 2005-2009: 0 attacks
+2025,0,2026,Revolutionary Armed Forces of Colombia (FARC) dissidents | 2010-2014: 0 attacks
+2026,0,2027,Revolutionary Armed Forces of Colombia (FARC) dissidents | 2015-2019: 140 attacks
+2027,0,2028,Revolutionary Armed Forces of Colombia (FARC) dissidents | 2020-2020: 58 attacks
+2028,0,2029,Moro National Liberation Front (MNLF) | 197 attacks 1975-2017 | 623 killed 892 wounded | dominant: Bombing/Explosion | top target: Business | suicide 0% | success 98%
+2029,0,2030,"Moro National Liberation Front (MNLF) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2030,0,2031,Moro National Liberation Front (MNLF) | Assassination: 8 attacks
+2031,0,2032,Moro National Liberation Front (MNLF) | Armed Assault: 63 attacks
+2032,0,2033,Moro National Liberation Front (MNLF) | Bombing/Explosion: 75 attacks
+2033,0,2034,Moro National Liberation Front (MNLF) | Hijacking: 1 attacks
+2034,0,2035,Moro National Liberation Front (MNLF) | Kidnapping: 32 attacks
+2035,0,2036,Moro National Liberation Front (MNLF) | Infrastructure Attack: 6 attacks
+2036,0,2037,Moro National Liberation Front (MNLF) | Unknown: 12 attacks
+2037,0,2038,Moro National Liberation Front (MNLF) | 623 killed
+2038,0,2039,Moro National Liberation Front (MNLF) | 892 wounded
+2039,0,2040,Moro National Liberation Front (MNLF) | struck in 1 country | most: Philippines
+2040,0,2041,Moro National Liberation Front (MNLF) | activity 1970-2020 in 5-yr bins | peak 1975-1979: 58 attacks
+2041,0,2042,Moro National Liberation Front (MNLF) | 1970-1974: 0 attacks
+2042,0,2043,Moro National Liberation Front (MNLF) | 1975-1979: 58 attacks
+2043,0,2044,Moro National Liberation Front (MNLF) | 1980-1984: 42 attacks
+2044,0,2045,Moro National Liberation Front (MNLF) | 1985-1989: 40 attacks
+2045,0,2046,Moro National Liberation Front (MNLF) | 1990-1994: 30 attacks
+2046,0,2047,Moro National Liberation Front (MNLF) | 1995-1999: 7 attacks
+2047,0,2048,Moro National Liberation Front (MNLF) | 2000-2004: 3 attacks
+2048,0,2049,Moro National Liberation Front (MNLF) | 2005-2009: 2 attacks
+2049,0,2050,Moro National Liberation Front (MNLF) | 2010-2014: 12 attacks
+2050,0,2051,Moro National Liberation Front (MNLF) | 2015-2019: 3 attacks
+2051,0,2052,Moro National Liberation Front (MNLF) | 2020-2020: 0 attacks
+2052,0,2053,Islamist extremists | 194 attacks 1987-2011 | 1158 killed 986 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 94%
+2053,0,2054,"Islamist extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2054,0,2055,Islamist extremists | Assassination: 35 attacks
+2055,0,2056,Islamist extremists | Armed Assault: 76 attacks
+2056,0,2057,Islamist extremists | Bombing/Explosion: 48 attacks
+2057,0,2058,Islamist extremists | Hijacking: 1 attacks
+2058,0,2059,Islamist extremists | Kidnapping: 4 attacks
+2059,0,2060,Islamist extremists | Infrastructure Attack: 1 attacks
+2060,0,2061,Islamist extremists | Unarmed Assault: 2 attacks
+2061,0,2062,Islamist extremists | Unknown: 27 attacks
+2062,0,2063,Islamist extremists | 1158 killed
+2063,0,2064,Islamist extremists | 986 wounded
+2064,0,2065,Islamist extremists | struck in 16 countries | most: Algeria
+2065,0,2066,Islamist extremists | activity 1970-2020 in 5-yr bins | peak 1995-1999: 127 attacks
+2066,0,2067,Islamist extremists | 1970-1974: 0 attacks
+2067,0,2068,Islamist extremists | 1975-1979: 0 attacks
+2068,0,2069,Islamist extremists | 1980-1984: 0 attacks
+2069,0,2070,Islamist extremists | 1985-1989: 4 attacks
+2070,0,2071,Islamist extremists | 1990-1994: 46 attacks
+2071,0,2072,Islamist extremists | 1995-1999: 127 attacks
+2072,0,2073,Islamist extremists | 2000-2004: 6 attacks
+2073,0,2074,Islamist extremists | 2005-2009: 5 attacks
+2074,0,2075,Islamist extremists | 2010-2014: 6 attacks
+2075,0,2076,Islamist extremists | 2015-2019: 0 attacks
+2076,0,2077,Islamist extremists | 2020-2020: 0 attacks
+2077,0,2078,Armenian Secret Army for the Liberation of Armenia | 186 attacks 1975-1997 | 61 killed 378 wounded | dominant: Bombing/Explosion | top target: Airports & Aircraft | suicide 0% | success 84%
+2078,0,2079,"Armenian Secret Army for the Liberation of Armenia | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2079,0,2080,Armenian Secret Army for the Liberation of Armenia | Assassination: 26 attacks
+2080,0,2081,Armenian Secret Army for the Liberation of Armenia | Armed Assault: 3 attacks
+2081,0,2082,Armenian Secret Army for the Liberation of Armenia | Bombing/Explosion: 145 attacks
+2082,0,2083,Armenian Secret Army for the Liberation of Armenia | Hostage (Barricade): 2 attacks
+2083,0,2084,Armenian Secret Army for the Liberation of Armenia | Kidnapping: 1 attacks
+2084,0,2085,Armenian Secret Army for the Liberation of Armenia | Infrastructure Attack: 2 attacks
+2085,0,2086,Armenian Secret Army for the Liberation of Armenia | Unknown: 7 attacks
+2086,0,2087,Armenian Secret Army for the Liberation of Armenia | 61 killed
+2087,0,2088,Armenian Secret Army for the Liberation of Armenia | 378 wounded
+2088,0,2089,Armenian Secret Army for the Liberation of Armenia | struck in 18 countries | most: France
+2089,0,2090,Armenian Secret Army for the Liberation of Armenia | activity 1970-2020 in 5-yr bins | peak 1980-1984: 121 attacks
+2090,0,2091,Armenian Secret Army for the Liberation of Armenia | 1970-1974: 0 attacks
+2091,0,2092,Armenian Secret Army for the Liberation of Armenia | 1975-1979: 55 attacks
+2092,0,2093,Armenian Secret Army for the Liberation of Armenia | 1980-1984: 121 attacks
+2093,0,2094,Armenian Secret Army for the Liberation of Armenia | 1985-1989: 8 attacks
+2094,0,2095,Armenian Secret Army for the Liberation of Armenia | 1990-1994: 1 attacks
+2095,0,2096,Armenian Secret Army for the Liberation of Armenia | 1995-1999: 1 attacks
+2096,0,2097,Armenian Secret Army for the Liberation of Armenia | 2000-2004: 0 attacks
+2097,0,2098,Armenian Secret Army for the Liberation of Armenia | 2005-2009: 0 attacks
+2098,0,2099,Armenian Secret Army for the Liberation of Armenia | 2010-2014: 0 attacks
+2099,0,2100,Armenian Secret Army for the Liberation of Armenia | 2015-2019: 0 attacks
+2100,0,2101,Armenian Secret Army for the Liberation of Armenia | 2020-2020: 0 attacks
+2101,0,2102,Al-Aqsa Martyrs Brigade | 177 attacks 2000-2019 | 290 killed 1084 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 20% | success 88%
+2102,0,2103,"Al-Aqsa Martyrs Brigade | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2103,0,2104,Al-Aqsa Martyrs Brigade | Assassination: 5 attacks
+2104,0,2105,Al-Aqsa Martyrs Brigade | Armed Assault: 68 attacks
+2105,0,2106,Al-Aqsa Martyrs Brigade | Bombing/Explosion: 90 attacks
+2106,0,2107,Al-Aqsa Martyrs Brigade | Hostage (Barricade): 1 attacks
+2107,0,2108,Al-Aqsa Martyrs Brigade | Kidnapping: 7 attacks
+2108,0,2109,Al-Aqsa Martyrs Brigade | Infrastructure Attack: 4 attacks
+2109,0,2110,Al-Aqsa Martyrs Brigade | Unarmed Assault: 1 attacks
+2110,0,2111,Al-Aqsa Martyrs Brigade | Unknown: 1 attacks
+2111,0,2112,Al-Aqsa Martyrs Brigade | 290 killed
+2112,0,2113,Al-Aqsa Martyrs Brigade | 1084 wounded
+2113,0,2114,Al-Aqsa Martyrs Brigade | struck in 2 countries | most: West Bank and Gaza Strip
+2114,0,2115,Al-Aqsa Martyrs Brigade | activity 1970-2020 in 5-yr bins | peak 2000-2004: 87 attacks
+2115,0,2116,Al-Aqsa Martyrs Brigade | 1970-1974: 0 attacks
+2116,0,2117,Al-Aqsa Martyrs Brigade | 1975-1979: 0 attacks
+2117,0,2118,Al-Aqsa Martyrs Brigade | 1980-1984: 0 attacks
+2118,0,2119,Al-Aqsa Martyrs Brigade | 1985-1989: 0 attacks
+2119,0,2120,Al-Aqsa Martyrs Brigade | 1990-1994: 0 attacks
+2120,0,2121,Al-Aqsa Martyrs Brigade | 1995-1999: 0 attacks
+2121,0,2122,Al-Aqsa Martyrs Brigade | 2000-2004: 87 attacks
+2122,0,2123,Al-Aqsa Martyrs Brigade | 2005-2009: 66 attacks
+2123,0,2124,Al-Aqsa Martyrs Brigade | 2010-2014: 9 attacks
+2124,0,2125,Al-Aqsa Martyrs Brigade | 2015-2019: 15 attacks
+2125,0,2126,Al-Aqsa Martyrs Brigade | 2020-2020: 0 attacks
+2126,0,2127,Muttahida Qami Movement (MQM) | 176 attacks 1990-2018 | 236 killed 195 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 96%
+2127,0,2128,"Muttahida Qami Movement (MQM) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2128,0,2129,Muttahida Qami Movement (MQM) | Assassination: 22 attacks
+2129,0,2130,Muttahida Qami Movement (MQM) | Armed Assault: 84 attacks
+2130,0,2131,Muttahida Qami Movement (MQM) | Bombing/Explosion: 9 attacks
+2131,0,2132,Muttahida Qami Movement (MQM) | Kidnapping: 1 attacks
+2132,0,2133,Muttahida Qami Movement (MQM) | Infrastructure Attack: 3 attacks
+2133,0,2134,Muttahida Qami Movement (MQM) | Unarmed Assault: 50 attacks
+2134,0,2135,Muttahida Qami Movement (MQM) | Unknown: 7 attacks
+2135,0,2136,Muttahida Qami Movement (MQM) | 236 killed
+2136,0,2137,Muttahida Qami Movement (MQM) | 195 wounded
+2137,0,2138,Muttahida Qami Movement (MQM) | struck in 1 country | most: Pakistan
+2138,0,2139,Muttahida Qami Movement (MQM) | activity 1970-2020 in 5-yr bins | peak 1995-1999: 115 attacks
+2139,0,2140,Muttahida Qami Movement (MQM) | 1970-1974: 0 attacks
+2140,0,2141,Muttahida Qami Movement (MQM) | 1975-1979: 0 attacks
+2141,0,2142,Muttahida Qami Movement (MQM) | 1980-1984: 0 attacks
+2142,0,2143,Muttahida Qami Movement (MQM) | 1985-1989: 0 attacks
+2143,0,2144,Muttahida Qami Movement (MQM) | 1990-1994: 49 attacks
+2144,0,2145,Muttahida Qami Movement (MQM) | 1995-1999: 115 attacks
+2145,0,2146,Muttahida Qami Movement (MQM) | 2000-2004: 6 attacks
+2146,0,2147,Muttahida Qami Movement (MQM) | 2005-2009: 0 attacks
+2147,0,2148,Muttahida Qami Movement (MQM) | 2010-2014: 1 attacks
+2148,0,2149,Muttahida Qami Movement (MQM) | 2015-2019: 5 attacks
+2149,0,2150,Muttahida Qami Movement (MQM) | 2020-2020: 0 attacks
+2150,0,2151,National Democratic Front of Bodoland (NDFB) | 176 attacks 1992-2017 | 514 killed 524 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 93%
+2151,0,2152,"National Democratic Front of Bodoland (NDFB) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2152,0,2153,National Democratic Front of Bodoland (NDFB) | Assassination: 3 attacks
+2153,0,2154,National Democratic Front of Bodoland (NDFB) | Armed Assault: 78 attacks
+2154,0,2155,National Democratic Front of Bodoland (NDFB) | Bombing/Explosion: 53 attacks
+2155,0,2156,National Democratic Front of Bodoland (NDFB) | Kidnapping: 26 attacks
+2156,0,2157,National Democratic Front of Bodoland (NDFB) | Infrastructure Attack: 4 attacks
+2157,0,2158,National Democratic Front of Bodoland (NDFB) | Unarmed Assault: 5 attacks
+2158,0,2159,National Democratic Front of Bodoland (NDFB) | Unknown: 7 attacks
+2159,0,2160,National Democratic Front of Bodoland (NDFB) | 514 killed
+2160,0,2161,National Democratic Front of Bodoland (NDFB) | 524 wounded
+2161,0,2162,National Democratic Front of Bodoland (NDFB) | struck in 2 countries | most: India
+2162,0,2163,National Democratic Front of Bodoland (NDFB) | activity 1970-2020 in 5-yr bins | peak 2010-2014: 95 attacks
+2163,0,2164,National Democratic Front of Bodoland (NDFB) | 1970-1974: 0 attacks
+2164,0,2165,National Democratic Front of Bodoland (NDFB) | 1975-1979: 0 attacks
+2165,0,2166,National Democratic Front of Bodoland (NDFB) | 1980-1984: 0 attacks
+2166,0,2167,National Democratic Front of Bodoland (NDFB) | 1985-1989: 0 attacks
+2167,0,2168,National Democratic Front of Bodoland (NDFB) | 1990-1994: 9 attacks
+2168,0,2169,National Democratic Front of Bodoland (NDFB) | 1995-1999: 14 attacks
+2169,0,2170,National Democratic Front of Bodoland (NDFB) | 2000-2004: 22 attacks
+2170,0,2171,National Democratic Front of Bodoland (NDFB) | 2005-2009: 22 attacks
+2171,0,2172,National Democratic Front of Bodoland (NDFB) | 2010-2014: 95 attacks
+2172,0,2173,National Democratic Front of Bodoland (NDFB) | 2015-2019: 14 attacks
+2173,0,2174,National Democratic Front of Bodoland (NDFB) | 2020-2020: 0 attacks
+2174,0,2175,Palestine Liberation Organization (PLO) | 175 attacks 1970-1995 | 246 killed 335 wounded | dominant: Bombing/Explosion | top target: Military | suicide 1% | success 94%
+2175,0,2176,"Palestine Liberation Organization (PLO) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2176,0,2177,Palestine Liberation Organization (PLO) | Assassination: 21 attacks
+2177,0,2178,Palestine Liberation Organization (PLO) | Armed Assault: 39 attacks
+2178,0,2179,Palestine Liberation Organization (PLO) | Bombing/Explosion: 105 attacks
+2179,0,2180,Palestine Liberation Organization (PLO) | Hijacking: 1 attacks
+2180,0,2181,Palestine Liberation Organization (PLO) | Kidnapping: 4 attacks
+2181,0,2182,Palestine Liberation Organization (PLO) | Infrastructure Attack: 5 attacks
+2182,0,2183,Palestine Liberation Organization (PLO) | 246 killed
+2183,0,2184,Palestine Liberation Organization (PLO) | 335 wounded
+2184,0,2185,Palestine Liberation Organization (PLO) | struck in 12 countries | most: Lebanon
+2185,0,2186,Palestine Liberation Organization (PLO) | activity 1970-2020 in 5-yr bins | peak 1980-1984: 120 attacks
+2186,0,2187,Palestine Liberation Organization (PLO) | 1970-1974: 1 attacks
+2187,0,2188,Palestine Liberation Organization (PLO) | 1975-1979: 22 attacks
+2188,0,2189,Palestine Liberation Organization (PLO) | 1980-1984: 120 attacks
+2189,0,2190,Palestine Liberation Organization (PLO) | 1985-1989: 11 attacks
+2190,0,2191,Palestine Liberation Organization (PLO) | 1990-1994: 20 attacks
+2191,0,2192,Palestine Liberation Organization (PLO) | 1995-1999: 1 attacks
+2192,0,2193,Palestine Liberation Organization (PLO) | 2000-2004: 0 attacks
+2193,0,2194,Palestine Liberation Organization (PLO) | 2005-2009: 0 attacks
+2194,0,2195,Palestine Liberation Organization (PLO) | 2010-2014: 0 attacks
+2195,0,2196,Palestine Liberation Organization (PLO) | 2015-2019: 0 attacks
+2196,0,2197,Palestine Liberation Organization (PLO) | 2020-2020: 0 attacks
+2197,0,2198,Left-Wing Militants | 173 attacks 1970-1995 | 6 killed 25 wounded | dominant: Bombing/Explosion | top target: Military | suicide 0% | success 75%
+2198,0,2199,"Left-Wing Militants | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2199,0,2200,Left-Wing Militants | Assassination: 1 attacks
+2200,0,2201,Left-Wing Militants | Armed Assault: 3 attacks
+2201,0,2202,Left-Wing Militants | Bombing/Explosion: 94 attacks
+2202,0,2203,Left-Wing Militants | Hijacking: 1 attacks
+2203,0,2204,Left-Wing Militants | Infrastructure Attack: 72 attacks
+2204,0,2205,Left-Wing Militants | Unarmed Assault: 1 attacks
+2205,0,2206,Left-Wing Militants | Unknown: 1 attacks
+2206,0,2207,Left-Wing Militants | 6 killed
+2207,0,2208,Left-Wing Militants | 25 wounded
+2208,0,2209,Left-Wing Militants | struck in 4 countries | most: United States
+2209,0,2210,Left-Wing Militants | activity 1970-2020 in 5-yr bins | peak 1970-1974: 169 attacks
+2210,0,2211,Left-Wing Militants | 1970-1974: 169 attacks
+2211,0,2212,Left-Wing Militants | 1975-1979: 0 attacks
+2212,0,2213,Left-Wing Militants | 1980-1984: 1 attacks
+2213,0,2214,Left-Wing Militants | 1985-1989: 0 attacks
+2214,0,2215,Left-Wing Militants | 1990-1994: 2 attacks
+2215,0,2216,Left-Wing Militants | 1995-1999: 1 attacks
+2216,0,2217,Left-Wing Militants | 2000-2004: 0 attacks
+2217,0,2218,Left-Wing Militants | 2005-2009: 0 attacks
+2218,0,2219,Left-Wing Militants | 2010-2014: 0 attacks
+2219,0,2220,Left-Wing Militants | 2015-2019: 0 attacks
+2220,0,2221,Left-Wing Militants | 2020-2020: 0 attacks
+2221,0,2222,Barqa Province of the Islamic State | 169 attacks 2014-2019 | 417 killed 522 wounded | dominant: Bombing/Explosion | top target: Military | suicide 18% | success 92%
+2222,0,2223,"Barqa Province of the Islamic State | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2223,0,2224,Barqa Province of the Islamic State | Assassination: 6 attacks
+2224,0,2225,Barqa Province of the Islamic State | Armed Assault: 28 attacks
+2225,0,2226,Barqa Province of the Islamic State | Bombing/Explosion: 92 attacks
+2226,0,2227,Barqa Province of the Islamic State | Hijacking: 1 attacks
+2227,0,2228,Barqa Province of the Islamic State | Hostage (Barricade): 2 attacks
+2228,0,2229,Barqa Province of the Islamic State | Kidnapping: 23 attacks
+2229,0,2230,Barqa Province of the Islamic State | Infrastructure Attack: 1 attacks
+2230,0,2231,Barqa Province of the Islamic State | Unknown: 16 attacks
+2231,0,2232,Barqa Province of the Islamic State | 417 killed
+2232,0,2233,Barqa Province of the Islamic State | 522 wounded
+2233,0,2234,Barqa Province of the Islamic State | struck in 1 country | most: Libya
+2234,0,2235,Barqa Province of the Islamic State | activity 1970-2020 in 5-yr bins | peak 2015-2019: 164 attacks
+2235,0,2236,Barqa Province of the Islamic State | 1970-1974: 0 attacks
+2236,0,2237,Barqa Province of the Islamic State | 1975-1979: 0 attacks
+2237,0,2238,Barqa Province of the Islamic State | 1980-1984: 0 attacks
+2238,0,2239,Barqa Province of the Islamic State | 1985-1989: 0 attacks
+2239,0,2240,Barqa Province of the Islamic State | 1990-1994: 0 attacks
+2240,0,2241,Barqa Province of the Islamic State | 1995-1999: 0 attacks
+2241,0,2242,Barqa Province of the Islamic State | 2000-2004: 0 attacks
+2242,0,2243,Barqa Province of the Islamic State | 2005-2009: 0 attacks
+2243,0,2244,Barqa Province of the Islamic State | 2010-2014: 5 attacks
+2244,0,2245,Barqa Province of the Islamic State | 2015-2019: 164 attacks
+2245,0,2246,Barqa Province of the Islamic State | 2020-2020: 0 attacks
+2246,0,2247,Jihadi-inspired extremists | 169 attacks 1994-2020 | 343 killed 1047 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 8% | success 83%
+2247,0,2248,"Jihadi-inspired extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2248,0,2249,Jihadi-inspired extremists | Assassination: 3 attacks
+2249,0,2250,Jihadi-inspired extremists | Armed Assault: 87 attacks
+2250,0,2251,Jihadi-inspired extremists | Bombing/Explosion: 35 attacks
+2251,0,2252,Jihadi-inspired extremists | Hijacking: 4 attacks
+2252,0,2253,Jihadi-inspired extremists | Hostage (Barricade): 11 attacks
+2253,0,2254,Jihadi-inspired extremists | Kidnapping: 3 attacks
+2254,0,2255,Jihadi-inspired extremists | Infrastructure Attack: 14 attacks
+2255,0,2256,Jihadi-inspired extremists | Unarmed Assault: 12 attacks
+2256,0,2257,Jihadi-inspired extremists | 343 killed
+2257,0,2258,Jihadi-inspired extremists | 1047 wounded
+2258,0,2259,Jihadi-inspired extremists | struck in 29 countries | most: United States
+2259,0,2260,Jihadi-inspired extremists | activity 1970-2020 in 5-yr bins | peak 2015-2019: 121 attacks
+2260,0,2261,Jihadi-inspired extremists | 1970-1974: 0 attacks
+2261,0,2262,Jihadi-inspired extremists | 1975-1979: 0 attacks
+2262,0,2263,Jihadi-inspired extremists | 1980-1984: 0 attacks
+2263,0,2264,Jihadi-inspired extremists | 1985-1989: 0 attacks
+2264,0,2265,Jihadi-inspired extremists | 1990-1994: 3 attacks
+2265,0,2266,Jihadi-inspired extremists | 1995-1999: 0 attacks
+2266,0,2267,Jihadi-inspired extremists | 2000-2004: 2 attacks
+2267,0,2268,Jihadi-inspired extremists | 2005-2009: 3 attacks
+2268,0,2269,Jihadi-inspired extremists | 2010-2014: 18 attacks
+2269,0,2270,Jihadi-inspired extremists | 2015-2019: 121 attacks
+2270,0,2271,Jihadi-inspired extremists | 2020-2020: 22 attacks
+2271,0,2272,Garo National Liberation Army | 169 attacks 2010-2018 | 81 killed 105 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 82%
+2272,0,2273,"Garo National Liberation Army | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2273,0,2274,Garo National Liberation Army | Assassination: 5 attacks
+2274,0,2275,Garo National Liberation Army | Armed Assault: 69 attacks
+2275,0,2276,Garo National Liberation Army | Bombing/Explosion: 36 attacks
+2276,0,2277,Garo National Liberation Army | Kidnapping: 48 attacks
+2277,0,2278,Garo National Liberation Army | Infrastructure Attack: 4 attacks
+2278,0,2279,Garo National Liberation Army | Unarmed Assault: 2 attacks
+2279,0,2280,Garo National Liberation Army | Unknown: 5 attacks
+2280,0,2281,Garo National Liberation Army | 81 killed
+2281,0,2282,Garo National Liberation Army | 105 wounded
+2282,0,2283,Garo National Liberation Army | struck in 1 country | most: India
+2283,0,2284,Garo National Liberation Army | activity 1970-2020 in 5-yr bins | peak 2010-2014: 119 attacks
+2284,0,2285,Garo National Liberation Army | 1970-1974: 0 attacks
+2285,0,2286,Garo National Liberation Army | 1975-1979: 0 attacks
+2286,0,2287,Garo National Liberation Army | 1980-1984: 0 attacks
+2287,0,2288,Garo National Liberation Army | 1985-1989: 0 attacks
+2288,0,2289,Garo National Liberation Army | 1990-1994: 0 attacks
+2289,0,2290,Garo National Liberation Army | 1995-1999: 0 attacks
+2290,0,2291,Garo National Liberation Army | 2000-2004: 0 attacks
+2291,0,2292,Garo National Liberation Army | 2005-2009: 0 attacks
+2292,0,2293,Garo National Liberation Army | 2010-2014: 119 attacks
+2293,0,2294,Garo National Liberation Army | 2015-2019: 50 attacks
+2294,0,2295,Garo National Liberation Army | 2020-2020: 0 attacks
+2295,0,2296,Tribesmen | 168 attacks 1998-2020 | 706 killed 294 wounded | dominant: Kidnapping | top target: Private Citizens & Property | suicide 0% | success 94%
+2296,0,2297,"Tribesmen | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2297,0,2298,Tribesmen | Assassination: 5 attacks
+2298,0,2299,Tribesmen | Armed Assault: 38 attacks
+2299,0,2300,Tribesmen | Bombing/Explosion: 41 attacks
+2300,0,2301,Tribesmen | Hijacking: 3 attacks
+2301,0,2302,Tribesmen | Kidnapping: 60 attacks
+2302,0,2303,Tribesmen | Infrastructure Attack: 13 attacks
+2303,0,2304,Tribesmen | Unknown: 8 attacks
+2304,0,2305,Tribesmen | 706 killed
+2305,0,2306,Tribesmen | 294 wounded
+2306,0,2307,Tribesmen | struck in 11 countries | most: Yemen
+2307,0,2308,Tribesmen | activity 1970-2020 in 5-yr bins | peak 2010-2014: 78 attacks
+2308,0,2309,Tribesmen | 1970-1974: 0 attacks
+2309,0,2310,Tribesmen | 1975-1979: 0 attacks
+2310,0,2311,Tribesmen | 1980-1984: 0 attacks
+2311,0,2312,Tribesmen | 1985-1989: 0 attacks
+2312,0,2313,Tribesmen | 1990-1994: 0 attacks
+2313,0,2314,Tribesmen | 1995-1999: 4 attacks
+2314,0,2315,Tribesmen | 2000-2004: 7 attacks
+2315,0,2316,Tribesmen | 2005-2009: 7 attacks
+2316,0,2317,Tribesmen | 2010-2014: 78 attacks
+2317,0,2318,Tribesmen | 2015-2019: 64 attacks
+2318,0,2319,Tribesmen | 2020-2020: 8 attacks
+2319,0,2320,Hutu extremists | 168 attacks 1992-2016 | 4102 killed 872 wounded | dominant: Armed Assault | top target: Private Citizens & Property | suicide 0% | success 99%
+2320,0,2321,"Hutu extremists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2321,0,2322,Hutu extremists | Assassination: 3 attacks
+2322,0,2323,Hutu extremists | Armed Assault: 68 attacks
+2323,0,2324,Hutu extremists | Bombing/Explosion: 10 attacks
+2324,0,2325,Hutu extremists | Kidnapping: 7 attacks
+2325,0,2326,Hutu extremists | Infrastructure Attack: 40 attacks
+2326,0,2327,Hutu extremists | Unknown: 40 attacks
+2327,0,2328,Hutu extremists | 4102 killed
+2328,0,2329,Hutu extremists | 872 wounded
+2329,0,2330,Hutu extremists | struck in 6 countries | most: Burundi
+2330,0,2331,Hutu extremists | activity 1970-2020 in 5-yr bins | peak 1995-1999: 135 attacks
+2331,0,2332,Hutu extremists | 1970-1974: 0 attacks
+2332,0,2333,Hutu extremists | 1975-1979: 0 attacks
+2333,0,2334,Hutu extremists | 1980-1984: 0 attacks
+2334,0,2335,Hutu extremists | 1985-1989: 0 attacks
+2335,0,2336,Hutu extremists | 1990-1994: 6 attacks
+2336,0,2337,Hutu extremists | 1995-1999: 135 attacks
+2337,0,2338,Hutu extremists | 2000-2004: 20 attacks
+2338,0,2339,Hutu extremists | 2005-2009: 3 attacks
+2339,0,2340,Hutu extremists | 2010-2014: 3 attacks
+2340,0,2341,Hutu extremists | 2015-2019: 1 attacks
+2341,0,2342,Hutu extremists | 2020-2020: 0 attacks
+2342,0,2343,People's Liberation Forces (FPL) | 167 attacks 1977-1979 | 124 killed 66 wounded | dominant: Bombing/Explosion | top target: Government (General) | suicide 0% | success 98%
+2343,0,2344,"People's Liberation Forces (FPL) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2344,0,2345,People's Liberation Forces (FPL) | Assassination: 47 attacks
+2345,0,2346,People's Liberation Forces (FPL) | Armed Assault: 41 attacks
+2346,0,2347,People's Liberation Forces (FPL) | Bombing/Explosion: 53 attacks
+2347,0,2348,People's Liberation Forces (FPL) | Hostage (Barricade): 8 attacks
+2348,0,2349,People's Liberation Forces (FPL) | Kidnapping: 4 attacks
+2349,0,2350,People's Liberation Forces (FPL) | Infrastructure Attack: 12 attacks
+2350,0,2351,People's Liberation Forces (FPL) | Unknown: 2 attacks
+2351,0,2352,People's Liberation Forces (FPL) | 124 killed
+2352,0,2353,People's Liberation Forces (FPL) | 66 wounded
+2353,0,2354,People's Liberation Forces (FPL) | struck in 1 country | most: El Salvador
+2354,0,2355,People's Liberation Forces (FPL) | activity 1970-2020 in 5-yr bins | peak 1975-1979: 167 attacks
+2355,0,2356,People's Liberation Forces (FPL) | 1970-1974: 0 attacks
+2356,0,2357,People's Liberation Forces (FPL) | 1975-1979: 167 attacks
+2357,0,2358,People's Liberation Forces (FPL) | 1980-1984: 0 attacks
+2358,0,2359,People's Liberation Forces (FPL) | 1985-1989: 0 attacks
+2359,0,2360,People's Liberation Forces (FPL) | 1990-1994: 0 attacks
+2360,0,2361,People's Liberation Forces (FPL) | 1995-1999: 0 attacks
+2361,0,2362,People's Liberation Forces (FPL) | 2000-2004: 0 attacks
+2362,0,2363,People's Liberation Forces (FPL) | 2005-2009: 0 attacks
+2363,0,2364,People's Liberation Forces (FPL) | 2010-2014: 0 attacks
+2364,0,2365,People's Liberation Forces (FPL) | 2015-2019: 0 attacks
+2365,0,2366,People's Liberation Forces (FPL) | 2020-2020: 0 attacks
+2366,0,2367,Muslim Separatists | 163 attacks 1984-2011 | 180 killed 379 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 0% | success 91%
+2367,0,2368,"Muslim Separatists | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2368,0,2369,Muslim Separatists | Assassination: 10 attacks
+2369,0,2370,Muslim Separatists | Armed Assault: 30 attacks
+2370,0,2371,Muslim Separatists | Bombing/Explosion: 62 attacks
+2371,0,2372,Muslim Separatists | Kidnapping: 5 attacks
+2372,0,2373,Muslim Separatists | Infrastructure Attack: 35 attacks
+2373,0,2374,Muslim Separatists | Unarmed Assault: 19 attacks
+2374,0,2375,Muslim Separatists | Unknown: 2 attacks
+2375,0,2376,Muslim Separatists | 180 killed
+2376,0,2377,Muslim Separatists | 379 wounded
+2377,0,2378,Muslim Separatists | struck in 5 countries | most: India
+2378,0,2379,Muslim Separatists | activity 1970-2020 in 5-yr bins | peak 1995-1999: 101 attacks
+2379,0,2380,Muslim Separatists | 1970-1974: 0 attacks
+2380,0,2381,Muslim Separatists | 1975-1979: 0 attacks
+2381,0,2382,Muslim Separatists | 1980-1984: 1 attacks
+2382,0,2383,Muslim Separatists | 1985-1989: 2 attacks
+2383,0,2384,Muslim Separatists | 1990-1994: 25 attacks
+2384,0,2385,Muslim Separatists | 1995-1999: 101 attacks
+2385,0,2386,Muslim Separatists | 2000-2004: 5 attacks
+2386,0,2387,Muslim Separatists | 2005-2009: 22 attacks
+2387,0,2388,Muslim Separatists | 2010-2014: 7 attacks
+2388,0,2389,Muslim Separatists | 2015-2019: 0 attacks
+2389,0,2390,Muslim Separatists | 2020-2020: 0 attacks
+2390,0,2391,Khmer Rouge | 160 attacks 1978-1999 | 361 killed 312 wounded | dominant: Bombing/Explosion | top target: Transportation | suicide 0% | success 98%
+2391,0,2392,"Khmer Rouge | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2392,0,2393,Khmer Rouge | Assassination: 2 attacks
+2393,0,2394,Khmer Rouge | Armed Assault: 44 attacks
+2394,0,2395,Khmer Rouge | Bombing/Explosion: 76 attacks
+2395,0,2396,Khmer Rouge | Hostage (Barricade): 2 attacks
+2396,0,2397,Khmer Rouge | Kidnapping: 14 attacks
+2397,0,2398,Khmer Rouge | Infrastructure Attack: 2 attacks
+2398,0,2399,Khmer Rouge | Unknown: 20 attacks
+2399,0,2400,Khmer Rouge | 361 killed
+2400,0,2401,Khmer Rouge | 312 wounded
+2401,0,2402,Khmer Rouge | struck in 2 countries | most: Cambodia
+2402,0,2403,Khmer Rouge | activity 1970-2020 in 5-yr bins | peak 1990-1994: 80 attacks
+2403,0,2404,Khmer Rouge | 1970-1974: 0 attacks
+2404,0,2405,Khmer Rouge | 1975-1979: 1 attacks
+2405,0,2406,Khmer Rouge | 1980-1984: 0 attacks
+2406,0,2407,Khmer Rouge | 1985-1989: 2 attacks
+2407,0,2408,Khmer Rouge | 1990-1994: 80 attacks
+2408,0,2409,Khmer Rouge | 1995-1999: 77 attacks
+2409,0,2410,Khmer Rouge | 2000-2004: 0 attacks
+2410,0,2411,Khmer Rouge | 2005-2009: 0 attacks
+2411,0,2412,Khmer Rouge | 2010-2014: 0 attacks
+2412,0,2413,Khmer Rouge | 2015-2019: 0 attacks
+2413,0,2414,Khmer Rouge | 2020-2020: 0 attacks
+2414,0,2415,Guerrilla Army of the Poor (EGP) | 157 attacks 1975-1994 | 579 killed 103 wounded | dominant: Armed Assault | top target: Military | suicide 0% | success 96%
+2415,0,2416,"Guerrilla Army of the Poor (EGP) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2416,0,2417,Guerrilla Army of the Poor (EGP) | Assassination: 24 attacks
+2417,0,2418,Guerrilla Army of the Poor (EGP) | Armed Assault: 55 attacks
+2418,0,2419,Guerrilla Army of the Poor (EGP) | Bombing/Explosion: 42 attacks
+2419,0,2420,Guerrilla Army of the Poor (EGP) | Hostage (Barricade): 6 attacks
+2420,0,2421,Guerrilla Army of the Poor (EGP) | Kidnapping: 9 attacks
+2421,0,2422,Guerrilla Army of the Poor (EGP) | Infrastructure Attack: 9 attacks
+2422,0,2423,Guerrilla Army of the Poor (EGP) | Unknown: 12 attacks
+2423,0,2424,Guerrilla Army of the Poor (EGP) | 579 killed
+2424,0,2425,Guerrilla Army of the Poor (EGP) | 103 wounded
+2425,0,2426,Guerrilla Army of the Poor (EGP) | struck in 3 countries | most: Guatemala
+2426,0,2427,Guerrilla Army of the Poor (EGP) | activity 1970-2020 in 5-yr bins | peak 1980-1984: 100 attacks
+2427,0,2428,Guerrilla Army of the Poor (EGP) | 1970-1974: 0 attacks
+2428,0,2429,Guerrilla Army of the Poor (EGP) | 1975-1979: 48 attacks
+2429,0,2430,Guerrilla Army of the Poor (EGP) | 1980-1984: 100 attacks
+2430,0,2431,Guerrilla Army of the Poor (EGP) | 1985-1989: 7 attacks
+2431,0,2432,Guerrilla Army of the Poor (EGP) | 1990-1994: 2 attacks
+2432,0,2433,Guerrilla Army of the Poor (EGP) | 1995-1999: 0 attacks
+2433,0,2434,Guerrilla Army of the Poor (EGP) | 2000-2004: 0 attacks
+2434,0,2435,Guerrilla Army of the Poor (EGP) | 2005-2009: 0 attacks
+2435,0,2436,Guerrilla Army of the Poor (EGP) | 2010-2014: 0 attacks
+2436,0,2437,Guerrilla Army of the Poor (EGP) | 2015-2019: 0 attacks
+2437,0,2438,Guerrilla Army of the Poor (EGP) | 2020-2020: 0 attacks
+2438,0,2439,Popular Front for the Liberation of Palestine (PFLP) | 156 attacks 1970-2019 | 150 killed 539 wounded | dominant: Bombing/Explosion | top target: Private Citizens & Property | suicide 4% | success 88%
+2439,0,2440,"Popular Front for the Liberation of Palestine (PFLP) | ring, 12 slots clockwise from 12: Assassination, Armed Assault, Bombing, Hijacking, Barricade, Kidnapping, Infrastructure, Unarmed, Unknown, Killed, Wounded, Countries Struck"
+2440,0,2441,Popular Front for the Liberation of Palestine (PFLP) | Assassination: 16 attacks
+2441,0,2442,Popular Front for the Liberation of Palestine (PFLP) | Armed Assault: 26 attacks
+2442,0,2443,Popular Front for the Liberation of Palestine (PFLP) | Bombing/Explosion: 91 attacks
+2443,0,2444,Popular Front for the Liberation of Palestine (PFLP) | Hijacking: 6 attacks
+2444,0,2445,Popular Front for the Liberation of Palestine (PFLP) | Hostage (Barricade): 6 attacks
+2445,0,2446,Popular Front for the Liberation of Palestine (PFLP) | Kidnapping: 6 attacks
+2446,0,2447,Popular Front for the Liberation of Palestine (PFLP) | Infrastructure Attack: 4 attacks
+2447,0,2448,Popular Front for the Liberation of Palestine (PFLP) | Unknown: 1 attacks
+2448,0,2449,Popular Front for the Liberation of Palestine (PFLP) | 150 killed
+2449,0,2450,Popular Front for the Liberation of Palestine (PFLP) | 539 wounded
+2450,0,2451,Popular Front for the Liberation of Palestine (PFLP) | struck in 20 countries | most: Israel
+2451,0,2452,Popular Front for the Liberation of Palestine (PFLP) | activity 1970-2020 in 5-yr bins | peak 1970-1974: 30 attacks
+2452,0,2453,Popular Front for the Liberation of Palestine (PFLP) | 1970-1974: 30 attacks
+2453,0,2454,Popular Front for the Liberation of Palestine (PFLP) | 1975-1979: 22 attacks
+2454,0,2455,Popular Front for the Liberation of Palestine (PFLP) | 1980-1984: 16 attacks
+2455,0,2456,Popular Front for the Liberation of Palestine (PFLP) | 1985-1989: 7 attacks
+2456,0,2457,Popular Front for the Liberation of Palestine (PFLP) | 1990-1994: 14 attacks
+2457,0,2458,Popular Front for the Liberation of Palestine (PFLP) | 1995-1999: 4 attacks
+2458,0,2459,Popular Front for the Liberation of Palestine (PFLP) | 2000-2004: 20 attacks
+2459,0,2460,Popular Front for the Liberation of Palestine (PFLP) | 2005-2009: 28 attacks
+2460,0,2461,Popular Front for the Liberation of Palestine (PFLP) | 2010-2014: 7 attacks
+2461,0,2462,Popular Front for the Liberation of Palestine (PFLP) | 2015-2019: 8 attacks
+2462,0,2463,Popular Front for the Liberation of Palestine (PFLP) | 2020-2020: 0 attacks
+2463,0,2464,"TIME CURSOR | x = current date (1970 left, 2020 right) | height = attacks/month by these orgs"
+2464,0,2465,1970
+2465,0,2466,1980
+2466,0,2467,1990
+2467,0,2468,2000
+2468,0,2469,2010
+2469,0,2470,2020
