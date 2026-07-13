@@ -36,6 +36,12 @@ Z-topology variants (9–13) are each "akin to" their non-Z counterpart with the
 
 When topology behavior is ambiguous, consult `gaiaviz-skill/references/structure/Topology-Guide.md` first. If not covered there, derive from first principles and note the choice in the commit message.
 
+## World Grid (type=6)
+
+Implemented 2026-07-13 (second attempt; the reverted V1's implicit root-glyph attachment is gone). A World Grid is a real, movable/rotatable/scalable node whose children attach **explicitly** via `parent_id = grid.id` — never implicitly, and scenes have no default grid (legacy type-6 rows in loaded files do render; GaiaViz's parent_id=0 main-grid convention is deliberately not used). Children place by `translate_x`=longitude, `translate_y`=latitude, `translate_z`=elevation within the grid's **extents window** (`Node.grid_extents()`), stored in the 94-column `trigger_lo_x/hi_x` (lon min/max) and `trigger_lo_y/hi_y` (lat min/max) fields; `segments_x/y` are the rendered cell counts. Degenerate (hi ≤ lo, i.e. legacy all-zero) axes fall back to the whole-earth window (-180..180, -90..90), which centers at (0, 0) so a grid at the origin with scale 1 is an exact 1:1 frame — a child at (180, 90) coincides with a non-child node at world (180, 90). Region windows recenter children on the window midpoint. The grid's draw matrix is extents half-spans × RAW scale (no base_scale, no 0.2 floor — see `scene._grid_draw_scale`) so the rendered rectangle stays under its children.
+
+Key rules: grid scale re-spaces child POSITIONS per axis but never child rendered size or subtree internal spacing (keyed on parent TYPE=6 in `compute_world_transforms` / `update_world_transform_rows` — plain topo=Plane parents keep legacy scale inheritance); grids are never click/rubber-band-pickable (G key selects/cycles them, matching ANTz; the node table and World Grid panel also select) and are excluded from bulk Select All; Move-drag sensitivity for children of scaled Cartesian parents divides by the parent's cumulative scale (`viewport._move_axis_divisors` — this was V1's "hypersensitive mouse" failure). Solid grid geometry (`GEO_GRID`) takes an equirectangular texture across the window; wire geometry draws the lattice only.
+
 ## Rotation Convention
 
 `rotate_x/y/z` support two interpretations, selected per-node via `Node.rotation_mode` (`glyphviz_core/node.py`):

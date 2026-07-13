@@ -11,13 +11,15 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from pathlib import Path
 
 from glyphviz_core.node import (
-    Node, NON_VISUAL_TYPES, NODE_TYPE_LINK,
+    Node, NON_VISUAL_TYPES, NODE_TYPE_GRID, NODE_TYPE_LINK,
     RENDER_MODE_NORMAL, RENDER_MODE_ADDITIVE, RENDER_MODE_SUBTRACTIVE,
     RENDER_MODE_DARK, RENDER_MODE_OFF, RENDER_MODE_SCREEN, RENDER_MODE_PREMULTIPLIED,
     WORLD_DEFAULT_BG_RGB,
 )
 from glyphviz_core.scene import Scene
-from glyphviz_core.topology import TOPO_PLOT, TOPO_SURFACE
+from glyphviz_core.topology import (
+    TOPO_NONE, TOPO_PLANE, TOPO_PLOT, TOPO_SURFACE, TOPO_VIDEO,
+)
 from glyphviz_core.mesh_loader import load_mesh_file as _load_mesh_data
 
 from glyphviz_core.geometry_data import GEO_TORUS, GEO_TORUS_WIRE
@@ -44,6 +46,15 @@ _MAX_TAGS_PER_FRAME = 500
 # a delta applied every cycle, nominally 60 cycles/second — see
 # Node-Field-Descriptions.md's Translate/Rotate/Scale sections.
 _RATE_CYCLE_MS = 1000.0 / 60.0
+
+# Parent shapes whose translate_x/y/z map linearly (Cartesian) into the
+# parent's local frame — for these, a Move-drag's screen-space delta can be
+# converted exactly into translate units by dividing out the parent's
+# cumulative per-axis scale (see _move_axis_divisors). Angular topologies
+# (Sphere/Torus/...) use degrees and keep the historical fixed drag rate.
+_CARTESIAN_PARENT_TOPOS = frozenset({
+    TOPO_NONE, TOPO_PLANE, TOPO_VIDEO, TOPO_PLOT, TOPO_SURFACE,
+})
 
 
 _DEFAULT_BG = tuple(c / 255.0 for c in WORLD_DEFAULT_BG_RGB)  # used when the scene has no World node
@@ -111,6 +122,7 @@ class Viewport(QOpenGLWidget):
     bgToggleRequested = Signal()         # B → toggle background black/white
     renderModeCycleRequested = Signal()  # 8 → cycle scene render mode
     quickSaveRequested = Signal()        # K → silent auto-save node+tag CSV
+    gridSelectRequested = Signal()       # G → select / cycle World Grid nodes (ANTz-style)
 
     # Channels playback transport (handled here, not as window-wide
     # shortcuts, so a bare Space still types normally in text fields;
@@ -381,6 +393,13 @@ class Viewport(QOpenGLWidget):
                 self._scene.world_pos(n.id) or (n.translate_x, n.translate_y, n.translate_z)
                 for n in visible
             ]
+            # A World Grid's footprint spans far beyond its center point —
+            # include its corners so a grid scene opens fully framed.
+            for n, p in zip(visible, list(positions)):
+                if n.type == NODE_TYPE_GRID:
+                    rx, ry, _ = self._radius_of(n)
+                    positions.append((p[0] - rx, p[1] - ry, p[2]))
+                    positions.append((p[0] + rx, p[1] + ry, p[2]))
             xs = [p[0] for p in positions]
             ys = [p[1] for p in positions]
             zs = [p[2] for p in positions]
@@ -399,6 +418,13 @@ class Viewport(QOpenGLWidget):
 
     def _radius_of(self, node: Node) -> tuple[float, float, float]:
         """Per-axis rendered radii (rx, ry, rz) for camera focus and UI hints."""
+        if node.type == NODE_TYPE_GRID:
+            # World Grid: footprint = extents half-spans x raw scale, no
+            # base_scale/floor (mirrors scene._grid_draw_scale).
+            half_lon, half_lat = node.grid_half_extents()
+            return (max(node.scale_x * half_lon, 0.2),
+                    max(node.scale_y * half_lat, 0.2),
+                    max(node.scale_z, 0.2))
         s = self._scene.world_scale(node.id) or (node.scale_x, node.scale_y, node.scale_z)
         bs = self._base_scale
         return (max(s[0]*bs, 0.2), max(s[1]*bs, 0.2), max(s[2]*bs, 0.2))
@@ -901,7 +927,11 @@ class Viewport(QOpenGLWidget):
         loop pass its own just-captured matrices in for frustum culling
         (self._mv_matrix/_proj_matrix are left None in stereo mode -- see
         paintGL -- since each eye needs its own off-axis projection)."""
-        if self.show_grid:
+        if self.show_grid and not any(n.type == NODE_TYPE_GRID
+                                      for n in self._scene.nodes):
+            # Procedural backdrop only for scenes with no real World Grid —
+            # once one exists, its own lattice is the reference plane and the
+            # decoration's unrelated spacing would just fight it.
             self._draw_grid()
         if self.show_axes:
             self._draw_axes()
@@ -1374,6 +1404,9 @@ class Viewport(QOpenGLWidget):
         # construction. Selection outlines are a separate pass
         # (_draw_selected_outlines) so this body can compile into the
         # retained scene display list unchanged.
+        if node.type == NODE_TYPE_GRID:
+            self._draw_world_grid(node, gl_matrix)
+            return
         glPushMatrix()
         glMultMatrixf(gl_matrix)
 
@@ -1395,6 +1428,75 @@ class Viewport(QOpenGLWidget):
         self._geo.draw(node.geometry, 1.0, 1.0, 1.0, ratio=node.ratio, gl_tex_name=gl_tex,
                        mesh_id=node.mesh_id)
 
+        glPopMatrix()
+
+    def _draw_world_grid(self, node: Node, gl_matrix: np.ndarray):
+        """Bespoke draw path for World Grid nodes (type=6).
+
+        The draw matrix already carries the extents-window half-spans times
+        the node's raw scale (see scene._grid_draw_scale), so everything here
+        renders in a ±1 local square: lattice lines at the node's segments_x/y
+        counts, plus — for a solid geometry choice — a double-sided plate that
+        takes the node's texture (e.g. an equirectangular earth map, which the
+        default whole-earth window matches exactly). UVs follow GEO_GRID's
+        convention (v grows with +y)."""
+        seg_x, seg_y = node.grid_segments()
+        wire_only = node.geometry in WIRE_TO_SOLID   # any *_WIRE geometry id
+
+        glPushMatrix()
+        glMultMatrixf(gl_matrix)
+        glDisable(GL_LIGHTING)
+
+        r, g, b, a = (node.color_r / 255.0, node.color_g / 255.0,
+                      node.color_b / 255.0, node.color_a / 255.0)
+        if not wire_only:
+            gl_tex = 0
+            if node.texture_id:
+                gl_tex = self._tex_mgr.get_gl_name(node.texture_id)
+                if not gl_tex:
+                    gl_tex = self._video_mgr.get_gl_name(node.texture_id)
+            if gl_tex:
+                glEnable(GL_TEXTURE_2D)
+                glBindTexture(GL_TEXTURE_2D, gl_tex)
+                glColor4f(1.0, 1.0, 1.0, a)   # don't tint the map texture
+            else:
+                glColor4f(r, g, b, a)
+            glBegin(GL_QUADS)   # double-sided, like geometry.py's grid plate
+            glNormal3f(0.0, 0.0, 1.0)
+            for x, y, u, v in ((-1, -1, 0, 0), (1, -1, 1, 0),
+                               (1, 1, 1, 1), (-1, 1, 0, 1)):
+                glTexCoord2f(u, v)
+                glVertex3f(x, y, 0.0)
+            glNormal3f(0.0, 0.0, -1.0)
+            for x, y, u, v in ((-1, 1, 0, 1), (1, 1, 1, 1),
+                               (1, -1, 1, 0), (-1, -1, 0, 0)):
+                glTexCoord2f(u, v)
+                glVertex3f(x, y, 0.0)
+            glEnd()
+            if gl_tex:
+                glDisable(GL_TEXTURE_2D)
+
+        # Lattice lines. Over a solid/textured plate they dim toward half
+        # opacity for contrast and lift a hair off the surface (in local z,
+        # so the offset scales with the grid, never dwarfing thin scenes).
+        z = 0.0 if wire_only else 0.001
+        if wire_only:
+            glColor4f(r, g, b, a)
+        else:
+            glColor4f(r, g, b, a * 0.5)
+        glLineWidth(1.0)
+        glBegin(GL_LINES)
+        for i in range(seg_x + 1):
+            x = -1.0 + 2.0 * i / seg_x
+            glVertex3f(x, -1.0, z)
+            glVertex3f(x, 1.0, z)
+        for j in range(seg_y + 1):
+            y = -1.0 + 2.0 * j / seg_y
+            glVertex3f(-1.0, y, z)
+            glVertex3f(1.0, y, z)
+        glEnd()
+
+        glEnable(GL_LIGHTING)
         glPopMatrix()
 
     def _draw_rubber_band(self):
@@ -1588,6 +1690,18 @@ class Viewport(QOpenGLWidget):
             if node.type == NODE_TYPE_LINK:
                 continue   # links are picked via lines below
             if not self.show_hidden and node.hide:
+                continue
+            if node.type == NODE_TYPE_GRID:
+                # World Grids are never click/rubber-band targets: a grid
+                # usually fills the view under its children, so making it
+                # pickable would swallow every near-miss click meant for a
+                # glyph. Select a grid with the G key (cycles through grids,
+                # ANTz-style), the node table, or the World Grid panel; once
+                # selected, Move/Rotate/Size drags apply to it as normal.
+                # Still counted against the draw limit so this pass's
+                # decimation cutoff stays aligned with the draw loop's.
+                if self._draw_limit is None or visible_count < self._draw_limit:
+                    visible_count += 1
                 continue
             is_selected = node.id in self.selected_node_ids
             within_limit = self._draw_limit is None or visible_count < self._draw_limit
@@ -1789,6 +1903,9 @@ class Viewport(QOpenGLWidget):
         elif event.key() == Qt.Key.Key_K:
             self.quickSaveRequested.emit()
             event.accept()
+        elif event.key() == Qt.Key.Key_G:
+            self.gridSelectRequested.emit()
+            event.accept()
         elif event.key() == Qt.Key.Key_H:
             if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 self.showAllRequested.emit()
@@ -1972,11 +2089,14 @@ class Viewport(QOpenGLWidget):
             node = self._scene.node_by_id(nid)
             if node is None:
                 continue
+            move_div = (self._move_axis_divisors(node)
+                        if self.gizmo_mode == 'move' else None)
             for axis, raw in raw_deltas.items():
                 if self.gizmo_mode == 'move':
                     speed = self._cam_distance * 0.0015   # matches camera-pan speed
                     attr = f'translate_{axis}'
-                    setattr(node, attr, getattr(node, attr) + raw * speed)
+                    setattr(node, attr, getattr(node, attr)
+                            + raw * speed / move_div[axis])
                 elif self.gizmo_mode == 'rotate':
                     attr = f'rotate_{axis}'
                     setattr(node, attr, getattr(node, attr) + raw * 0.4)  # matches orbit sensitivity
@@ -1989,6 +2109,30 @@ class Viewport(QOpenGLWidget):
             self._scene.invalidate()
             self.update()
             self.nodesManipulated.emit(changed)
+
+    def _move_axis_divisors(self, node: Node) -> dict[str, float]:
+        """Per-axis divisors converting a Move-drag's world-unit step into
+        the node's translate units.
+
+        A child's translate maps to world through its parent's cumulative
+        scale, so under a scaled parent a raw translate step of X moves the
+        node scale*X world units — the source of the old 'child of a big
+        grid flies off screen at the slightest drag' hypersensitivity.
+        Dividing by the parent's cumulative per-axis scale makes the on-
+        screen drag speed constant (matching camera pan) no matter how the
+        parent is scaled. Applied only where translate really is a linear
+        length: World Grid parents and Cartesian-mapping topologies —
+        angular topologies' translate fields are degrees, left untouched.
+        """
+        parent = self._scene.node_by_id(node.parent_id)
+        if (parent is None or parent is node
+                or (parent.type != NODE_TYPE_GRID
+                    and parent.topo not in _CARTESIAN_PARENT_TOPOS)):
+            return {'x': 1.0, 'y': 1.0, 'z': 1.0}
+        s = self._scene.world_scale(parent.id)
+        if s is None:
+            return {'x': 1.0, 'y': 1.0, 'z': 1.0}
+        return {axis: max(abs(v), 1e-9) for axis, v in zip('xyz', s)}
 
     def wheelEvent(self, event):
         delta = event.angleDelta().y()

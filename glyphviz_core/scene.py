@@ -35,7 +35,7 @@ import numpy as np
 
 from .csv_reader import load_node_csv
 from .geometry_data import ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
-from .node import Node, NODE_TYPE_WORLD, NON_VISUAL_TYPES
+from .node import Node, NODE_TYPE_GRID, NODE_TYPE_WORLD, NON_VISUAL_TYPES
 from .topology import (
     TOPO_ROD,
     SceneTransforms,
@@ -47,6 +47,22 @@ _MAT_IDENTITY_3 = ((1., 0., 0.), (0., 1., 0.), (0., 0., 1.))
 
 _ROD_SCALE_FACTORS = np.array([ROD_RADIUS_FACTOR, ROD_RADIUS_FACTOR,
                                ROD_HEIGHT_FACTOR])
+
+
+def _grid_draw_scale(node: Node) -> tuple[float, float, float]:
+    """Per-axis draw-matrix scale for a World Grid node (type=6).
+
+    The grid's geometry is drawn in a ±1 local square (see the viewport's
+    _draw_world_grid), so the matrix scale is the node's RAW scale times the
+    extents window's half-spans — with neither base_scale nor the 0.2 render
+    floor applied. Both exemptions are alignment requirements, not style:
+    child POSITIONS map through the grid's raw world_basis (base_scale plays
+    no part there), so the rendered rectangle only stays under the children
+    it frames if its own footprint uses exactly the same raw factors. At
+    scale 1 the default window renders 360x180 world units, 1:1 with world
+    coordinates."""
+    half_lon, half_lat = node.grid_half_extents()
+    return (node.scale_x * half_lon, node.scale_y * half_lat, node.scale_z)
 
 
 class Scene:
@@ -171,9 +187,13 @@ class Scene:
                           for nd in self.nodes], dtype=np.float64)
         sc = np.maximum(scale * bs, 0.2)
         topo = np.array([nd.topo for nd in self.nodes], dtype=np.int64)
-        rod = topo == TOPO_ROD
+        types = np.array([nd.type for nd in self.nodes], dtype=np.int64)
+        grids = types == NODE_TYPE_GRID
+        rod = (topo == TOPO_ROD) & ~grids   # a Grid row is never rod-shaped
         if rod.any():
             sc[rod] *= _ROD_SCALE_FACTORS
+        for i in np.flatnonzero(grids):
+            sc[i] = _grid_draw_scale(self.nodes[int(i)])
 
         M3 = (t.parent_basis @ t.child_local) * sc[:, None, :]
         pos = t.world_pos.copy()
@@ -204,9 +224,13 @@ class Scene:
                           for nd in sub], dtype=np.float64)
         sc = np.maximum(scale * bs, 0.2)
         topo = np.array([nd.topo for nd in sub], dtype=np.int64)
-        rod = topo == TOPO_ROD
+        types = np.array([nd.type for nd in sub], dtype=np.int64)
+        grids = types == NODE_TYPE_GRID
+        rod = (topo == TOPO_ROD) & ~grids   # a Grid row is never rod-shaped
         if rod.any():
             sc[rod] *= _ROD_SCALE_FACTORS
+        for i in np.flatnonzero(grids):
+            sc[i] = _grid_draw_scale(sub[int(i)])
 
         M3 = (t.parent_basis[rows] @ t.child_local[rows]) * sc[:, None, :]
         pos = t.world_pos[rows]   # fancy index -> already a copy
@@ -248,8 +272,16 @@ class Scene:
                 float(self._draw_radius[row]))
 
     def glyph_nodes(self) -> list[Node]:
-        """Nodes that represent visual glyphs (not camera/world/grid infrastructure)."""
+        """Nodes that render in the viewport (not World/Camera settings rows).
+        Includes World Grid (type=6) nodes — they're real scene objects."""
         return [n for n in self.nodes if n.type not in NON_VISUAL_TYPES]
+
+    def grid_nodes(self) -> list[Node]:
+        """All World Grid (type=6) nodes in scene order — for the G-key
+        select/cycle and the World Grid panel. Any number may exist; each
+        child references its grid via parent_id = grid.id (no implicit
+        attachment, unlike GaiaViz's parent_id=0 main-grid legacy)."""
+        return [n for n in self.nodes if n.type == NODE_TYPE_GRID]
 
     def node_by_id(self, node_id: int) -> Node | None:
         return self._by_id.get(node_id)
@@ -313,13 +345,17 @@ def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
         lc = np.array(_MAT_IDENTITY_3, dtype=np.float64)
 
     bs = scene.base_scale
-    sc = np.array([
-        max(node.scale_x * bs, 0.2),
-        max(node.scale_y * bs, 0.2),
-        max(node.scale_z * bs, 0.2),
-    ], dtype=np.float64)
+    if node.type == NODE_TYPE_GRID:
+        # World Grid: extent-sized footprint at RAW scale (see _grid_draw_scale).
+        sc = np.array(_grid_draw_scale(node), dtype=np.float64)
+    else:
+        sc = np.array([
+            max(node.scale_x * bs, 0.2),
+            max(node.scale_y * bs, 0.2),
+            max(node.scale_z * bs, 0.2),
+        ], dtype=np.float64)
 
-    if node.topo == TOPO_ROD:
+    if node.topo == TOPO_ROD and node.type != NODE_TYPE_GRID:
         sc_rod = sc * np.array([ROD_RADIUS_FACTOR, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR])
         M3 = (pwb @ lc) * sc_rod
         # Cap offset: translate bottom of cylinder to world origin (ANTz convention).

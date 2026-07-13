@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSlider,
+    QSpinBox,
     QStatusBar,
     QToolBar,
     QVBoxLayout,
@@ -30,13 +31,19 @@ from glyphviz_core.csv_reader import (
     load_node_csv, save_node_csv, save_tag_csv, stamp_node_and_tag_paths,
 )
 from glyphviz_core.pdb_loader import load_pdb_file
-from glyphviz_core.geometry_data import GEO_NAMES, GEO_COUNT, GEO_OCTA, GEO_MESH
+from glyphviz_core.geometry_data import (
+    GEO_NAMES, GEO_COUNT, GEO_GRID_WIRE, GEO_OCTA, GEO_MESH,
+)
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
-    NODE_TYPE_LINK, NODE_TYPE_WORLD, RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
+    GRID_DEFAULT_EXTENTS, GRID_DEFAULT_SEGMENTS,
+    NODE_TYPE_GRID, NODE_TYPE_LINK, NODE_TYPE_WORLD,
+    RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
     WORLD_DEFAULT_BG_RGB,
 )
-from glyphviz_core.topology import TOPO_NAMES, TOPO_COUNT, TOPO_POINT, CUBE_FACE_NAMES
+from glyphviz_core.topology import (
+    TOPO_NAMES, TOPO_COUNT, TOPO_PLANE, TOPO_POINT, CUBE_FACE_NAMES,
+)
 
 from .audio_player import AudioPlayer
 from .node_table import NodeTableView
@@ -143,6 +150,7 @@ class MainWindow(QMainWindow):
         self._viewport.fpsUpdated.connect(self._on_fps_updated)
         self._viewport.tagToggled.connect(self._on_tag_toggled)
         self._viewport.quickSaveRequested.connect(self._quick_save)
+        self._viewport.gridSelectRequested.connect(self._select_next_grid)
         self._viewport.nodesManipulated.connect(self._on_viewport_manipulated)
         self._viewport.bgToggleRequested.connect(self._on_scene_bg_toggle_bw)
         self._viewport.renderModeCycleRequested.connect(self._on_scene_render_mode_cycle)
@@ -577,8 +585,22 @@ class MainWindow(QMainWindow):
         )
         self._btn_new_child.clicked.connect(self._create_child_node)
 
+        self._btn_new_grid = QPushButton("Add World Grid")
+        self._btn_new_grid.setToolTip(
+            "Create a World Grid (type 6): a geospatial reference plane whose\n"
+            "children place by longitude (X) / latitude (Y) / elevation (Z).\n"
+            "Default window is the whole earth (-180..180, -90..90) at 1:1\n"
+            "world units; edit the window and grid lines in the World Grid\n"
+            "panel below. Scaling a grid re-spaces its children without\n"
+            "resizing them. Multiple grids per scene are allowed.\n"
+            "[G] selects / cycles through grids (grids aren't click-pickable\n"
+            "so they never swallow clicks meant for glyphs on them)."
+        )
+        self._btn_new_grid.clicked.connect(self._create_world_grid)
+
         create_layout.addWidget(self._btn_new_node)
         create_layout.addWidget(self._btn_new_child)
+        create_layout.addWidget(self._btn_new_grid)
 
         # --- New Object Defaults: geometry/topology/scale/color applied to
         # nodes created via New Node, New Child, N, and Shift+N. Position and
@@ -959,6 +981,63 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Tag Text:", self._insp_text)
         insp_layout.addRow("Link:",     self._insp_link)
 
+        # --- World Grid group: extents window + grid lines for a selected
+        # type-6 node (see Node.grid_extents / grid_segments). Enabled only
+        # when exactly one World Grid is selected; the G key selects/cycles
+        # grids since they're deliberately not click-pickable.
+        self._grid_grp = QGroupBox("World Grid")
+        self._grid_grp.setEnabled(False)
+        self._grid_grp.setToolTip(
+            "Coordinate window of the selected World Grid. Children place by\n"
+            "these coordinates: X = longitude, Y = latitude, Z = elevation.\n"
+            "Shrink the window to a region (e.g. -125..-66, 24..49 for the\n"
+            "contiguous US) and raw lon/lat data lands on it directly — no\n"
+            "coordinate transforms needed. Use the grid's Scale to zoom the\n"
+            "layout and set aspect ratio; children re-space but never resize."
+        )
+        grid_form = QFormLayout(self._grid_grp)
+        grid_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+
+        lon_widget = QWidget()
+        lon_layout = QHBoxLayout(lon_widget)
+        lon_layout.setContentsMargins(0, 0, 0, 0)
+        lon_layout.setSpacing(4)
+        self._grid_lon_min = QDoubleSpinBox()
+        self._grid_lon_max = QDoubleSpinBox()
+        lat_widget = QWidget()
+        lat_layout = QHBoxLayout(lat_widget)
+        lat_layout.setContentsMargins(0, 0, 0, 0)
+        lat_layout.setSpacing(4)
+        self._grid_lat_min = QDoubleSpinBox()
+        self._grid_lat_max = QDoubleSpinBox()
+        for sb in (self._grid_lon_min, self._grid_lon_max,
+                   self._grid_lat_min, self._grid_lat_max):
+            sb.setRange(-1_000_000.0, 1_000_000.0)
+            sb.setDecimals(3)
+            sb.setSingleStep(1.0)
+            sb.valueChanged.connect(self._on_grid_extents_changed)
+        lon_layout.addWidget(self._grid_lon_min)
+        lon_layout.addWidget(self._grid_lon_max)
+        lat_layout.addWidget(self._grid_lat_min)
+        lat_layout.addWidget(self._grid_lat_max)
+
+        seg_widget = QWidget()
+        seg_layout = QHBoxLayout(seg_widget)
+        seg_layout.setContentsMargins(0, 0, 0, 0)
+        seg_layout.setSpacing(4)
+        self._grid_seg_x = QSpinBox()
+        self._grid_seg_y = QSpinBox()
+        for sb in (self._grid_seg_x, self._grid_seg_y):
+            sb.setRange(1, 3600)
+            sb.setToolTip("Grid cell counts (ANTz segments_x/y). 1 = plain rectangle outline.")
+            sb.valueChanged.connect(self._on_grid_segments_changed)
+        seg_layout.addWidget(self._grid_seg_x)
+        seg_layout.addWidget(self._grid_seg_y)
+
+        grid_form.addRow("Lon Min/Max:", lon_widget)
+        grid_form.addRow("Lat Min/Max:", lat_widget)
+        grid_form.addRow("Grid Cells (X,Y):", seg_widget)
+
         # --- Channels / playback group ---
         self._ch_grp = QGroupBox("Channels")
         self._ch_grp.setVisible(False)
@@ -1030,6 +1109,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(sel_grp)
         layout.addWidget(vis_grp)
         layout.addWidget(self._insp_grp)
+        layout.addWidget(self._grid_grp)
         layout.addWidget(self._ch_grp)
         layout.addStretch()
 
@@ -1514,12 +1594,15 @@ class MainWindow(QMainWindow):
 
     def _selectable_nodes(self) -> list[Node]:
         """Nodes the bulk-selection commands (Select All/Invert/Select By)
-        operate on: visual objects only. World/Camera/Grid config nodes are
+        operate on: visual glyphs only. World/Camera config nodes are
         excluded — sweeping the invisible World node into Select All meant a
         bulk color edit silently changed the scene background (its color IS
-        the background). Explicitly clicking such a row in the table still
-        selects and edits it."""
-        return [n for n in self.nodes if n.type not in NON_VISUAL_TYPES]
+        the background). World Grids are excluded too: Select-All + Move
+        would drag the reference frame along with everything sitting on it,
+        double-moving every child. Explicitly clicking such a row in the
+        table (or pressing G for grids) still selects and edits it."""
+        return [n for n in self.nodes
+                if n.type not in NON_VISUAL_TYPES and n.type != NODE_TYPE_GRID]
 
     def _on_select_by(self):
         criterion = self._sel_criterion.currentText()
@@ -1594,15 +1677,17 @@ class MainWindow(QMainWindow):
 
     def _isolate_selected(self):
         """Show only the selected nodes: clear their hide flags, set everyone
-        else's. World/camera/grid rows are never drawn, so their flags are
-        left untouched rather than silently rewritten in the saved CSV."""
+        else's. World/camera rows are never drawn, so their flags are left
+        untouched rather than silently rewritten in the saved CSV. World
+        Grids stay visible too — they're the reference frame under the
+        isolated glyphs, not part of the data being inspected."""
         if not self._selected_nodes:
             self.statusBar().showMessage("No selection to isolate.")
             return
         selected_ids = {n.id for n in self._selected_nodes}
         changed = []
         for node in self.nodes:
-            if node.type in NON_VISUAL_TYPES:
+            if node.type in NON_VISUAL_TYPES or node.type == NODE_TYPE_GRID:
                 continue
             new_hide = 0 if node.id in selected_ids else 1
             if node.hide != new_hide:
@@ -1673,9 +1758,11 @@ class MainWindow(QMainWindow):
         if node is None:
             self._insp_grp.setTitle("Selected Node")
             self._insp_grp.setEnabled(False)
+            self._refresh_grid_group()
             return
         self._insp_grp.setTitle("Selected Node")
         self._insp_grp.setEnabled(True)
+        self._refresh_grid_group()
         self._insp_id.setText(str(node.id))
         self._insp_type.setText(str(node.type))
         self._insp_parent.setText(str(node.parent_id))
@@ -1748,6 +1835,7 @@ class MainWindow(QMainWindow):
         n = len(nodes)
         self._insp_grp.setTitle(f"Selection ({n} nodes)")
         self._insp_grp.setEnabled(True)
+        self._refresh_grid_group()
         self._insp_id.setText("(multiple)")
         self._insp_type.setText("(multiple)")
         self._insp_parent.setText("(multiple)")
@@ -2342,6 +2430,96 @@ class MainWindow(QMainWindow):
             color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
             geometry=geo, hide=0, topo=topo, mesh_id=mesh_id,
         ), select_new=False)
+
+    def _create_world_grid(self):
+        """Add World Grid button: create a NEW type-6 grid node (multiple per
+        scene are allowed) at the world origin with the whole-earth window at
+        1:1 scale — a child at translate (180, 90) lands at world (180, 90).
+        Children attach explicitly (New Child / paste with the grid selected
+        sets parent_id = grid.id); nothing attaches implicitly."""
+        new_id = max((n.id for n in self.nodes), default=0) + 1
+        grid = Node(
+            id=new_id, type=NODE_TYPE_GRID, parent_id=0, branch_level=0,
+            translate_x=0.0, translate_y=0.0, translate_z=0.0,
+            rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
+            scale_x=1.0, scale_y=1.0, scale_z=1.0,
+            color_r=64, color_g=80, color_b=96, color_a=255,
+            geometry=GEO_GRID_WIRE, hide=0, topo=TOPO_PLANE,
+        )
+        grid.set_grid_extents(*GRID_DEFAULT_EXTENTS)
+        grid.set_grid_segments(*GRID_DEFAULT_SEGMENTS)
+        self._add_node_to_scene(grid)
+        self.statusBar().showMessage(
+            f"World Grid created (node {new_id}): lon -180..180, lat -90..90, "
+            "1:1 world units. G selects/cycles grids; New Child adds glyphs onto it."
+        )
+
+    def _select_next_grid(self):
+        """G key (ANTz-style): select the scene's World Grid; press again to
+        cycle when there are several. Grids aren't click-pickable (they'd
+        swallow clicks meant for glyphs sitting on them), so this — plus the
+        node table — is how a grid gets selected for Move/Rotate/Scale or
+        World Grid panel edits."""
+        grids = [n for n in self.nodes if n.type == NODE_TYPE_GRID]
+        if not grids:
+            self.statusBar().showMessage(
+                "No World Grid in this scene — use the Add World Grid button.")
+            return
+        selected_ids = {n.id for n in self._selected_nodes}
+        cur = next((i for i, g in enumerate(grids) if g.id in selected_ids), -1)
+        nxt = grids[(cur + 1) % len(grids)]
+        self._table.select_by_id(nxt.id)
+        self.statusBar().showMessage(
+            f"World Grid {nxt.id} selected ({cur + 2 if cur >= 0 else 1} of "
+            f"{len(grids)}) — Move/Rotate/Scale now apply to it; G cycles.")
+
+    def _selected_single_grid(self) -> Node | None:
+        if len(self._selected_nodes) == 1 and self._selected_nodes[0].type == NODE_TYPE_GRID:
+            return self._selected_nodes[0]
+        return None
+
+    def _refresh_grid_group(self):
+        """Sync the World Grid panel to the selection: enabled with values
+        loaded when exactly one grid is selected, disabled otherwise."""
+        grid = self._selected_single_grid()
+        self._grid_grp.setEnabled(grid is not None)
+        if grid is None:
+            return
+        lon_lo, lon_hi, lat_lo, lat_hi = grid.grid_extents()
+        seg_x, seg_y = grid.grid_segments()
+        for sb, val in (
+            (self._grid_lon_min, lon_lo), (self._grid_lon_max, lon_hi),
+            (self._grid_lat_min, lat_lo), (self._grid_lat_max, lat_hi),
+            (self._grid_seg_x, seg_x), (self._grid_seg_y, seg_y),
+        ):
+            sb.blockSignals(True)
+            sb.setValue(val)
+            sb.blockSignals(False)
+
+    def _on_grid_extents_changed(self, _value: float):
+        grid = self._selected_single_grid()
+        if grid is None:
+            return
+        lon_lo, lon_hi = self._grid_lon_min.value(), self._grid_lon_max.value()
+        lat_lo, lat_hi = self._grid_lat_min.value(), self._grid_lat_max.value()
+        if lon_hi <= lon_lo or lat_hi <= lat_lo:
+            # Transient state while typing (or a genuinely inverted window):
+            # don't store a degenerate window the renderer would ignore.
+            self.statusBar().showMessage("Grid extents: max must exceed min on each axis.")
+            return
+        grid.set_grid_extents(lon_lo, lon_hi, lat_lo, lat_hi)
+        self._table.refresh_node(grid.id)
+        self._viewport.scene_invalidate()
+
+    def _on_grid_segments_changed(self, _value: int):
+        grid = self._selected_single_grid()
+        if grid is None:
+            return
+        grid.set_grid_segments(self._grid_seg_x.value(), self._grid_seg_y.value())
+        self._table.refresh_node(grid.id)
+        # Segment counts change only the grid's own line rendering — no
+        # transform recompute needed, but the retained scene list must rebake.
+        self._viewport.scene_touch()
 
     def _add_node_to_scene(self, node: Node, select_new: bool = True):
         """Append a node to the live scene, table, and stats without resetting the camera."""

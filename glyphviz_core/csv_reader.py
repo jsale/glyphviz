@@ -26,6 +26,16 @@ _TRACKED_COLS = frozenset({
 # Extra columns written as plain strings (not int/float formatted).
 _STRING_COLS = frozenset({'text', 'link'})
 
+# Columns written as ints when the value is integral, 6-dp floats otherwise.
+# The trigger fields are historically integer-formatted (and every legacy
+# file holds 0 there, which must keep round-tripping byte-identically), but
+# GlyphViz's World Grid stores its lon/lat extents window in them (see
+# Node.grid_extents) and fractional extents like -117.5 must not truncate.
+_INT_OR_FLOAT_COLS = frozenset({
+    'trigger_hi_x', 'trigger_hi_y', 'trigger_hi_z',
+    'trigger_lo_x', 'trigger_lo_y', 'trigger_lo_z',
+})
+
 # Canonical 94-column ANTz/GaiaViz node CSV column order.
 _COL_ORDER = [
     'id', 'type', 'data', 'selected', 'parent_id', 'branch_level',
@@ -476,6 +486,9 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
                     cells.append(str(val) if val else '')
                 elif col in _FLOAT_COLS:
                     cells.append(f'{float(val):.6f}')
+                elif col in _INT_OR_FLOAT_COLS:
+                    v = float(val)
+                    cells.append(int(v) if v.is_integer() else f'{v:.6f}')
                 else:
                     cells.append(int(float(val)))
             writer.writerow(cells)

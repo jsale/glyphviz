@@ -13,7 +13,9 @@ from typing import NamedTuple
 import numpy as np
 
 from .geometry_data import ROD_HEIGHT_FACTOR, torus_radii
-from .node import Node, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL
+from .node import (
+    Node, NODE_TYPE_GRID, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
+)
 
 # topo id values — full reference list from Topology-Guide.md (np_topo_id there).
 # Every id except TOPO_NONE has a dedicated offset function registered in
@@ -519,7 +521,7 @@ def compute_world_transforms(nodes: list[Node], base_scale: float,
         (nd.translate_x, nd.translate_y, nd.translate_z,
          nd.rotate_x, nd.rotate_y, nd.rotate_z,
          nd.scale_x, nd.scale_y, nd.scale_z,
-         nd.rotation_mode, nd.topo, nd.ratio, nd.subspace)
+         nd.rotation_mode, nd.topo, nd.ratio, nd.subspace, nd.type)
         for nd in nodes
     ], dtype=np.float64)
     tx, ty, tz = fields[:, 0], fields[:, 1], fields[:, 2]
@@ -529,18 +531,39 @@ def compute_world_transforms(nodes: list[Node], base_scale: float,
     topo = fields[:, 10].astype(np.int64)
     ratio = fields[:, 11]
     subspace = fields[:, 12].astype(np.int64)
+    ntype = fields[:, 13].astype(np.int64)
 
     is_root = eff_parent < 0
     safe_parent = np.where(is_root, 0, eff_parent)
     ptopo = np.where(is_root, -1, topo[safe_parent])
     pratio = np.where(is_root, 0.0, ratio[safe_parent])
 
+    # World Grid (type=6) parents — see the "World Grid semantics" comment
+    # block above _cartesian_offset. Children are placed Cartesian at their
+    # coordinates relative to the grid's extents-window center, regardless
+    # of the grid's topo field.
+    grid_center = np.zeros((n, 2))
+    for i in np.flatnonzero(ntype == NODE_TYPE_GRID):
+        grid_center[i] = nodes[int(i)].grid_center()
+    grid_child = ~is_root & (ntype[safe_parent] == NODE_TYPE_GRID)
+
     own_rot = _batched_local_rotations(rx, ry, rz, mode)
     topo_rot = _batched_topo_rotations(ptopo, tx, ty, subspace)
+    if grid_child.any():
+        # Grid children take no topology base rotation (their placement is
+        # plain Cartesian), whatever the grid row's topo field says.
+        topo_rot[grid_child] = np.eye(3)
     child_local = topo_rot @ own_rot          # identity topo_rot for roots
     local_scaled = child_local * scale[:, None, :]   # m @ diag(scale)
     offsets = _batched_topo_offsets(ptopo, tx, ty, tz, base_scale,
                                      pratio, subspace)
+    if grid_child.any():
+        pc = grid_center[safe_parent]
+        offsets[grid_child] = np.stack([
+            tx[grid_child] - pc[grid_child, 0],
+            ty[grid_child] - pc[grid_child, 1],
+            tz[grid_child],
+        ], axis=1)
 
     world_basis = np.empty((n, 3, 3))
     parent_basis = np.tile(np.eye(3), (n, 1, 1))
@@ -560,7 +583,17 @@ def compute_world_transforms(nodes: list[Node], base_scale: float,
     for level in range(1, max_depth + 1):
         c = order[bounds[level]:bounds[level + 1]]
         p = eff_parent[c]
-        pb = world_basis[p]
+        pb = world_basis[p]   # fancy index -> already a copy, safe to patch
+        gsel = ntype[p] == NODE_TYPE_GRID
+        if gsel.any():
+            # Children of a World Grid compose onto the grid's rotation-only
+            # basis (everything above the grid, plus the grid's own rotation,
+            # minus its scale): the grid's scale re-spaces child POSITIONS
+            # (world_pos below uses the grid's full world_basis) but must not
+            # stretch child shapes or their own subtrees' spacing — the
+            # ANTz-documented Grid rule ("does NOT affect their size").
+            pg = p[gsel]
+            pb[gsel] = parent_basis[pg] @ child_local[pg]
         parent_basis[c] = pb
         world_basis[c] = pb @ local_scaled[c]
         world_pos[c] = world_pos[p] + np.einsum(
@@ -621,17 +654,32 @@ def update_world_transform_rows(nodes: list[Node], base_scale: float,
     is_root = eff_parent < 0
     ptopo = np.full(k, -1, dtype=np.int64)
     pratio = np.zeros(k)
+    pgrid = np.zeros(k, dtype=bool)   # parent is a World Grid (type=6)
+    pcenter = np.zeros((k, 2))        # grid parents' extents-window center
     nr = np.flatnonzero(~is_root)
     if nr.size:
         ptopo[nr] = [nodes[int(p)].topo for p in eff_parent[nr]]
         pratio[nr] = [nodes[int(p)].ratio for p in eff_parent[nr]]
+        for j in nr:
+            parent = nodes[int(eff_parent[j])]
+            if parent.type == NODE_TYPE_GRID:
+                pgrid[j] = True
+                pcenter[j] = parent.grid_center()
 
     own_rot = _batched_local_rotations(rx, ry, rz, mode)
     topo_rot = _batched_topo_rotations(ptopo, tx, ty, subspace)
+    if pgrid.any():
+        topo_rot[pgrid] = np.eye(3)   # grid children: plain Cartesian placement
     child_local = topo_rot @ own_rot          # identity topo_rot for roots
     local_scaled = child_local * scale[:, None, :]
     offsets = _batched_topo_offsets(ptopo, tx, ty, tz, base_scale,
                                      pratio, subspace)
+    if pgrid.any():
+        offsets[pgrid] = np.stack([
+            tx[pgrid] - pcenter[pgrid, 0],
+            ty[pgrid] - pcenter[pgrid, 1],
+            tz[pgrid],
+        ], axis=1)
     t.child_local[rows] = child_local
 
     # Level-ordered in-place update, mirroring compute_world_transforms'
@@ -652,11 +700,20 @@ def update_world_transform_rows(nodes: list[Node], base_scale: float,
             csel = gsel[~rootm]
             crows = rows[csel]
             pp = p[~rootm]
-            pb = t.world_basis[pp]
-            t.parent_basis[crows] = pb
-            t.world_basis[crows] = pb @ local_scaled[csel]
+            pb = t.world_basis[pp]   # fancy index -> already a copy
+            # Positions first, from the parent's FULL basis (scale included —
+            # a World Grid's scale deliberately re-spaces its children) ...
             t.world_pos[crows] = t.world_pos[pp] + np.einsum(
                 'nij,nj->ni', pb, offsets[csel])
+            gm = pgrid[csel]
+            if gm.any():
+                # ... then patch World Grid parents' SHAPE basis to exclude
+                # the grid's scale (mirrors compute_world_transforms' per-
+                # level override) before composing child bases from it.
+                pg = pp[gm]
+                pb[gm] = t.parent_basis[pg] @ t.child_local[pg]
+            t.parent_basis[crows] = pb
+            t.world_basis[crows] = pb @ local_scaled[csel]
 
 
 def compute_world_bases(
@@ -726,6 +783,34 @@ def compute_world_bases(
 # compute_world_bases), which applies every ancestor's rotation and per-axis
 # stretch in the mathematically correct order, however many levels deep.
 # child_subspace is only used by _cube_offset/_zcube_offset.
+
+# ---------------------------------------------------------------------------
+# World Grid semantics (parent TYPE = 6, not a topo id — see NODE_TYPE_GRID).
+#
+# A World Grid maps its children's translate_x/y as coordinates within the
+# grid's extents window (Node.grid_extents(), default the whole earth in
+# equirectangular degrees) and translate_z as elevation:
+#
+#     offset = (tx - center_lon, ty - center_lat, tz)
+#
+# i.e. plain Cartesian recentered on the window midpoint, regardless of the
+# grid row's topo field, then transformed by the grid's world_basis like any
+# child offset — so the grid's scale_x/y/z re-space children per axis and
+# its rotation carries them around. The default window centers at (0, 0),
+# making a grid at the origin with scale 1 an exact 1:1 frame: a child at
+# translate (180, 90) lands at world (180, 90).
+#
+# Unlike every topo-driven parent, a grid's scale must NOT stretch its
+# children's rendered shape or their subtrees' internal spacing (the
+# ANTz-documented Grid rule: scaling "compacts the spacing of attached
+# nodes but does NOT affect their size, and is axis specific") — see the
+# per-level shape-basis override in compute_world_transforms /
+# update_world_transform_rows, keyed on the parent's type.
+#
+# This special-casing lives in the vectorized engine only; the scalar
+# offset functions below dispatch purely on parent topo and stay the
+# readable per-TOPOLOGY spec.
+# ---------------------------------------------------------------------------
 
 def _cartesian_offset(tx, ty, tz, _base_radius, _parent_ratio, _child_subspace=0):
     """Plain Cartesian (dx, dy, dz) offset from the parent's center, in the

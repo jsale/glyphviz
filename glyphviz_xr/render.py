@@ -4,7 +4,7 @@ exactly as the desktop viewport does."""
 import numpy as np
 
 from glyphviz_core.geometry_data import GEO_CUBE_WIRE, GEO_SPHERE
-from glyphviz_core.node import NODE_TYPE_LINK, NON_VISUAL_TYPES
+from glyphviz_core.node import NODE_TYPE_GRID, NODE_TYPE_LINK, NON_VISUAL_TYPES
 from glyphviz_core.scene import Scene, node_world_matrix
 from glyphviz_gl.geometry import GeoRenderer
 
@@ -66,7 +66,11 @@ def draw_scene(scene: Scene, geo: GeoRenderer, scale: float, forward: float, dow
     glScalef(scale, scale, scale)
 
     for node in scene.nodes:
-        if node.type in NON_VISUAL_TYPES or node.type == NODE_TYPE_LINK:
+        # NODE_TYPE_GRID: the desktop viewport renders World Grids through a
+        # bespoke path (extent-sized lattice); the XR renderer has no grid
+        # draw yet, so grid rows are skipped here. Their children still
+        # render at grid-mapped positions via node_world_matrix.
+        if node.type in NON_VISUAL_TYPES or node.type in (NODE_TYPE_LINK, NODE_TYPE_GRID):
             continue
         M = node_world_matrix(node, scene)
         glPushMatrix()

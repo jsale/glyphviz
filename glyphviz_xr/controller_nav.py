@@ -4,7 +4,7 @@ from math import radians
 
 import numpy as np
 
-from glyphviz_core.node import NODE_TYPE_LINK, NON_VISUAL_TYPES
+from glyphviz_core.node import NODE_TYPE_GRID, NODE_TYPE_LINK, NON_VISUAL_TYPES
 from glyphviz_core.scene import node_world_matrix
 from glyphviz_gl.geometry import GeoRenderer
 
@@ -260,7 +260,10 @@ class ControllerNav:
         rig_inv = self.rig_inverse()
         best_node, best_dist = None, None
         for node in scene.nodes:
-            if node.type in NON_VISUAL_TYPES or node.type == NODE_TYPE_LINK:
+            # Grids aren't ray-pick targets in VR either (they'd swallow every
+            # ray aimed at glyphs sitting on them — same rule as the desktop
+            # viewport's click picking).
+            if node.type in NON_VISUAL_TYPES or node.type in (NODE_TYPE_LINK, NODE_TYPE_GRID):
                 continue
             M = node_world_matrix(node, scene)
             center_diorama = diorama_transform @ M[:, 3]
