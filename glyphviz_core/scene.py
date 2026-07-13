@@ -40,6 +40,7 @@ from .topology import (
     TOPO_ROD,
     SceneTransforms,
     compute_world_transforms,
+    update_world_transform_rows,
 )
 
 _MAT_IDENTITY_3 = ((1., 0., 0.), (0., 1., 0.), (0., 0., 1.))
@@ -106,6 +107,33 @@ class Scene:
         self._ensure()
         return self._transforms.row_of_id.get(node_id)
 
+    def rows_for_ids(self, ids) -> np.ndarray:
+        """Row indices (sorted, int64) for the given node ids; unknown ids
+        are silently dropped. For refresh_rows callers."""
+        self._ensure()
+        row_of_id = self._transforms.row_of_id
+        return np.array(sorted(row_of_id[i] for i in ids if i in row_of_id),
+                        dtype=np.int64)
+
+    def refresh_rows(self, rows: np.ndarray) -> bool:
+        """Partially refresh cached transforms + draw data for `rows` only,
+        WITHOUT bumping _revision — the Channels-playback fast path: a
+        renderer keyed on _revision keeps replaying its retained state for
+        everything else while the animated subtrees get current matrices.
+
+        `rows` must satisfy update_world_transform_rows' contract (closed
+        under descendants; only translate/rotate/scale changed). Returns
+        False when the cache was stale and a full recompute ran instead —
+        either way, all draw data is current on return."""
+        if self._dirty or self._transforms is None:
+            self._ensure()
+            return False
+        update_world_transform_rows(self.nodes, self.base_scale,
+                                    self._transforms, rows)
+        if self._draw_M is not None:
+            self._bake_draw_rows(rows)
+        return True
+
     # --- public accessors (trigger lazy compute) ---
 
     def world_pos(self, node_id: int) -> tuple[float, float, float] | None:
@@ -162,6 +190,36 @@ class Scene:
         self._draw_gl = np.ascontiguousarray(
             M.transpose(0, 2, 1).reshape(n, 16), dtype=np.float32)
         self._draw_radius = np.sqrt((M3 * M3).sum(axis=1)).max(axis=1)
+
+    def _bake_draw_rows(self, rows: np.ndarray):
+        """Row-subset version of _bake_draw_data, writing in place — must
+        stay numerically identical to it (same formula, same dtypes)."""
+        t = self._transforms
+        k = len(rows)
+        if k == 0:
+            return
+        bs = self.base_scale
+        sub = [self.nodes[int(i)] for i in rows]
+        scale = np.array([(nd.scale_x, nd.scale_y, nd.scale_z)
+                          for nd in sub], dtype=np.float64)
+        sc = np.maximum(scale * bs, 0.2)
+        topo = np.array([nd.topo for nd in sub], dtype=np.int64)
+        rod = topo == TOPO_ROD
+        if rod.any():
+            sc[rod] *= _ROD_SCALE_FACTORS
+
+        M3 = (t.parent_basis[rows] @ t.child_local[rows]) * sc[:, None, :]
+        pos = t.world_pos[rows]   # fancy index -> already a copy
+        if rod.any():
+            pos[rod] += M3[rod][:, :, 2]
+
+        M = np.zeros((k, 4, 4))
+        M[:, :3, :3] = M3
+        M[:, :3, 3] = pos
+        M[:, 3, 3] = 1.0
+        self._draw_M[rows] = M
+        self._draw_gl[rows] = M.transpose(0, 2, 1).reshape(k, 16)
+        self._draw_radius[rows] = np.sqrt((M3 * M3).sum(axis=1)).max(axis=1)
 
     def node_draw_data(self, node: Node) -> tuple:
         """Per-node data the renderer needs every frame, batch-computed once

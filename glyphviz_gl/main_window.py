@@ -146,6 +146,8 @@ class MainWindow(QMainWindow):
         self._viewport.nodesManipulated.connect(self._on_viewport_manipulated)
         self._viewport.bgToggleRequested.connect(self._on_scene_bg_toggle_bw)
         self._viewport.renderModeCycleRequested.connect(self._on_scene_render_mode_cycle)
+        self._viewport.channelPlayToggleRequested.connect(self._ch_toggle_play)
+        self._viewport.channelStopRequested.connect(self._ch_stop)
         self._viewport.glInitialized.connect(self._load_default_media)
         self.setCentralWidget(self._viewport)
         # Link self.nodes into the viewport scene so appends stay in sync.
@@ -989,15 +991,25 @@ class MainWindow(QMainWindow):
         ch_fps_layout.setContentsMargins(0, 0, 0, 0)
         ch_fps_layout.setSpacing(4)
         ch_fps_layout.addWidget(QLabel("FPS:"))
-        self._ch_fps = QDoubleSpinBox()
-        self._ch_fps.setRange(1, 120)
-        self._ch_fps.setValue(30)
-        self._ch_fps.setDecimals(0)
-        self._ch_fps.setFixedWidth(60)
-        self._ch_fps.setToolTip("Playback speed in frames per second")
+        # Desired playback rate. The display box shows the *setting*; the
+        # actually-achieved rate (which may be lower on heavy scenes) is the
+        # status bar's fps readout.
+        self._ch_fps = QSlider(Qt.Orientation.Horizontal)
+        self._ch_fps.setRange(1, 30)
+        self._ch_fps.setValue(30)   # matches the previous spinbox default
+        self._ch_fps.setTickInterval(5)
+        self._ch_fps.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._ch_fps.setToolTip("Desired playback speed in frames per second")
         self._ch_fps.valueChanged.connect(self._ch_update_fps)
-        ch_fps_layout.addWidget(self._ch_fps)
-        ch_fps_layout.addStretch()
+        self._ch_fps_display = QLineEdit("30 fps")
+        self._ch_fps_display.setReadOnly(True)
+        self._ch_fps_display.setFixedWidth(52)
+        self._ch_fps_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._ch_fps_display.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._ch_fps_display.setToolTip(
+            "The desired FPS setting (actual playback may be slower on heavy scenes)")
+        ch_fps_layout.addWidget(self._ch_fps, 1)
+        ch_fps_layout.addWidget(self._ch_fps_display)
 
         self._ch_loop = QCheckBox("Loop")
         self._ch_loop.setChecked(True)
@@ -1025,7 +1037,12 @@ class MainWindow(QMainWindow):
         dock.setWidget(scroll)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
         self._view_menu.addSeparator()
-        self._view_menu.addAction(dock.toggleViewAction())
+        # Window-wide shortcut on the dock's own toggle action, so it shows
+        # (and stays discoverable) next to the View-menu entry and works with
+        # the panel closed — e.g. reopening Properties while in stereo 3D.
+        toggle = dock.toggleViewAction()
+        toggle.setShortcut("Ctrl+P")
+        self._view_menu.addAction(toggle)
 
     def _build_table(self):
         dock = QDockWidget("Node Table", self)
@@ -1036,7 +1053,9 @@ class MainWindow(QMainWindow):
         self._table = NodeTableView()
         dock.setWidget(self._table)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock)
-        self._view_menu.addAction(dock.toggleViewAction())
+        toggle = dock.toggleViewAction()
+        toggle.setShortcut("Ctrl+N")   # bare N/Shift+N (new node) are viewport keys; Ctrl+N is free
+        self._view_menu.addAction(toggle)
 
         self._table.selectionModel().selectionChanged.connect(self._on_table_selection)
         self._table.doubleClicked.connect(self._on_table_double_click)
@@ -2464,6 +2483,7 @@ class MainWindow(QMainWindow):
         if not map_path or not tracks_path:
             self._ch_grp.setVisible(False)
             self._ch_engine = None
+            self._viewport.set_channel_dynamic_nodes(None)
             self._ch_unload_audio()
             return None
 
@@ -2475,9 +2495,15 @@ class MainWindow(QMainWindow):
             if engine.frame_count == 0 or not engine.has_bindings:
                 self._ch_grp.setVisible(False)
                 self._ch_engine = None
+                self._viewport.set_channel_dynamic_nodes(None)
                 self._ch_unload_audio()
                 return None
             self._ch_engine = engine
+            # Enable the playback fast path: bound nodes (and descendants of
+            # transform-bound ones) leave the baked display list and draw
+            # immediate per frame — see Viewport.channel_frame_update.
+            self._viewport.set_channel_dynamic_nodes(
+                engine.bound_node_ids, engine.transform_bound_node_ids)
             self._ch_frame = 0
             self._ch_slider.blockSignals(True)
             self._ch_slider.setRange(0, engine.frame_count - 1)
@@ -2495,12 +2521,15 @@ class MainWindow(QMainWindow):
                     "Disabled: this Channels animation is synced to its audio "
                     "file's real playback position instead of a fixed rate."
                 )
+                self._ch_fps_display.setEnabled(False)
+                self._ch_fps_display.setText("audio")
                 return f"channels: {engine.frame_count} frames, synced to {audio_path.name}"
             self._ch_unload_audio()
             return f"channels: {engine.frame_count} frames"
         except Exception as exc:
             self._ch_grp.setVisible(False)
             self._ch_engine = None
+            self._viewport.set_channel_dynamic_nodes(None)
             self._ch_unload_audio()
             self.statusBar().showMessage(f"Channel load warning: {exc}")
             return None
@@ -2509,7 +2538,9 @@ class MainWindow(QMainWindow):
         self._ch_audio.unload()
         self._ch_audio_loaded = False
         self._ch_fps.setEnabled(True)
-        self._ch_fps.setToolTip("Playback speed in frames per second")
+        self._ch_fps.setToolTip("Desired playback speed in frames per second")
+        self._ch_fps_display.setEnabled(True)
+        self._ch_fps_display.setText(f"{self._ch_fps.value()} fps")
 
     def _ch_toggle_play(self):
         if self._ch_playing:
@@ -2586,19 +2617,20 @@ class MainWindow(QMainWindow):
         self._ch_slider.setValue(frame)
         self._ch_slider.blockSignals(False)
         self._ch_frame_label.setText(f"Frame: {frame} / {self._ch_engine.frame_count - 1}")
-        self._viewport.scene_invalidate()
+        self._viewport.channel_frame_update()
 
     def _on_ch_slider(self, value: int):
         self._ch_frame = value
         if self._ch_engine:
             self._ch_engine.apply_frame(value)
             self._ch_frame_label.setText(f"Frame: {value} / {self._ch_engine.frame_count - 1}")
-            self._viewport.scene_invalidate()
+            self._viewport.channel_frame_update()
             if self._ch_audio_loaded and self._ch_engine.frame_count > 1:
                 frac = value / (self._ch_engine.frame_count - 1)
                 self._ch_audio.seek_ms(int(frac * self._ch_audio.duration_ms()))
 
-    def _ch_update_fps(self, _value: float):
+    def _ch_update_fps(self, value: int):
+        self._ch_fps_display.setText(f"{int(value)} fps")
         if self._ch_playing and not self._ch_audio_loaded:
             self._ch_timer.start(max(1, int(1000 / self._ch_fps.value())))
 

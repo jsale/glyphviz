@@ -258,6 +258,8 @@ class SceneTransforms(NamedTuple):
     matching the old dict caches where the first resolution of an id stuck).
     eff_parent[i] is the row of node i's effective parent, -1 for roots
     (missing parent, self-parent, or a cycle entry — see _resolve_hierarchy).
+    depth[i] is node i's hierarchy depth (0 for roots), kept so
+    update_world_transform_rows can re-walk a row subset in level order.
     """
     row_of_id: dict[int, int]
     eff_parent: np.ndarray    # (n,)   int64
@@ -265,6 +267,7 @@ class SceneTransforms(NamedTuple):
     parent_basis: np.ndarray  # (n,3,3) float64
     child_local: np.ndarray   # (n,3,3) float64
     world_pos: np.ndarray     # (n,3)   float64
+    depth: np.ndarray         # (n,)   int64
 
 
 def _resolve_hierarchy(nodes: list[Node]) -> tuple[np.ndarray, np.ndarray]:
@@ -505,7 +508,8 @@ def compute_world_transforms(nodes: list[Node], base_scale: float,
     if n == 0:
         e3 = np.empty((0, 3, 3))
         return SceneTransforms({}, np.empty(0, dtype=np.int64),
-                               e3, e3.copy(), e3.copy(), np.empty((0, 3)))
+                               e3, e3.copy(), e3.copy(), np.empty((0, 3)),
+                               np.empty(0, dtype=np.int64))
 
     eff_parent, depth = _resolve_hierarchy(nodes)
 
@@ -567,7 +571,92 @@ def compute_world_transforms(nodes: list[Node], base_scale: float,
         row_of_id.setdefault(nd.id, i)
 
     return SceneTransforms(row_of_id, eff_parent, world_basis, parent_basis,
-                           child_local, world_pos)
+                           child_local, world_pos, depth)
+
+
+def update_world_transform_rows(nodes: list[Node], base_scale: float,
+                                t: SceneTransforms, rows: np.ndarray) -> None:
+    """Recompute a subset of an existing SceneTransforms in place.
+
+    The per-frame engine behind Channels playback: when an animation mutates
+    translate/rotate/scale on a known set of nodes, this refreshes
+    child_local, parent_basis, world_basis and world_pos for exactly `rows`
+    (reading parent state straight from the arrays) at O(len(rows)) cost
+    instead of a full-scene compute_world_transforms.
+
+    Contract:
+    * `rows` must be closed under descendants: if a node's transform inputs
+      changed, every descendant's row must also be present (their world
+      state depends on it). Depth ordering below then guarantees any dirty
+      parent is recomputed before its children; a parent NOT in `rows` has,
+      by the closure rule, no changed ancestor, so its cached state is valid.
+    * Structural inputs (parent_id, topo, ratio, subspace, rotation_mode,
+      the node list itself) must be unchanged since the last full
+      compute_world_transforms — only translate/rotate/scale may differ.
+      (Channels can only bind translate/rotate/scale/rate/color fields, so
+      playback satisfies this by construction.)
+
+    The math here must stay numerically identical to
+    compute_world_transforms — same helpers, same composition order — since
+    refreshed rows feed the same render/pick contract.
+    """
+    k = len(rows)
+    if k == 0:
+        return
+    sub = [nodes[int(i)] for i in rows]
+    fields = np.array([
+        (nd.translate_x, nd.translate_y, nd.translate_z,
+         nd.rotate_x, nd.rotate_y, nd.rotate_z,
+         nd.scale_x, nd.scale_y, nd.scale_z,
+         nd.rotation_mode, nd.subspace)
+        for nd in sub
+    ], dtype=np.float64)
+    tx, ty, tz = fields[:, 0], fields[:, 1], fields[:, 2]
+    rx, ry, rz = fields[:, 3], fields[:, 4], fields[:, 5]
+    scale = fields[:, 6:9]
+    mode = fields[:, 9].astype(np.int64)
+    subspace = fields[:, 10].astype(np.int64)
+
+    eff_parent = t.eff_parent[rows]
+    is_root = eff_parent < 0
+    ptopo = np.full(k, -1, dtype=np.int64)
+    pratio = np.zeros(k)
+    nr = np.flatnonzero(~is_root)
+    if nr.size:
+        ptopo[nr] = [nodes[int(p)].topo for p in eff_parent[nr]]
+        pratio[nr] = [nodes[int(p)].ratio for p in eff_parent[nr]]
+
+    own_rot = _batched_local_rotations(rx, ry, rz, mode)
+    topo_rot = _batched_topo_rotations(ptopo, tx, ty, subspace)
+    child_local = topo_rot @ own_rot          # identity topo_rot for roots
+    local_scaled = child_local * scale[:, None, :]
+    offsets = _batched_topo_offsets(ptopo, tx, ty, tz, base_scale,
+                                     pratio, subspace)
+    t.child_local[rows] = child_local
+
+    # Level-ordered in-place update, mirroring compute_world_transforms'
+    # per-level composition but over the subset only.
+    order = np.argsort(t.depth[rows], kind='stable')
+    sorted_depth = t.depth[rows][order]
+    bounds = np.flatnonzero(np.diff(sorted_depth) > 0) + 1
+    for gsel in np.split(order, bounds):
+        grows = rows[gsel]
+        p = t.eff_parent[grows]
+        rootm = p < 0
+        if rootm.any():
+            rsel = gsel[rootm]
+            t.world_basis[rows[rsel]] = local_scaled[rsel]
+            t.world_pos[rows[rsel]] = np.stack(
+                [tx[rsel], ty[rsel], tz[rsel]], axis=1)
+        if (~rootm).any():
+            csel = gsel[~rootm]
+            crows = rows[csel]
+            pp = p[~rootm]
+            pb = t.world_basis[pp]
+            t.parent_basis[crows] = pb
+            t.world_basis[crows] = pb @ local_scaled[csel]
+            t.world_pos[crows] = t.world_pos[pp] + np.einsum(
+                'nij,nj->ni', pb, offsets[csel])
 
 
 def compute_world_bases(

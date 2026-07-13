@@ -112,6 +112,12 @@ class Viewport(QOpenGLWidget):
     renderModeCycleRequested = Signal()  # 8 → cycle scene render mode
     quickSaveRequested = Signal()        # K → silent auto-save node+tag CSV
 
+    # Channels playback transport (handled here, not as window-wide
+    # shortcuts, so a bare Space still types normally in text fields;
+    # works whenever the viewport has focus — e.g. Properties panel closed).
+    channelPlayToggleRequested = Signal()   # Space       → play / pause
+    channelStopRequested = Signal()         # Shift+Space → stop & reset
+
     # Visibility hotkeys (handled by MainWindow, which owns the hide logic)
     hideSelectedRequested = Signal()     # H       → hide selected nodes
     showAllRequested = Signal()          # Shift+H → clear every hide flag
@@ -205,6 +211,21 @@ class Viewport(QOpenGLWidget):
         self._scene_dl_video_ids: set[int] = set()
         self._assets_rev = 0
 
+        # Channels-playback fast path (see set_channel_dynamic_nodes /
+        # channel_frame_update): ids of channel-bound nodes (plus all
+        # descendants of transform-bound ones) that are excluded from the
+        # baked scene display list and drawn immediate every frame instead,
+        # so playback frames replay the static bulk from the DL and pay
+        # per-node Python cost only for the animated subtrees.
+        self._ch_dynamic_ids: set[int] = set()      # drawn immediate (excluded from DL)
+        self._ch_transform_ids: set[int] = set()    # subset whose matrices move each frame
+        self._ch_dynamic_rev = 0                    # bumped per set change; part of the DL key
+        # Per-scene-revision caches derived from the id sets (row indices
+        # shift and nodes may vanish whenever the scene actually changes):
+        self._ch_dynamic_nodes: list[Node] = []     # dynamic nodes in scene order
+        self._ch_transform_rows: np.ndarray | None = None
+        self._ch_cache_rev: tuple | None = None
+
         self._geo = GeoRenderer()
         self._next_mesh_id = 1
         self._mesh_names: dict[int, str] = {}   # mesh_id -> source filename, for the UI
@@ -248,6 +269,79 @@ class Viewport(QOpenGLWidget):
         self._scene.touch()
         self.update()
 
+    # --- Channels playback fast path ---
+
+    def set_channel_dynamic_nodes(self, bound_ids: set[int] | None,
+                                  transform_bound_ids: set[int] | None = None):
+        """Declare which nodes a loaded Channels animation drives, enabling
+        the playback fast path. Call with the engine's bound_node_ids /
+        transform_bound_node_ids after a successful channel load, and with
+        None when channels unload.
+
+        Transform-bound ids are expanded to include ALL their descendants:
+        a scale/rotate on a parent cascades through the hierarchy, so the
+        whole subtree must leave the baked display list and get its matrices
+        refreshed each frame. Color-only-bound nodes are excluded from the
+        DL too (color compiles into it) but need no matrix work."""
+        if not bound_ids:
+            changed = bool(self._ch_dynamic_ids)
+            self._ch_dynamic_ids = set()
+            self._ch_transform_ids = set()
+        else:
+            transform_ids = self._expand_with_descendants(
+                transform_bound_ids or set())
+            dynamic_ids = set(bound_ids) | transform_ids
+            changed = (dynamic_ids != self._ch_dynamic_ids
+                       or transform_ids != self._ch_transform_ids)
+            self._ch_dynamic_ids = dynamic_ids
+            self._ch_transform_ids = transform_ids
+        if changed:
+            self._ch_dynamic_rev += 1
+            self._ch_cache_rev = None
+        self.update()
+
+    def _expand_with_descendants(self, ids: set[int]) -> set[int]:
+        if not ids:
+            return set()
+        children: dict[int, list[int]] = {}
+        for n in self._scene.nodes:
+            if n.parent_id and n.parent_id != n.id:
+                children.setdefault(n.parent_id, []).append(n.id)
+        out = set(ids)
+        stack = list(ids)
+        while stack:
+            for child_id in children.get(stack.pop(), ()):
+                if child_id not in out:
+                    out.add(child_id)
+                    stack.append(child_id)
+        return out
+
+    def channel_frame_update(self):
+        """Repaint for a Channels playback frame WITHOUT invalidating the
+        scene: Scene._revision stays put, so paintGL keeps replaying the
+        baked static display list and only the declared dynamic subtrees
+        get a matrix refresh + immediate draw. Falls back to a plain
+        scene_invalidate() when the fast path isn't available."""
+        if not self._ch_dynamic_ids or self._draw_limit is not None:
+            self.scene_invalidate()
+            return
+        self._ch_ensure_playback_cache()
+        if self._ch_transform_rows is not None and len(self._ch_transform_rows):
+            self._scene.refresh_rows(self._ch_transform_rows)
+        self.update()
+
+    def _ch_ensure_playback_cache(self):
+        """Recompute the row indices / node list derived from the dynamic id
+        sets whenever the scene actually changed (edits, node add/remove —
+        anything that bumps Scene._revision or the set itself)."""
+        rev = (self._scene._revision, self._ch_dynamic_rev)
+        if self._ch_cache_rev == rev:
+            return
+        self._ch_dynamic_nodes = [n for n in self._scene.nodes
+                                  if n.id in self._ch_dynamic_ids]
+        self._ch_transform_rows = self._scene.rows_for_ids(self._ch_transform_ids)
+        self._ch_cache_rev = rev
+
     def register_node(self, node: Node):
         """Sync a node appended directly to self._scene.nodes into the scene's lookup cache."""
         self._scene.register_node(node)
@@ -270,6 +364,14 @@ class Viewport(QOpenGLWidget):
         self._draw_limit = None   # new scene → show everything
         self._assets_rev += 1     # new Scene restarts its revision counter — force a scene-list rebuild
         self._tag_text_cache.clear()
+        # Any channel dynamic set belonged to the old scene; the caller
+        # re-declares it after (re)loading channels for the new one.
+        self._ch_dynamic_ids = set()
+        self._ch_transform_ids = set()
+        self._ch_dynamic_nodes = []
+        self._ch_transform_rows = None
+        self._ch_cache_rev = None
+        self._ch_dynamic_rev += 1
         self._scene = Scene(nodes, self._base_scale)
         self._scene._ensure()   # pre-compute so camera init can read positions
         self._update_render_timer_state()
@@ -510,14 +612,17 @@ class Viewport(QOpenGLWidget):
         (e.g. the Properties inspector) to re-evaluate continuous repaint."""
         self._update_render_timer_state()
 
-    def _apply_rate_animation(self, dt_ms: float) -> bool:
+    def _apply_rate_animation(self, dt_ms: float) -> set[int]:
         """Advance translate_x/y/z, rotate_x/y/z, scale_x/y/z by their
-        *_rate_* velocities (see _RATE_CYCLE_MS). Returns True if any node
-        moved, so the caller knows to invalidate the scene's transform cache."""
+        *_rate_* velocities (see _RATE_CYCLE_MS). Returns the ids of nodes
+        that moved (empty set = nothing changed), so the caller can either
+        invalidate the scene's transform cache or — when every mover is
+        inside the Channels dynamic set — take the partial-refresh fast
+        path instead."""
         cycles = dt_ms / _RATE_CYCLE_MS
         if cycles <= 0:
-            return False
-        moved = False
+            return set()
+        moved: set[int] = set()
         for n in self._scene.nodes:
             if n.extras.get('freeze', 0):
                 continue
@@ -525,17 +630,17 @@ class Viewport(QOpenGLWidget):
                 n.translate_x += n.translate_rate_x * cycles
                 n.translate_y += n.translate_rate_y * cycles
                 n.translate_z += n.translate_rate_z * cycles
-                moved = True
+                moved.add(n.id)
             if n.rotate_rate_x or n.rotate_rate_y or n.rotate_rate_z:
                 n.rotate_x += n.rotate_rate_x * cycles
                 n.rotate_y += n.rotate_rate_y * cycles
                 n.rotate_z += n.rotate_rate_z * cycles
-                moved = True
+                moved.add(n.id)
             if n.scale_rate_x or n.scale_rate_y or n.scale_rate_z:
                 n.scale_x += n.scale_rate_x * cycles
                 n.scale_y += n.scale_rate_y * cycles
                 n.scale_z += n.scale_rate_z * cycles
-                moved = True
+                moved.add(n.id)
         return moved
 
     def list_audio_tracks(self) -> list[tuple[int, str]]:
@@ -599,8 +704,17 @@ class Viewport(QOpenGLWidget):
         dt_ms = (now - self._last_tex_tick) * 1000.0
         self._last_tex_tick = now
         self._tex_mgr.tick(dt_ms)   # advance any playing animated GIFs
-        if self._apply_rate_animation(dt_ms):
-            self._scene.invalidate()
+        rate_moved = self._apply_rate_animation(dt_ms)
+        if rate_moved:
+            if (self._ch_dynamic_ids and self._draw_limit is None
+                    and rate_moved <= self._ch_transform_ids):
+                # Every rate-driven mover is a channel-bound subtree (e.g. a
+                # channel driving rotate_rate): refresh just those rows so
+                # the static display list keeps replaying.
+                self._ch_ensure_playback_cache()
+                self._scene.refresh_rows(self._ch_transform_rows)
+            else:
+                self._scene.invalidate()
         if self.follow_selected:
             self._apply_follow_target()
         # QPainter's GL paint engine (used by _draw_tags_qpainter) can leave
@@ -800,8 +914,18 @@ class Viewport(QOpenGLWidget):
         # content-change source: Scene._revision (node edits, gizmo drags,
         # rate animation, base_scale), _assets_rev (texture/video/mesh
         # loads), and the two loop-shape toggles baked into the commands.
+        # Channels playback splits the scene: bound subtrees are excluded
+        # from the baked list and drawn immediate after it every frame
+        # (channel_frame_update refreshes their matrices without bumping
+        # _revision, so the key — and the baked static bulk — hold still).
+        # Disabled under a draw limit: the decimation cap counts nodes in
+        # scene order and can't be split across two passes.
+        ch_dynamic = (self._ch_dynamic_ids
+                      if self._ch_dynamic_ids and self._draw_limit is None
+                      else None)
         key = (self._scene._revision, self._assets_rev,
-               self.show_hidden, self._draw_limit)
+               self.show_hidden, self._draw_limit,
+               self._ch_dynamic_rev if ch_dynamic is not None else None)
         if self._scene_dl and key == self._scene_dl_key:
             for tid in self._scene_dl_video_ids:
                 self._video_mgr.get_gl_name(tid)   # keep baked videos marked visible
@@ -810,26 +934,43 @@ class Viewport(QOpenGLWidget):
             # Scene content held still for a full pass — bake it now, then
             # replay. (Rate-animated scenes bump _revision every frame and
             # never reach here; they stay on the immediate path below.)
-            self._compile_scene_dl(key)
+            self._compile_scene_dl(key, skip_ids=ch_dynamic)
             glCallList(self._scene_dl)
         else:
             self._draw_nodes_immediate(self._frustum_planes(mv, pr))
+            ch_dynamic = None   # everything (dynamic included) just drew
         self._scene_dl_last_key = key
+        if ch_dynamic is not None:
+            # Dynamic subtrees draw after the static bulk so translucent
+            # animated nodes blend over the baked content. (Like the rest
+            # of the renderer, there is no depth sorting — a translucent
+            # static in front of a dynamic node blends in bake order.)
+            self._ch_ensure_playback_cache()
+            self._draw_nodes_immediate(self._frustum_planes(mv, pr),
+                                       nodes=self._ch_dynamic_nodes)
 
         self._draw_selected_outlines()
         self._draw_topology_overlays()
 
-    def _draw_nodes_immediate(self, planes):
+    def _draw_nodes_immediate(self, planes, nodes: list[Node] | None = None,
+                              skip_ids: set[int] | None = None):
         """Per-node draw loop with CPU frustum culling — used while scene
         content is actively changing (and by _compile_scene_dl, without
-        culling, for the baked list)."""
+        culling, for the baked list). `nodes` restricts the loop to a
+        subset (the Channels dynamic pass); `skip_ids` excludes ids while
+        iterating the full scene (the static bake). The two are never
+        combined, and the draw limit is disabled whenever either is in
+        play (see _draw_scene_content), so the decimation count still sees
+        every node in scene order when it is active."""
         visible_count = 0
-        for node in self._scene.nodes:
+        for node in (self._scene.nodes if nodes is None else nodes):
             if node.type in NON_VISUAL_TYPES:
                 continue
             if node.type == NODE_TYPE_LINK:
                 continue   # rendered as lines in _draw_topology_overlays
             if not self.show_hidden and node.hide:
+                continue
+            if skip_ids is not None and node.id in skip_ids:
                 continue
             if self._draw_limit is not None and visible_count >= self._draw_limit:
                 break
@@ -843,8 +984,11 @@ class Viewport(QOpenGLWidget):
                 continue
             self._draw_node(node, gl_matrix)
 
-    def _compile_scene_dl(self, key):
-        """Bake the whole per-node draw loop into one display list.
+    def _compile_scene_dl(self, key, skip_ids: set[int] | None = None):
+        """Bake the whole per-node draw loop into one display list —
+        excluding `skip_ids` (the Channels dynamic set) when given, so
+        playback frames can replay the static bulk and immediate-draw only
+        the animated subtrees on top (see _draw_scene_content).
 
         No frustum culling here — the list must stay valid from any camera
         angle (GPU clipping handles off-screen geometry). Selection outlines
@@ -872,7 +1016,7 @@ class Viewport(QOpenGLWidget):
                                      or self._video_mgr.get_gl_name(node.texture_id)))
                 self._geo.ensure_torus_list(node.geometry, bool(textured), node.ratio)
         glNewList(self._scene_dl, GL_COMPILE)
-        self._draw_nodes_immediate(planes=None)
+        self._draw_nodes_immediate(planes=None, skip_ids=skip_ids)
         glEndList()
         self._scene_dl_key = key
 
@@ -1653,6 +1797,12 @@ class Viewport(QOpenGLWidget):
             event.accept()
         elif event.key() == Qt.Key.Key_I:
             self.isolateSelectedRequested.emit()
+            event.accept()
+        elif event.key() == Qt.Key.Key_Space:
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                self.channelStopRequested.emit()
+            else:
+                self.channelPlayToggleRequested.emit()
             event.accept()
         else:
             super().keyPressEvent(event)

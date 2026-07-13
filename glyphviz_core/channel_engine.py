@@ -40,6 +40,9 @@ _ATTR_TO_FIELD: dict[str, str] = {
 
 _COLOR_FIELDS = frozenset({'color_r', 'color_g', 'color_b', 'color_a'})
 _INT_FIELDS = _COLOR_FIELDS | frozenset({'texture_id'})
+# Bindable fields that do NOT affect node transforms (see
+# transform_bound_node_ids).
+_NON_TRANSFORM_FIELDS = _INT_FIELDS
 
 # Old-style ANTz column name for the channel-input-id field (stored in node.extras).
 _CH_INPUT_KEYS = ('ch_input_id', 'np_ch_in_id', 'ch_input_id ')
@@ -59,6 +62,21 @@ class ChannelEngine:
     @property
     def has_bindings(self) -> bool:
         return bool(self._bindings)
+
+    @property
+    def bound_node_ids(self) -> set[int]:
+        """Ids of every node with at least one channel binding."""
+        return {node.id for node, _f, _c, _i in self._bindings}
+
+    @property
+    def transform_bound_node_ids(self) -> set[int]:
+        """Ids of nodes with a binding that can move/reshape geometry
+        (translate/rotate/scale and their *_rate fields — a rate binding
+        makes the viewport integrate the positional field every tick).
+        Color/texture bindings change draw content but never transforms,
+        so they don't cascade to descendants."""
+        return {node.id for node, field, _c, _i in self._bindings
+                if field not in _NON_TRANSFORM_FIELDS}
 
     def load(
         self,
