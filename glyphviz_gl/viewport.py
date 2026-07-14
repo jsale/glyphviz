@@ -11,7 +11,7 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from pathlib import Path
 
 from glyphviz_core.node import (
-    Node, NON_VISUAL_TYPES, NODE_TYPE_GRID, NODE_TYPE_LINK,
+    Node, GRID_GLOBE_RADIUS, NON_VISUAL_TYPES, NODE_TYPE_GRID, NODE_TYPE_LINK,
     RENDER_MODE_NORMAL, RENDER_MODE_ADDITIVE, RENDER_MODE_SUBTRACTIVE,
     RENDER_MODE_DARK, RENDER_MODE_OFF, RENDER_MODE_SCREEN, RENDER_MODE_PREMULTIPLIED,
     WORLD_DEFAULT_BG_RGB,
@@ -419,8 +419,13 @@ class Viewport(QOpenGLWidget):
     def _radius_of(self, node: Node) -> tuple[float, float, float]:
         """Per-axis rendered radii (rx, ry, rz) for camera focus and UI hints."""
         if node.type == NODE_TYPE_GRID:
-            # World Grid: footprint = extents half-spans x raw scale, no
+            # World Grid: footprint = shape half-spans x raw scale, no
             # base_scale/floor (mirrors scene._grid_draw_scale).
+            if node.grid_is_globe():
+                gr = GRID_GLOBE_RADIUS
+                return (max(node.scale_x * gr, 0.2),
+                        max(node.scale_y * gr, 0.2),
+                        max(node.scale_z * gr, 0.2))
             half_lon, half_lat = node.grid_half_extents()
             return (max(node.scale_x * half_lon, 0.2),
                     max(node.scale_y * half_lat, 0.2),
@@ -1430,18 +1435,29 @@ class Viewport(QOpenGLWidget):
 
         glPopMatrix()
 
-    def _draw_world_grid(self, node: Node, gl_matrix: np.ndarray):
-        """Bespoke draw path for World Grid nodes (type=6).
+    # Globe tessellation (unit sphere, scaled to GRID_GLOBE_RADIUS x node
+    # scale by the draw matrix). A single grid node draws this immediate-mode
+    # once per bake, so density is chosen for smooth texture mapping.
+    _GLOBE_SLICES = 48   # longitude bands
+    _GLOBE_STACKS = 24   # latitude bands
 
-        The draw matrix already carries the extents-window half-spans times
-        the node's raw scale (see scene._grid_draw_scale), so everything here
-        renders in a ±1 local square: lattice lines at the node's segments_x/y
-        counts, plus — for a solid geometry choice — a double-sided plate that
-        takes the node's texture (e.g. an equirectangular earth map, which the
-        default whole-earth window matches exactly). UVs follow GEO_GRID's
-        convention (v grows with +y)."""
+    def _draw_world_grid(self, node: Node, gl_matrix: np.ndarray):
+        """Bespoke draw path for World Grid nodes (type=6), flat or globe.
+
+        The draw matrix already carries the shape's half-spans times the
+        node's raw scale (see scene._grid_draw_scale), so everything here
+        renders in ±1 local units. Flat form: lattice lines at the node's
+        segments_x/y counts, plus — for a solid geometry choice — a
+        double-sided plate taking the node's texture (an equirectangular
+        earth map matches the default whole-earth window exactly). Globe form
+        (Node.grid_is_globe): a lon/lat graticule and, when solid, a unit
+        sphere with exact equirect UVs (u=(lon+180)/360, v=(lat+90)/180 —
+        gluSphere's mapping is offset AND mirrored in longitude relative to
+        KML, so the sphere is built here instead). Both draw unlit so the
+        map reads at full brightness with no day/night shading."""
         seg_x, seg_y = node.grid_segments()
         wire_only = node.geometry in WIRE_TO_SOLID   # any *_WIRE geometry id
+        globe = node.grid_is_globe()
 
         glPushMatrix()
         glMultMatrixf(gl_matrix)
@@ -1461,43 +1477,108 @@ class Viewport(QOpenGLWidget):
                 glColor4f(1.0, 1.0, 1.0, a)   # don't tint the map texture
             else:
                 glColor4f(r, g, b, a)
-            glBegin(GL_QUADS)   # double-sided, like geometry.py's grid plate
-            glNormal3f(0.0, 0.0, 1.0)
-            for x, y, u, v in ((-1, -1, 0, 0), (1, -1, 1, 0),
-                               (1, 1, 1, 1), (-1, 1, 0, 1)):
-                glTexCoord2f(u, v)
-                glVertex3f(x, y, 0.0)
-            glNormal3f(0.0, 0.0, -1.0)
-            for x, y, u, v in ((-1, 1, 0, 1), (1, 1, 1, 1),
-                               (1, -1, 1, 0), (-1, -1, 0, 0)):
-                glTexCoord2f(u, v)
-                glVertex3f(x, y, 0.0)
-            glEnd()
+            if globe:
+                self._globe_surface(textured=bool(gl_tex))
+            else:
+                self._grid_plate(textured=True)
             if gl_tex:
                 glDisable(GL_TEXTURE_2D)
 
-        # Lattice lines. Over a solid/textured plate they dim toward half
-        # opacity for contrast and lift a hair off the surface (in local z,
-        # so the offset scales with the grid, never dwarfing thin scenes).
-        z = 0.0 if wire_only else 0.001
+        # Lattice/graticule lines. Over a solid surface they dim toward half
+        # opacity for contrast and lift slightly off the surface (in local
+        # units, so the offset scales with the grid).
         if wire_only:
             glColor4f(r, g, b, a)
         else:
             glColor4f(r, g, b, a * 0.5)
         glLineWidth(1.0)
-        glBegin(GL_LINES)
-        for i in range(seg_x + 1):
-            x = -1.0 + 2.0 * i / seg_x
-            glVertex3f(x, -1.0, z)
-            glVertex3f(x, 1.0, z)
-        for j in range(seg_y + 1):
-            y = -1.0 + 2.0 * j / seg_y
-            glVertex3f(-1.0, y, z)
-            glVertex3f(1.0, y, z)
-        glEnd()
+        if globe:
+            self._globe_graticule(seg_x, seg_y,
+                                  radius=1.0 if wire_only else 1.002)
+        else:
+            z = 0.0 if wire_only else 0.001
+            glBegin(GL_LINES)
+            for i in range(seg_x + 1):
+                x = -1.0 + 2.0 * i / seg_x
+                glVertex3f(x, -1.0, z)
+                glVertex3f(x, 1.0, z)
+            for j in range(seg_y + 1):
+                y = -1.0 + 2.0 * j / seg_y
+                glVertex3f(-1.0, y, z)
+                glVertex3f(1.0, y, z)
+            glEnd()
 
         glEnable(GL_LIGHTING)
         glPopMatrix()
+
+    @staticmethod
+    def _grid_plate(textured: bool):
+        """±1 double-sided flat plate (GEO_GRID's UV convention: v grows
+        with +y). Shared by the draw pass and the pick pass's occluder."""
+        glBegin(GL_QUADS)
+        glNormal3f(0.0, 0.0, 1.0)
+        for x, y, u, v in ((-1, -1, 0, 0), (1, -1, 1, 0),
+                           (1, 1, 1, 1), (-1, 1, 0, 1)):
+            if textured:
+                glTexCoord2f(u, v)
+            glVertex3f(x, y, 0.0)
+        glNormal3f(0.0, 0.0, -1.0)
+        for x, y, u, v in ((-1, 1, 0, 1), (1, 1, 1, 1),
+                           (1, -1, 1, 0), (-1, -1, 0, 0)):
+            if textured:
+                glTexCoord2f(u, v)
+            glVertex3f(x, y, 0.0)
+        glEnd()
+
+    @classmethod
+    def _globe_surface(cls, textured: bool):
+        """Unit sphere as latitude-band quad strips with KML-aligned equirect
+        UVs: lon 0 faces +X (u=0.5), u grows eastward, v grows northward."""
+        slices, stacks = cls._GLOBE_SLICES, cls._GLOBE_STACKS
+        for j in range(stacks):
+            lat0 = math.radians(-90.0 + 180.0 * j / stacks)
+            lat1 = math.radians(-90.0 + 180.0 * (j + 1) / stacks)
+            z0, c0 = math.sin(lat0), math.cos(lat0)
+            z1, c1 = math.sin(lat1), math.cos(lat1)
+            v0, v1 = j / stacks, (j + 1) / stacks
+            glBegin(GL_QUAD_STRIP)
+            for i in range(slices + 1):
+                lon = math.radians(-180.0 + 360.0 * i / slices)
+                cl, sl = math.cos(lon), math.sin(lon)
+                u = i / slices
+                if textured:
+                    glTexCoord2f(u, v1)
+                glNormal3f(c1 * cl, c1 * sl, z1)
+                glVertex3f(c1 * cl, c1 * sl, z1)
+                if textured:
+                    glTexCoord2f(u, v0)
+                glNormal3f(c0 * cl, c0 * sl, z0)
+                glVertex3f(c0 * cl, c0 * sl, z0)
+            glEnd()
+
+    @classmethod
+    def _globe_graticule(cls, seg_x: int, seg_y: int, radius: float):
+        """Meridians (seg_x of them) and parallels (seg_y bands' edges,
+        poles excluded) on a sphere of `radius` in local units."""
+        arc = cls._GLOBE_SLICES  # vertices per full circle
+        for i in range(seg_x):
+            lon = math.radians(-180.0 + 360.0 * i / seg_x)
+            cl, sl = math.cos(lon), math.sin(lon)
+            glBegin(GL_LINE_STRIP)
+            for j in range(arc + 1):
+                lat = math.radians(-90.0 + 180.0 * j / arc)
+                c, z = math.cos(lat), math.sin(lat)
+                glVertex3f(radius * c * cl, radius * c * sl, radius * z)
+            glEnd()
+        for j in range(1, seg_y):
+            lat = math.radians(-90.0 + 180.0 * j / seg_y)
+            c, z = math.cos(lat), math.sin(lat)
+            glBegin(GL_LINE_LOOP)
+            for i in range(arc):
+                lon = math.radians(-180.0 + 360.0 * i / arc)
+                glVertex3f(radius * c * math.cos(lon),
+                           radius * c * math.sin(lon), radius * z)
+            glEnd()
 
     def _draw_rubber_band(self):
         """Draw a semi-transparent rectangle in 2D screen space for rubber-band select."""
@@ -1702,6 +1783,21 @@ class Viewport(QOpenGLWidget):
                 # decimation cutoff stays aligned with the draw loop's.
                 if self._draw_limit is None or visible_count < self._draw_limit:
                     visible_count += 1
+                # A SOLID grid surface visually occludes glyphs behind it
+                # (especially a globe's far side), so render it into the
+                # pick depth buffer as color-ID 0: clicks on it read as
+                # background rather than selecting something hidden. Wire
+                # grids see through, so they get no occluder.
+                if node.geometry not in WIRE_TO_SOLID:
+                    glColor4ub(0, 0, 0, 255)
+                    _, gl_matrix, _ = self._scene.node_draw_data(node)
+                    glPushMatrix()
+                    glMultMatrixf(gl_matrix)
+                    if node.grid_is_globe():
+                        self._globe_surface(textured=False)
+                    else:
+                        self._grid_plate(textured=False)
+                    glPopMatrix()
                 continue
             is_selected = node.id in self.selected_node_ids
             within_limit = self._draw_limit is None or visible_count < self._draw_limit

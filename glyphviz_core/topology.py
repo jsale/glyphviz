@@ -14,7 +14,8 @@ import numpy as np
 
 from .geometry_data import ROD_HEIGHT_FACTOR, torus_radii
 from .node import (
-    Node, NODE_TYPE_GRID, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
+    Node, GRID_GLOBE_RADIUS, NODE_TYPE_GRID,
+    ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
 )
 
 # topo id values — full reference list from Topology-Guide.md (np_topo_id there).
@@ -539,31 +540,47 @@ def compute_world_transforms(nodes: list[Node], base_scale: float,
     pratio = np.where(is_root, 0.0, ratio[safe_parent])
 
     # World Grid (type=6) parents — see the "World Grid semantics" comment
-    # block above _cartesian_offset. Children are placed Cartesian at their
-    # coordinates relative to the grid's extents-window center, regardless
-    # of the grid's topo field.
+    # block above _cartesian_offset. Flat grids place children Cartesian at
+    # their coordinates relative to the extents-window center; globe grids
+    # (sphere geometry — Node.grid_is_globe) place them by KML lon/lat/
+    # elevation on the sphere surface. Both regardless of the grid row's
+    # topo field.
     grid_center = np.zeros((n, 2))
+    grid_globe = np.zeros(n, dtype=bool)
     for i in np.flatnonzero(ntype == NODE_TYPE_GRID):
-        grid_center[i] = nodes[int(i)].grid_center()
+        nd = nodes[int(i)]
+        grid_center[i] = nd.grid_center()
+        grid_globe[i] = nd.grid_is_globe()
     grid_child = ~is_root & (ntype[safe_parent] == NODE_TYPE_GRID)
+    globe_child = grid_child & grid_globe[safe_parent]
+    flat_child = grid_child & ~globe_child
 
     own_rot = _batched_local_rotations(rx, ry, rz, mode)
     topo_rot = _batched_topo_rotations(ptopo, tx, ty, subspace)
-    if grid_child.any():
-        # Grid children take no topology base rotation (their placement is
-        # plain Cartesian), whatever the grid row's topo field says.
-        topo_rot[grid_child] = np.eye(3)
+    if flat_child.any():
+        # Flat-grid children take no topology base rotation (their
+        # placement is plain Cartesian).
+        topo_rot[flat_child] = np.eye(3)
+    if globe_child.any():
+        # Globe children orient outward from the sphere surface at their
+        # lon/lat, same scaffold as TOPO_SPHERE children.
+        topo_rot[globe_child] = (_batched_rot_z(tx[globe_child])
+                                 @ _batched_rot_y(90.0 - ty[globe_child]))
     child_local = topo_rot @ own_rot          # identity topo_rot for roots
     local_scaled = child_local * scale[:, None, :]   # m @ diag(scale)
     offsets = _batched_topo_offsets(ptopo, tx, ty, tz, base_scale,
                                      pratio, subspace)
-    if grid_child.any():
+    if flat_child.any():
         pc = grid_center[safe_parent]
-        offsets[grid_child] = np.stack([
-            tx[grid_child] - pc[grid_child, 0],
-            ty[grid_child] - pc[grid_child, 1],
-            tz[grid_child],
+        offsets[flat_child] = np.stack([
+            tx[flat_child] - pc[flat_child, 0],
+            ty[flat_child] - pc[flat_child, 1],
+            tz[flat_child],
         ], axis=1)
+    if globe_child.any():
+        offsets[globe_child] = _batched_kml(
+            tx[globe_child], ty[globe_child], tz[globe_child],
+            GRID_GLOBE_RADIUS)
 
     world_basis = np.empty((n, 3, 3))
     parent_basis = np.tile(np.eye(3), (n, 1, 1))
@@ -655,6 +672,7 @@ def update_world_transform_rows(nodes: list[Node], base_scale: float,
     ptopo = np.full(k, -1, dtype=np.int64)
     pratio = np.zeros(k)
     pgrid = np.zeros(k, dtype=bool)   # parent is a World Grid (type=6)
+    pglobe = np.zeros(k, dtype=bool)  # ... in globe (sphere-geometry) form
     pcenter = np.zeros((k, 2))        # grid parents' extents-window center
     nr = np.flatnonzero(~is_root)
     if nr.size:
@@ -664,22 +682,30 @@ def update_world_transform_rows(nodes: list[Node], base_scale: float,
             parent = nodes[int(eff_parent[j])]
             if parent.type == NODE_TYPE_GRID:
                 pgrid[j] = True
+                pglobe[j] = parent.grid_is_globe()
                 pcenter[j] = parent.grid_center()
+    pflat = pgrid & ~pglobe
 
     own_rot = _batched_local_rotations(rx, ry, rz, mode)
     topo_rot = _batched_topo_rotations(ptopo, tx, ty, subspace)
-    if pgrid.any():
-        topo_rot[pgrid] = np.eye(3)   # grid children: plain Cartesian placement
+    if pflat.any():
+        topo_rot[pflat] = np.eye(3)   # flat-grid children: plain Cartesian
+    if pglobe.any():
+        topo_rot[pglobe] = (_batched_rot_z(tx[pglobe])
+                            @ _batched_rot_y(90.0 - ty[pglobe]))
     child_local = topo_rot @ own_rot          # identity topo_rot for roots
     local_scaled = child_local * scale[:, None, :]
     offsets = _batched_topo_offsets(ptopo, tx, ty, tz, base_scale,
                                      pratio, subspace)
-    if pgrid.any():
-        offsets[pgrid] = np.stack([
-            tx[pgrid] - pcenter[pgrid, 0],
-            ty[pgrid] - pcenter[pgrid, 1],
-            tz[pgrid],
+    if pflat.any():
+        offsets[pflat] = np.stack([
+            tx[pflat] - pcenter[pflat, 0],
+            ty[pflat] - pcenter[pflat, 1],
+            tz[pflat],
         ], axis=1)
+    if pglobe.any():
+        offsets[pglobe] = _batched_kml(tx[pglobe], ty[pglobe], tz[pglobe],
+                                       GRID_GLOBE_RADIUS)
     t.child_local[rows] = child_local
 
     # Level-ordered in-place update, mirroring compute_world_transforms'
@@ -800,12 +826,20 @@ def compute_world_bases(
 # making a grid at the origin with scale 1 an exact 1:1 frame: a child at
 # translate (180, 90) lands at world (180, 90).
 #
+# A grid whose geometry is Sphere/Sphere Wire is a GLOBE (Node.grid_is_globe):
+# children place by KML lon/lat on the sphere surface at radius
+# GRID_GLOBE_RADIUS (180/pi, so the equator is exactly 360 units — the flat
+# 1:1 map rolled up), translate_z is a radial elevation, and each child gets
+# the TOPO_SPHERE outward-facing base rotation. Extents recentering does not
+# apply on a globe — lon/lat are absolute positions on the sphere.
+#
 # Unlike every topo-driven parent, a grid's scale must NOT stretch its
 # children's rendered shape or their subtrees' internal spacing (the
 # ANTz-documented Grid rule: scaling "compacts the spacing of attached
 # nodes but does NOT affect their size, and is axis specific") — see the
 # per-level shape-basis override in compute_world_transforms /
-# update_world_transform_rows, keyed on the parent's type.
+# update_world_transform_rows, keyed on the parent's type. This holds for
+# both flat and globe forms.
 #
 # This special-casing lives in the vectorized engine only; the scalar
 # offset functions below dispatch purely on parent topo and stay the

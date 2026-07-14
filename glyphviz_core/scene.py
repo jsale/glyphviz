@@ -35,7 +35,9 @@ import numpy as np
 
 from .csv_reader import load_node_csv
 from .geometry_data import ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
-from .node import Node, NODE_TYPE_GRID, NODE_TYPE_WORLD, NON_VISUAL_TYPES
+from .node import (
+    GRID_GLOBE_RADIUS, Node, NODE_TYPE_GRID, NODE_TYPE_WORLD, NON_VISUAL_TYPES,
+)
 from .topology import (
     TOPO_ROD,
     SceneTransforms,
@@ -52,15 +54,21 @@ _ROD_SCALE_FACTORS = np.array([ROD_RADIUS_FACTOR, ROD_RADIUS_FACTOR,
 def _grid_draw_scale(node: Node) -> tuple[float, float, float]:
     """Per-axis draw-matrix scale for a World Grid node (type=6).
 
-    The grid's geometry is drawn in a ±1 local square (see the viewport's
+    The grid's geometry is drawn in ±1 local units (see the viewport's
     _draw_world_grid), so the matrix scale is the node's RAW scale times the
-    extents window's half-spans — with neither base_scale nor the 0.2 render
-    floor applied. Both exemptions are alignment requirements, not style:
-    child POSITIONS map through the grid's raw world_basis (base_scale plays
-    no part there), so the rendered rectangle only stays under the children
-    it frames if its own footprint uses exactly the same raw factors. At
-    scale 1 the default window renders 360x180 world units, 1:1 with world
-    coordinates."""
+    shape's half-spans — with neither base_scale nor the 0.2 render floor
+    applied. Both exemptions are alignment requirements, not style: child
+    POSITIONS map through the grid's raw world_basis (base_scale plays no
+    part there), so the rendered surface only stays under the children it
+    frames if its own footprint uses exactly the same raw factors.
+
+    Flat form: half-spans are the extents window's — at scale 1 the default
+    window renders 360x180 world units, 1:1 with world coordinates.
+    Globe form (sphere geometry): the half-span is GRID_GLOBE_RADIUS on all
+    three axes, matching the KML child-placement radius exactly."""
+    if node.grid_is_globe():
+        r = GRID_GLOBE_RADIUS
+        return (node.scale_x * r, node.scale_y * r, node.scale_z * r)
     half_lon, half_lat = node.grid_half_extents()
     return (node.scale_x * half_lon, node.scale_y * half_lat, node.scale_z)
 

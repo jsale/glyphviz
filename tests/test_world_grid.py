@@ -19,7 +19,9 @@ import pandas as pd
 import pytest
 
 from glyphviz_core.csv_reader import _COL_ORDER, load_node_csv, save_node_csv
-from glyphviz_core.node import GRID_DEFAULT_EXTENTS, NODE_TYPE_GRID, Node
+from glyphviz_core.node import (
+    GRID_DEFAULT_EXTENTS, GRID_GLOBE_RADIUS, NODE_TYPE_GRID, Node,
+)
 from glyphviz_core.scene import Scene, node_world_matrix
 from glyphviz_core import topology as topo
 
@@ -200,6 +202,112 @@ def test_grid_draw_matrix_skips_render_floor(tmp_path):
     # 0.05 * 180 / 0.05 * 90 — and scale_z stays raw 0.05, under the 0.2
     # floor ordinary glyphs get.
     assert _rendered_scale(scene, 1) == pytest.approx((9.0, 4.5, 0.05))
+
+
+# ---------------------------------------------------------------------------
+# Globe form: a grid with Sphere/Sphere Wire geometry places children by KML
+# lon/lat/elevation on a sphere of radius GRID_GLOBE_RADIUS (180/pi — the
+# flat 1:1 map rolled up so the equator is exactly 360 world units).
+# ---------------------------------------------------------------------------
+
+def _globe_row(**overrides):
+    row = _grid_row(geometry=2)   # GEO_SPHERE_WIRE
+    row.update(overrides)
+    return row
+
+
+def test_globe_children_place_by_kml_lon_lat(tmp_path):
+    R = GRID_GLOBE_RADIUS
+    scene = _scene(tmp_path, [
+        _globe_row(id=1),
+        _row(id=2, parent_id=1, branch_level=1, translate_x=0.0, translate_y=0.0),
+        _row(id=3, parent_id=1, branch_level=1, translate_x=90.0, translate_y=0.0),
+        _row(id=4, parent_id=1, branch_level=1, translate_x=0.0, translate_y=90.0),
+        _row(id=5, parent_id=1, branch_level=1, translate_x=180.0, translate_y=0.0),
+    ])
+    assert scene.world_pos(2) == pytest.approx((R, 0.0, 0.0))        # lon 0 -> +X
+    assert scene.world_pos(3) == pytest.approx((0.0, R, 0.0), abs=1e-9)   # lon 90 -> +Y
+    assert scene.world_pos(4) == pytest.approx((0.0, 0.0, R), abs=1e-9)   # north pole -> +Z
+    assert scene.world_pos(5) == pytest.approx((-R, 0.0, 0.0), abs=1e-9)  # antimeridian -> -X
+
+
+def test_globe_elevation_is_radial(tmp_path):
+    R = GRID_GLOBE_RADIUS
+    scene = _scene(tmp_path, [
+        _globe_row(id=1),
+        _row(id=2, parent_id=1, branch_level=1,
+             translate_x=0.0, translate_y=0.0, translate_z=5.0),
+    ])
+    assert scene.world_pos(2) == pytest.approx((R + 5.0, 0.0, 0.0))
+
+
+def test_globe_scale_respaces_but_never_resizes(tmp_path):
+    R = GRID_GLOBE_RADIUS
+    scene = _scene(tmp_path, [
+        _globe_row(id=1, scale_x=2.0, scale_y=2.0, scale_z=2.0),
+        _row(id=2, parent_id=1, branch_level=1, translate_x=0.0, translate_y=0.0),
+    ], base_scale=3.0)
+    assert scene.world_pos(2) == pytest.approx((2.0 * R, 0.0, 0.0))
+    # Child rendered size: base_scale x own scale only, no globe 2x.
+    assert _rendered_scale(scene, 2) == pytest.approx((3.0, 3.0, 3.0))
+
+
+def test_globe_children_orient_outward(tmp_path):
+    """A globe child's local +Z (the KML surface normal) points radially
+    outward at its lon/lat, matching TOPO_SPHERE children."""
+    scene = _scene(tmp_path, [
+        _globe_row(id=1),
+        _row(id=2, parent_id=1, branch_level=1, translate_x=45.0, translate_y=45.0),
+    ])
+    M = node_world_matrix(scene.node_by_id(2), scene)
+    z_axis = np.array([M[0][2], M[1][2], M[2][2]])
+    z_axis /= np.linalg.norm(z_axis)
+    lon, lat = math.radians(45.0), math.radians(45.0)
+    outward = np.array([math.cos(lat) * math.cos(lon),
+                        math.cos(lat) * math.sin(lon), math.sin(lat)])
+    assert z_axis == pytest.approx(outward)
+
+
+def test_globe_draw_matrix_is_radius_times_raw_scale(tmp_path):
+    R = GRID_GLOBE_RADIUS
+    scene = _scene(tmp_path, [_globe_row(id=1, scale_x=2.0)], base_scale=3.0)
+    assert _rendered_scale(scene, 1) == pytest.approx((2.0 * R, R, R))
+
+
+def test_toggling_geometry_switches_flat_and_globe(tmp_path):
+    """The flat<->globe toggle is just a geometry change + invalidate —
+    exactly what the Geometry dropdown / Shape combo do."""
+    R = GRID_GLOBE_RADIUS
+    scene = _scene(tmp_path, [
+        _grid_row(id=1),   # flat wire
+        _row(id=2, parent_id=1, branch_level=1, translate_x=90.0, translate_y=0.0),
+    ])
+    assert scene.world_pos(2) == pytest.approx((90.0, 0.0, 0.0))
+    grid = scene.node_by_id(1)
+    grid.geometry = 2   # GEO_SPHERE_WIRE -> globe
+    scene.invalidate()
+    assert scene.world_pos(2) == pytest.approx((0.0, R, 0.0), abs=1e-9)
+    grid.geometry = 20  # GEO_GRID_WIRE -> flat again
+    scene.invalidate()
+    assert scene.world_pos(2) == pytest.approx((90.0, 0.0, 0.0))
+
+
+def test_globe_partial_refresh_matches_full_recompute(tmp_path):
+    rows = [
+        _globe_row(id=1, scale_x=1.5, scale_y=1.5, scale_z=1.5, rotate_z=20.0),
+        _row(id=2, parent_id=1, branch_level=1, translate_x=-117.0, translate_y=33.0),
+        _row(id=3, parent_id=2, branch_level=2, translate_x=1.0),
+    ]
+    nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
+    t = topo.compute_world_transforms(nodes, base_scale=1.0)
+    nodes[1].translate_x = 2.4
+    nodes[1].translate_y = 48.9
+    nodes[1].translate_z = 3.0
+    topo.update_world_transform_rows(nodes, 1.0, t, np.array([1, 2]))
+    fresh = topo.compute_world_transforms(nodes, base_scale=1.0)
+    np.testing.assert_allclose(t.world_pos, fresh.world_pos, atol=1e-12)
+    np.testing.assert_allclose(t.world_basis, fresh.world_basis, atol=1e-12)
+    np.testing.assert_allclose(t.parent_basis, fresh.parent_basis, atol=1e-12)
 
 
 # ---------------------------------------------------------------------------

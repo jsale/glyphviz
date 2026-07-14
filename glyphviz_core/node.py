@@ -26,6 +26,17 @@ NON_VISUAL_TYPES = frozenset({NODE_TYPE_WORLD, NODE_TYPE_CAMERA})
 GRID_DEFAULT_EXTENTS = (-180.0, 180.0, -90.0, 90.0)   # lon_min, lon_max, lat_min, lat_max
 GRID_DEFAULT_SEGMENTS = (36, 18)                      # 10°-cell lines for the default window
 
+# Globe form of a World Grid: a type-6 node whose geometry is Sphere (3) or
+# Sphere Wire (2) renders as a globe, and its children place by KML
+# longitude/latitude/elevation on the sphere's surface instead of on a flat
+# window. The radius at scale 1 is 180/pi (~57.3) world units so the equator
+# is exactly 360 units long — the flat 1:1 map rolled onto a sphere: one
+# degree of longitude at the equator still moves a child one world unit, and
+# toggling a grid between flat and globe keeps the layout the same overall
+# size. translate_z is a radial elevation in the same world units.
+GRID_GLOBE_RADIUS = 180.0 / 3.141592653589793
+_GEO_SPHERE_IDS = frozenset({2, 3})   # GEO_SPHERE_WIRE, GEO_SPHERE (geometry_data.py)
+
 # rotate_x/y/z interpretation. ANTz/GaiaViz always used HEADING_TILT_ROLL (a
 # Z-X-Z "proper Euler" sequence borrowed from KML's Heading/Tilt/Roll camera
 # and model convention: rotate_y and rotate_z both rotate about the z-axis).
@@ -167,6 +178,13 @@ class Node:
         rectangle in local units before the node's own scale is applied."""
         lon_lo, lon_hi, lat_lo, lat_hi = self.grid_extents()
         return ((lon_hi - lon_lo) / 2.0, (lat_hi - lat_lo) / 2.0)
+
+    def grid_is_globe(self) -> bool:
+        """True when this World Grid renders as a globe (geometry Sphere or
+        Sphere Wire) — children then place by KML lon/lat/elevation on the
+        sphere surface (radius GRID_GLOBE_RADIUS x scale) instead of on the
+        flat extents window. Any other geometry means the flat rectangle."""
+        return self.type == NODE_TYPE_GRID and self.geometry in _GEO_SPHERE_IDS
 
     def grid_segments(self) -> tuple[int, int]:
         """(x, y) grid cell counts for rendering (ANTz segments_x/y). 1 = an

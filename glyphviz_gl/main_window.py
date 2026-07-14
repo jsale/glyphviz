@@ -32,7 +32,8 @@ from glyphviz_core.csv_reader import (
 )
 from glyphviz_core.pdb_loader import load_pdb_file
 from glyphviz_core.geometry_data import (
-    GEO_NAMES, GEO_COUNT, GEO_GRID_WIRE, GEO_OCTA, GEO_MESH,
+    GEO_NAMES, GEO_COUNT, GEO_GRID, GEO_GRID_WIRE, GEO_MESH, GEO_OCTA,
+    GEO_SPHERE, GEO_SPHERE_WIRE, _WIRE_IDS,
 )
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
@@ -1034,6 +1035,22 @@ class MainWindow(QMainWindow):
         seg_layout.addWidget(self._grid_seg_x)
         seg_layout.addWidget(self._grid_seg_y)
 
+        self._grid_shape = QComboBox()
+        self._grid_shape.addItem("Flat Rectangle", "flat")
+        self._grid_shape.addItem("Globe (Sphere)", "globe")
+        self._grid_shape.setToolTip(
+            "Flat Rectangle: children place Cartesian within the lon/lat\n"
+            "window below (X=lon, Y=lat, Z=elevation above the plane).\n"
+            "Globe: the same children wrap onto a sphere at their absolute\n"
+            "lon/lat, Z becomes radial elevation. Radius is 180/π (~57.3)\n"
+            "world units at scale 1, so the equator is exactly 360 units —\n"
+            "the flat 1:1 map rolled up. Equivalent to switching the grid's\n"
+            "Geometry between Grid and Sphere (wire/solid is preserved);\n"
+            "solid + an equirectangular texture gives a textured earth."
+        )
+        self._grid_shape.currentIndexChanged.connect(self._on_grid_shape_changed)
+
+        grid_form.addRow("Shape:", self._grid_shape)
         grid_form.addRow("Lon Min/Max:", lon_widget)
         grid_form.addRow("Lat Min/Max:", lat_widget)
         grid_form.addRow("Grid Cells (X,Y):", seg_widget)
@@ -1975,6 +1992,7 @@ class MainWindow(QMainWindow):
                 node.mesh_id = mesh_id
         self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._update_sel_values()
+        self._refresh_grid_group()   # a grid's geometry decides flat vs globe
         self._viewport.scene_invalidate()
 
     def _on_insp_scale_changed(self, value: float):
@@ -2495,6 +2513,32 @@ class MainWindow(QMainWindow):
             sb.blockSignals(True)
             sb.setValue(val)
             sb.blockSignals(False)
+        globe = grid.grid_is_globe()
+        self._grid_shape.blockSignals(True)
+        self._grid_shape.setCurrentIndex(
+            max(self._grid_shape.findData("globe" if globe else "flat"), 0))
+        self._grid_shape.blockSignals(False)
+        # A globe places children at absolute lon/lat — the extents window
+        # only applies to the flat form (segments still set the graticule).
+        for sb in (self._grid_lon_min, self._grid_lon_max,
+                   self._grid_lat_min, self._grid_lat_max):
+            sb.setEnabled(not globe)
+
+    def _on_grid_shape_changed(self, _idx: int):
+        """Toggle the selected grid between flat rectangle and globe by
+        rewriting its geometry (preserving the wire/solid choice) — the
+        same effect as picking Grid/Sphere in the Geometry dropdown."""
+        grid = self._selected_single_grid()
+        if grid is None:
+            return
+        wire = grid.geometry in _WIRE_IDS
+        if self._grid_shape.currentData() == "globe":
+            grid.geometry = GEO_SPHERE_WIRE if wire else GEO_SPHERE
+        else:
+            grid.geometry = GEO_GRID_WIRE if wire else GEO_GRID
+        self._table.refresh_node(grid.id)
+        self._refresh_inspector(grid)   # re-sync Geometry combo + panel state
+        self._viewport.scene_invalidate()   # child placement math changed
 
     def _on_grid_extents_changed(self, _value: float):
         grid = self._selected_single_grid()
