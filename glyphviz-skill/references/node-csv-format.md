@@ -37,7 +37,7 @@ All 20: `id`, `type`, `parent_id`, `branch_level`, `translate_x/y/z`,
 | `type` | int | Node type: 0 World, 1 Camera, 5 ordinary glyph (convention), 6 World Grid, 7 Link. See Node types. |
 | `parent_id` | int | 0 = root node; otherwise the parent's `id`. This alone defines the hierarchy. |
 | `branch_level` | int | Tree depth: **roots are 0**, children 1, etc. (GaiaViz files use 1 for roots; GlyphViz uses this field for select-by-level and sibling navigation, not for attachment.) |
-| `translate_x/y/z` | float | Position **in the parent's topology coordinate system** (Cartesian offsets for topo None/Plane; longitude/latitude/altitude for Sphere; orbital-angle/tube-angle/elevation for Torus; etc. — see the topologies reference). |
+| `translate_x/y/z` | float | Position **in the parent's topology coordinate system** (Cartesian offsets for topo None/Plane; longitude/latitude/altitude for Sphere; orbital-angle/tube-angle/elevation for Torus; etc. — see `topologies.md`). |
 | `rotate_x/y/z` | float | Orientation in degrees, interpreted per `rotation_mode` (see optional columns). |
 | `scale_x/y/z` | float | Per-axis scale. **Renderer floors the rendered scale at 0.2 per axis** — author visible nodes with raw scale ≥ 0.2 and never encode size as huge-parent × tiny-child. |
 | `color_r/g/b/a` | int | 0–255. Alpha blends per the World node's `render_mode`. |
@@ -187,8 +187,8 @@ prefix is for genuine GaiaViz files.
 17 Surface (deformable grid/FFT/LIDAR; GlyphViz extension).
 
 Z-variants (9–13) zero the surface/radius offset so children sit through the
-center/axis instead of on the rendered surface. Full placement math belongs to
-the topologies reference (planned).
+center/axis instead of on the rendered surface. Full placement math:
+`topologies.md`.
 
 ## Geometry ids (`geometry` — this node's own shape)
 

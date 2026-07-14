@@ -94,7 +94,8 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 | Geo-registered map/globe scene | World Grid node (type 6) as the parent |
 
 Z-variants (9–13) are the same shapes with children pulled to the
-center/axis. Full placement math: topologies reference (planned).
+center/axis. Full placement math, coordinate meanings per topology, and
+worked examples: `references/topologies.md`.
 
 ## Workflow
 
@@ -132,5 +133,9 @@ center/axis. Full placement math: topologies reference (planned).
 - `references/node-csv-format.md` — the complete, verified column spec
   (required/optional/94-column tables, node types, geometry & topology id
   tables, tag file format). **Read it before generating anything nontrivial.**
+- `references/topologies.md` — per-topology placement math: coordinate
+  meanings, formulas, outward-orientation rules, Plot/Surface overlay
+  requirements, and engine-verified worked examples. **Read it before
+  positioning children under any non-Cartesian topology.**
 - `references/OUTLINE.md` — what's planned but not yet written; do not invent
   content for those areas, derive from `glyphviz_core/` source when available.

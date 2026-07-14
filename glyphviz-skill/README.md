@@ -10,6 +10,7 @@ A Claude Agent Skill for generating and validating **GlyphViz** scene data —
 |---|---|
 | `SKILL.md` | First draft — verified facts only |
 | `references/node-csv-format.md` | **Done** — verified column-by-column against `glyphviz_core/csv_reader.py` |
+| `references/topologies.md` | **Done** — placement math for all 18 topologies; 17 worked examples machine-verified through the real engine |
 | Remaining references | Planned — see `references/OUTLINE.md` |
 | `examples/` | Curation plan only — see `examples/README.md` |
 | `code/` (generator + validator helpers) | Planned |

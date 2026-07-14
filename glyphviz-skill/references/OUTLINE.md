@@ -7,7 +7,7 @@ done. Nothing is inherited from `gaiaviz-skill/` without re-verification.
 | Doc | Status | Scope / primary sources |
 |---|---|---|
 | `node-csv-format.md` | **Done** (2026-07-14) | Full node CSV spec. Verified against `csv_reader.py`, `node.py`, `geometry_data.py`, `topology.py`. |
-| `topologies.md` | Planned | Per-topology child-placement math and worked coordinate examples for all 18 types, incl. Plot/Surface data encoding and Z-variant behavior. Source: `topology.py` offset functions; sanity-check with headless Viewport renders. |
+| `topologies.md` | **Done** (2026-07-14) | Per-topology child-placement math and worked coordinate examples for all 18 types, incl. Plot/Surface overlay rules and Z-variant behavior. Verified against `topology.py` offset functions + `viewport.py` overlays; all 17 worked examples machine-checked through `compute_world_positions`. |
 | `world-grid.md` | Planned | Flat plate vs globe, extents windows, region recentering, textures, child coordinate rules, unpickability. Source: `node.py` grid accessors, `scene.py`, `viewport.py`. |
 | `tags-and-labels.md` | Planned | Inline `text`/`link` vs `gv_tag.csv`, URL/file/app-launch link encoding, tag offsets, display toggles. Source: `csv_reader.py` tag functions + `glyphviz_gl` tag rendering. |
 | `channels-animation.md` | Planned | `gv_ch-map.csv`/`gv_ch-tracks.csv` formats, `ch_input_id` binding, playback transport/FPS. Source: `channel_loader.py`, `channel_engine.py`. |
