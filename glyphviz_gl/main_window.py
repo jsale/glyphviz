@@ -45,6 +45,10 @@ from glyphviz_core.node import (
 from glyphviz_core.topology import (
     TOPO_NAMES, TOPO_COUNT, TOPO_NONE, TOPO_PLANE, TOPO_POINT, CUBE_FACE_NAMES,
 )
+from glyphviz_core.color_palette import (
+    PALETTE_NAMES, PALETTE_COUNT, PALETTE_DEFAULT,
+    resolve_palette_color, palette_index_count,
+)
 
 from .audio_player import AudioPlayer
 from .node_table import NodeTableView
@@ -163,6 +167,8 @@ class MainWindow(QMainWindow):
         self._viewport.gridSelectRequested.connect(self._select_next_grid)
         self._viewport.geoCycleRequested.connect(self._cycle_selected_geometry)
         self._viewport.topoCycleRequested.connect(self._cycle_selected_topology)
+        self._viewport.colorIndexCycleRequested.connect(self._cycle_selected_color_index)
+        self._viewport.paletteCycleRequested.connect(self._cycle_selected_palette)
         self._viewport.escapePressed.connect(self._on_escape_pressed)
         self._viewport.nodesManipulated.connect(self._on_viewport_manipulated)
         self._viewport.bgToggleRequested.connect(self._on_scene_bg_toggle_bw)
@@ -996,6 +1002,25 @@ class MainWindow(QMainWindow):
         )
         self._insp_subspace.currentIndexChanged.connect(self._on_insp_subspace_changed)
 
+        self._insp_palette = QComboBox()
+        for pid in sorted(PALETTE_NAMES):
+            self._insp_palette.addItem(PALETTE_NAMES[pid], pid)
+        self._insp_palette.setToolTip(
+            "Color palette used by the =/- and Alt+=/Alt+- cycle keys. "
+            "Changing this re-resolves the node's color from the new "
+            "palette at the current Color Index."
+        )
+        self._insp_palette.currentIndexChanged.connect(self._on_insp_palette_changed)
+
+        self._insp_color_index = QSpinBox()
+        self._insp_color_index.setRange(0, 127)
+        self._insp_color_index.setToolTip(
+            "Index within the active palette (=/- keys step this). "
+            "Immediately resolves to a literal color_r/g/b — opening the "
+            "Color picker below then overrides that until you cycle again."
+        )
+        self._insp_color_index.valueChanged.connect(self._on_insp_color_index_changed)
+
         self._insp_color_btn = QPushButton()
         self._insp_color_btn.setFixedHeight(24)
         self._insp_color_btn.clicked.connect(self._on_insp_color)
@@ -1039,6 +1064,8 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Facet:",    self._insp_subspace)
         insp_layout.addRow("Ratio:",    self._insp_ratio)
         insp_layout.addRow("Texture ID:", self._insp_texture_id)
+        insp_layout.addRow("Palette:",  self._insp_palette)
+        insp_layout.addRow("Color Index:", self._insp_color_index)
         insp_layout.addRow("Color:",    self._insp_color_btn)
         insp_layout.addRow("Tag Text:", self._insp_text)
         insp_layout.addRow("Link:",     self._insp_link)
@@ -1855,6 +1882,41 @@ class MainWindow(QMainWindow):
             msg = f"Cycled topology {step:+d} on {len(targets)} node(s)."
         self._after_attr_cycle(targets, msg)
 
+    def _cycle_selected_color_index(self, step: int):
+        """= \\ -: step each selected node's color_index within its own
+        palette's range, then immediately resolve to literal color_r/g/b
+        (color_a is untouched -- ANTz palettes never carry alpha)."""
+        targets = self._cycle_targets()
+        if not targets:
+            return
+        for node in targets:
+            node.color_index = (node.color_index + step) % palette_index_count(node.palette_id)
+            node.color_r, node.color_g, node.color_b = resolve_palette_color(
+                node.palette_id, node.color_index)
+        if len(targets) == 1:
+            msg = f"Color index → {targets[0].color_index}"
+        else:
+            msg = f"Cycled color index {step:+d} on {len(targets)} node(s)."
+        self._after_attr_cycle(targets, msg)
+
+    def _cycle_selected_palette(self, step: int):
+        """Alt+= \\ Alt+-: step each selected node's palette_id, clamp
+        color_index into the new palette's range, and re-resolve color_r/g/b."""
+        targets = self._cycle_targets()
+        if not targets:
+            return
+        for node in targets:
+            node.palette_id = (node.palette_id + step) % PALETTE_COUNT
+            node.color_index %= palette_index_count(node.palette_id)
+            node.color_r, node.color_g, node.color_b = resolve_palette_color(
+                node.palette_id, node.color_index)
+        if len(targets) == 1:
+            p = targets[0].palette_id
+            msg = f"Palette → {PALETTE_NAMES.get(p, p)}"
+        else:
+            msg = f"Cycled palette {step:+d} on {len(targets)} node(s)."
+        self._after_attr_cycle(targets, msg)
+
     # --- viewport pick callbacks ---
 
     def _on_viewport_pick(self, node_id: int):
@@ -2038,6 +2100,7 @@ class MainWindow(QMainWindow):
         self._insp_rotation_mode.setCurrentIndex(max(idx, 0))
         self._insp_rotation_mode.blockSignals(False)
 
+        self._refresh_palette_controls(node)
         self._refresh_color_btn(node)
 
         self._insp_text.blockSignals(True)
@@ -2114,6 +2177,7 @@ class MainWindow(QMainWindow):
         self._insp_rotation_mode.setCurrentIndex(max(idx, 0))
         self._insp_rotation_mode.blockSignals(False)
 
+        self._refresh_palette_controls(primary)
         self._refresh_color_btn(primary)
 
         self._insp_text.blockSignals(True)
@@ -2135,6 +2199,17 @@ class MainWindow(QMainWindow):
 
     def _refresh_color_btn(self, node: Node):
         self._set_color_btn(self._insp_color_btn, node.color_r, node.color_g, node.color_b, node.color_a)
+
+    def _refresh_palette_controls(self, node: Node):
+        idx = self._insp_palette.findData(node.palette_id)
+        self._insp_palette.blockSignals(True)
+        self._insp_palette.setCurrentIndex(max(idx, 0))
+        self._insp_palette.blockSignals(False)
+
+        self._insp_color_index.blockSignals(True)
+        self._insp_color_index.setMaximum(palette_index_count(node.palette_id) - 1)
+        self._insp_color_index.setValue(node.color_index)
+        self._insp_color_index.blockSignals(False)
 
     # --- inspector change handlers ---
 
@@ -2322,6 +2397,31 @@ class MainWindow(QMainWindow):
         rotation_mode = self._insp_rotation_mode.currentData()
         for node in self._selected_nodes:
             node.rotation_mode = rotation_mode
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
+        self._viewport.scene_invalidate()
+
+    def _on_insp_palette_changed(self, _idx: int):
+        if not self._selected_nodes:
+            return
+        palette_id = self._insp_palette.currentData()
+        for node in self._selected_nodes:
+            node.palette_id = palette_id
+            node.color_index %= palette_index_count(palette_id)
+            node.color_r, node.color_g, node.color_b = resolve_palette_color(
+                palette_id, node.color_index)
+        self._refresh_palette_controls(self._selected_nodes[0])
+        self._refresh_color_btn(self._selected_nodes[0])
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
+        self._viewport.scene_invalidate()
+
+    def _on_insp_color_index_changed(self, value: int):
+        if not self._selected_nodes:
+            return
+        for node in self._selected_nodes:
+            node.color_index = value % palette_index_count(node.palette_id)
+            node.color_r, node.color_g, node.color_b = resolve_palette_color(
+                node.palette_id, node.color_index)
+        self._refresh_color_btn(self._selected_nodes[0])
         self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.scene_invalidate()
 

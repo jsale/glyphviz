@@ -130,6 +130,8 @@ class Viewport(QOpenGLWidget):
     # selection stays mixed. Payload is the step (+1, or -1 with Shift held).
     geoCycleRequested = Signal(int)      # O / Shift+O → cycle geometry ±1
     topoCycleRequested = Signal(int)     # J / Shift+J → cycle topology ±1
+    colorIndexCycleRequested = Signal(int)   # = / - → cycle color_index ±1
+    paletteCycleRequested = Signal(int)      # Alt+= / Alt+- → cycle palette_id ±1
 
     # Channels playback transport (handled here, not as window-wide
     # shortcuts, so a bare Space still types normally in text fields;
@@ -2115,6 +2117,13 @@ class Viewport(QOpenGLWidget):
         elif event.key() == Qt.Key.Key_J:
             shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
             self.topoCycleRequested.emit(-1 if shift else 1)
+            event.accept()
+        elif event.key() in (Qt.Key.Key_Equal, Qt.Key.Key_Minus):
+            step = 1 if event.key() == Qt.Key.Key_Equal else -1
+            if event.modifiers() & Qt.KeyboardModifier.AltModifier:
+                self.paletteCycleRequested.emit(step)
+            else:
+                self.colorIndexCycleRequested.emit(step)
             event.accept()
         elif event.key() == Qt.Key.Key_H:
             if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:

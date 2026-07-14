@@ -101,6 +101,21 @@ class Node:
     subspace: int = 0
     texture_id: int = 0
     mesh_id: int = 0   # selects an imported GEO_MESH shape (see mesh_loader.py); no ANTz/GaiaViz equivalent
+    # ANTz color_index/np_color_id + np_palette_id (see glyphviz_core.color_palette):
+    # a convenience that resolves into literal color_r/g/b, applied only when the
+    # user steps through =/-/Alt+=/Alt+- (glyphviz_gl.main_window's
+    # _cycle_selected_color_index/_cycle_selected_palette) -- never automatically
+    # on load/render. Opening the RGB color picker sets color_r/g/b/a directly and
+    # leaves these two fields inert until the next cycle keypress overwrites
+    # color_r/g/b again (matches documented ANTz behavior: changing the color
+    # loses the custom value the next time you cycle). color_a is never touched
+    # by palette resolution. Default (0, 0) is both a fresh Node()'s and a CSV
+    # missing the columns' value -- symmetric, since resolution is opt-in/keypress
+    # -only and can never silently repaint a loaded scene (unlike rotation_mode,
+    # which is why that field needs an asymmetric load-time default and this
+    # doesn't).
+    palette_id: int = 0
+    color_index: int = 0
     rotation_mode: int = ROTATION_MODE_EULER_XYZ
     # Per-cycle velocities (ANTz convention: added to translate/rotate/scale
     # every cycle, nominally 60 cycles/second — see Node-Field-Descriptions.md's

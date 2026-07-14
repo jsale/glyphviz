@@ -14,7 +14,7 @@ _TRACKED_COLS = frozenset({
     'translate_x', 'translate_y', 'translate_z',
     'rotate_x', 'rotate_y', 'rotate_z',
     'scale_x', 'scale_y', 'scale_z',
-    'color_r', 'color_g', 'color_b', 'color_a',
+    'color_r', 'color_g', 'color_b', 'color_a', 'color_index', 'palette_id',
     'geometry', 'hide', 'topo', 'ratio', 'subspace', 'facet', 'texture_id',
     'mesh_id', 'text', 'link', 'rotation_mode',
     'render_mode', 'fog_enabled', 'fog_start', 'fog_end',
@@ -285,6 +285,11 @@ def load_node_csv(path: str) -> list[Node]:
     cg = df['color_g'].astype('int64').tolist()
     cb = df['color_b'].astype('int64').tolist()
     ca = df['color_a'].astype('int64').tolist()
+    color_indices = _int_col(df, 'color_index', n, 0)
+    # palette_id has no slot in the ANTz 94-column layout (see node.py); missing
+    # column means 0 (the default 20-distinct-colors palette) on reload, same
+    # value a fresh Node() gets -- symmetric, unlike rotation_mode's fallback.
+    palette_ids   = _int_col(df, 'palette_id', n, 0)
     geometries = df['geometry'].astype('int64').tolist()
     hides      = df['hide'].astype('int64').tolist()
     topos      = df['topo'].astype('int64').tolist()
@@ -335,6 +340,7 @@ def load_node_csv(path: str) -> list[Node]:
             rotate_x=rx[i], rotate_y=ry[i], rotate_z=rz[i],
             scale_x=sx[i], scale_y=sy[i], scale_z=sz[i],
             color_r=cr[i], color_g=cg[i], color_b=cb[i], color_a=ca[i],
+            color_index=color_indices[i], palette_id=palette_ids[i],
             geometry=geometries[i],
             hide=hides[i],
             topo=topos[i],
@@ -392,6 +398,10 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
     # reload (no mesh selected), so it only needs writing when some node
     # actually references an imported mesh.
     has_mesh_id = any(n.mesh_id for n in nodes)
+    # palette_id has no ANTz/GaiaViz column slot (see node.py); omitting it
+    # means 0 on reload, the same value a fresh Node() gets, so it only needs
+    # writing when some node actually references a non-default palette.
+    has_palette_id = any(n.palette_id for n in nodes)
     # World-node-only scene settings (see node.py); omitting a column means
     # "default" on reload, so each is only written when some node's value
     # would actually be misread by that fallback.
@@ -408,6 +418,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
         col_order.append('rotation_mode')
     if has_mesh_id:
         col_order.append('mesh_id')
+    if has_palette_id:
+        col_order.append('palette_id')
     if has_render_mode:
         col_order.append('render_mode')
     if has_fog_enabled:
@@ -446,6 +458,7 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
             row['color_g'] = node.color_g
             row['color_b'] = node.color_b
             row['color_a'] = node.color_a
+            row['color_index'] = node.color_index
             row['geometry'] = node.geometry
             row['hide'] = node.hide
             row['topo'] = node.topo
@@ -454,6 +467,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
             row['texture_id'] = node.texture_id
             if has_mesh_id:
                 row['mesh_id'] = node.mesh_id
+            if has_palette_id:
+                row['palette_id'] = node.palette_id
             row['translate_rate_x'] = node.translate_rate_x
             row['translate_rate_y'] = node.translate_rate_y
             row['translate_rate_z'] = node.translate_rate_z
