@@ -43,7 +43,18 @@ GEO_MESH           = 23
 GEO_CIRCLE         = 24
 GEO_CROSS          = 25
 GEO_STAR           = 26
-GEO_COUNT          = 27
+# GlyphViz extensions (no ANTz/GaiaViz equivalent): render modes for Link
+# (type=7) nodes specifically -- meaningless on any other node type. GEO_LINE
+# is the classic thin GL_LINES connector (the only mode Links have ever had,
+# and still the fallback for every legacy value including the default 0);
+# GEO_LINE_PRISM instead builds a small textured 4-sided tube between the
+# link's A-end and B-end, so a texture (optionally scrolled via
+# rotate_rate_z, see viewport._draw_topology_overlays) can indicate directed
+# flow -- e.g. for directed-graph edges. See _draw_topology_overlays() in
+# glyphviz_gl/viewport.py.
+GEO_LINE           = 27
+GEO_LINE_PRISM     = 28
+GEO_COUNT          = 29
 
 GEO_NAMES = {
     GEO_CUBE_WIRE:     "Cube Wire",
@@ -73,6 +84,8 @@ GEO_NAMES = {
     GEO_CIRCLE:        "Circle",
     GEO_CROSS:         "Cross",
     GEO_STAR:          "Star",
+    GEO_LINE:          "Line",
+    GEO_LINE_PRISM:    "Prism (Textured)",
 }
 
 _WIRE_IDS = frozenset({

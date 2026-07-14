@@ -22,7 +22,7 @@ from glyphviz_core.topology import (
 )
 from glyphviz_core.mesh_loader import load_mesh_file as _load_mesh_data
 
-from glyphviz_core.geometry_data import GEO_TORUS, GEO_TORUS_WIRE
+from glyphviz_core.geometry_data import GEO_TORUS, GEO_TORUS_WIRE, GEO_LINE_PRISM
 
 from .geometry import GeoRenderer, WIRE_TO_SOLID
 from .texture_manager import TextureManager
@@ -123,6 +123,7 @@ class Viewport(QOpenGLWidget):
     renderModeCycleRequested = Signal()  # 8 → cycle scene render mode
     quickSaveRequested = Signal()        # K → silent auto-save node+tag CSV
     gridSelectRequested = Signal()       # G → select / cycle World Grid nodes (ANTz-style)
+    escapePressed = Signal()             # Esc → cancel current modal action (e.g. a pending Link A-end)
 
     # ANTz-style per-node attribute cycling: each SELECTED node steps its own
     # geometry (O) or topology (J) to the next id in the list, so a mixed
@@ -1151,6 +1152,102 @@ class Viewport(QOpenGLWidget):
                 return False
         return True
 
+    # World units per texture repeat along a GEO_LINE_PRISM link's length
+    # (GL_REPEAT wrap keeps stripe density constant regardless of length),
+    # and the conversion from rotate_rate_z's "degrees per cycle" units
+    # (repurposed as texture scroll rate for links, see _draw_link_prism)
+    # into texture repeats per accumulated rotate_z degree.
+    _LINK_TEX_TILE = 1.0
+    _LINK_SCROLL_SCALE = 1.0 / 360.0
+
+    def _draw_link_prism(self, link: Node, a_pos, b_pos):
+        """GEO_LINE_PRISM: renders a type=7 link as a small textured 4-sided
+        (square cross-section) tube between its A-end and B-end instead of a
+        flat-color line, so a texture can indicate directed flow -- e.g. for
+        directed-graph edges. `ratio` sets the tube's half-width (same field
+        the classic line uses for its pixel width). `rotate_rate_z` is
+        otherwise inert for links (they apply no rotation), so it's
+        repurposed here as a texture scroll rate: the existing rate-animation
+        system (_apply_rate_animation) already integrates it into rotate_z
+        every frame with zero extra code, and its sign controls flow
+        direction (positive scrolls A->B, negative B->A; zero stays static,
+        matching every file that doesn't set it)."""
+        ax, ay, az = a_pos
+        bx, by, bz = b_pos
+        dx, dy, dz = bx - ax, by - ay, bz - az
+        length = math.sqrt(dx * dx + dy * dy + dz * dz)
+        if length < 1e-6:
+            return
+        dx, dy, dz = dx / length, dy / length, dz / length
+
+        # Arbitrary-up trick: cross the direction with a reference axis not
+        # (near-)parallel to it, then cross again for an orthonormal
+        # (right, up) basis around the tube's axis.
+        ref = (0.0, 0.0, 1.0) if abs(dz) < 0.99 else (1.0, 0.0, 0.0)
+        rx, ry, rz = dy * ref[2] - dz * ref[1], dz * ref[0] - dx * ref[2], dx * ref[1] - dy * ref[0]
+        rlen = math.sqrt(rx * rx + ry * ry + rz * rz) or 1.0
+        rx, ry, rz = rx / rlen, ry / rlen, rz / rlen
+        ux, uy, uz = ry * dz - rz * dy, rz * dx - rx * dz, rx * dy - ry * dx
+
+        radius = max(link.ratio, 0.01)
+        # Square cross-section corners in (right, up) order: ++, +-, -+, --.
+        corners = [
+            (rx * s * radius + ux * t * radius,
+             ry * s * radius + uy * t * radius,
+             rz * s * radius + uz * t * radius)
+            for s in (1, -1) for t in (1, -1)
+        ]
+        # Ring order stepping consistently around the square (++, +-, --, -+).
+        loop = [corners[0], corners[1], corners[3], corners[2]]
+
+        gl_tex = 0
+        if link.texture_id:
+            gl_tex = self._tex_mgr.get_gl_name(link.texture_id)
+            if not gl_tex:
+                gl_tex = self._video_mgr.get_gl_name(link.texture_id)
+
+        v_b = length / self._LINK_TEX_TILE
+        if gl_tex:
+            glEnable(GL_TEXTURE_2D)
+            glBindTexture(GL_TEXTURE_2D, gl_tex)
+            glColor4f(1.0, 1.0, 1.0, link.color_a / 255.0)   # don't tint the flow texture
+            v_scroll = link.rotate_z * self._LINK_SCROLL_SCALE
+            glMatrixMode(GL_TEXTURE)
+            glPushMatrix()
+            glLoadIdentity()
+            glTranslatef(0.0, v_scroll, 0.0)
+            glMatrixMode(GL_MODELVIEW)
+        else:
+            glColor4f(link.color_r / 255.0, link.color_g / 255.0,
+                      link.color_b / 255.0, link.color_a / 255.0)
+
+        glBegin(GL_QUADS)
+        for i in range(4):
+            c0 = loop[i]
+            c1 = loop[(i + 1) % 4]
+            u0 = i / 4.0
+            u1 = (i + 1) / 4.0
+            # Vertex order (c0, c1, B+c1, B+c0): winds each face CCW as seen
+            # from outside so it survives paintGL's GL_CULL_FACE(GL_BACK) --
+            # empirically verified with a headless render (a prior hand
+            # derivation got the sign backwards and rendered the inside of
+            # the tube instead; fixed after Jeff caught it visually).
+            glTexCoord2f(u0, 0.0)
+            glVertex3f(ax + c0[0], ay + c0[1], az + c0[2])
+            glTexCoord2f(u1, 0.0)
+            glVertex3f(ax + c1[0], ay + c1[1], az + c1[2])
+            glTexCoord2f(u1, v_b)
+            glVertex3f(bx + c1[0], by + c1[1], bz + c1[2])
+            glTexCoord2f(u0, v_b)
+            glVertex3f(bx + c0[0], by + c0[1], bz + c0[2])
+        glEnd()
+
+        if gl_tex:
+            glMatrixMode(GL_TEXTURE)
+            glPopMatrix()
+            glMatrixMode(GL_MODELVIEW)
+            glDisable(GL_TEXTURE_2D)
+
     def _draw_topology_overlays(self):
         """Draw type=7 link lines, TOPO_PLOT polylines, and TOPO_SURFACE quad meshes."""
         # Build parent→children map and collect link nodes in a single pass.
@@ -1180,6 +1277,9 @@ class Viewport(QOpenGLWidget):
             a_pos = self._scene.world_pos(a_id)
             b_pos = self._scene.world_pos(b_id)
             if a_pos is None or b_pos is None:
+                continue
+            if link.geometry == GEO_LINE_PRISM:
+                self._draw_link_prism(link, a_pos, b_pos)
                 continue
             width = max(link.ratio * 20.0, 1.0)
             glLineWidth(width)
@@ -2030,6 +2130,9 @@ class Viewport(QOpenGLWidget):
                 self.channelStopRequested.emit()
             else:
                 self.channelPlayToggleRequested.emit()
+            event.accept()
+        elif event.key() == Qt.Key.Key_Escape:
+            self.escapePressed.emit()
             event.accept()
         else:
             super().keyPressEvent(event)

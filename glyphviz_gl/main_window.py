@@ -33,7 +33,7 @@ from glyphviz_core.csv_reader import (
 from glyphviz_core.pdb_loader import load_pdb_file
 from glyphviz_core.geometry_data import (
     GEO_NAMES, GEO_COUNT, GEO_GRID, GEO_GRID_WIRE, GEO_MESH, GEO_OCTA,
-    GEO_SPHERE, GEO_SPHERE_WIRE, _WIRE_IDS,
+    GEO_SPHERE, GEO_SPHERE_WIRE, GEO_LINE, GEO_LINE_PRISM, _WIRE_IDS,
 )
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
@@ -43,7 +43,7 @@ from glyphviz_core.node import (
     WORLD_DEFAULT_BG_RGB,
 )
 from glyphviz_core.topology import (
-    TOPO_NAMES, TOPO_COUNT, TOPO_PLANE, TOPO_POINT, CUBE_FACE_NAMES,
+    TOPO_NAMES, TOPO_COUNT, TOPO_NONE, TOPO_PLANE, TOPO_POINT, CUBE_FACE_NAMES,
 )
 
 from .audio_player import AudioPlayer
@@ -109,6 +109,15 @@ class MainWindow(QMainWindow):
         self._gizmo_mode: str | None = None
         self._mode_buttons: dict[str, QPushButton] = {}
 
+        # Link mode (interactive Link creation): click an A-end node, then a
+        # B-end node, to create a type=7 Link between them. Separate from
+        # _gizmo_mode/_mode_buttons above -- Move/Rotate/Size require an
+        # existing selection and get force-cleared the moment selection is
+        # empty (_on_table_selection), but Link mode must be armable with
+        # nothing selected and must survive selecting the A-end/new Link node.
+        self._link_mode_active: bool = False
+        self._link_pending_a_id: int | None = None
+
         # Rate-animation pause: freezes translate_rate/rotate_rate/scale_rate
         # in place by zeroing them (snapshotting the originals here) so a Save
         # while paused writes a genuinely static file — not just a visually
@@ -154,6 +163,7 @@ class MainWindow(QMainWindow):
         self._viewport.gridSelectRequested.connect(self._select_next_grid)
         self._viewport.geoCycleRequested.connect(self._cycle_selected_geometry)
         self._viewport.topoCycleRequested.connect(self._cycle_selected_topology)
+        self._viewport.escapePressed.connect(self._on_escape_pressed)
         self._viewport.nodesManipulated.connect(self._on_viewport_manipulated)
         self._viewport.bgToggleRequested.connect(self._on_scene_bg_toggle_bw)
         self._viewport.renderModeCycleRequested.connect(self._on_scene_render_mode_cycle)
@@ -333,6 +343,23 @@ class MainWindow(QMainWindow):
 
         tb.addSeparator()
 
+        # Separate from the Move/Rotate/Size group above: Link mode must be
+        # armable with nothing selected (see _link_mode_active), so it isn't
+        # gated by _on_table_selection's has_selection enable/disable and
+        # doesn't share _gizmo_mode's state.
+        self._link_mode_btn = QPushButton("Link")
+        self._link_mode_btn.setCheckable(True)
+        self._link_mode_btn.setToolTip(
+            "Click a node, then a second node, to create a Link between "
+            "them (LeftButton). Escape or a miss-click cancels a pending "
+            "pick without creating a link. Stays armed for the next pair "
+            "until clicked again."
+        )
+        self._link_mode_btn.clicked.connect(self._on_link_mode_button_clicked)
+        tb.addWidget(self._link_mode_btn)
+
+        tb.addSeparator()
+
         self._gizmo_axis_checks: dict[str, QCheckBox] = {}
         for axis in ('x', 'y', 'z'):
             cb = QCheckBox(axis.upper())
@@ -362,6 +389,29 @@ class MainWindow(QMainWindow):
             btn.setChecked(n == mode)
             btn.blockSignals(False)
         self._viewport.gizmo_mode = mode
+        if mode is not None and self._link_mode_active:
+            self._set_link_mode(False)   # mutually exclusive with Link mode
+
+    def _on_link_mode_button_clicked(self):
+        self._set_link_mode(not self._link_mode_active)
+
+    def _set_link_mode(self, active: bool):
+        """Toggle interactive Link creation. Mutually exclusive with
+        Move/Rotate/Size (see _set_gizmo_mode); unlike those, armable with
+        nothing selected, and any pending A-end is dropped whenever the mode
+        is (re)entered or left."""
+        self._link_mode_active = active
+        self._link_pending_a_id = None
+        self._link_mode_btn.blockSignals(True)
+        self._link_mode_btn.setChecked(active)
+        self._link_mode_btn.blockSignals(False)
+        if active:
+            self._viewport.setCursor(Qt.CursorShape.CrossCursor)
+            if self._gizmo_mode is not None:
+                self._set_gizmo_mode(None)
+            self.statusBar().showMessage("Link mode: click an A-end node, then a B-end node.")
+        else:
+            self._viewport.unsetCursor()
 
     def _on_gizmo_axis_toggled(self, axis: str, _checked: bool = False):
         self._viewport.gizmo_axes = {
@@ -882,6 +932,13 @@ class MainWindow(QMainWindow):
             )
             sb.valueChanged.connect(self._on_insp_rotate_rate_changed)
             rotate_rate_layout.addWidget(sb)
+        self._insp_rotate_rate_z.setToolTip(
+            self._insp_rotate_rate_z.toolTip() + "\nOn a Link set to Prism "
+            "(Textured) geometry, this field doubles up as texture scroll "
+            "rate instead: nonzero values flow the texture along the link "
+            "(sign sets direction, A-end to B-end when positive) to indicate "
+            "directed-graph edge direction."
+        )
 
         scale_rate_widget = QWidget()
         scale_rate_layout = QHBoxLayout(scale_rate_widget)
@@ -912,7 +969,9 @@ class MainWindow(QMainWindow):
             "place children riding on a Torus-topology parent's surface.\n"
             "On other glyphs this field doubles up: Point geometry uses it as "
             "an on-screen sprite size, and Link/Plot-parent nodes use it as "
-            "line width (both as ratio * 20, in pixels)."
+            "line width (both as ratio * 20, in pixels) — except a Link set to "
+            "Prism (Textured) geometry, where ratio is instead the tube's "
+            "world-space half-width."
         )
         self._insp_ratio.valueChanged.connect(self._on_insp_ratio_changed)
 
@@ -1752,17 +1811,26 @@ class MainWindow(QMainWindow):
         self._viewport.scene_invalidate()
         self.statusBar().showMessage(message)
 
+    _LINK_ONLY_GEOS = frozenset({GEO_LINE, GEO_LINE_PRISM})
+
     def _cycle_selected_geometry(self, step: int):
         """O / Shift+O: step each selected node's geometry forward/back one id.
         GEO_MESH is skipped over — like the Geometry dropdowns, a bare Mesh id
         is meaningless without a mesh_id (imported meshes get their own combo
-        entries); a node already ON a mesh still cycles out of it normally."""
+        entries); a node already ON a mesh still cycles out of it normally.
+        GEO_LINE/GEO_LINE_PRISM are Link-only render modes (geometry_data.py):
+        a Link node toggles between just those two (direction-agnostic, since
+        there are only two states); any other node type skips over them like
+        GEO_MESH, since a bare line/prism is meaningless on a regular glyph."""
         targets = self._cycle_targets()
         if not targets:
             return
         for node in targets:
+            if node.type == NODE_TYPE_LINK:
+                node.geometry = GEO_LINE if node.geometry == GEO_LINE_PRISM else GEO_LINE_PRISM
+                continue
             geo = (node.geometry + step) % GEO_COUNT
-            if geo == GEO_MESH:
+            while geo == GEO_MESH or geo in self._LINK_ONLY_GEOS:
                 geo = (geo + step) % GEO_COUNT
             node.geometry = geo
         if len(targets) == 1:
@@ -1790,16 +1858,91 @@ class MainWindow(QMainWindow):
     # --- viewport pick callbacks ---
 
     def _on_viewport_pick(self, node_id: int):
-        """Plain click: replace selection with this single node."""
+        """Plain click: replace selection with this single node -- or, in
+        Link mode, register it as the pending A-end / complete a pending link."""
+        if self._link_mode_active:
+            self._handle_link_pick(node_id)
+            return
         self._table.select_by_id(node_id)
 
     def _on_viewport_pick_additive(self, node_id: int):
-        """Ctrl+click: toggle this node in/out of the current selection."""
+        """Ctrl+click: toggle this node in/out of the current selection --
+        or, in Link mode, the same pick handling as a plain click (Link
+        creation has no separate additive semantics)."""
+        if self._link_mode_active:
+            self._handle_link_pick(node_id)
+            return
         self._table.select_toggle_id(node_id)
 
     def _on_viewport_nodes_selected(self, node_ids: object):
-        """Rubber-band or click-on-empty: replace selection with the given ID set."""
+        """Rubber-band or click-on-empty: replace selection with the given ID
+        set -- or, in Link mode, a miss-click cancels any pending A-end."""
+        if self._link_mode_active:
+            if not node_ids:
+                self._link_pending_a_id = None
+                self.statusBar().showMessage("Link: pending pick cancelled.")
+            return
         self._table.select_by_ids(set(node_ids))
+
+    def _handle_link_pick(self, node_id: int):
+        """Second half of Link mode's click sequence. First hit becomes the
+        pending A-end (still runs through normal selection so it's
+        highlighted and previewed in the inspector); a different second hit
+        creates the Link and re-arms for the next pair; picking the same id
+        again is a no-op (can't self-link)."""
+        if self._link_pending_a_id is None:
+            self._link_pending_a_id = node_id
+            self._table.select_by_id(node_id)
+            self.statusBar().showMessage(f"Link: A-end = node {node_id}. Click the B-end node.")
+            return
+        if node_id == self._link_pending_a_id:
+            self.statusBar().showMessage(
+                f"Link: node {node_id} is already the A-end -- click a different node for the B-end."
+            )
+            return
+        a_id = self._link_pending_a_id
+        self._link_pending_a_id = None
+        self._create_link(a_id, node_id)
+
+    def _on_escape_pressed(self):
+        """Esc: cancel the current modal action -- currently just a pending
+        Link A-end, matching ANTz's R-click-cancels-Link behavior without
+        overloading the right mouse button (already the third-axis
+        manipulate drag / camera orbit everywhere else in GlyphViz)."""
+        if self._link_mode_active and self._link_pending_a_id is not None:
+            self._link_pending_a_id = None
+            self.statusBar().showMessage("Link: pending pick cancelled.")
+
+    def _create_link(self, a_id: int, b_id: int):
+        """Create a type=7 Link node connecting a_id (A-end/parent_id) to
+        b_id (B-end/child_id) -- the interactive counterpart to hand-authoring
+        a Link row or a generator script (see pdb_loader.py,
+        generate_gtdb_examples.py). Deliberately no root-only restriction
+        (unlike ANTz): the Link renderer just resolves world_pos() for
+        whichever two ids it's given, so linking nodes at any hierarchy depth
+        already works identically -- restricting to roots would just be
+        carrying over an ANTz UI limitation with no GlyphViz reason behind it."""
+        a_node = next((n for n in self.nodes if n.id == a_id), None)
+        if a_node is None:
+            self.statusBar().showMessage(f"Link: node {a_id} no longer exists.")
+            return
+        new_id = max((n.id for n in self.nodes), default=0) + 1
+        color = self._new_obj_color
+        link = Node(
+            id=new_id, type=NODE_TYPE_LINK, parent_id=a_id,
+            branch_level=a_node.branch_level + 1,
+            translate_x=0.0, translate_y=0.0, translate_z=0.0,
+            rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
+            scale_x=1.0, scale_y=1.0, scale_z=1.0,
+            color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
+            geometry=GEO_LINE, hide=0, topo=TOPO_NONE,
+            extras={'child_id': b_id},
+        )
+        self._add_node_to_scene(link)
+        self.statusBar().showMessage(
+            f"Link created (node {new_id}): {a_id} -> {b_id}. "
+            "Click another A-end, or toggle Link mode off."
+        )
 
     def _on_viewport_nodes_selected_additive(self, node_ids: object):
         """Ctrl+Shift+drag rubber-band: add the region's nodes to the selection."""
