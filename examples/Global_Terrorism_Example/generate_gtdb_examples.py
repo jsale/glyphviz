@@ -50,9 +50,15 @@ No aggregation: every GTD incident is one octahedron.
   (computed from the geocoded incidents in the same country).
 
   A NASA Blue Marble world map (media/bluemarble-2048.png, 2:1
-  equirectangular) underlies the cloud on a solid textured Grid plane that
-  exactly covers lon -180..180 / lat -90..90. GlyphViz auto-loads the
-  media/ folder next to the node CSV, so the map is texture_id=1.
+  equirectangular) underlies the cloud on a real type=6 World Grid plane
+  (see CLAUDE.md's World Grid section) that exactly covers lon -180..180 /
+  lat -90..90 at scale 1. GlyphViz auto-loads the media/ folder next to
+  the node CSV, so the map is texture_id=1. Every event, plus the decade
+  markers, attaches as an explicit child of the grid, so the whole cloud
+  can be toggled flat <-> globe from the World Grid panel (Shape: Sphere)
+  -- the map rolls into a globe and the events resolve to the same lon/lat
+  on its surface, with date as radial elevation instead of height above
+  the plate.
 
 Scene 3 -- Org_Event_Network/  (node + tag)
 --------------------------------------------
@@ -64,6 +70,9 @@ drawn per-frame, so unlimited links on a 12k-attack org would kill the
 framerate; raise --links-per-org if your GPU disagrees). Each org gets a
 distinct link hue so the cones of attribution stay separable, and its
 rosette carries a small matching beacon so the cone can be traced back.
+Unlike Event_Cloud and Time_Replay, this scene's map plane is a plain
+untyped plate (not a type=6 World Grid) -- deliberately, to show a World
+Grid isn't required for a map-anchored visualization like this one.
 
 Scene 4 -- Time_Replay/  (node + tag + ch-map + ch-tracks)
 -----------------------------------------------------------
@@ -87,6 +96,12 @@ surge still reads as a surge, and every incident with >= 50 casualties
 is always included. The channel data itself stays tiny no matter the
 node count: incidents sharing a birth month share one alpha-envelope
 track (612 tracks + 2 cursor tracks), so nodes-per-track scales freely.
+
+Like Event_Cloud, the Blue Marble plane is a real type=6 World Grid and
+every incident, the time cursor, and the decade ticks attach as its
+explicit children -- toggle Shape to Sphere in the World Grid panel mid-
+playback to watch fifty years of history replay across a spinning globe
+instead of a flat map.
 
 Load the node CSV, open the Channels panel, press play (~10 FPS is a
 good speed; each visual second then covers ~5 months).
@@ -139,6 +154,7 @@ GEO_GRID_WIRE, GEO_GRID = 20, 21
 GEO_POINT = 22
 TOPO_NONE, TOPO_PLOT = 0, 16
 NODE_TYPE_PIN, NODE_TYPE_LINK = 5, 7
+NODE_TYPE_GRID = 6   # World Grid (glyphviz_core.node.NODE_TYPE_GRID)
 
 # GTD attacktype1 codes -> legend RGB (matches the ANTz-era GTDB legend)
 ATTACK_RGB = {
@@ -213,6 +229,13 @@ MAP_TEXTURE_ID = 1           # first image in the media/ folder next to the
                              # equirectangular NASA Blue Marble, auto-loads
                              # as texture 1; textures modulate node color,
                              # so the map plane must stay white)
+# World Grid children (Event_Cloud, Time_Replay): a flat grid's child offset
+# is (tx - center_lon, ty - center_lat, tz) -- Z passes through unshifted, so
+# a child's world height is grid.translate_z + tz. Adding this to every
+# child's translate_z reproduces the exact pre-grid absolute world height
+# (grid.translate_z is MAP_Z, so height = MAP_Z + (original + GRID_Z_ADJUST)
+# = original).
+GRID_Z_ADJUST = -MAP_Z
 
 # --- Time replay (scene 4) ---
 # Playback time is calendar time: every channel frame is half a month.
@@ -601,22 +624,30 @@ def build_org_profiles(stats, type_counts, bins, out_dir: Path):
 # Scene 2: Event Cloud
 # ===========================================================================
 
-def event_nodes(df, nodes, tags, start_id) -> int:
-    """Append one octahedron per incident; returns (next free id, eventid->id)."""
+def event_nodes(df, nodes, tags, start_id, *, parent_id: int = 0,
+               z_shift: float = 0.0) -> int:
+    """Append one octahedron per incident; returns (next free id, eventid->id).
+
+    parent_id/z_shift attach events as explicit children of a World Grid
+    (add_map_furniture's as_world_grid=True) instead of scene roots --
+    z_shift compensates the grid's own MAP_Z position so each event's
+    absolute world height is unchanged (see GRID_Z_ADJUST)."""
     ev = df.dropna(subset=["latitude", "longitude"]).sort_values("frac_year")
     zz = ev["frac_year"].to_numpy() * Z_PER_YEAR
     scale = EVENT_MIN + EVENT_SPAN * (
         np.log1p(np.minimum(ev["casualties"].to_numpy(), CAS_CAP))
         / math.log1p(CAS_CAP))
     nid = start_id
+    branch_level = 1 if parent_id else 0
     id_of_event = {}
     cols = ["eventid", "gname", "iyear", "imonth", "iday", "city",
             "country_txt", "attacktype1", "attacktype1_txt", "targtype1_txt",
             "nkill", "nwound", "longitude", "latitude"]
     for i, r in enumerate(ev[cols].itertuples(index=False)):
         color = ATTACK_RGB.get(int(r.attacktype1), ATTACK_RGB[9])
-        nodes.append(node_row(nid, 0, 0, float(r.longitude), float(r.latitude),
-                              float(zz[i]), float(scale[i]), color,
+        nodes.append(node_row(nid, parent_id, branch_level,
+                              float(r.longitude), float(r.latitude),
+                              float(zz[i]) + z_shift, float(scale[i]), color,
                               GEO_OCTA, TOPO_NONE))
         cas = ""
         if r.nkill or r.nwound:
@@ -632,32 +663,53 @@ def event_nodes(df, nodes, tags, start_id) -> int:
     return nid, id_of_event
 
 
-def add_map_furniture(nodes, tags, next_id, *, textured: bool) -> int:
+def add_map_furniture(nodes, tags, next_id, *, textured: bool,
+                      as_world_grid: bool = False) -> int:
     """World-map plane at 1970 plus decade markers up the date axis.
 
-    The plane exactly covers lon -180..180 / lat -90..90 (see the MAP_SCALE
-    comment up top for the sqrt(2) factor). With *textured* it's a solid
-    white grid showing texture 1 -- the equirectangular world map from the
-    media/ folder next to the node CSV; otherwise a dark wire placeholder
-    with the same footprint, so dropping a map in media/ and setting
-    texture_id=1 later lines up with no other change."""
+    The plane exactly covers lon -180..180 / lat -90..90. With *textured*
+    it's a solid white grid showing texture 1 -- the equirectangular world
+    map from the media/ folder next to the node CSV; otherwise a dark wire
+    placeholder with the same footprint, so dropping a map in media/ and
+    setting texture_id=1 later lines up with no other change.
+
+    as_world_grid=True makes the plane a real type=6 World Grid node (see
+    CLAUDE.md's World Grid section) instead of a plain untyped plate, so it
+    can be toggled flat <-> globe from the World Grid panel; its footprint
+    is then the grid's default whole-earth extents window at scale 1 (not
+    the MAP_SCALE sqrt(2) factor a plain plate needs), and the decade
+    markers attach as its explicit children (id == next_id, i.e. the id
+    this call was given, is the grid's id -- the caller uses it to also
+    parent the event cloud). Org_Event_Network passes the default False to
+    keep its plain plate unchanged, deliberately, to show a World Grid
+    isn't required for a similar map visualization."""
+    grid_id = next_id
+    node_type = NODE_TYPE_GRID if as_world_grid else NODE_TYPE_PIN
+    map_sx, map_sy = (1.0, 1.0) if as_world_grid else (MAP_SCALE_X, MAP_SCALE_Y)
     if textured:
-        nodes.append(node_row(next_id, 0, 0, 0, 0, MAP_Z, MAP_SCALE_X,
+        nodes.append(node_row(next_id, 0, 0, 0, 0, MAP_Z, map_sx,
                               (255, 255, 255), GEO_GRID, TOPO_NONE,
-                              sy=MAP_SCALE_Y, sz=1.0,
-                              texture_id=MAP_TEXTURE_ID))
+                              sy=map_sy, sz=1.0, texture_id=MAP_TEXTURE_ID,
+                              node_type=node_type))
     else:
-        nodes.append(node_row(next_id, 0, 0, 0, 0, MAP_Z, MAP_SCALE_X,
+        nodes.append(node_row(next_id, 0, 0, 0, 0, MAP_Z, map_sx,
                               (55, 60, 75), GEO_GRID_WIRE, TOPO_NONE,
-                              alpha=130, sy=MAP_SCALE_Y, sz=1.0))
+                              alpha=130, sy=map_sy, sz=1.0,
+                              node_type=node_type))
     tags.append({"id": len(tags), "table_id": 0, "record_id": next_id, "title": (
         "GTD EVENT CLOUD | X longitude, Y latitude, Z date (1970 at the map, "
-        "2 units/yr) | color = attack type | size = killed + wounded (log)")})
+        "2 units/yr) | color = attack type | size = killed + wounded (log)"
+        + (" | World Grid: toggle Shape to Sphere in the World Grid panel "
+           "for a globe" if as_world_grid else ""))})
     next_id += 1
+    marker_parent = grid_id if as_world_grid else 0
+    marker_branch = 1 if as_world_grid else 0
+    z_shift = GRID_Z_ADJUST if as_world_grid else 0.0
     for decade in range(YEAR_LO, YEAR_HI + 1, 10):
-        z = (decade - YEAR_LO) * Z_PER_YEAR
-        nodes.append(node_row(next_id, 0, 0, -195.0, -60.0, z, 0.8,
-                              (200, 200, 210), GEO_SPHERE_WIRE, TOPO_NONE))
+        z = (decade - YEAR_LO) * Z_PER_YEAR + z_shift
+        nodes.append(node_row(next_id, marker_parent, marker_branch, -195.0,
+                              -60.0, z, 0.8, (200, 200, 210), GEO_SPHERE_WIRE,
+                              TOPO_NONE))
         tags.append({"id": len(tags), "table_id": 0, "record_id": next_id,
                      "title": str(decade)})
         next_id += 1
@@ -668,8 +720,11 @@ def build_event_cloud(df, out_dir: Path, max_events: int):
     out_dir.mkdir(parents=True, exist_ok=True)
     ev = df if not max_events else df.nlargest(max_events, "casualties")
     nodes, tags = [], []
-    next_id = add_map_furniture(nodes, tags, 1, textured=True)
-    next_id, _ = event_nodes(ev, nodes, tags, next_id)
+    grid_id = 1
+    next_id = add_map_furniture(nodes, tags, grid_id, textured=True,
+                                as_world_grid=True)
+    next_id, _ = event_nodes(ev, nodes, tags, next_id, parent_id=grid_id,
+                             z_shift=GRID_Z_ADJUST)
     write_csv(out_dir / "EventCloud_gv_node.csv", NODE_FIELDS, nodes)
     write_csv(out_dir / "EventCloud_gv_tag.csv", TAG_FIELDS, tags)
 
@@ -805,21 +860,30 @@ def build_time_replay(df, out_dir: Path, budget: int):
         row["ch_input_id"] = ch_input_id
         nodes.append(row)
 
-    # Blue Marble plane (same footprint math as scene 2's furniture).
-    add(node_row(1, 0, 0, 0, 0, MAP_Z, MAP_SCALE_X, (255, 255, 255),
-                 GEO_GRID, TOPO_NONE, sy=MAP_SCALE_Y, sz=1.0,
-                 texture_id=MAP_TEXTURE_ID))
-    tags.append({"id": 0, "table_id": 0, "record_id": 1, "title": (
+    # Blue Marble plane, a real type=6 World Grid (same footprint math as
+    # scene 2's as_world_grid furniture): scale 1 on the default whole-earth
+    # extents exactly covers lon -180..180 / lat -90..90. The cursor, decade
+    # ticks, and every incident attach as its explicit children (GRID_Z_ADJUST
+    # keeps their absolute world height unchanged -- see add_map_furniture),
+    # so toggling Shape to Sphere in the World Grid panel rolls the whole
+    # scene into a globe.
+    grid_id = 1
+    add(node_row(grid_id, 0, 0, 0, 0, MAP_Z, 1.0, (255, 255, 255),
+                 GEO_GRID, TOPO_NONE, sy=1.0, sz=1.0,
+                 texture_id=MAP_TEXTURE_ID, node_type=NODE_TYPE_GRID))
+    tags.append({"id": 0, "table_id": 0, "record_id": grid_id, "title": (
         f"GTD TIME REPLAY {YEAR_LO}-{YEAR_HI} | Channels playback: each "
         f"frame = half a month | incidents flash on their date, then fade "
         f"to embers | color = attack type, size = casualties (log) | "
         f"yellow cursor: position = current date, height = worldwide "
         f"attacks that month | {len(sel)} most severe of {len(df)} "
-        f"incidents (per-month quota) | play at ~10 FPS")})
+        f"incidents (per-month quota) | play at ~10 FPS | World Grid: "
+        f"toggle Shape to Sphere in the World Grid panel for a globe")})
 
     # Time cursor + decade tick marks along the bottom edge.
-    add(node_row(2, 0, 0, -180.0, CURSOR_Y, CURSOR_Z, 2.0, (255, 230, 90),
-                 GEO_OCTA, TOPO_NONE, sz=CURSOR_H_MIN), ch_input_id=CURSOR_CH)
+    add(node_row(2, grid_id, 1, -180.0, CURSOR_Y, CURSOR_Z + GRID_Z_ADJUST,
+                 2.0, (255, 230, 90), GEO_OCTA, TOPO_NONE, sz=CURSOR_H_MIN),
+       ch_input_id=CURSOR_CH)
     tags.append({"id": 1, "table_id": 0, "record_id": 2, "title": (
         "TIME CURSOR | x = current date (1970 left edge, 2020 right) | "
         "height = attacks worldwide that month")})
@@ -827,8 +891,8 @@ def build_time_replay(df, out_dir: Path, budget: int):
     for decade in range(YEAR_LO, YEAR_HI + 1, 10):
         f = (decade - YEAR_LO) * 12 * REPLAY_FRAMES_PER_MONTH
         x = -180.0 + 360.0 * f / (REPLAY_FRAMES - 1)
-        add(node_row(next_id, 0, 0, x, CURSOR_Y, 0.0, 0.8, (200, 200, 210),
-                     GEO_SPHERE_WIRE, TOPO_NONE))
+        add(node_row(next_id, grid_id, 1, x, CURSOR_Y, GRID_Z_ADJUST, 0.8,
+                     (200, 200, 210), GEO_SPHERE_WIRE, TOPO_NONE))
         tags.append({"id": len(tags), "table_id": 0, "record_id": next_id,
                      "title": str(decade)})
         next_id += 1
@@ -843,10 +907,11 @@ def build_time_replay(df, out_dir: Path, budget: int):
         / math.log1p(CAS_CAP))
     for i, r in enumerate(sel[cols].itertuples(index=False)):
         color = ATTACK_RGB.get(int(r.attacktype1), ATTACK_RGB[9])
-        z = REPLAY_Z0 + int(r.month) * REPLAY_Z_PER_MONTH
-        add(node_row(next_id, 0, 0, float(r.longitude), float(r.latitude),
-                     z, float(scale[i]), color, GEO_OCTA, TOPO_NONE,
-                     alpha=REPLAY_EMBER_A), ch_input_id=int(r.month) + 1)
+        z = REPLAY_Z0 + int(r.month) * REPLAY_Z_PER_MONTH + GRID_Z_ADJUST
+        add(node_row(next_id, grid_id, 1, float(r.longitude),
+                     float(r.latitude), z, float(scale[i]), color, GEO_OCTA,
+                     TOPO_NONE, alpha=REPLAY_EMBER_A),
+           ch_input_id=int(r.month) + 1)
         cas = ""
         if r.nkill or r.nwound:
             cas = f" | {r.nkill:.0f} killed {r.nwound:.0f} wounded"

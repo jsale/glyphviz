@@ -1,5 +1,5 @@
 id,table_id,record_id,title
-0,0,1,"GTD TIME REPLAY 1970-2020 | Channels playback: each frame = half a month | incidents flash on their date, then fade to embers | color = attack type, size = casualties (log) | yellow cursor: position = current date, height = worldwide attacks that month | 10039 most severe of 209706 incidents (per-month quota) | play at ~10 FPS"
+0,0,1,"GTD TIME REPLAY 1970-2020 | Channels playback: each frame = half a month | incidents flash on their date, then fade to embers | color = attack type, size = casualties (log) | yellow cursor: position = current date, height = worldwide attacks that month | 10039 most severe of 209706 incidents (per-month quota) | play at ~10 FPS | World Grid: toggle Shape to Sphere in the World Grid panel for a globe"
 1,0,2,"TIME CURSOR | x = current date (1970 left edge, 2020 right) | height = attacks worldwide that month"
 2,0,3,1970
 3,0,4,1980
