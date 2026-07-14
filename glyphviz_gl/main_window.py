@@ -152,6 +152,8 @@ class MainWindow(QMainWindow):
         self._viewport.tagToggled.connect(self._on_tag_toggled)
         self._viewport.quickSaveRequested.connect(self._quick_save)
         self._viewport.gridSelectRequested.connect(self._select_next_grid)
+        self._viewport.geoCycleRequested.connect(self._cycle_selected_geometry)
+        self._viewport.topoCycleRequested.connect(self._cycle_selected_topology)
         self._viewport.nodesManipulated.connect(self._on_viewport_manipulated)
         self._viewport.bgToggleRequested.connect(self._on_scene_bg_toggle_bw)
         self._viewport.renderModeCycleRequested.connect(self._on_scene_render_mode_cycle)
@@ -1719,6 +1721,71 @@ class MainWindow(QMainWindow):
             node.hide = 0
         self._after_visibility_change(
             changed, f"All nodes shown ({len(changed)} unhidden).")
+
+    # --- ANTz-style attribute cycling (O = geometry, J = topology) ---
+    #
+    # The step is applied PER NODE — each selected node advances from its OWN
+    # current value — so a mixed-geometry/topology selection stays mixed
+    # instead of snapping to a single shared value (matching ANTz).
+
+    def _cycle_targets(self) -> list[Node]:
+        """Nodes the O/J cycling keys operate on: the current selection minus
+        World/Camera rows and World Grids. A grid's geometry encodes flat vs
+        globe and its topo is ignored, so cycling either would corrupt it —
+        use the World Grid panel's Shape combo instead."""
+        targets = [n for n in self._selected_nodes
+                   if n.type not in NON_VISUAL_TYPES and n.type != NODE_TYPE_GRID]
+        if not targets:
+            self.statusBar().showMessage("No selection to cycle.")
+        return targets
+
+    def _after_attr_cycle(self, targets: list[Node], message: str):
+        """Shared tail for the O/J cycles: refresh the table rows and the
+        Select-By value combo, re-sync the inspector (its Geometry/Topology
+        combos would otherwise show stale values), and rebuild the scene."""
+        self._table.refresh_nodes(n.id for n in targets)
+        self._update_sel_values()
+        if len(self._selected_nodes) == 1:
+            self._refresh_inspector(self._selected_nodes[0])
+        else:
+            self._refresh_inspector_multi(self._selected_nodes)
+        self._viewport.scene_invalidate()
+        self.statusBar().showMessage(message)
+
+    def _cycle_selected_geometry(self, step: int):
+        """O / Shift+O: step each selected node's geometry forward/back one id.
+        GEO_MESH is skipped over — like the Geometry dropdowns, a bare Mesh id
+        is meaningless without a mesh_id (imported meshes get their own combo
+        entries); a node already ON a mesh still cycles out of it normally."""
+        targets = self._cycle_targets()
+        if not targets:
+            return
+        for node in targets:
+            geo = (node.geometry + step) % GEO_COUNT
+            if geo == GEO_MESH:
+                geo = (geo + step) % GEO_COUNT
+            node.geometry = geo
+        if len(targets) == 1:
+            g = targets[0].geometry
+            msg = f"Geometry → {g}: {GEO_NAMES.get(g, f'Geo {g}')}"
+        else:
+            msg = f"Cycled geometry {step:+d} on {len(targets)} node(s)."
+        self._after_attr_cycle(targets, msg)
+
+    def _cycle_selected_topology(self, step: int):
+        """J / Shift+J: step each selected node's topology forward/back one id
+        (same per-node increment rule as O)."""
+        targets = self._cycle_targets()
+        if not targets:
+            return
+        for node in targets:
+            node.topo = (node.topo + step) % TOPO_COUNT
+        if len(targets) == 1:
+            t = targets[0].topo
+            msg = f"Topology → {t}: {TOPO_NAMES.get(t, f'Topo {t}')}"
+        else:
+            msg = f"Cycled topology {step:+d} on {len(targets)} node(s)."
+        self._after_attr_cycle(targets, msg)
 
     # --- viewport pick callbacks ---
 

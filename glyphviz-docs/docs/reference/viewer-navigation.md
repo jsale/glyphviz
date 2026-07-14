@@ -76,6 +76,8 @@ Shortcuts handled directly in the Viewer (`Viewport.keyPressEvent`/`event`,
 | B | Toggle background black/white | `bgToggleRequested` — `viewport.py:1380-1382` |
 | 8 | Cycle the scene-wide render/blend mode | `renderModeCycleRequested` — `viewport.py:1383-1385` |
 | K | Quick-save — writes fresh, timestamped node + tag CSVs immediately (no dialog), next to the running executable | `quickSaveRequested` → `_quick_save` — `viewport.py:1386-1388`, `main_window.py:1093-1106` |
+| O / Shift+O | Cycle each selected node's **geometry** forward/back one entry (ANTz-style; the step is per node, so a mixed-geometry selection stays mixed) | `geoCycleRequested` → `_cycle_selected_geometry` |
+| J / Shift+J | Cycle each selected node's **topology** forward/back one entry (same per-node rule) | `topoCycleRequested` → `_cycle_selected_topology` |
 
 Shortcuts registered at the main-window level (`QShortcut`, still fire while
 the Viewer has focus, since Qt shortcuts aren't widget-scoped here):

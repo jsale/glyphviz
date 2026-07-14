@@ -124,6 +124,12 @@ class Viewport(QOpenGLWidget):
     quickSaveRequested = Signal()        # K → silent auto-save node+tag CSV
     gridSelectRequested = Signal()       # G → select / cycle World Grid nodes (ANTz-style)
 
+    # ANTz-style per-node attribute cycling: each SELECTED node steps its own
+    # geometry (O) or topology (J) to the next id in the list, so a mixed
+    # selection stays mixed. Payload is the step (+1, or -1 with Shift held).
+    geoCycleRequested = Signal(int)      # O / Shift+O → cycle geometry ±1
+    topoCycleRequested = Signal(int)     # J / Shift+J → cycle topology ±1
+
     # Channels playback transport (handled here, not as window-wide
     # shortcuts, so a bare Space still types normally in text fields;
     # works whenever the viewport has focus — e.g. Properties panel closed).
@@ -2001,6 +2007,14 @@ class Viewport(QOpenGLWidget):
             event.accept()
         elif event.key() == Qt.Key.Key_G:
             self.gridSelectRequested.emit()
+            event.accept()
+        elif event.key() == Qt.Key.Key_O:
+            shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+            self.geoCycleRequested.emit(-1 if shift else 1)
+            event.accept()
+        elif event.key() == Qt.Key.Key_J:
+            shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+            self.topoCycleRequested.emit(-1 if shift else 1)
             event.accept()
         elif event.key() == Qt.Key.Key_H:
             if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
