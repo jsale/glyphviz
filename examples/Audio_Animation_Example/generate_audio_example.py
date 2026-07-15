@@ -51,8 +51,8 @@ import random
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from glyphviz_core.audio_analysis import analyze
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from audio_analysis import analyze   # vendored copy — see that file's docstring
 
 # ===========================================================================
 # Parameters — modify these freely, or override SOURCE_WAV with --wav
