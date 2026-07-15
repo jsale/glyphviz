@@ -687,9 +687,15 @@ class Viewport(QOpenGLWidget):
         """Return (texture_id, filename) for each loaded video's audio track."""
         return self._video_mgr.list_tracks()
 
-    def set_audio_solo(self, texture_id: int | None):
-        """Mute every video's audio except *texture_id* (None = play all)."""
-        self._video_mgr.set_solo(texture_id)
+    def set_audio_solo(self, texture_ids: int | set[int] | None):
+        """Mute every video's audio except *texture_ids* (None = play all)."""
+        self._video_mgr.set_solo(texture_ids)
+
+    def is_video_texture(self, texture_id: int) -> bool:
+        """True if *texture_id* is a loaded video (vs. a static image) --
+        lets callers filter a node selection down to its video textures for
+        selection-driven audio solo."""
+        return self._video_mgr.has(texture_id)
 
     # --- GL lifecycle ---
 

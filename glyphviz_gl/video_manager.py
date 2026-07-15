@@ -8,8 +8,10 @@ every render tick via glTexSubImage2D.
 
 Each video's audio track plays through its own QAudioOutput, so by default all
 loaded videos are heard at once (mixed by the OS, same as multiple browser tabs
-playing video).  Call set_solo() to mute every track but one, or pass None to
-return to the "play all" default.
+playing video).  Call set_solo() with a texture_id, a set of texture_ids, or
+None to return to the "play all" default.  An empty set mutes every track --
+this is what selection-driven "solo audio to selection" uses when nothing
+video-textured is currently selected.
 
 Requires PySide6-QtMultimedia (bundled with standard PySide6 wheels on Windows).
 If the module is absent, VideoManager.load_folder() returns 0 and prints a notice.
@@ -169,7 +171,7 @@ class VideoManager:
 
     def __init__(self):
         self._entries: dict[int, _VideoEntry] = {}   # texture_id → entry
-        self._solo_id: int | None = None   # None == all audio tracks play
+        self._solo_ids: set[int] | None = None   # None == all audio tracks play
         self._active_ids: set[int] = set()   # texture_ids drawn on a node this frame
 
     def load_folder(self, folder: Path, first_id: int) -> int:
@@ -179,7 +181,7 @@ class VideoManager:
         image texture ID so the two ID spaces don't collide).  Returns the number
         of videos loaded.  Must be called while the OpenGL context is current."""
         self._release()
-        self._solo_id = None
+        self._solo_ids = None
         if not _QT_MULTIMEDIA_AVAILABLE:
             print("[VideoManager] PySide6.QtMultimedia not available — video textures disabled.")
             return 0
@@ -232,16 +234,30 @@ class VideoManager:
     def has_videos(self) -> bool:
         return bool(self._entries)
 
+    def has(self, texture_id: int) -> bool:
+        """True if *texture_id* names a loaded video (as opposed to a static
+        image texture) -- used to filter a node selection down to the video
+        textures it contains."""
+        return texture_id in self._entries
+
     def list_tracks(self) -> list[tuple[int, str]]:
         """Return (texture_id, filename) for each loaded video, in load order."""
         return [(tid, entry.name) for tid, entry in sorted(self._entries.items())]
 
-    def set_solo(self, texture_id: int | None):
-        """Mute every video's audio except *texture_id*.  Pass None to unmute
-        all of them (the default "play every track" behavior)."""
-        self._solo_id = texture_id
+    def set_solo(self, texture_ids: int | set[int] | None):
+        """Mute every video's audio except those named by *texture_ids*.
+
+        Accepts a single texture_id, a set of them, or None to unmute all
+        (the default "play every track" behavior).  An empty set mutes every
+        track."""
+        if texture_ids is None:
+            self._solo_ids = None
+        elif isinstance(texture_ids, int):
+            self._solo_ids = {texture_ids}
+        else:
+            self._solo_ids = set(texture_ids)
         for tid, entry in self._entries.items():
-            entry.set_muted(texture_id is not None and tid != texture_id)
+            entry.set_muted(self._solo_ids is not None and tid not in self._solo_ids)
 
     def release(self):
         """Stop all players and release all GL textures."""

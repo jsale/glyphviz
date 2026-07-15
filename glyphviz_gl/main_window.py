@@ -84,6 +84,7 @@ class MainWindow(QMainWindow):
 
         # Multi-select state
         self._selected_nodes: list[Node] = []
+        self._audio_follow_selection = False
         # Anchor values for delta-based position/rotation editing across a selection.
         # When the inspector is refreshed for a selection, these are set to the
         # primary node's values.  Each subsequent edit computes a delta from the
@@ -502,6 +503,17 @@ class MainWindow(QMainWindow):
         self._audio_combo.setEnabled(False)
         self._audio_combo.currentIndexChanged.connect(self._on_audio_track_selected)
         disp_layout.addWidget(self._audio_combo)
+
+        self._cb_audio_follow_selection = QCheckBox("Solo Audio to Selection")
+        self._cb_audio_follow_selection.setChecked(False)
+        self._cb_audio_follow_selection.setToolTip(
+            "When checked, only video textures on currently selected nodes play\n"
+            "audio -- select several video-textured nodes to hear all of them at\n"
+            "once, or deselect to mute. Overrides the dropdown above while checked."
+        )
+        self._cb_audio_follow_selection.setEnabled(False)
+        self._cb_audio_follow_selection.toggled.connect(self._on_audio_follow_selection_toggled)
+        disp_layout.addWidget(self._cb_audio_follow_selection)
 
         # --- Scale group ---
         scale_grp = QGroupBox("Global Scale")
@@ -1503,12 +1515,38 @@ class MainWindow(QMainWindow):
         for texture_id, name in tracks:
             self._audio_combo.addItem(f"Only: {name}", texture_id)
         self._audio_combo.setCurrentIndex(0)
-        self._audio_combo.setEnabled(len(tracks) > 1)
+        self._audio_combo.setEnabled(len(tracks) > 1 and not self._audio_follow_selection)
         self._audio_combo.blockSignals(False)
+        self._cb_audio_follow_selection.setEnabled(bool(tracks))
+        if self._audio_follow_selection:
+            self._update_selection_audio_solo()
 
     def _on_audio_track_selected(self, index: int):
+        if self._audio_follow_selection:
+            return
         texture_id = self._audio_combo.itemData(index)
         self._viewport.set_audio_solo(texture_id)
+
+    def _on_audio_follow_selection_toggled(self, checked: bool):
+        self._audio_follow_selection = checked
+        tracks = self._viewport.list_audio_tracks()
+        self._audio_combo.setEnabled(len(tracks) > 1 and not checked)
+        if checked:
+            self._update_selection_audio_solo()
+        else:
+            self._on_audio_track_selected(self._audio_combo.currentIndex())
+
+    def _update_selection_audio_solo(self):
+        """While 'Solo Audio to Selection' is on, mute every video except
+        those textured on currently selected nodes -- multiple selected
+        video-textured nodes all play at once; none selected plays none."""
+        if not self._audio_follow_selection:
+            return
+        ids = {
+            n.texture_id for n in self._selected_nodes
+            if n.texture_id and self._viewport.is_video_texture(n.texture_id)
+        }
+        self._viewport.set_audio_solo(ids)
 
     def _save_csv(self):
         """Ctrl+S — overwrite the currently open (already-timestamped) file.
@@ -2016,6 +2054,7 @@ class MainWindow(QMainWindow):
         self._selected_nodes = self._table.selected_nodes()
         self._viewport.selected_node_ids = {n.id for n in self._selected_nodes}
         self._viewport.update()
+        self._update_selection_audio_solo()
 
         has_selection = bool(self._selected_nodes)
         for btn in self._mode_buttons.values():
