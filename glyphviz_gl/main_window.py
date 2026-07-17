@@ -114,6 +114,10 @@ class MainWindow(QMainWindow):
         self._gizmo_mode: str | None = None
         self._mode_buttons: dict[str, QPushButton] = {}
 
+        # Camera toolbar buttons (Main + 3 fixed axis views), kept in sync
+        # with the viewport's active camera via cameraChanged.
+        self._camera_buttons: list[QPushButton] = []
+
         # Link mode (interactive Link creation): click an A-end node, then a
         # B-end node, to create a type=7 Link between them. Separate from
         # _gizmo_mode/_mode_buttons above -- Move/Rotate/Size require an
@@ -135,6 +139,7 @@ class MainWindow(QMainWindow):
         self._build_viewport()
         self._build_menu()
         self._build_manipulate_toolbar()
+        self._build_camera_toolbar()
         self._build_panel()
         self._build_table()
         self._build_statusbar()
@@ -177,6 +182,7 @@ class MainWindow(QMainWindow):
         self._viewport.channelPlayToggleRequested.connect(self._ch_toggle_play)
         self._viewport.channelStopRequested.connect(self._ch_stop)
         self._viewport.glInitialized.connect(self._load_default_media)
+        self._viewport.cameraChanged.connect(self._on_camera_changed)
         self.setCentralWidget(self._viewport)
         # Link self.nodes into the viewport scene so appends stay in sync.
         self._viewport.set_nodes(self.nodes)
@@ -384,6 +390,38 @@ class MainWindow(QMainWindow):
 
         self.addToolBar(tb)
         self._view_menu.addAction(tb.toggleViewAction())
+
+    def _build_camera_toolbar(self):
+        """Ever-present camera picker: Main (free orbit) + the 3 fixed
+        +X/+Y/+Z reference views, matching the viewport's 4 default cameras.
+        C / Shift+C cycles the same list; this stays in sync via
+        cameraChanged (see _on_camera_changed)."""
+        tb = QToolBar("Camera", self)
+        tb.setObjectName("cameraToolbar")
+        tb.setMovable(False)
+
+        for i, name in enumerate(self._viewport.camera_names()):
+            btn = QPushButton(name)
+            btn.setCheckable(True)
+            btn.setChecked(i == 0)
+            btn.setToolTip(
+                "Fixed reference view: zoom only, no orbit/pan.  [C cycles]"
+                if i else "Free orbit/pan/zoom camera.  [C cycles]"
+            )
+            btn.clicked.connect(lambda _checked=False, idx=i: self._viewport.select_camera(idx))
+            self._camera_buttons.append(btn)
+            tb.addWidget(btn)
+
+        self.addToolBar(tb)
+        self._view_menu.addAction(tb.toggleViewAction())
+
+    def _on_camera_changed(self, index: int):
+        for i, btn in enumerate(self._camera_buttons):
+            btn.blockSignals(True)
+            btn.setChecked(i == index)
+            btn.blockSignals(False)
+        name = self._viewport.camera_names()[index]
+        self.statusBar().showMessage(f"Camera: {name}", 2000)
 
     def _on_mode_button_clicked(self, name: str):
         new_mode = None if self._gizmo_mode == name else name

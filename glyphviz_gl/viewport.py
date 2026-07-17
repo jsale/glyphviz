@@ -1,5 +1,6 @@
 import math
 import time
+from dataclasses import dataclass, field
 
 import numpy as np
 from OpenGL.GL import *
@@ -58,6 +59,20 @@ _CARTESIAN_PARENT_TOPOS = frozenset({
 
 
 _DEFAULT_BG = tuple(c / 255.0 for c in WORLD_DEFAULT_BG_RGB)  # used when the scene has no World node
+
+
+@dataclass
+class _CameraView:
+    """A saved orbit-camera viewpoint (azimuth/elevation/distance/target),
+    switchable with the C key or the Camera toolbar. `locked` cameras
+    (the 3 default axis views) are fixed reference views: orbit and pan are
+    disabled while active, zoom (distance) is not."""
+    name: str
+    azimuth: float
+    elevation: float
+    distance: float
+    target: list = field(default_factory=lambda: [0.0, 0.0, 0.0])
+    locked: bool = False
 
 
 def _apply_render_mode(mode: int):
@@ -125,6 +140,10 @@ class Viewport(QOpenGLWidget):
     gridSelectRequested = Signal()       # G → select / cycle World Grid nodes (ANTz-style)
     escapePressed = Signal()             # Esc → cancel current modal action (e.g. a pending Link A-end)
 
+    # Active camera switched (C / Shift+C, or the Camera toolbar) — carries
+    # the new active camera's index into self.camera_names().
+    cameraChanged = Signal(int)
+
     # ANTz-style per-node attribute cycling: each SELECTED node steps its own
     # geometry (O) or topology (J) to the next id in the list, so a mixed
     # selection stays mixed. Payload is the step (+1, or -1 with Shift held).
@@ -168,6 +187,16 @@ class Viewport(QOpenGLWidget):
         self._cam_azimuth = 45.0
         self._cam_elevation = 25.0
         self._cam_target = [0.0, 0.0, 0.0]
+
+        # Multiple cameras (ANTz-style): index 0 is always the free orbit
+        # camera above ("Main"); 1-3 are fixed +X/+Y/+Z reference views onto
+        # the world origin. Re-derived with scene-appropriate distances in
+        # set_nodes(); see _make_default_cameras.
+        self._cameras: list[_CameraView] = self._make_default_cameras()
+        self._active_camera = 0
+        # True only while both Left and Right buttons are held together —
+        # drives the combined orbit+zoom gesture (see _orbit_zoom_camera).
+        self._combo_active = False
 
         # Cross-eye free-view stereo: render the scene twice (per-eye lateral
         # camera offset, same look-at target -> toe-in convergence at the
@@ -419,6 +448,16 @@ class Viewport(QOpenGLWidget):
             ]
             span = max(max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs))
             self._cam_distance = max(span * 1.5, 50.0)
+            # Axis cameras look at the origin specifically, not the scene's
+            # bounding-box center, so their distance is sized off how far
+            # content actually reaches from the origin, not off `span`.
+            origin_radius = max(math.dist((0.0, 0.0, 0.0), p) for p in positions)
+            axis_distance = max(origin_radius * 1.5, 50.0)
+        else:
+            axis_distance = 500.0
+        self._cameras = self._make_default_cameras(axis_distance)
+        self._active_camera = 0
+        self.cameraChanged.emit(0)
         self.update()
 
     def world_position(self, node_id: int) -> tuple[float, float, float] | None:
@@ -455,6 +494,56 @@ class Viewport(QOpenGLWidget):
             self._cam_distance = distance
         if target is not None:
             self._cam_target = list(target)
+
+    def _make_default_cameras(self, axis_distance: float = 500.0) -> list['_CameraView']:
+        """The 4 default cameras. Eye position for (azimuth, elevation) is
+        target + distance*(cos(el)cos(az), cos(el)sin(az), sin(el)) (see
+        paintGL's gluLookAt setup), so azimuth=elevation=0 looks from the
+        +X axis, azimuth=90 from +Y, and elevation=89 (not exactly 90, to
+        avoid the up-vector singularity — same clamp _orbit_camera uses)
+        from nearly straight above on +Z."""
+        return [
+            _CameraView('Main', self._cam_azimuth, self._cam_elevation,
+                        self._cam_distance, list(self._cam_target), locked=False),
+            _CameraView('+X View', 0.0, 0.0, axis_distance, [0.0, 0.0, 0.0], locked=True),
+            _CameraView('+Y View', 90.0, 0.0, axis_distance, [0.0, 0.0, 0.0], locked=True),
+            _CameraView('+Z View', 0.0, 89.0, axis_distance, [0.0, 0.0, 0.0], locked=True),
+        ]
+
+    def camera_names(self) -> list[str]:
+        return [c.name for c in self._cameras]
+
+    @property
+    def active_camera_index(self) -> int:
+        return self._active_camera
+
+    def active_camera_locked(self) -> bool:
+        return bool(self._cameras) and self._cameras[self._active_camera].locked
+
+    def _sync_active_camera(self):
+        """Write the live _cam_* state back into the active camera's saved slot."""
+        cam = self._cameras[self._active_camera]
+        cam.azimuth, cam.elevation = self._cam_azimuth, self._cam_elevation
+        cam.distance = self._cam_distance
+        cam.target = list(self._cam_target)
+
+    def select_camera(self, index: int):
+        """Switch the active camera (by index, wrapping) and load its saved
+        viewpoint live. Used by both C-key cycling and the Camera toolbar."""
+        if not self._cameras:
+            return
+        index %= len(self._cameras)
+        self._sync_active_camera()
+        self._active_camera = index
+        cam = self._cameras[index]
+        self._cam_azimuth, self._cam_elevation = cam.azimuth, cam.elevation
+        self._cam_distance = cam.distance
+        self._cam_target = list(cam.target)
+        self.cameraChanged.emit(index)
+        self.update()
+
+    def cycle_camera(self, step: int = 1):
+        self.select_camera(self._active_camera + step)
 
     def export_png(self, path: str, width: int, height: int) -> None:
         """Render the current scene at an explicit pixel resolution and save
@@ -2149,6 +2238,11 @@ class Viewport(QOpenGLWidget):
         elif event.key() == Qt.Key.Key_Escape:
             self.escapePressed.emit()
             event.accept()
+        elif event.key() == Qt.Key.Key_C:
+            # ANTz-style: repeated hits of C step through the cameras.
+            step = -1 if event.modifiers() & Qt.KeyboardModifier.ShiftModifier else 1
+            self.cycle_camera(step)
+            event.accept()
         else:
             super().keyPressEvent(event)
 
@@ -2191,6 +2285,15 @@ class Viewport(QOpenGLWidget):
         self._press_pos = event.pos()
         self._drag_button = event.button()
         self._drag_moved = False
+
+        # Left+Right held together (ANTz-style combined orbit+zoom, see
+        # _orbit_zoom_camera): snap the orbit pivot onto the selected object
+        # the moment the second button goes down, not continuously.
+        buttons = event.buttons()
+        combo = bool(buttons & Qt.MouseButton.LeftButton) and bool(buttons & Qt.MouseButton.RightButton)
+        if combo and not self._combo_active:
+            self._maybe_snap_orbit_target()
+        self._combo_active = combo
 
     def mouseReleaseEvent(self, event):
         # --- rubber-band release ---
@@ -2237,8 +2340,19 @@ class Viewport(QOpenGLWidget):
                 # Click on empty space (no Ctrl) → clear the selection
                 self.nodesSelected.emit(set())
 
-        self._drag_button = None
-        self._drag_moved = False
+        # Fall back to whichever button (if any) is still held rather than
+        # unconditionally clearing the drag — releasing one button of a
+        # Left+Right combo drag should resume plain single-button orbit,
+        # not stop navigation until re-pressed.
+        remaining = event.buttons()
+        for btn in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton, Qt.MouseButton.MiddleButton):
+            if remaining & btn:
+                self._drag_button = btn
+                break
+        else:
+            self._drag_button = None
+            self._drag_moved = False
+        self._combo_active = bool(remaining & Qt.MouseButton.LeftButton) and bool(remaining & Qt.MouseButton.RightButton)
 
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -2268,7 +2382,18 @@ class Viewport(QOpenGLWidget):
         manipulating = self.gizmo_mode is not None and bool(self.selected_node_ids)
         enabled_axes = [a for a in ('x', 'y', 'z') if self.gizmo_axes.get(a)]
 
-        if self._drag_button == Qt.MouseButton.LeftButton:
+        buttons = event.buttons()
+        left = bool(buttons & Qt.MouseButton.LeftButton)
+        right = bool(buttons & Qt.MouseButton.RightButton)
+        middle = bool(buttons & Qt.MouseButton.MiddleButton)
+
+        if left and right:
+            # Both buttons together always means camera nav (Dr. Dave
+            # Warner's requested ANTz gesture) — takes priority over any
+            # in-progress gizmo manipulation.
+            self._orbit_zoom_camera(dx, dy)
+
+        elif left:
             if manipulating and enabled_axes:
                 raw_deltas = {enabled_axes[0]: dx}
                 if len(enabled_axes) >= 2:
@@ -2277,13 +2402,13 @@ class Viewport(QOpenGLWidget):
             else:
                 self._orbit_camera(dx, dy)
 
-        elif self._drag_button == Qt.MouseButton.RightButton:
+        elif right:
             if manipulating and len(enabled_axes) == 3:
                 self._apply_axis_deltas({enabled_axes[2]: -dy})
             else:
                 self._orbit_camera(dx, dy)
 
-        elif self._drag_button == Qt.MouseButton.MiddleButton:
+        elif middle and not self.active_camera_locked():
             az = math.radians(self._cam_azimuth)
             el = math.radians(self._cam_elevation)
             right_x = -math.sin(az)
@@ -2300,8 +2425,36 @@ class Viewport(QOpenGLWidget):
         self.update()
 
     def _orbit_camera(self, dx: float, dy: float):
+        if self.active_camera_locked():
+            return   # fixed reference view: no orbit/pan, zoom only
         self._cam_azimuth += dx * 0.4
         self._cam_elevation = max(-89.0, min(89.0, self._cam_elevation - dy * 0.4))
+
+    def _orbit_zoom_camera(self, dx: float, dy: float):
+        """Both mouse buttons held together: horizontal drag orbits azimuth
+        (around the selected object, see _maybe_snap_orbit_target), vertical
+        drag zooms — Dr. Dave Warner's requested ANTz-style combined
+        orbit+zoom gesture. Locked (axis) cameras still zoom, but ignore the
+        orbit component to stay fixed reference views."""
+        if not self.active_camera_locked():
+            self._cam_azimuth += dx * 0.4
+        factor = 1.0 + dy * 0.005
+        self._cam_distance = max(1.0, self._cam_distance * factor)
+
+    def _maybe_snap_orbit_target(self):
+        """Called once, at the moment a Left+Right combo drag begins: re-center
+        the orbit pivot on the selected node so the combined orbit+zoom
+        gesture orbits *the selected object*, not whatever the camera
+        happened to be pointed at. Skipped for locked axis cameras, which
+        must always stay aimed at the world origin."""
+        if self.active_camera_locked():
+            return
+        node = self.follow_node()
+        if node is None:
+            return
+        pos = self.world_position(node.id)
+        if pos is not None:
+            self._cam_target = list(pos)
 
     def _apply_axis_deltas(self, raw_deltas: dict):
         """Apply one drag-step of Move/Rotate/Size to every selected node.
