@@ -47,3 +47,6 @@ mobygo1_mono.wav
 # Top-level media/ is the working WAV pool for generate_audio_example.py;
 # per-example media/ folders hold the distributable copies.
 examples/Audio_Animation_Example/media/*.wav
+
+# Local zip built for Claude Desktop skill upload; regenerate from the folder
+glyphviz-skill/*.zip

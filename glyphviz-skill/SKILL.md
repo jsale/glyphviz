@@ -106,10 +106,12 @@ worked examples: `references/topologies.md`.
 3. **Generate with a script** (pandas or csv module), never by hand-editing
    CSV text. Start ids at 1; give parents their topology; place children in
    the parent's coordinate system.
-4. **Color**: either literal `color_r/g/b` (compute ramps yourself) or set
-   `color_index` (+ optional `palette_id`, 26 built-in palettes) and let the
-   user cycle in-app with =/− keys. Palette fields never repaint on load —
-   they resolve only on keypress.
+4. **Color**: write literal `color_r/g/b` for the on-load look, and *also*
+   set `color_index` (+ optional `palette_id`, 26 built-in palettes) to
+   pre-wire in-app recoloring with the =/− and Alt+=/Alt+− keys. Palette
+   fields never repaint on load — they resolve only on keypress. Palette
+   tables, gradient formulas, and the category-coloring recipe:
+   `references/color-palettes.md`.
 5. **Validate before delivering**: re-read the file with pandas; check
    required columns present, ids unique, every `parent_id` exists (or 0),
    colors in range, visible scales ≥ 0.2, UTF-8 clean.
@@ -127,6 +129,11 @@ worked examples: `references/topologies.md`.
   (Dedicated reference planned.)
 - **Link flow**: Link nodes (type 7) with geometry 28 (Prism) scroll their
   texture via `rotate_rate_z` — directed-graph flow animation.
+- **Textures / video / audio**: `texture_id` is a 1-based index into the
+  scene's `media/` folder (sorted: images, then videos; animated GIFs and
+  videos animate automatically; video audio can be soloed to the selection).
+  See `references/textures-and-media.md` before authoring any textured
+  scene.
 
 ## References
 
@@ -137,5 +144,11 @@ worked examples: `references/topologies.md`.
   meanings, formulas, outward-orientation rules, Plot/Surface overlay
   requirements, and engine-verified worked examples. **Read it before
   positioning children under any non-Cartesian topology.**
+- `references/color-palettes.md` — the 26 palettes (full 20-color table,
+  gradient formulas), `color_index`/`palette_id` resolution semantics, and
+  coloring recipes for generated data.
+- `references/textures-and-media.md` — how `texture_id` maps to `media/`
+  files, animated GIF/video textures, and video audio (incl. Solo Audio to
+  Selection).
 - `references/OUTLINE.md` — what's planned but not yet written; do not invent
   content for those areas, derive from `glyphviz_core/` source when available.
