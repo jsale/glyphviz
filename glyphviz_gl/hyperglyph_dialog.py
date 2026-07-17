@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 
 from glyphviz_core.glyph_recipe import generate_nodes
 from hyperglyph_lab.hyperglyph_generator import (
-    random_recipe, apply_idle_motion, DETERMINISTIC_SEED,
+    random_recipe, apply_idle_motion, assign_color_index, DETERMINISTIC_SEED,
 )
 
 from .viewport import Viewport
@@ -187,6 +187,7 @@ class HyperglyphGeneratorDialog(QDialog):
         # Insert into Scene reproduces this exact same structure — what you
         # see in the preview is what gets inserted.
         nodes = generate_nodes(recipe, start_id=1)
+        assign_color_index(nodes)
         self._idle_motion_applied = self._w_idle_motion.isChecked()
         if self._idle_motion_applied:
             apply_idle_motion(nodes, random.Random(seed))
@@ -223,6 +224,7 @@ class HyperglyphGeneratorDialog(QDialog):
                                 parent_id=parent_id, base_branch_level=base_branch)
         if not nodes:
             return
+        assign_color_index(nodes)
         if self._idle_motion_applied:
             apply_idle_motion(nodes, random.Random(self._rng_seed))
 

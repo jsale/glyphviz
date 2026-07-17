@@ -62,11 +62,15 @@ Implemented in `glyphviz_core/topology.py`'s `local_rotation_matrix()` dispatche
 ## Tech Stack
 
 Python 3.12, PySide6 (Qt6), PyOpenGL, numpy, pandas.
-Run: `C:\Users\jsale\anaconda3\envs\glyphviz\python.exe main.py` — call the conda env's
-`python.exe` directly for *every* invocation (running the app, one-off scripts, headless
-verification scripts, tests). Never use `conda run -n glyphviz ...`: it hangs silently on
-Jeff's Windows setup (broken stdout/stderr inheritance in some terminal environments) and
-needs Ctrl+C to escape.
+Run: locate the `glyphviz` conda env's `python.exe` and call it directly for *every*
+invocation (running the app, one-off scripts, headless verification scripts, tests) —
+e.g. `<glyphviz-env-python> main.py`. Its path is **not fixed** — Jeff works across
+multiple machines and Anaconda/conda landed in a different location on each (seen so
+far: `anaconda3\envs\glyphviz\python.exe` and `.conda\envs\glyphviz\python.exe`, both
+under `%USERPROFILE%`). Resolve it fresh each session rather than assuming either path:
+run `conda env list` and take the `glyphviz` row, or check `%USERPROFILE%\.conda\environments.txt`.
+Never use `conda run -n glyphviz ...`: it hangs silently on Jeff's Windows setup (broken
+stdout/stderr inheritance in some terminal environments) and needs Ctrl+C to escape.
 
 ## GaiaViz Skill
 

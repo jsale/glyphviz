@@ -3,7 +3,7 @@
 # PyInstaller spec for GlyphViz (Windows, one-folder output).
 #
 # Build:
-#   build.bat   (or directly: C:\Users\jsale\anaconda3\envs\glyphviz\python.exe -m PyInstaller GlyphViz.spec --clean -y)
+#   build.bat   (or directly: C:\Users\jsale\.conda\envs\glyphviz\python.exe -m PyInstaller GlyphViz.spec --clean -y)
 #
 # Output: dist\GlyphViz\GlyphViz.exe
 #
@@ -12,7 +12,7 @@
 
 import shutil, os as _os
 
-_CONDA = r'C:\Users\jsale\anaconda3\envs\glyphviz\Library\bin'
+_CONDA = r'C:\Users\jsale\.conda\envs\glyphviz\Library\bin'
 
 # pyexpat.pyd links against 'libexpat.dll' but conda ships 'expat.dll'.
 # Create an alias so PyInstaller can bundle it under the expected name.

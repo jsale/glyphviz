@@ -4,7 +4,7 @@ echo ============================================================
 echo  GlyphViz Windows build  (conda env: glyphviz)
 echo ============================================================
 
-set PYTHON=C:\Users\jsale\anaconda3\envs\glyphviz\python.exe
+set PYTHON=C:\Users\jsale\.conda\envs\glyphviz\python.exe
 
 echo.
 echo [1/2] Installing / updating PyInstaller...

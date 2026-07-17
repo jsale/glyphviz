@@ -361,6 +361,21 @@ def mutate_recipe(base: GlyphRecipe, rng: random.Random, max_nodes: int,
 
 
 # ------------------------------------------------------------------------------
+# Color Palettes wiring
+# ------------------------------------------------------------------------------
+
+def assign_color_index(nodes: list[Node]) -> None:
+    """Set each node's color_index (glyphviz_core.color_palette) from its
+    branch_level, so a hyperglyph's levels are pre-wired into the Color
+    Palettes feature the moment it's generated: color_index = branch_level +
+    1, since color_index=0 is not a color any palette resolves (see
+    Node.color_index in glyphviz_core/node.py) — trunk (branch_level 0) gets
+    1, its children get 2, and so on."""
+    for node in nodes:
+        node.color_index = node.branch_level + 1
+
+
+# ------------------------------------------------------------------------------
 # Idle motion
 # ------------------------------------------------------------------------------
 
@@ -508,6 +523,7 @@ def generate_batch(branch_levels: int, max_nodes: int, count: int,
             recipe, meta = random_recipe(branch_levels, max_nodes, rng, name=name)
 
         nodes = generate_nodes(recipe)
+        assign_color_index(nodes)
         if idle_motion:
             apply_idle_motion(nodes, rng)
 
