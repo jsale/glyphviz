@@ -217,3 +217,4 @@ Columns: `id, table_id, record_id, title`.
   a bare URL (`http(s)://`, `www.`, `ftp://`), or plain text.
 - Written with CRLF; for generated data prefer the inline `text`/`link`
   columns unless ANTz/GaiaViz tag compatibility is needed.
+- Display behavior, link/app-launch rules, and gotchas: `tags-and-labels.md`.

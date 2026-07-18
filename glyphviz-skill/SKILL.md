@@ -61,7 +61,8 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 7. Labels: prefer inline `text` (label) and `link` (URL/file for the U key)
    columns — GlyphViz-native and simpler than a tag file. Use a companion
    `gv_tag.csv` only for ANTz/GaiaViz compatibility (`table_id` must be 0
-   there).
+   there). Labels are off by default (T toggles); show-all mode draws at
+   most 500 tags per frame. Full rules: `references/tags-and-labels.md`.
 8. Node types: 5 = ordinary glyph; 0 = World (scene settings, never drawn);
    1 = Camera; 6 = World Grid (children attach explicitly via
    `parent_id = grid.id`, place by lon/lat); 7 = Link (edge `parent_id` →
@@ -155,5 +156,8 @@ worked examples: `references/topologies.md`.
 - `references/channels-animation.md` — the ch-map/ch-tracks formats, the
   complete bindable-attribute list, playback/audio-sync behavior, and
   animation recipes. **Read it before generating any Channels files.**
+- `references/tags-and-labels.md` — inline `text`/`link` vs the companion
+  tag file, title encodings, display behavior (incl. the 500-per-frame
+  cap), and the U-key link/app-launch rules.
 - `references/OUTLINE.md` — what's planned but not yet written; do not invent
   content for those areas, derive from `glyphviz_core/` source when available.
