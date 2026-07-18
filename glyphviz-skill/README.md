@@ -15,6 +15,7 @@ A Claude Agent Skill for generating and validating **GlyphViz** scene data —
 | `references/textures-and-media.md` | **Done** — `texture_id`→`media/` mapping, GIF/video textures, Solo Audio to Selection |
 | `references/channels-animation.md` | **Done** — ch-map/ch-tracks formats, bindable attributes, playback + audio sync; 12 behavior checks through the real ChannelEngine |
 | `references/tags-and-labels.md` | **Done** — inline text/link vs tag file, title encodings, U-key rules, 500-per-frame draw cap; 18 checks through the real loader/saver |
+| `references/world-grid.md` | **Done** — flat/globe placement, extents windows, the grid scale rule, multi-grid recipes; 18 checks incl. 7 engine-verified examples |
 | Remaining references | Planned — see `references/OUTLINE.md` |
 | `examples/` | Curation plan only — see `examples/README.md` |
 | `code/` (generator + validator helpers) | Planned |

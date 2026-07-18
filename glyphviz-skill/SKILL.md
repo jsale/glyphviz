@@ -159,5 +159,9 @@ worked examples: `references/topologies.md`.
 - `references/tags-and-labels.md` — inline `text`/`link` vs the companion
   tag file, title encodings, display behavior (incl. the 500-per-frame
   cap), and the U-key link/app-launch rules.
+- `references/world-grid.md` — geo-registered scenes: flat plates and
+  globes, extents windows, the grid scale rule, multi-grid scenes, and
+  engine-verified placement examples. **Read it before building any
+  map/geographic scene.**
 - `references/OUTLINE.md` — what's planned but not yet written; do not invent
   content for those areas, derive from `glyphviz_core/` source when available.

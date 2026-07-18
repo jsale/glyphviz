@@ -212,8 +212,8 @@ Children of a World Grid node place by `translate_x` = longitude,
 `translate_y` = latitude within the grid's extents window (`translate_z` =
 elevation), regardless of the grid row's own `topo` value — flat plate or
 globe depending on the grid's geometry. Grid scale re-spaces child positions
-but never child sizes. Full rules: `world-grid.md` (planned); field layout:
-`node-csv-format.md`.
+but never child sizes. Full rules and engine-verified examples:
+`world-grid.md`; field layout: `node-csv-format.md`.
 
 ## Generation tips
 
