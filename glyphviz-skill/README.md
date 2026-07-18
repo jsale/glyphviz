@@ -13,6 +13,7 @@ A Claude Agent Skill for generating and validating **GlyphViz** scene data —
 | `references/topologies.md` | **Done** — placement math for all 18 topologies; 17 worked examples machine-verified through the real engine |
 | `references/color-palettes.md` | **Done** — 26 palettes, resolution semantics, ramp recipes; samples machine-verified via `resolve_palette_color` |
 | `references/textures-and-media.md` | **Done** — `texture_id`→`media/` mapping, GIF/video textures, Solo Audio to Selection |
+| `references/channels-animation.md` | **Done** — ch-map/ch-tracks formats, bindable attributes, playback + audio sync; 12 behavior checks through the real ChannelEngine |
 | Remaining references | Planned — see `references/OUTLINE.md` |
 | `examples/` | Curation plan only — see `examples/README.md` |
 | `code/` (generator + validator helpers) | Planned |

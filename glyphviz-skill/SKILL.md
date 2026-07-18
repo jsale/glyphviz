@@ -125,8 +125,10 @@ worked examples: `references/topologies.md`.
   per-cycle velocities (~60 cycles/s) applied continuously — the cheapest way
   to add motion (spinning tori, drifting clouds). `freeze` ≠ 0 suspends a node.
 - **Channels**: full time-series playback of node attributes via
-  `gv_ch-map.csv` / `gv_ch-tracks.csv`, bound per-node with `ch_input_id`.
-  (Dedicated reference planned.)
+  `gv_ch-map.csv` / `gv_ch-tracks.csv`, bound per-node with `ch_input_id`
+  — positions, rotations, scale, rates, colors, even `texture_id`
+  flip-books, optionally synced to an audio file. See
+  `references/channels-animation.md`.
 - **Link flow**: Link nodes (type 7) with geometry 28 (Prism) scroll their
   texture via `rotate_rate_z` — directed-graph flow animation.
 - **Textures / video / audio**: `texture_id` is a 1-based index into the
@@ -150,5 +152,8 @@ worked examples: `references/topologies.md`.
 - `references/textures-and-media.md` — how `texture_id` maps to `media/`
   files, animated GIF/video textures, and video audio (incl. Solo Audio to
   Selection).
+- `references/channels-animation.md` — the ch-map/ch-tracks formats, the
+  complete bindable-attribute list, playback/audio-sync behavior, and
+  animation recipes. **Read it before generating any Channels files.**
 - `references/OUTLINE.md` — what's planned but not yet written; do not invent
   content for those areas, derive from `glyphviz_core/` source when available.
