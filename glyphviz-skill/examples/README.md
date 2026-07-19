@@ -1,24 +1,35 @@
-# Examples — curation plan
+# Examples
 
-The skill will ship a small set of **self-contained** examples (generator
-script + output CSVs + one screenshot each), curated from the repo's
-`examples/` directory rather than written fresh. Candidates, in rough order of
-instructional value:
+Curated, verified scenes demonstrating how to *think* about hyperglyph
+design — not just the file formats. Both were generated in the wild by a
+skill-equipped Claude instance (2026-07, NHL history dataset), then passed
+the repo's curation gate: loaded through the real `load_node_csv`, channel
+joins validated through the real `ChannelEngine`, cumulative render-scale
+floor checked, and confirmed with a real headless render.
 
-1. **Topology_Example** — all 18 topologies side by side; the canonical
-   "what does topo N look like" reference. Small, synthetic, ideal first copy.
-2. **Rotation_Convention_Example** — Heading/Tilt/Roll vs Euler XYZ,
-   numerically verified; pairs with the `rotation_mode` rules in SKILL.md.
-3. **A Channels example** — smallest good one (SineWave_Example or a trimmed
-   Flocking_Example) once `channels-animation.md` exists.
-4. **A World Grid / geographic example** — a trimmed Global_Terrorism_Example
-   scene (Event_Cloud) once `world-grid.md` exists.
-5. **Palette_Example** — pairs with `color-palettes.md`.
+| Example | Demonstrates |
+|---|---|
+| `Breathing_Century/` | The **channel-sharing compression pattern**: ~1,700 animated glyphs on 204 channels (nodes sharing birth-year + final-alpha share one `ch_input_id`); step-function `color_a` appear-and-stay timelines; one track feeding `scale_x/y/z` for a breathing glyph; era-fair encoding; carrying values across source-data gaps. |
+| `Duel_of_Dynasties/` | **Deep multi-branch design under one clock**: torus → cube-facet → satellite hierarchies; Plot-topology curves; flare-and-settle scale tracks that end on authored state so looping stays consistent; pairing per-node scale channels with shared alpha channels; the choice of clock (career-relative vs calendar) as an analytic decision. |
 
-Rules for copying an example in:
-- Trim to the minimum that demonstrates the concept (skill zips should stay
-  small; no large media/textures).
-- Each example gets its own README stating what it demonstrates and which
-  reference doc it pairs with.
-- Regenerate outputs with the repo's real generator + verify with the real
-  loader before committing the copy — never hand-edit the CSVs.
+Each folder is a complete loadable scene: open the `*_gv_node.csv` in
+GlyphViz and the name-paired `ch-map`/`ch-tracks` files auto-load; playback
+off shows the static scene. The `build_*.py` generators are included for
+reading (they show the authoring patterns in code) — regenerating requires
+the source dataset, which is not bundled.
+
+A third exemplar from the same series, **Century_Swarm** (29,140
+player-seasons, ~140k nodes — spatial position as the primary encoding, and
+the scale/labeling strategies that make a six-figure node count workable),
+lives in the main repo at `examples/Century_Swarm_Example/`; its node CSV
+is too large to bundle in the skill zip.
+
+## Rules for adding an example
+
+- Must pass the curation gate above (real loader, real engine, real render)
+  before landing.
+- Trim to the minimum that demonstrates the concept — the skill zip stays
+  small; no large media.
+- Each example's README states the concept and **what it teaches**, not
+  just what it is.
+- Never hand-edit the CSVs; regenerate from the script.
