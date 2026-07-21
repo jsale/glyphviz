@@ -22,6 +22,13 @@ hyperglyph_lab/output/
 build/
 dist/
 
+# Build wrapper: bakes in the local conda env path, which differs across
+# Jeff's machines (anaconda3\envs vs .conda\envs) -- keep it local-only so a
+# stale hardcoded path from one machine never lands on another via git.
+# GlyphViz.spec (the actual build config) stays tracked; it derives the
+# conda path from sys.prefix instead. See build.bat.example to recreate it.
+build.bat
+
 # Jupyter autosave checkpoints
 .ipynb_checkpoints/
 

@@ -1,0 +1,51 @@
+@echo off
+setlocal
+echo ============================================================
+echo  GlyphViz Windows build  (conda env: glyphviz)
+echo ============================================================
+
+rem Locate the glyphviz conda env's python.exe. Conda lands in different
+rem places on different machines (anaconda3\envs, .conda\envs, miniconda3),
+rem so probe the usual roots first, then fall back to conda's
+rem environments.txt registry of every env it has ever created.
+set "PYTHON="
+if exist "%USERPROFILE%\.conda\envs\glyphviz\python.exe"    set "PYTHON=%USERPROFILE%\.conda\envs\glyphviz\python.exe"
+if not defined PYTHON if exist "%USERPROFILE%\anaconda3\envs\glyphviz\python.exe"  set "PYTHON=%USERPROFILE%\anaconda3\envs\glyphviz\python.exe"
+if not defined PYTHON if exist "%USERPROFILE%\miniconda3\envs\glyphviz\python.exe" set "PYTHON=%USERPROFILE%\miniconda3\envs\glyphviz\python.exe"
+if not defined PYTHON if exist "%USERPROFILE%\.conda\environments.txt" (
+    for /f "usebackq delims=" %%L in ("%USERPROFILE%\.conda\environments.txt") do (
+        if /i "%%~nxL"=="glyphviz" if exist "%%L\python.exe" set "PYTHON=%%L\python.exe"
+    )
+)
+if not defined PYTHON (
+    echo ERROR: could not find the 'glyphviz' conda env's python.exe.
+    echo Looked under %%USERPROFILE%% in .conda\envs, anaconda3\envs,
+    echo miniconda3\envs, and every env listed in .conda\environments.txt.
+    exit /b 1
+)
+echo Using: %PYTHON%
+
+echo.
+echo [1/2] Installing / updating PyInstaller...
+"%PYTHON%" -m pip install --quiet --upgrade pyinstaller
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: pip install failed.
+    exit /b 1
+)
+
+echo.
+echo [2/2] Building...
+"%PYTHON%" -m PyInstaller GlyphViz.spec --clean -y
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo BUILD FAILED.  Check the output above.
+    exit /b 1
+)
+
+echo.
+echo ============================================================
+echo  Done.
+echo  Executable : dist\GlyphViz\GlyphViz.exe
+echo  Distribute : copy the entire dist\GlyphViz\ folder
+echo ============================================================
+endlocal

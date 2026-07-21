@@ -3,16 +3,20 @@
 # PyInstaller spec for GlyphViz (Windows, one-folder output).
 #
 # Build:
-#   build.bat   (or directly: C:\Users\jsale\.conda\envs\glyphviz\python.exe -m PyInstaller GlyphViz.spec --clean -y)
+#   build.bat   (auto-locates the glyphviz conda env; or directly:
+#   <glyphviz-env>\python.exe -m PyInstaller GlyphViz.spec --clean -y)
 #
 # Output: dist\GlyphViz\GlyphViz.exe
 #
 # To add a Windows icon, set:
 #   exe = EXE(..., icon='path\\to\\glyphviz.ico', ...)
 
-import shutil, os as _os
+import shutil, sys, os as _os
 
-_CONDA = r'C:\Users\jsale\.conda\envs\glyphviz\Library\bin'
+# Library\bin of whichever conda env is running this build — sys.prefix is
+# that env's root. Conda's install location varies across Jeff's machines
+# (anaconda3\envs vs .conda\envs), so never hardcode it here.
+_CONDA = _os.path.join(sys.prefix, 'Library', 'bin')
 
 # pyexpat.pyd links against 'libexpat.dll' but conda ships 'expat.dll'.
 # Create an alias so PyInstaller can bundle it under the expected name.
