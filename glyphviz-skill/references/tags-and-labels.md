@@ -75,9 +75,11 @@ NA-token parsing can eat them.
   sharing 200 distinct labels paint far cheaper than 10,000 unique
   strings. Prefer short, shared labels where the data allows.
 
-## Links and the U key
+## Links: the U key and Alt+click
 
-With exactly **one** node selected, `U` opens its `link`:
+With exactly **one** node selected, `U` opens its `link`; **Alt+click**
+on a node in the viewport does the same in one gesture (it selects the
+node, then opens its link). Either way:
 
 - `http://`, `https://`, `ftp://` → default browser; `www.` gets
   `https://` prefixed automatically.

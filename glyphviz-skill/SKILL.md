@@ -138,6 +138,17 @@ worked examples: `references/topologies.md`.
   See `references/textures-and-media.md` before authoring any textured
   scene.
 
+## Live-updating scenes
+
+A generator may loop (fetch → rebuild → rewrite, e.g. a `--watch N`
+flag) and pair with the app's **File > Watch and Reload** (Ctrl+R),
+which polls the open node CSV's mtime and hot-reloads on change,
+preserving the user's camera, selection, and Channels playback. Rules
+for the generator side: write every file **atomically** (temp file +
+`os.replace`), and write companion tag/channel files *first* and the
+node CSV *last*, so a triggered reload never sees a torn or mismatched
+scene. Worked exemplar: `examples/RSS_News/`.
+
 ## References
 
 - `references/node-csv-format.md` — the complete, verified column spec

@@ -1,0 +1,21 @@
+source,country,city,lat,lon,lang,feed_url,homepage
+BBC News,United Kingdom,London,51.52,-0.12,en,https://feeds.bbci.co.uk/news/world/rss.xml,https://www.bbc.com/news
+The Guardian,United Kingdom,London,51.53,-0.24,en,https://www.theguardian.com/world/rss,https://www.theguardian.com
+NYT World,United States,New York,40.76,-73.98,en,https://rss.nytimes.com/services/xml/rss/nyt/World.xml,https://www.nytimes.com
+NPR News,United States,Washington DC,38.90,-77.03,en,https://feeds.npr.org/1001/rss.xml,https://www.npr.org
+CBC News,Canada,Toronto,43.64,-79.39,en,https://www.cbc.ca/webfeed/rss/rss-topstories,https://www.cbc.ca/news
+La Jornada,Mexico,Mexico City,19.43,-99.13,es,https://www.jornada.com.mx/rss/edicion.xml?v=1,https://www.jornada.com.mx
+Folha de S.Paulo,Brazil,Sao Paulo,-23.55,-46.63,pt,https://feeds.folha.uol.com.br/emcimadahora/rss091.xml,https://www.folha.uol.com.br
+Le Monde,France,Paris,48.86,2.34,fr,https://www.lemonde.fr/rss/une.xml,https://www.lemonde.fr
+Der Spiegel,Germany,Hamburg,53.55,10.00,de,https://www.spiegel.de/schlagzeilen/index.rss,https://www.spiegel.de
+El Pais,Spain,Madrid,40.42,-3.70,es,https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada,https://elpais.com
+ANSA,Italy,Rome,41.90,12.50,it,https://www.ansa.it/sito/ansait_rss.xml,https://www.ansa.it
+TASS,Russia,Moscow,55.76,37.62,ru,https://tass.ru/rss/v2.xml,https://tass.ru
+Al Jazeera,Qatar,Doha,25.29,51.53,en,https://www.aljazeera.com/xml/rss/all.xml,https://www.aljazeera.com
+Punch Nigeria,Nigeria,Lagos,6.52,3.38,en,https://punchng.com/feed/,https://punchng.com
+Daily Maverick,South Africa,Johannesburg,-26.20,28.05,en,https://www.dailymaverick.co.za/dmrss/,https://www.dailymaverick.co.za
+Times of India,India,New Delhi,28.61,77.21,en,https://timesofindia.indiatimes.com/rssfeedstopstories.cms,https://timesofindia.indiatimes.com
+SCMP,Hong Kong,Hong Kong,22.28,114.16,en,https://www.scmp.com/rss/91/feed,https://www.scmp.com
+NHK News,Japan,Tokyo,35.68,139.77,ja,https://www3.nhk.or.jp/rss/news/cat0.xml,https://www3.nhk.or.jp/news
+Yonhap,South Korea,Seoul,37.57,126.98,ko,https://www.yna.co.kr/rss/news.xml,https://www.yna.co.kr
+ABC News AU,Australia,Sydney,-33.87,151.21,en,https://www.abc.net.au/news/feed/51120/rss.xml,https://www.abc.net.au/news
