@@ -110,6 +110,14 @@ class MainWindow(QMainWindow):
         self._ch_audio = AudioPlayer()
         self._ch_audio_loaded = False
 
+        # Watch and Reload: poll the open node CSV's mtime once a second and
+        # hot-reload the scene when a generator rewrites it (e.g. a --watch
+        # data script), preserving camera, selection, and playback state.
+        self._watch_timer = QTimer(self)
+        self._watch_timer.setInterval(1000)
+        self._watch_timer.timeout.connect(self._watch_tick)
+        self._watch_mtime: float | None = None
+
         # Gizmo manipulation state (Move/Rotate/Size mode selector)
         self._gizmo_mode: str | None = None
         self._mode_buttons: dict[str, QPushButton] = {}
@@ -155,6 +163,7 @@ class MainWindow(QMainWindow):
         self._viewport = Viewport(self)
         self._viewport.nodeClicked.connect(self._on_viewport_pick)
         self._viewport.nodeClickedAdditive.connect(self._on_viewport_pick_additive)
+        self._viewport.nodeLinkActivated.connect(self._on_node_link_activated)
         self._viewport.nodesSelected.connect(self._on_viewport_nodes_selected)
         self._viewport.nodesSelectedAdditive.connect(self._on_viewport_nodes_selected_additive)
         self._viewport.hideSelectedRequested.connect(self._hide_selected)
@@ -194,6 +203,18 @@ class MainWindow(QMainWindow):
         open_act = file_menu.addAction("&Open Node CSV…")
         open_act.setShortcut("Ctrl+O")
         open_act.triggered.connect(self._open_csv)
+
+        self._watch_act = file_menu.addAction("Watch and &Reload")
+        self._watch_act.setCheckable(True)
+        self._watch_act.setChecked(False)
+        self._watch_act.setShortcut("Ctrl+R")
+        self._watch_act.setToolTip(
+            "Watch the open node CSV on disk and hot-reload the scene\n"
+            "whenever another program rewrites it (e.g. a data generator\n"
+            "running with --watch). Camera, selection, and Channels playback\n"
+            "survive each reload.  [Ctrl+R]"
+        )
+        self._watch_act.triggered.connect(self._toggle_watch_reload)
 
         import_pdb_act = file_menu.addAction("Import &PDB File…")
         import_pdb_act.setToolTip(
@@ -1320,6 +1341,7 @@ class MainWindow(QMainWindow):
             self._current_path = path
             self._current_tag_path = None
             self._path_is_stamped = False
+            self._watch_mtime = self._file_mtime(path)
             self._save_act.setEnabled(True)
             self._viewport.set_nodes(self.nodes)
             self._table.set_nodes(self.nodes)
@@ -1338,6 +1360,80 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(msg)
         except Exception as exc:
             self.statusBar().showMessage(f"Error: {exc}")
+
+    # --- Watch and Reload ---
+
+    @staticmethod
+    def _file_mtime(path: str) -> float | None:
+        try:
+            return Path(path).stat().st_mtime
+        except OSError:
+            return None
+
+    def _toggle_watch_reload(self, checked: bool):
+        if checked and self._current_path is None:
+            self._watch_act.setChecked(False)
+            self.statusBar().showMessage(
+                "Watch and Reload: open a node CSV first.")
+            return
+        if checked:
+            self._watch_mtime = self._file_mtime(self._current_path)
+            self._watch_timer.start()
+            self.statusBar().showMessage(
+                f"Watching {Path(self._current_path).name} — the scene will "
+                "reload whenever the file changes on disk.")
+        else:
+            self._watch_timer.stop()
+            self.statusBar().showMessage("Watch and Reload off.")
+
+    def _watch_tick(self):
+        if self._current_path is None:
+            return
+        m = self._file_mtime(self._current_path)
+        if m is None:
+            # File briefly missing (generator mid-replace): keep waiting.
+            return
+        if self._watch_mtime is None or m > self._watch_mtime:
+            if self._reload_current_csv():
+                self._watch_mtime = m
+
+    def _reload_current_csv(self) -> bool:
+        """Hot-reload the current node CSV (+ companion tag/channel files)
+        in place, preserving camera, selection, and Channels playback.
+        Returns False (keeping the old scene) if the file can't be parsed —
+        e.g. a non-atomic writer caught mid-write; the next tick retries."""
+        path = self._current_path
+        try:
+            nodes = load_node_csv(path)
+        except Exception as exc:
+            self.statusBar().showMessage(
+                f"Watch: reload failed, keeping current scene ({exc})")
+            return False
+        cam = self._viewport.camera_state()
+        sel_ids = {n.id for n in self._selected_nodes}
+        was_playing = self._ch_playing
+        prev_frame = self._ch_frame
+        self._ch_stop()
+        self.nodes = nodes
+        self._viewport.set_nodes(self.nodes)
+        self._table.set_nodes(self.nodes)
+        self._update_stats(Path(path).name)
+        self._update_sel_values()
+        self._refresh_scene_settings()
+        ch_msg = self._ch_load_from_csv(path)
+        self._viewport.restore_camera_state(cam)
+        keep = sel_ids & {n.id for n in self.nodes}
+        if keep:
+            self._table.select_by_ids(keep)
+        if was_playing and self._ch_engine is not None:
+            self._ch_frame = min(prev_frame, self._ch_engine.frame_count - 1)
+            self._ch_apply_and_show_frame(self._ch_frame)
+            self._ch_toggle_play()
+        msg = f"Reloaded {len(self.nodes)} nodes from {Path(path).name}"
+        if ch_msg:
+            msg += f" | {ch_msg}"
+        self.statusBar().showMessage(msg + "  [watching]")
+        return True
 
     def _import_pdb_file(self):
         """File > Import PDB File…: parse a .pdb structure into atom/bond
@@ -1701,7 +1797,16 @@ class MainWindow(QMainWindow):
         """U key: open the selected node's link in the default browser/app."""
         if len(self._selected_nodes) != 1:
             return
-        link = self._selected_nodes[0].link.strip()
+        self._open_link_value(self._selected_nodes[0].link.strip())
+
+    def _on_node_link_activated(self, node_id: int):
+        """Alt+click in the viewport: open the clicked node's link (the
+        mouse counterpart of the U key — see Viewport.nodeLinkActivated)."""
+        node = self._node_by_id(node_id)
+        if node is not None:
+            self._open_link_value(node.link.strip())
+
+    def _open_link_value(self, link: str):
         if not link:
             self.statusBar().showMessage("Node has no link.")
             return

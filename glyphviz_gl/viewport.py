@@ -106,6 +106,10 @@ class Viewport(QOpenGLWidget):
     nodeClicked = Signal(int)
     # Ctrl+left-click on a node: toggle that node in/out of selection
     nodeClickedAdditive = Signal(int)
+    # Alt+left-click on a node: select it AND open its link (tag URL /
+    # inline link column) in the default browser or OS handler — the
+    # pointer-device counterpart of the U key.
+    nodeLinkActivated = Signal(int)
     # Rubber-band release OR click-on-empty-space: replace selection with this set
     # (empty set = clear all).  Also used by Select-By to push a set of IDs.
     nodesSelected = Signal(object)   # carries set[int]
@@ -544,6 +548,36 @@ class Viewport(QOpenGLWidget):
 
     def cycle_camera(self, step: int = 1):
         self.select_camera(self._active_camera + step)
+
+    def camera_state(self) -> dict:
+        """Snapshot the live camera, the saved camera list, and the active
+        index — so a scene reload (File > Watch and Reload) can put the
+        viewpoint back exactly where the user left it, undoing set_nodes()'s
+        auto-framing."""
+        self._sync_active_camera()
+        return {
+            'azimuth': self._cam_azimuth,
+            'elevation': self._cam_elevation,
+            'distance': self._cam_distance,
+            'target': list(self._cam_target),
+            'cameras': [_CameraView(c.name, c.azimuth, c.elevation,
+                                    c.distance, list(c.target), c.locked)
+                        for c in self._cameras],
+            'active': self._active_camera,
+        }
+
+    def restore_camera_state(self, state: dict):
+        """Reapply a camera_state() snapshot (after set_nodes)."""
+        self._cameras = [_CameraView(c.name, c.azimuth, c.elevation,
+                                     c.distance, list(c.target), c.locked)
+                         for c in state['cameras']]
+        self._active_camera = min(state['active'], len(self._cameras) - 1)
+        self._cam_azimuth = state['azimuth']
+        self._cam_elevation = state['elevation']
+        self._cam_distance = state['distance']
+        self._cam_target = list(state['target'])
+        self.cameraChanged.emit(self._active_camera)
+        self.update()
 
     def export_png(self, path: str, width: int, height: int) -> None:
         """Render the current scene at an explicit pixel resolution and save
@@ -2331,13 +2365,19 @@ class Viewport(QOpenGLWidget):
             print(f"[pick] ({event.pos().x()},{event.pos().y()}) -> {label}")
 
             ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
+            alt = bool(event.modifiers() & Qt.KeyboardModifier.AltModifier)
             if node is not None:
                 if ctrl:
                     self.nodeClickedAdditive.emit(node.id)
                 else:
                     self.nodeClicked.emit(node.id)
-            elif not ctrl:
-                # Click on empty space (no Ctrl) → clear the selection
+                    if alt:
+                        # Alt+click: also open the node's link (U-key
+                        # equivalent for the mouse) — after selection, so
+                        # the opened node is highlighted and inspected.
+                        self.nodeLinkActivated.emit(node.id)
+            elif not ctrl and not alt:
+                # Click on empty space (no Ctrl/Alt) → clear the selection
                 self.nodesSelected.emit(set())
 
         # Fall back to whichever button (if any) is still held rather than
