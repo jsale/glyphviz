@@ -14,13 +14,21 @@ per-language term lists, a war spike is directly comparable between BBC
 (English), TASS (Russian), and NHK (Japanese) — you can spot patterns in
 languages you don't read.
 
+Every concept cube is itself a small Sphere-topology parent: it's ringed
+by one smaller same-colored cube per **actual article** that mentions the
+concept, each carrying that specific story's real URL — so "war 3" isn't
+just a count, it's three clickable articles orbiting the cube.
+
+![tower detail](screenshot_closeup.png)
+
 ## What you're looking at
 
 | Element | Meaning |
 |---|---|
 | Globe | World Grid (type 6) in globe form, Blue Marble texture |
 | White pads on the surface | News outlets, placed at their home city (`link` = homepage) |
-| Cube towers | One cube per concept, same altitude slot on every tower; size = articles mentioning it; color = concept (see the legend column west of the globe) |
+| Cube towers | One cube per concept, same altitude slot on every tower; size = articles mentioning it; color = concept (see the legend column west of the globe); `text` names the outlet AND the concept (e.g. "BBC News: war 3") |
+| Small cubes ringing each tower cube | One per actual article mentioning that concept — same color/geometry as the cube, `link` = that article's URL, `text` = its headline |
 | Gaps in a tower | The outlet never mentioned that concept |
 | Amber octahedron at the top | The outlet's latest headline (`text` label; `link` = the article) |
 | Amber bar south of the globe | UTC timeline for the replay window; the spinning octa is the playback cursor |
@@ -29,13 +37,15 @@ languages you don't read.
 
 1. **File > Open** `rss_news_gv_node.csv` (the `media/` globe texture and
    the `ch-map`/`ch-tracks` channel files load automatically).
-2. **Space** — play the time replay: every cube dims, then flashes in the
-   3-hour buckets where matching articles were published while the cursor
-   sweeps the timeline. **Stop** (Shift+Space) restores the static totals.
-3. **T** — toggle text labels (outlet names, concept counts, headlines).
-4. **Alt+click** a headline octahedron (or any outlet pad) — the article
-   (or homepage) opens in your browser. Same for selecting it and
-   pressing **U**.
+2. **Space** — play the time replay: every cube (and its article children,
+   which share its channel) dims, then flashes in the 3-hour buckets
+   where matching articles were published while the cursor sweeps the
+   timeline. **Stop** (Shift+Space) restores the static totals.
+3. **T** — toggle text labels (outlet names, concept counts, headlines,
+   article titles — this gets busy with labels on; try it selectively).
+4. **Alt+click** any article cube, headline octahedron, or outlet pad —
+   the article (or homepage) opens in your browser. Same for selecting
+   it and pressing **U**.
 5. **G** — select the globe; the World Grid panel appears.
 
 ## Rebuilding / going live
@@ -72,6 +82,12 @@ per concept no matter how often a term repeats). Alphabetic-script terms
 match at word starts ("election" also matches "elections", "вакцин"
 matches "вакцина"); terms of ≤3 letters require a full word; CJK terms
 match as substrings.
+
+Article children are spaced evenly by longitude (`translate_x`) around
+their cube at a fixed altitude (`translate_z` ≈ 1) and scaled to roughly
+half the cube's own size (floored so they never drop below the renderer's
+0.2 minimum) — a concept with many matching articles gets a denser ring,
+not a bigger single glyph.
 
 ## Requirements
 

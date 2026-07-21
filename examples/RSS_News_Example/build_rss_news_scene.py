@@ -20,7 +20,17 @@ Scene structure:
     a glance). Cube size encodes how many of the outlet's articles
     mention the concept; cube color identifies the concept (legend
     column floats west of the globe). Concepts an outlet never mentioned
-    leave a visible gap in its tower.
+    leave a visible gap in its tower. Each cube's `text` names both the
+    outlet and the concept (e.g. "BBC News: war 3"), so selecting it
+    tells you everything without also selecting the source pad below.
+  * Each concept cube is itself a Sphere-topology PARENT: one small child
+    cube per ARTICLE that actually mentions the concept, same color and
+    geometry as the cube, `link` = that article's real URL (`text` = its
+    headline). Children sit at a fixed altitude (translate_z ~= 1) above
+    the cube's surface and are spaced evenly by longitude (translate_x)
+    around it, so a concept mentioned by 3 articles shows 3 small cubes
+    ringing its tower cube — Alt+click any one to read that specific
+    story, not just the outlet's single latest headline.
   * At each tower's top, a spinning amber octahedron carrying the
     outlet's LATEST HEADLINE as its text label and the article URL as
     its `link` — select it and press U, or Alt+click it, to read the
@@ -97,6 +107,12 @@ HEADLINE_GAP_Z = 4.5            # headline octa floats this far above the top
 CUBE_MIN, CUBE_MAX = 0.35, 1.6  # concept cube scale range (>= 0.2 floor)
 AMBER = (255, 179, 64)          # headline / timeline accent color
 BG_COLOR = (8, 10, 24, 255)     # World-row background (deep space blue)
+
+# Article children (one per matching article, ringing their concept cube) --
+ARTICLE_CHILD_SCALE_FRAC = 0.5   # child scale = parent scale * this ...
+ARTICLE_CHILD_SCALE_MIN = 0.22   # ... floored here (still < CUBE_MIN, >= 0.2)
+ARTICLE_ALT_Z = 1.0              # KML altitude above the cube's Sphere-topo surface
+ARTICLE_TITLE_MAX_CHARS = 46
 
 # Channels time replay -------------------------------------------------------
 STATIC_ALPHA = 235              # concept cube alpha with playback off
@@ -355,6 +371,7 @@ DEFAULTS = dict(child_id=0, translate_x=0.0, translate_y=0.0, translate_z=0.0,
                 text="", link="")
 
 GEO_CUBE, GEO_SPHERE, GEO_OCTA, GEO_CYLINDER, GEO_LINE_PRISM = 1, 3, 11, 19, 27
+TOPO_SPHERE = 2   # KML-style longitude/latitude/altitude children
 
 
 @dataclass
@@ -440,8 +457,11 @@ class SceneBuilder:
 
     def add_source(self, src, totals: dict[str, int], max_total: int,
                    headline: tuple[str, str] | None,
-                   channel_of: dict[tuple[str, str], int]) -> None:
-        """One outlet: surface pad + concept tower + headline octa."""
+                   channel_of: dict[tuple[str, str], int],
+                   articles: dict[tuple[str, str], list[tuple[str, str]]]
+                   ) -> None:
+        """One outlet: surface pad + concept tower (each cube ringed by one
+        article child per matching story) + headline octa."""
         lon, lat = float(src.lon), float(src.lat)
         n_articles = sum(totals.values())
         self.add(type=5, parent_id=self.globe_id, branch_level=1,
@@ -457,14 +477,19 @@ class SceneBuilder:
             r, g, b = CONCEPT_COLOR[concept]
             s = CUBE_MIN + (CUBE_MAX - CUBE_MIN) * \
                 (count / max_total) ** 0.5
-            self.add(type=5, parent_id=self.globe_id, branch_level=1,
-                     translate_x=lon, translate_y=lat,
-                     translate_z=round(TOWER_BASE_Z + i * TOWER_STEP_Z, 3),
-                     scale_x=round(s, 3), scale_y=round(s, 3),
-                     scale_z=round(s, 3), geometry=GEO_CUBE,
-                     color_r=r, color_g=g, color_b=b, color_a=STATIC_ALPHA,
-                     ch_input_id=channel_of.get((str(src.source), concept), 0),
-                     text=f"{concept} {count}")
+            s = round(s, 3)
+            ch = channel_of.get((str(src.source), concept), 0)
+            cube_id = self.add(
+                type=5, parent_id=self.globe_id, branch_level=1,
+                translate_x=lon, translate_y=lat,
+                translate_z=round(TOWER_BASE_Z + i * TOWER_STEP_Z, 3),
+                scale_x=s, scale_y=s, scale_z=s, geometry=GEO_CUBE,
+                topo=TOPO_SPHERE, color_r=r, color_g=g, color_b=b,
+                color_a=STATIC_ALPHA, ch_input_id=ch,
+                text=f"{src.source}: {concept} {count}")
+            self._add_article_children(
+                cube_id, s, r, g, b, ch,
+                articles.get((str(src.source), concept), []))
         if headline is not None:
             title, url = headline
             top_z = TOWER_BASE_Z + len(CONCEPT_ORDER) * TOWER_STEP_Z \
@@ -476,6 +501,30 @@ class SceneBuilder:
                      geometry=GEO_OCTA, rotate_rate_z=0.8,
                      color_r=AMBER[0], color_g=AMBER[1], color_b=AMBER[2],
                      color_a=255, text=title, link=url)
+
+    def _add_article_children(self, cube_id: int, cube_scale: float,
+                              r: int, g: int, b: int, ch: int,
+                              matches: list[tuple[str, str]]) -> None:
+        """One child per article that actually matched this concept cube's
+        (source, concept) pair, evenly spaced by longitude (translate_x)
+        around the cube's Sphere-topology surface at a fixed altitude
+        (translate_z ~= 1) -- same color/geometry as the cube, `link` =
+        the article's real URL."""
+        n = len(matches)
+        child_scale = round(max(ARTICLE_CHILD_SCALE_MIN,
+                                cube_scale * ARTICLE_CHILD_SCALE_FRAC), 3)
+        for i, (title, url) in enumerate(matches):
+            lon = round(i * (360.0 / n), 3)
+            text = title
+            if len(text) > ARTICLE_TITLE_MAX_CHARS:
+                text = text[:ARTICLE_TITLE_MAX_CHARS - 1] + "…"
+            self.add(type=5, parent_id=cube_id, branch_level=2,
+                     translate_x=lon, translate_y=0.0,
+                     translate_z=ARTICLE_ALT_Z,
+                     scale_x=child_scale, scale_y=child_scale,
+                     scale_z=child_scale, geometry=GEO_CUBE,
+                     color_r=r, color_g=g, color_b=b, color_a=STATIC_ALPHA,
+                     ch_input_id=ch, text=text, link=url)
 
     def to_dataframe(self) -> pd.DataFrame:
         return pd.DataFrame(self.rows, columns=COLUMNS)
@@ -642,14 +691,19 @@ def build_once(args, feeds: pd.DataFrame, matchers) -> None:
     tagged = int((items["concepts"] != "").sum())
     print(f"  {tagged} items mention at least one tracked concept")
 
-    # Static totals per (source, concept) over the whole working set.
+    # Static totals per (source, concept) over the whole working set, plus
+    # the actual matching articles (title, url) behind each count -- these
+    # become the article children ringing each concept cube.
     totals: dict[str, dict[str, int]] = {}
+    articles: dict[tuple[str, str], list[tuple[str, str]]] = {}
     for it in items.itertuples(index=False):
         for concept in str(it.concepts).split(";"):
             if concept:
                 totals.setdefault(str(it.source), {})
                 totals[str(it.source)][concept] = \
                     totals[str(it.source)].get(concept, 0) + 1
+                articles.setdefault((str(it.source), concept), []).append(
+                    (str(it.title), str(it.link)))
     max_total = max((c for per in totals.values() for c in per.values()),
                     default=1)
 
@@ -684,12 +738,16 @@ def build_once(args, feeds: pd.DataFrame, matchers) -> None:
         per = totals.get(str(src.source), {})
         hl = headlines.get(str(src.source))
         sb.add_source(src, per, max_total,
-                      (hl[0], hl[1]) if hl else None, channel_of)
+                      (hl[0], hl[1]) if hl else None, channel_of, articles)
 
     df = sb.to_dataframe()
     problems = validate(df) + validate_channels(df, ch_map_df, ch_tracks_df)
     if problems:
         raise RuntimeError("; ".join(problems))
+
+    n_article_children = sum(len(v) for v in articles.values())
+    print(f"  {len(channel_of)} concept cubes, "
+          f"{n_article_children} article children")
 
     # Channels first, node CSV last: the app watches the node file, so by
     # the time a reload triggers, the companion files are already in place.

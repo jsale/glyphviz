@@ -152,4 +152,16 @@ id,channel_id,track_id,attribute,track_table_id,ch_map_table_id,record_id
 151,151,151,color_a,0,0,0
 152,152,152,color_a,0,0,0
 153,153,153,color_a,0,0,0
-154,900,900,translate_x,0,0,0
+154,154,154,color_a,0,0,0
+155,155,155,color_a,0,0,0
+156,156,156,color_a,0,0,0
+157,157,157,color_a,0,0,0
+158,158,158,color_a,0,0,0
+159,159,159,color_a,0,0,0
+160,160,160,color_a,0,0,0
+161,161,161,color_a,0,0,0
+162,162,162,color_a,0,0,0
+163,163,163,color_a,0,0,0
+164,164,164,color_a,0,0,0
+165,165,165,color_a,0,0,0
+166,900,900,translate_x,0,0,0
