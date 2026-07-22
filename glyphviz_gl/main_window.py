@@ -84,6 +84,10 @@ class MainWindow(QMainWindow):
 
         # Multi-select state
         self._selected_nodes: list[Node] = []
+        # The single node whose details are currently shown in the status bar
+        # (None when 0 or 2+ nodes are selected) — kept so resizeEvent can
+        # re-elide the tag text without re-running the whole selection handler.
+        self._status_current_node: Node | None = None
         self._audio_follow_selection = False
         # Anchor values for delta-based position/rotation editing across a selection.
         # When the inspector is refreshed for a selection, these are set to the
@@ -850,6 +854,23 @@ class MainWindow(QMainWindow):
         sel_layout.addRow("Value:", self._sel_value)
         sel_layout.addRow(self._sel_btn)
         sel_layout.addRow(self._sel_cumulative)
+
+        self._sel_tag_keyword = QLineEdit()
+        self._sel_tag_keyword.setPlaceholderText("keyword…")
+        self._sel_tag_keyword.setToolTip(
+            "Case-insensitive substring match against each node's tag text."
+        )
+        self._sel_tag_keyword.returnPressed.connect(self._on_select_by_tag)
+
+        self._sel_tag_btn = QPushButton("Select Matching Tags")
+        self._sel_tag_btn.setToolTip(
+            "Select every node whose tag text contains the keyword above.\n"
+            "Uses the same 'Add to current selection' checkbox as Select All Matching."
+        )
+        self._sel_tag_btn.clicked.connect(self._on_select_by_tag)
+
+        sel_layout.addRow("Tag contains:", self._sel_tag_keyword)
+        sel_layout.addRow(self._sel_tag_btn)
 
         # --- Visibility group ---
         # All four operate on the per-node hide flag (the table's Hide column,
@@ -1909,6 +1930,25 @@ class MainWindow(QMainWindow):
         else:
             self._table.select_by_ids(ids)
 
+    def _on_select_by_tag(self):
+        """Select every node whose tag text contains the keyword (case-insensitive
+        substring match). Deliberately reuses the plain highlight-in-table +
+        yellow-bounding-box selection mechanism rather than a separate results
+        list, matching every other Select By criterion (Geometry, Topology, ...)."""
+        keyword = self._sel_tag_keyword.text().strip()
+        if not keyword:
+            return
+        keyword_lower = keyword.lower()
+        ids = {n.id for n in self._selectable_nodes() if keyword_lower in n.text.lower()}
+        if self._sel_cumulative.isChecked():
+            self._table.select_add_ids(ids)
+        else:
+            self._table.select_by_ids(ids)
+        if ids:
+            self.statusBar().showMessage(f'{len(ids)} node(s) tagged with "{keyword}".')
+        else:
+            self.statusBar().showMessage(f'No nodes tagged with "{keyword}".')
+
     def _on_select_all(self):
         self._table.select_by_ids({n.id for n in self._selectable_nodes()})
 
@@ -2211,18 +2251,44 @@ class MainWindow(QMainWindow):
         n = len(self._selected_nodes)
         if n == 0:
             self._refresh_inspector(None)
+            self._status_current_node = None
             self.statusBar().showMessage("No selection.")
         elif n == 1:
             node = self._selected_nodes[0]
             self._refresh_inspector(node)
-            self.statusBar().showMessage(
-                f"Node {node.id}  type={node.type}  "
-                f"pos=({node.translate_x:.2f}, {node.translate_y:.2f}, {node.translate_z:.2f})  "
-                f"geo={node.geometry}  topo={node.topo}"
-            )
+            self._status_current_node = node
+            self._update_status_message()
         else:
             self._refresh_inspector_multi(self._selected_nodes)
+            self._status_current_node = None
             self.statusBar().showMessage(f"{n} nodes selected.")
+
+    def _update_status_message(self):
+        """(Re-)render the status bar text for the single currently-selected
+        node, appending its tag text (collapsed to one line) and eliding the
+        whole message with a trailing ellipsis if it doesn't fit — tag text
+        is intentionally NOT drawn in the 3D view unless the user opts in
+        (Show Tag Labels), but Jeff's users still want a quick, low-commitment
+        way to read it, without occupying the Properties panel for it."""
+        node = self._status_current_node
+        if node is None:
+            return
+        base = (
+            f"Node {node.id}  type={node.type}  "
+            f"pos=({node.translate_x:.2f}, {node.translate_y:.2f}, {node.translate_z:.2f})  "
+            f"geo={node.geometry}  topo={node.topo}"
+        )
+        tag_text = " ".join(node.text.split()) if node.text else ""
+        full = f'{base}   Tag: "{tag_text}"' if tag_text else base
+        sb = self.statusBar()
+        avail = sb.width() - self._fps_label.width() - 24
+        elided = sb.fontMetrics().elidedText(full, Qt.TextElideMode.ElideRight, max(avail, 50))
+        sb.showMessage(elided)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._status_current_node is not None:
+            self._update_status_message()
 
     def _refresh_inspector(self, node: Node | None):
         """Single-node or empty inspector state."""
