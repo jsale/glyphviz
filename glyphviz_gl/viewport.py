@@ -2467,17 +2467,23 @@ class Viewport(QOpenGLWidget):
     def _orbit_camera(self, dx: float, dy: float):
         if self.active_camera_locked():
             return   # fixed reference view: no orbit/pan, zoom only
-        self._cam_azimuth += dx * 0.4
-        self._cam_elevation = max(-89.0, min(89.0, self._cam_elevation - dy * 0.4))
+        # Sign is inverted from a plain camera-orbit ("fly around the
+        # object") so the drag instead reads as grabbing the object's
+        # near surface: drag right and the left side rotates toward the
+        # viewer; drag down and the top rotates toward the viewer. Jeff
+        # found the un-inverted mapping backwards on both axes.
+        self._cam_azimuth -= dx * 0.4
+        self._cam_elevation = max(-89.0, min(89.0, self._cam_elevation + dy * 0.4))
 
     def _orbit_zoom_camera(self, dx: float, dy: float):
         """Both mouse buttons held together: horizontal drag orbits azimuth
         (around the selected object, see _maybe_snap_orbit_target), vertical
         drag zooms — Dr. Dave Warner's requested ANTz-style combined
         orbit+zoom gesture. Locked (axis) cameras still zoom, but ignore the
-        orbit component to stay fixed reference views."""
+        orbit component to stay fixed reference views. Azimuth sign matches
+        _orbit_camera's inverted (grab-the-object) convention."""
         if not self.active_camera_locked():
-            self._cam_azimuth += dx * 0.4
+            self._cam_azimuth -= dx * 0.4
         factor = 1.0 + dy * 0.005
         self._cam_distance = max(1.0, self._cam_distance * factor)
 
