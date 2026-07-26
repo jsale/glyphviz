@@ -63,6 +63,14 @@ RENDER_MODE_PREMULTIPLIED = 6  # GL_ONE, GL_ONE_MINUS_SRC_ALPHA
 # matches the viewport's original hardcoded glClearColor(0.08, 0.08, 0.12, 1).
 WORLD_DEFAULT_BG_RGB = (20, 20, 31)
 
+# Color of the procedural reference grid the viewport draws under a scene that
+# has no real World Grid node (Viewport._draw_grid, toggled by the Show Grid
+# checkbox). Read from the World node's ref_grid_color_r/g/b — a type=6 World
+# Grid paints its own lattice from its own color_r/g/b instead, so the two are
+# separate settings. The value matches the gray the backdrop was hardcoded to
+# before it became settable, so old files look unchanged.
+REF_GRID_DEFAULT_RGB = (56, 56, 71)
+
 # Tag-text styling, read from the World node (type=0) only — see
 # Scene.world_node(). UNIFORM paints every label the World node's
 # tag_color_r/g/b; NODE paints each label its own glyph's color_r/g/b, so a
@@ -161,7 +169,9 @@ class Node:
     show_text: int = 0
     # World-node-only scene settings (see Scene.world_node()): background
     # color reuses color_r/g/b/a above; fog fades to that same color; the
-    # tag_* fields style every tag label in the scene (see TAG_COLOR_MODE_*).
+    # tag_* fields style every tag label in the scene (see TAG_COLOR_MODE_*);
+    # ref_grid_color_* paints the procedural backdrop grid (see
+    # REF_GRID_DEFAULT_RGB — not the World Grid node type, which colors itself).
     render_mode: int = RENDER_MODE_NORMAL
     fog_enabled: int = 0
     fog_start: float = 0.0
@@ -170,6 +180,9 @@ class Node:
     tag_color_r: int = TAG_DEFAULT_TEXT_RGB[0]
     tag_color_g: int = TAG_DEFAULT_TEXT_RGB[1]
     tag_color_b: int = TAG_DEFAULT_TEXT_RGB[2]
+    ref_grid_color_r: int = REF_GRID_DEFAULT_RGB[0]
+    ref_grid_color_g: int = REF_GRID_DEFAULT_RGB[1]
+    ref_grid_color_b: int = REF_GRID_DEFAULT_RGB[2]
     # Preserves untracked CSV columns (e.g. channel IDs, quaternion, segments)
     # so that save_node_csv can round-trip files without data loss.
     extras: dict = field(default_factory=dict)

@@ -7,7 +7,7 @@ import pandas as pd
 
 from .node import (
     Node, ROTATION_MODE_HEADING_TILT_ROLL, RENDER_MODE_NORMAL,
-    TAG_COLOR_MODE_UNIFORM, TAG_DEFAULT_TEXT_RGB,
+    TAG_COLOR_MODE_UNIFORM, TAG_DEFAULT_TEXT_RGB, REF_GRID_DEFAULT_RGB,
 )
 
 # Columns that GlyphViz reads into explicit Node fields.
@@ -22,6 +22,7 @@ _TRACKED_COLS = frozenset({
     'mesh_id', 'text', 'link', 'rotation_mode', 'show_text',
     'render_mode', 'fog_enabled', 'fog_start', 'fog_end',
     'tag_color_mode', 'tag_color_r', 'tag_color_g', 'tag_color_b',
+    'ref_grid_color_r', 'ref_grid_color_g', 'ref_grid_color_b',
     'translate_rate_x', 'translate_rate_y', 'translate_rate_z',
     'rotate_rate_x', 'rotate_rate_y', 'rotate_rate_z',
     'scale_rate_x', 'scale_rate_y', 'scale_rate_z',
@@ -325,6 +326,9 @@ def load_node_csv(path: str) -> list[Node]:
     tag_color_rs    = _int_col(df, 'tag_color_r', n, TAG_DEFAULT_TEXT_RGB[0])
     tag_color_gs    = _int_col(df, 'tag_color_g', n, TAG_DEFAULT_TEXT_RGB[1])
     tag_color_bs    = _int_col(df, 'tag_color_b', n, TAG_DEFAULT_TEXT_RGB[2])
+    grid_color_rs   = _int_col(df, 'ref_grid_color_r', n, REF_GRID_DEFAULT_RGB[0])
+    grid_color_gs   = _int_col(df, 'ref_grid_color_g', n, REF_GRID_DEFAULT_RGB[1])
+    grid_color_bs   = _int_col(df, 'ref_grid_color_b', n, REF_GRID_DEFAULT_RGB[2])
     trx = _float_col(df, 'translate_rate_x', n, 0.0)
     try_ = _float_col(df, 'translate_rate_y', n, 0.0)
     trz = _float_col(df, 'translate_rate_z', n, 0.0)
@@ -371,6 +375,9 @@ def load_node_csv(path: str) -> list[Node]:
             tag_color_r=tag_color_rs[i],
             tag_color_g=tag_color_gs[i],
             tag_color_b=tag_color_bs[i],
+            ref_grid_color_r=grid_color_rs[i],
+            ref_grid_color_g=grid_color_gs[i],
+            ref_grid_color_b=grid_color_bs[i],
             translate_rate_x=trx[i], translate_rate_y=try_[i], translate_rate_z=trz[i],
             rotate_rate_x=rrx[i], rotate_rate_y=rry[i], rotate_rate_z=rrz[i],
             scale_rate_x=srx[i], scale_rate_y=sry[i], scale_rate_z=srz[i],
@@ -438,6 +445,11 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
         (n.tag_color_r, n.tag_color_g, n.tag_color_b) != TAG_DEFAULT_TEXT_RGB
         for n in nodes
     )
+    # Reference-grid color: three channels, same all-or-nothing reasoning.
+    has_ref_grid_color = any(
+        (n.ref_grid_color_r, n.ref_grid_color_g, n.ref_grid_color_b) != REF_GRID_DEFAULT_RGB
+        for n in nodes
+    )
     # show_text has no ANTz/GaiaViz column slot; omitting it means 0 (not
     # pinned) on reload, so it only needs writing when some node is pinned.
     has_show_text = any(n.show_text for n in nodes)
@@ -466,6 +478,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
         col_order.append('tag_color_mode')
     if has_tag_color:
         col_order.extend(('tag_color_r', 'tag_color_g', 'tag_color_b'))
+    if has_ref_grid_color:
+        col_order.extend(('ref_grid_color_r', 'ref_grid_color_g', 'ref_grid_color_b'))
 
     with open(path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
@@ -538,6 +552,10 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
                 row['tag_color_r'] = node.tag_color_r
                 row['tag_color_g'] = node.tag_color_g
                 row['tag_color_b'] = node.tag_color_b
+            if has_ref_grid_color:
+                row['ref_grid_color_r'] = node.ref_grid_color_r
+                row['ref_grid_color_g'] = node.ref_grid_color_g
+                row['ref_grid_color_b'] = node.ref_grid_color_b
 
             # Format each cell: strings as-is, floats with 6 dp, others as int.
             cells = []

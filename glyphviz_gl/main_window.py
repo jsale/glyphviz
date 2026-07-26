@@ -40,7 +40,7 @@ from glyphviz_core.node import (
     GRID_DEFAULT_EXTENTS, GRID_DEFAULT_SEGMENTS,
     NODE_TYPE_GRID, NODE_TYPE_LINK, NODE_TYPE_WORLD,
     RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
-    WORLD_DEFAULT_BG_RGB,
+    WORLD_DEFAULT_BG_RGB, REF_GRID_DEFAULT_RGB,
     TAG_COLOR_MODE_UNIFORM, TAG_COLOR_MODE_NODE, TAG_DEFAULT_TEXT_RGB,
 )
 from glyphviz_core.topology import (
@@ -536,6 +536,25 @@ class MainWindow(QMainWindow):
         self._cb_grid.setChecked(True)
         self._cb_grid.toggled.connect(self._set_grid)
 
+        # Reference-grid color. Sits with its checkbox, but — like the tag
+        # colors below — it persists to the World node (see
+        # _refresh_scene_settings), so it's scene data, not viewport state.
+        grid_color_row = QWidget()
+        grid_color_layout = QHBoxLayout(grid_color_row)
+        grid_color_layout.setContentsMargins(0, 0, 0, 0)
+        grid_color_layout.setSpacing(4)
+        grid_color_layout.addWidget(QLabel("Grid Color:"))
+        self._grid_color_btn = QPushButton()
+        self._grid_color_btn.setFixedHeight(24)
+        self._grid_color_btn.setToolTip(
+            "Color of the reference grid drawn under the scene.\n"
+            "A World Grid node (type 6) paints its own lattice from its own\n"
+            "node color instead — this is the backdrop grid only."
+        )
+        self._grid_color_btn.clicked.connect(self._on_ref_grid_color)
+        grid_color_layout.addWidget(self._grid_color_btn, 1)
+        self._set_color_btn(self._grid_color_btn, *REF_GRID_DEFAULT_RGB, 255)
+
         self._cb_hidden = QCheckBox("Show Hidden Nodes")
         self._cb_hidden.setChecked(False)
         self._cb_hidden.toggled.connect(self._set_hidden)
@@ -582,6 +601,7 @@ class MainWindow(QMainWindow):
 
         disp_layout.addWidget(self._cb_axes)
         disp_layout.addWidget(self._cb_grid)
+        disp_layout.addWidget(grid_color_row)
         disp_layout.addWidget(self._cb_hidden)
         disp_layout.addWidget(self._cb_tags)
         disp_layout.addWidget(self._cb_tags_selected)
@@ -2877,9 +2897,12 @@ class MainWindow(QMainWindow):
         tag_rgb = ((world.tag_color_r, world.tag_color_g, world.tag_color_b)
                    if world else TAG_DEFAULT_TEXT_RGB)
         tag_by_node = bool(world and world.tag_color_mode == TAG_COLOR_MODE_NODE)
+        grid_rgb = ((world.ref_grid_color_r, world.ref_grid_color_g, world.ref_grid_color_b)
+                    if world else REF_GRID_DEFAULT_RGB)
 
         self._set_color_btn(self._scene_bg_btn, r, g, b, 255)
         self._set_color_btn(self._tag_color_btn, *tag_rgb, 255)
+        self._set_color_btn(self._grid_color_btn, *grid_rgb, 255)
         self._cb_tag_color_node.blockSignals(True)
         self._cb_tag_color_node.setChecked(tag_by_node)
         self._cb_tag_color_node.blockSignals(False)
@@ -2928,6 +2951,20 @@ class MainWindow(QMainWindow):
         world.tag_color_g = color.green()
         world.tag_color_b = color.blue()
         self._set_color_btn(self._tag_color_btn, color.red(), color.green(), color.blue(), 255)
+        self._table.refresh_node(world.id)
+        self._viewport.update()
+
+    def _on_ref_grid_color(self):
+        world = self._ensure_world_node()
+        initial = QColor(world.ref_grid_color_r, world.ref_grid_color_g,
+                         world.ref_grid_color_b)
+        color = QColorDialog.getColor(initial, self, "Grid Color")
+        if not color.isValid():
+            return
+        world.ref_grid_color_r = color.red()
+        world.ref_grid_color_g = color.green()
+        world.ref_grid_color_b = color.blue()
+        self._set_color_btn(self._grid_color_btn, color.red(), color.green(), color.blue(), 255)
         self._table.refresh_node(world.id)
         self._viewport.update()
 

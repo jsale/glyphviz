@@ -15,7 +15,7 @@ from glyphviz_core.node import (
     Node, GRID_GLOBE_RADIUS, NON_VISUAL_TYPES, NODE_TYPE_GRID, NODE_TYPE_LINK,
     RENDER_MODE_NORMAL, RENDER_MODE_ADDITIVE, RENDER_MODE_SUBTRACTIVE,
     RENDER_MODE_DARK, RENDER_MODE_OFF, RENDER_MODE_SCREEN, RENDER_MODE_PREMULTIPLIED,
-    WORLD_DEFAULT_BG_RGB,
+    WORLD_DEFAULT_BG_RGB, REF_GRID_DEFAULT_RGB,
     TAG_COLOR_MODE_NODE, TAG_DEFAULT_TEXT_RGB, TAG_TEXT_ALPHA, TAG_SHADOW_RGBA,
 )
 from glyphviz_core.scene import Scene
@@ -60,6 +60,7 @@ _CARTESIAN_PARENT_TOPOS = frozenset({
 
 
 _DEFAULT_BG = tuple(c / 255.0 for c in WORLD_DEFAULT_BG_RGB)  # used when the scene has no World node
+_DEFAULT_REF_GRID = tuple(c / 255.0 for c in REF_GRID_DEFAULT_RGB)   # ditto, for the backdrop grid
 
 
 @dataclass
@@ -2076,8 +2077,17 @@ class Viewport(QOpenGLWidget):
         glEnable(GL_LIGHTING)
 
     def _draw_grid(self):
+        """Procedural reference grid (no World Grid node in the scene). Its
+        color comes from the World node's ref_grid_color_r/g/b, falling back
+        to the historical gray when the scene has no World row."""
         glDisable(GL_LIGHTING)
-        glColor3f(0.22, 0.22, 0.28)
+        world = self._scene.world_node()
+        if world is not None:
+            glColor3f(world.ref_grid_color_r / 255.0,
+                      world.ref_grid_color_g / 255.0,
+                      world.ref_grid_color_b / 255.0)
+        else:
+            glColor3f(*_DEFAULT_REF_GRID)
         glLineWidth(1.0)
         step = max(10.0, self._cam_distance * 0.04)
         count = 20

@@ -62,6 +62,7 @@ All 20: `id`, `type`, `parent_id`, `branch_level`, `translate_x/y/z`,
 | `fog_enabled`, `fog_start`, `fog_end` | 0, 0.0, 0.0 | **World-node-only** fog (fades to the World bg color). Extension columns, written only when nonzero. |
 | `tag_color_mode` | 0 (Uniform) | **World-node-only.** 0 = every tag label uses the single `tag_color_r/g/b` below; 1 = each label takes its own node's `color_r/g/b`, so a label reads as belonging to the glyph it names. The dark drop shadow behind tag text is fixed and not configurable. |
 | `tag_color_r/g/b` | 255, 255, 200 | **World-node-only** tag label color (pastel yellow by default), used when `tag_color_mode` = 0. All three are written together or not at all. |
+| `ref_grid_color_r/g/b` | 56, 56, 71 | **World-node-only.** Color of the procedural reference grid the viewport draws under scenes that contain no World Grid node (dark gray by default). A type-6 World Grid paints its own lattice from its own `color_r/g/b` and ignores this. All three are written together or not at all. |
 
 Every other column in the file is preserved verbatim in `Node.extras` and
 round-tripped by `save_node_csv` — unknown columns are never lost or reordered
@@ -147,6 +148,7 @@ Each is written **only when omitting it would misread on reload**:
 | `show_text` | any node pins its tag text on |
 | `tag_color_mode` | World tag color mode ≠ Uniform (0) |
 | `tag_color_r` / `tag_color_g` / `tag_color_b` | World tag color ≠ the pastel-yellow default |
+| `ref_grid_color_r` / `_g` / `_b` | World reference-grid color ≠ the default gray |
 
 This rule keeps untouched legacy ANTz/GaiaViz files byte-for-byte stable
 across a load/save round-trip.
@@ -177,7 +179,7 @@ prefix is for genuine GaiaViz files.
 
 | type | Meaning |
 |---|---|
-| 0 | **World** — one optional row holding scene-wide settings: background color in `color_r/g/b/a`, blend `render_mode`, fog, tag-label color (`tag_color_mode`, `tag_color_r/g/b`). Never drawn or picked; **must be excluded from bulk selection/edits**. Without one, background falls back to (20, 20, 31) and tag text to pastel yellow. |
+| 0 | **World** — one optional row holding scene-wide settings: background color in `color_r/g/b/a`, blend `render_mode`, fog, tag-label color (`tag_color_mode`, `tag_color_r/g/b`), reference-grid color (`ref_grid_color_r/g/b`). Never drawn or picked; **must be excluded from bulk selection/edits**. Without one, background falls back to (20, 20, 31), tag text to pastel yellow, and the reference grid to (56, 56, 71). |
 | 1 | **Camera** — stored view definitions (C key cycles). Never drawn or picked. |
 | 5 | **Glyph** — the ordinary renderable node; use 5 for normal data (other unlisted values also draw as plain glyphs). |
 | 6 | **World Grid** — a real, movable/scalable node rendering a flat lon/lat plate or (with Sphere/Sphere-Wire geometry) a globe. Children attach **explicitly** via `parent_id` = the grid's id and place by `translate_x` = longitude, `translate_y` = latitude, `translate_z` = elevation within the grid's extents window (`trigger_lo/hi_x/y`). No implicit/default grid exists. Grid scale re-spaces child positions, never child sizes. Full rules: `world-grid.md`. |

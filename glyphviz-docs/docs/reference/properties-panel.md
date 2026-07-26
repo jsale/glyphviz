@@ -25,6 +25,7 @@ Viewer (`_on_insp_*` handlers, e.g. `_on_insp_pos_changed` at
 |---|---|---|---|
 | Show Axes | checkbox | checked | `Viewport.show_axes` |
 | Show Grid | checkbox | checked | `Viewport.show_grid` |
+| Grid Color | color button | dark gray (56, 56, 71) | The reference grid's line color. Unlike the checkboxes around it this is **scene data**, stored on the World node (`ref_grid_color_r/g/b`) and saved with the file. A World Grid node (type 6) draws its own lattice in its own node color and ignores this setting. |
 | Show Hidden Nodes | checkbox | unchecked | `Viewport.show_hidden` |
 | Show Tag Labels | checkbox | unchecked | `Viewport.show_tags` (also toggled by the **T** key) |
 | Show Tag Labels of Selected | checkbox | unchecked | `Viewport.show_tags_selected_only` — when checked, only selected nodes' tags draw |
