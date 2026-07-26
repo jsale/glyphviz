@@ -58,21 +58,28 @@ File, Edit, Textures, Meshes, Tools, View. There is no Node or Help menu.
 
 ![View menu](../assets/screenshots/reference/menu-view.png)
 
-All items below F12/Ctrl+G's row are checkable toggles; checked state mirrors
-the identically-named controls in the [Properties Panel](properties-panel.md)'s
-Display group — the two stay in sync (`_set_axes`, `_set_grid`, etc. update
-both — `main_window.py:1139-1200`).
+All items below F12/Ctrl+G's row are checkable toggles. Most mirror an
+identically-named control in the [Properties Panel](properties-panel.md) — the
+Display group for the Show Axes/Grid/Hidden/Tag items, the Select By group for
+Show Selection Box — and the two stay in sync, because a single setter updates
+the menu action, the panel control and the viewport together (`_set_axes`,
+`_set_grid`, `_set_selection_box`, etc.). Pause Rate Animation, Follow Selected
+Node and Reset Camera have no panel counterpart.
 
 | Item | Default | Notes |
 |---|---|---|
-| Show Axes | ✓ checked | `main_window.py:205-208` |
-| Show Grid | ✓ checked | `main_window.py:210-213` |
-| Show Hidden Nodes | ☐ unchecked | `main_window.py:215-218` |
-| Show Tag Labels | ✓ checked | Tooltip notes the **T** key toggles the same state (`main_window.py:220-224`) |
+| Show Axes | ✓ checked | `main_window.py:304-307` |
+| Show Grid | ✓ checked | `main_window.py:309-312` |
+| Show Hidden Nodes | ☐ unchecked | `main_window.py:314-317` |
+| Show Tag Labels | ☐ unchecked | Tooltip notes the **T** key toggles the same state (`main_window.py:319-323`) |
+| Show Selection Box | ✓ checked | **Ctrl+B** — hide the yellow bounding box around selected nodes without deselecting them, e.g. for a clean screengrab. Mirrored by *Show selection box* in the Properties panel's Select By group, not the Display group (`main_window.py:325-336`) |
 | *(separator)* | | |
-| Stereo 3D (Cross-Eye) | ☐ unchecked | Side-by-side cross-eye stereo pair; disables rubber-band select while active (`main_window.py:227-236`) |
+| Stereo 3D (Cross-Eye) | ☐ unchecked | Side-by-side cross-eye stereo pair; disables rubber-band select while active (`main_window.py:339-348`) |
 | *(separator)* | | |
-| Reset Camera | — | See [Viewer Navigation](viewer-navigation.md#camera-controls) (`main_window.py:239`) |
+| Pause Rate Animation | ☐ unchecked | **P** — freeze all `translate_rate`/`rotate_rate`/`scale_rate` animation in place, then resume with the original rates (`main_window.py:351-360`) |
+| *(separator)* | | |
+| Follow Selected Node | ☐ unchecked | **F** — keep the camera centered on the selected node as it moves (`main_window.py:363-372`) |
+| Reset Camera | — | See [Viewer Navigation](viewer-navigation.md#camera-controls) (`main_window.py:373`) |
 | Manipulate | ✓ checked | Toggles visibility of the Manipulate (Move/Rotate/Size) toolbar (`main_window.py:279`) |
 | *(separator)* | | |
 | Properties | ✓ checked | Toggles visibility of the Properties dock (`main_window.py:899-900`) |

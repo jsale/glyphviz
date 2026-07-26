@@ -322,6 +322,19 @@ class MainWindow(QMainWindow):
         self._tags_act.setToolTip("Toggle tag text display  [T]")
         self._tags_act.triggered.connect(lambda c: self._set_tags(c))
 
+        self._selbox_act = self._view_menu.addAction("Show Selection &Box")
+        self._selbox_act.setCheckable(True)
+        self._selbox_act.setChecked(True)   # matches Viewport.show_selection_box
+        self._selbox_act.setShortcut("Ctrl+B")
+        self._selbox_act.setToolTip(
+            "Draw the yellow bounding box around selected nodes.\n"
+            "Uncheck for a selection-free screengrab without losing the\n"
+            "selection -- manipulation and selection keys keep working.\n"
+            "(ANTz toggles this with the spacebar, which GlyphViz uses for\n"
+            "Channels playback.)  [Ctrl+B]"
+        )
+        self._selbox_act.triggered.connect(lambda c: self._set_selection_box(c))
+
         self._view_menu.addSeparator()
         self._stereo_act = self._view_menu.addAction("Stereo &3D (Cross-Eye)")
         self._stereo_act.setCheckable(True)
@@ -871,6 +884,20 @@ class MainWindow(QMainWindow):
 
         sel_layout.addRow("Tag contains:", self._sel_tag_keyword)
         sel_layout.addRow(self._sel_tag_btn)
+
+        # Render-only toggle for the yellow halo — lives here rather than in
+        # the Display group because it is what you reach for while working
+        # with a selection (View > Show Selection Box mirrors it).
+        self._cb_selbox = QCheckBox("Show selection box")
+        self._cb_selbox.setChecked(True)   # matches Viewport.show_selection_box
+        self._cb_selbox.setToolTip(
+            "Draw the yellow bounding box around selected nodes.\n"
+            "Uncheck for a clean screengrab of a chosen state without having\n"
+            "to deselect — the selection stays live, so Move/Rotate/Size and\n"
+            "the selection keys keep working.  [Ctrl+B]"
+        )
+        self._cb_selbox.toggled.connect(self._set_selection_box)
+        sel_layout.addRow(self._cb_selbox)
 
         # --- Visibility group ---
         # All four operate on the per-node hide flag (the table's Hide column,
@@ -1809,6 +1836,16 @@ class MainWindow(QMainWindow):
         """Sync UI when T key toggles tags inside the viewport."""
         self._cb_tags.setChecked(checked)
         self._tags_act.setChecked(checked)
+
+    def _set_selection_box(self, checked: bool):
+        self._viewport.show_selection_box = checked
+        self._cb_selbox.setChecked(checked)
+        self._selbox_act.setChecked(checked)
+        self._viewport.update()
+        self.statusBar().showMessage(
+            "Selection box shown." if checked
+            else "Selection box hidden (selection still active)."
+        )
 
     def _set_tags_selected_only(self, checked: bool):
         self._viewport.show_tags_selected_only = checked

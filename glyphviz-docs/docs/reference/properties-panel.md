@@ -26,7 +26,7 @@ Viewer (`_on_insp_*` handlers, e.g. `_on_insp_pos_changed` at
 | Show Axes | checkbox | checked | `Viewport.show_axes` |
 | Show Grid | checkbox | checked | `Viewport.show_grid` |
 | Show Hidden Nodes | checkbox | unchecked | `Viewport.show_hidden` |
-| Show Tag Labels | checkbox | checked | `Viewport.show_tags` (also toggled by the **T** key) |
+| Show Tag Labels | checkbox | unchecked | `Viewport.show_tags` (also toggled by the **T** key) |
 | Show Tag Labels of Selected | checkbox | unchecked | `Viewport.show_tags_selected_only` — when checked, only selected nodes' tags draw |
 | *(texture status label + "…" button)* | — | "No textures loaded" | Opens **Textures → Set Texture Folder…** |
 | Audio track dropdown | combo | "All Audio Tracks" | Solos one video's audio track when multiple textured videos are loaded; disabled unless 2+ tracks exist |
@@ -102,11 +102,16 @@ there's no well-defined place to put them. Source: `main_window.py:574-587`.
 | Control | Notes |
 |---|---|
 | Select All / Deselect All buttons | Same as Ctrl+A's two states |
+| Invert Selection | Selects every node that is *not* currently selected (Ctrl+I) |
 | By: | combo — **Branch Level**, **Geometry**, or **Topology** |
 | Value: | combo, repopulated from whichever distinct values exist in the loaded scene for the chosen criterion |
 | Select All Matching | applies the filter |
+| Add to current selection | checkbox, unchecked — when checked, **Select All Matching** and **Select Matching Tags** add to the selection instead of replacing it |
+| Tag contains: | line edit — case-insensitive substring matched against each node's tag text (Enter runs the search) |
+| Select Matching Tags | selects every node whose tag text contains that keyword |
+| Show selection box | checkbox, checked — `Viewport.show_selection_box`, also **Ctrl+B** and **View → Show Selection Box**. Unchecking hides the yellow bounding box around selected nodes *without* deselecting them, so a screengrab can show a chosen state cleanly; Move/Rotate/Size and the selection keys keep working while it is off |
 
-Source: `main_window.py:589-619, 1208-1250`.
+Source: `main_window.py:821-900, 1911-2006`.
 
 ## Selected Node
 

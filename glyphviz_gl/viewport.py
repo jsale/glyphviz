@@ -295,6 +295,12 @@ class Viewport(QOpenGLWidget):
 
         self.show_tags = False   # off by default (Jeff's preference); toggle with T
         self.show_tags_selected_only = False
+        # Yellow selection halo. On by default; toggled with Ctrl+B (ANTz uses
+        # the spacebar for this, which GlyphViz already spends on Channels
+        # transport). Purely a render toggle — the selection itself stays live,
+        # so manipulation/keys keep working with the boxes hidden. Exists so a
+        # screengrab can show a chosen state without a selection-free deselect.
+        self.show_selection_box = True
         # Per-string QStaticText cache: text layout is computed once per
         # unique string instead of on every drawText call, which halves the
         # per-frame cost of painting thousands of tags. Keyed by tag text;
@@ -1271,8 +1277,9 @@ class Viewport(QOpenGLWidget):
     def _draw_selected_outlines(self):
         """Yellow bounding-box halo around each selected node. Drawn as its
         own pass (not inside _draw_node) so the baked scene display list is
-        selection-independent."""
-        if not self.selected_node_ids:
+        selection-independent — which also means show_selection_box can gate
+        the whole pass without forcing a rebake."""
+        if not self.show_selection_box or not self.selected_node_ids:
             return
         visible_count = 0
         limit_ids: set[int] | None = None

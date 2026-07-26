@@ -87,9 +87,10 @@ the Viewer has focus, since Qt shortcuts aren't widget-scoped here):
 | Ctrl+A | Select all / deselect all (see above) | `main_window.py:109-111` |
 | U | Open the selected node's **Link** field (URL or local file) in the OS default handler | `_on_open_link` — `main_window.py:112, 1166-1181` |
 | Delete / Backspace | Delete the selected node(s) and their descendants | `_delete_selected` — `main_window.py:113-114` |
+| Ctrl+B | Show/hide the yellow selection bounding box **without** changing the selection — for clean screengrabs of a selected state. (ANTz uses the spacebar for this; in GlyphViz the spacebar drives Channels playback.) | *View → Show Selection Box* → `_set_selection_box` |
 
 File/Edit/View menu actions carry their own accelerators (Ctrl+O, Ctrl+S,
-Ctrl+Shift+S, F12, Ctrl+C, Ctrl+V, Ctrl+G) — see [Menus](menus.md).
+Ctrl+Shift+S, F12, Ctrl+C, Ctrl+V, Ctrl+G, Ctrl+B) — see [Menus](menus.md).
 
 ## Node manipulation
 
