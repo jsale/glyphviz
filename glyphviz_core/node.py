@@ -63,6 +63,25 @@ RENDER_MODE_PREMULTIPLIED = 6  # GL_ONE, GL_ONE_MINUS_SRC_ALPHA
 # matches the viewport's original hardcoded glClearColor(0.08, 0.08, 0.12, 1).
 WORLD_DEFAULT_BG_RGB = (20, 20, 31)
 
+# Tag-text styling, read from the World node (type=0) only — see
+# Scene.world_node(). UNIFORM paints every label the World node's
+# tag_color_r/g/b; NODE paints each label its own glyph's color_r/g/b, so a
+# label reads as belonging to the thing it names. The dark drop shadow behind
+# the text (TAG_SHADOW_RGBA) is deliberately NOT configurable — it is what
+# keeps text legible against both bright glyphs and bright backgrounds.
+TAG_COLOR_MODE_UNIFORM = 0
+TAG_COLOR_MODE_NODE = 1
+TAG_COLOR_MODE_COUNT = 2
+TAG_COLOR_MODE_NAMES = {
+    TAG_COLOR_MODE_UNIFORM: "Uniform Color",
+    TAG_COLOR_MODE_NODE: "Match Node Color",
+}
+# Pastel yellow — the color tag text was hardcoded to before it became
+# settable, so a scene with no World node (or an older file) looks unchanged.
+TAG_DEFAULT_TEXT_RGB = (255, 255, 200)
+TAG_TEXT_ALPHA = 230              # face pass alpha, fixed
+TAG_SHADOW_RGBA = (0, 0, 0, 200)  # drop shadow / glow, fixed (see above)
+
 RENDER_MODE_COUNT = 7
 RENDER_MODE_NAMES = {
     RENDER_MODE_NORMAL: "Normal",
@@ -133,12 +152,24 @@ class Node:
     scale_rate_z: float = 0.0
     text: str = ""   # display label shown in 3D viewport
     link: str = ""   # URL or file path opened by U key
+    # Pin this node's tag text on: it draws whenever the node itself is
+    # drawn, regardless of the scene-wide "Show Tag Labels" / "…of Selected"
+    # settings, and is exempt from the all-tags frame cap (a pinned label is
+    # an explicit per-object request, the same reasoning that makes
+    # selected-only mode uncapped — see Viewport._project_tagged_nodes).
+    # Nothing overrides the node's own hide flag or the \-key draw limit.
+    show_text: int = 0
     # World-node-only scene settings (see Scene.world_node()): background
-    # color reuses color_r/g/b/a above; fog fades to that same color.
+    # color reuses color_r/g/b/a above; fog fades to that same color; the
+    # tag_* fields style every tag label in the scene (see TAG_COLOR_MODE_*).
     render_mode: int = RENDER_MODE_NORMAL
     fog_enabled: int = 0
     fog_start: float = 0.0
     fog_end: float = 0.0
+    tag_color_mode: int = TAG_COLOR_MODE_UNIFORM
+    tag_color_r: int = TAG_DEFAULT_TEXT_RGB[0]
+    tag_color_g: int = TAG_DEFAULT_TEXT_RGB[1]
+    tag_color_b: int = TAG_DEFAULT_TEXT_RGB[2]
     # Preserves untracked CSV columns (e.g. channel IDs, quaternion, segments)
     # so that save_node_csv can round-trip files without data loss.
     extras: dict = field(default_factory=dict)

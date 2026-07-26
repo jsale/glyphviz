@@ -16,6 +16,7 @@ from glyphviz_core.node import (
     RENDER_MODE_NORMAL, RENDER_MODE_ADDITIVE, RENDER_MODE_SUBTRACTIVE,
     RENDER_MODE_DARK, RENDER_MODE_OFF, RENDER_MODE_SCREEN, RENDER_MODE_PREMULTIPLIED,
     WORLD_DEFAULT_BG_RGB,
+    TAG_COLOR_MODE_NODE, TAG_DEFAULT_TEXT_RGB, TAG_TEXT_ALPHA, TAG_SHADOW_RGBA,
 )
 from glyphviz_core.scene import Scene
 from glyphviz_core.topology import (
@@ -109,7 +110,7 @@ class _SceneScan:
     whole scene several times over in Python, which at 700k nodes cost
     ~900 ms/frame no matter how few nodes the \\-key draw limit let render."""
     __slots__ = ('rate_nodes', 'link_nodes', 'plot_nodes', 'surface_nodes',
-                 'has_grid', '_children_of')
+                 'has_grid', 'has_pinned_tags', '_children_of')
 
     def __init__(self, nodes: list[Node]):
         self.rate_nodes: list[Node] = []
@@ -117,12 +118,22 @@ class _SceneScan:
         self.plot_nodes: list[Node] = []
         self.surface_nodes: list[Node] = []
         self.has_grid = False
+        # Any node with show_text set — the tag overlay pass has to run even
+        # with the scene-wide tag display off, and this keeps that check off
+        # the per-frame path (see Viewport.paintGL). Deliberately not ANDed
+        # with n.text: whether a pinned node has text yet changes on every
+        # keystroke in the inspector, and rebaking the scan (and with it the
+        # retained display list) that often is far more expensive than an
+        # overlay pass that finds nothing to draw.
+        self.has_pinned_tags = False
         self._children_of: dict[int, list[Node]] | None = None
         for n in nodes:
             if (n.translate_rate_x or n.translate_rate_y or n.translate_rate_z
                     or n.rotate_rate_x or n.rotate_rate_y or n.rotate_rate_z
                     or n.scale_rate_x or n.scale_rate_y or n.scale_rate_z):
                 self.rate_nodes.append(n)
+            if n.show_text:
+                self.has_pinned_tags = True
             if n.type == NODE_TYPE_LINK:
                 self.link_nodes.append(n)
             else:
@@ -819,6 +830,12 @@ class Viewport(QOpenGLWidget):
             self._scan_cache_rev = rev
         return self._scan_cache
 
+    def _any_tags_to_draw(self) -> bool:
+        """True when the tag overlay pass has anything to do: either the
+        scene-wide tag display is on, or some node pins its own text with
+        show_text (which draws regardless of the scene-wide settings)."""
+        return self.show_tags or self._scene_scan().has_pinned_tags
+
     def _has_active_rates(self) -> bool:
         """True if any non-frozen node has a nonzero translate/rotate/scale rate
         (ANTz's freeze flag, preserved in Node.extras, suspends a node's own
@@ -1025,7 +1042,7 @@ class Viewport(QOpenGLWidget):
                 self._setup_stereo_eye_matrices(lateral_offset, seg_w, h)
                 mv, pr = self._capture_camera_matrices()
                 self._draw_scene_content(mv, pr)
-                if self.show_tags and mv is not None:
+                if self._any_tags_to_draw() and mv is not None:
                     tag_batches.append((screen_x, seg_w, mv, pr))
             self._video_mgr.finalize_frame()   # pause any video no node drew this frame
 
@@ -1057,7 +1074,7 @@ class Viewport(QOpenGLWidget):
                 self._draw_rubber_band()
 
             # QPainter tag overlay (must come after all glBegin/glEnd blocks).
-            if self.show_tags and self._mv_matrix is not None:
+            if self._any_tags_to_draw() and self._mv_matrix is not None:
                 self._draw_tags_qpainter()
 
         # FPS: count this frame; emit once per second
@@ -1599,19 +1616,32 @@ class Viewport(QOpenGLWidget):
         glEnable(GL_LIGHTING)  # restore for subsequent passes (rubber band, etc.)
 
     def _project_tagged_nodes(self, mv: np.ndarray, pr: np.ndarray,
-                               vx: int, vy: int, vw: int, vh: int) -> list[tuple[str, int, int]]:
+                               vx: int, vy: int, vw: int, vh: int
+                               ) -> list[tuple[str, int, int, tuple | None]]:
         """World->screen project every tagged, visible node's position using
         the given camera matrices into the (vx, vy, vw, vh) viewport sub-rect
         (Qt widget coordinates). Used for both the full-widget single-eye
-        view and each half-width stereo eye view."""
+        view and each half-width stereo eye view.
+
+        Returns (text, screen_x, screen_y, rgb) tuples; rgb is the node's own
+        color under TAG_COLOR_MODE_NODE and None under the uniform mode, where
+        _paint_tags uses the World node's single tag color for every label."""
         # Selected-only mode draws every selected tag, uncapped: the user
         # explicitly scoped the set, so completeness beats frame rate there.
-        # The cap only guards the unscoped all-tags mode.
+        # The cap only guards the unscoped all-tags mode. Individually pinned
+        # tags (show_text) are exempt too, for the same reason — see below.
         cap = None if self.show_tags_selected_only else _MAX_TAGS_PER_FRAME
+        world = self._scene.world_node()
+        per_node_color = (world is not None
+                          and world.tag_color_mode == TAG_COLOR_MODE_NODE)
 
-        # Pass 1: collect eligible (text, world-pos) pairs in scene order.
+        # Pass 1: collect eligible (text, world-pos) pairs in scene order,
+        # remembering which ones are pinned so the cap can skip them.
         texts: list[str] = []
         positions: list[tuple[float, float, float]] = []
+        colors: list[tuple[int, int, int] | None] = []
+        pinned_flags: list[bool] = []
+        any_pinned = False
         visible_count = 0
         for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
@@ -1625,11 +1655,22 @@ class Viewport(QOpenGLWidget):
             visible_count += 1
             if not node.text:
                 continue
-            if self.show_tags_selected_only and node.id not in self.selected_node_ids:
-                continue
+            # A pinned node's label ignores both scene-wide tag settings; a
+            # node's own hide flag and the draw limit above still win, since
+            # those decide whether the glyph is on screen at all.
+            pinned = bool(node.show_text)
+            if not pinned:
+                if not self.show_tags:
+                    continue
+                if self.show_tags_selected_only and node.id not in self.selected_node_ids:
+                    continue
             wp = self._scene.world_pos(node.id) or (node.translate_x, node.translate_y, node.translate_z)
             texts.append(node.text)
             positions.append(wp)
+            colors.append((node.color_r, node.color_g, node.color_b)
+                          if per_node_color else None)
+            pinned_flags.append(pinned)
+            any_pinned |= pinned
         if not texts:
             return []
 
@@ -1652,15 +1693,26 @@ class Viewport(QOpenGLWidget):
         sx_all = vx + ((ndc[:, 0] + 1.0) / 2.0 * vw).astype(np.int64)
         sy_all = vy + ((1.0 - (ndc[:, 1] + 1.0) / 2.0) * vh).astype(np.int64)  # Y-flip for Qt
 
-        tagged: list[tuple[str, int, int]] = []
-        for i in np.flatnonzero(on_screen):
-            tagged.append((texts[i], int(sx_all[i]), int(sy_all[i])))
-            if cap is not None and len(tagged) >= cap:
-                break   # safety valve -- see _MAX_TAGS_PER_FRAME
-        return tagged
+        # Apply the safety valve to the ORDINARY tags only. Truncating the
+        # combined list instead would silently drop pinned tags that happen to
+        # sit late in scene order — the cap is a frame-rate guard on the
+        # unscoped all-tags mode, never on labels the user asked for by name.
+        selected = np.flatnonzero(on_screen)
+        if cap is not None and len(selected) > cap:
+            if any_pinned:
+                is_pinned = np.asarray(pinned_flags, dtype=bool)[selected]
+                # union1d re-sorts, so the kept tags stay in scene order.
+                selected = np.union1d(selected[~is_pinned][:cap],
+                                      selected[is_pinned])
+            else:
+                selected = selected[:cap]
 
-    def _paint_tags(self, painter: QPainter, tagged: list[tuple[str, int, int]]):
-        # Two single-pen passes (shadow, then face) over cached QStaticText:
+        return [(texts[i], int(sx_all[i]), int(sy_all[i]), colors[i])
+                for i in selected]
+
+    def _paint_tags(self, painter: QPainter,
+                    tagged: list[tuple[str, int, int, tuple | None]]):
+        # Single-pen passes (shadow, then face) over cached QStaticText:
         # per-tag setPen switching plus per-call text layout is what made
         # thousands of tags cost seconds per frame. drawStaticText anchors at
         # the TOP-left, drawText at the baseline — subtract the ascent to
@@ -1669,17 +1721,36 @@ class Viewport(QOpenGLWidget):
         if len(cache) > 100_000:
             cache.clear()   # size guard against per-frame text churn
         statics = []
-        for text, sx, sy in tagged:
+        for text, sx, sy, rgb in tagged:
             st = cache.get(text)
             if st is None:
                 st = cache[text] = QStaticText(text)
-            statics.append((st, sx, sy))
+            statics.append((st, sx, sy, rgb))
         top_offset = painter.fontMetrics().ascent()
-        painter.setPen(QColor(0, 0, 0, 200))
-        for st, sx, sy in statics:
+        painter.setPen(QColor(*TAG_SHADOW_RGBA))
+        for st, sx, sy, _rgb in statics:
             painter.drawStaticText(sx + 6, sy + 1 - top_offset, st)
-        painter.setPen(QColor(255, 255, 200, 230))
-        for st, sx, sy in statics:
+
+        world = self._scene.world_node()
+        if world is not None and world.tag_color_mode == TAG_COLOR_MODE_NODE:
+            # Group by color so the face pass is still one setPen per distinct
+            # color rather than one per label — a scene colored by category
+            # has a handful of them however many labels are on screen.
+            by_color: dict[tuple, list] = {}
+            for st, sx, sy, rgb in statics:
+                by_color.setdefault(rgb, []).append((st, sx, sy))
+            for rgb, items in by_color.items():
+                painter.setPen(QColor(*rgb, TAG_TEXT_ALPHA))
+                for st, sx, sy in items:
+                    painter.drawStaticText(sx + 5, sy - top_offset, st)
+            return
+
+        if world is not None:
+            face = (world.tag_color_r, world.tag_color_g, world.tag_color_b)
+        else:
+            face = TAG_DEFAULT_TEXT_RGB
+        painter.setPen(QColor(*face, TAG_TEXT_ALPHA))
+        for st, sx, sy, _rgb in statics:
             painter.drawStaticText(sx + 5, sy - top_offset, st)
 
     def _draw_tags_qpainter(self):

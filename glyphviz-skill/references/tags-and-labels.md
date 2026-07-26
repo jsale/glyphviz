@@ -1,7 +1,8 @@
 # Tags and labels — inline `text`/`link` and `gv_tag.csv`
 
 Verified against `glyphviz_core/csv_reader.py` and `glyphviz_gl/viewport.py`
-/ `main_window.py` (2026-07-18). Behaviors are machine-checked through the
+/ `main_window.py` (2026-07-18; pinning and tag color 2026-07-26).
+Behaviors are machine-checked through the
 real loader/saver.
 
 ## Two authoring paths (inline wins)
@@ -60,17 +61,33 @@ NA-token parsing can eat them.
   Display panel's "Show Tag Labels" checkbox.
 - "Show Tag Labels of Selected" mode restricts labels to the current
   selection.
+- **Pinned labels** (`show_text` = 1 on the node): draw whenever the node
+  draws, regardless of both settings above — even with tag display
+  entirely off. Set it in the CSV, or select nodes and tick "Always Show
+  Text" in the Selected Node panel (works on a multi-node selection; a
+  mixed selection shows the box partially-checked). Use it for the few
+  labels a scene should always show — a legend, axis ends, the outlier
+  worth naming — not as a way to label thousands of nodes.
 - **The 500-tag cap** (not a bug, and not a string-length limit): in
   show-all mode, at most **500 tags are drawn per frame** — the first 500
   eligible tagged nodes in file order. It's a frame-rate safety valve for
   pathological cases (thousands of simultaneously labeled nodes);
   ordinary scenes with tens-to-hundreds of tags never hit it. In
   **selected-only mode the cap deliberately does not apply** — every
-  selected tag draws, because the user explicitly scoped the set. If a
-  generated scene labels thousands of nodes, tell users to use
-  selected-only mode to see any specific subset in full.
+  selected tag draws, because the user explicitly scoped the set.
+  **Pinned labels are exempt** for the same reason. If a generated scene
+  labels thousands of nodes, tell users to use selected-only mode to see
+  any specific subset in full.
 - Eligibility: hidden nodes (unless Show Hidden), World/Camera rows, and
-  Link nodes never draw tags. Label text length itself is not limited.
+  Link nodes never draw tags — pinning does not override any of those, nor
+  the `\` draw limit. Label text length itself is not limited.
+- **Color**: labels are pastel yellow (255, 255, 200) over a fixed dark
+  drop shadow. The World node's `tag_color_r/g/b` changes that single
+  color scene-wide, and `tag_color_mode` = 1 instead draws each label in
+  its own node's `color_r/g/b` — useful when glyphs are already colored by
+  category. Both are in the Display panel ("Tag Color", "Tag Text Matches
+  Node Color"). The drop shadow is deliberately not configurable: it is
+  what keeps text legible on both bright glyphs and bright backgrounds.
 - Perf note: text layout is cached **per unique string** — 10,000 nodes
   sharing 200 distinct labels paint far cheaper than 10,000 unique
   strings. Prefer short, shared labels where the data allows.
@@ -107,4 +124,6 @@ node, then opens its link). Either way:
   `node`→`tag` stem swap.
 - `tag_offset_x/y/z` in the 94-column layout are **round-trip only** —
   GlyphViz does not render a label offset; don't bother computing them.
-- Remind users tags are off by default: "press T to see labels."
+- Remind users tags are off by default: "press T to see labels." — or pin
+  the handful that should always show with `show_text` = 1, so the scene
+  reads correctly the moment it opens.

@@ -41,6 +41,7 @@ from glyphviz_core.node import (
     NODE_TYPE_GRID, NODE_TYPE_LINK, NODE_TYPE_WORLD,
     RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
     WORLD_DEFAULT_BG_RGB,
+    TAG_COLOR_MODE_UNIFORM, TAG_COLOR_MODE_NODE, TAG_DEFAULT_TEXT_RGB,
 )
 from glyphviz_core.topology import (
     TOPO_NAMES, TOPO_COUNT, TOPO_NONE, TOPO_PLANE, TOPO_POINT, CUBE_FACE_NAMES,
@@ -551,11 +552,41 @@ class MainWindow(QMainWindow):
         )
         self._cb_tags_selected.toggled.connect(self._set_tags_selected_only)
 
+        # Tag text styling. Grouped here with the other tag controls, but
+        # unlike them these persist to the World node (type=0, see
+        # _refresh_scene_settings) — they're scene data, not viewport state.
+        # The dark drop shadow behind tag text is deliberately not settable.
+        tag_color_row = QWidget()
+        tag_color_layout = QHBoxLayout(tag_color_row)
+        tag_color_layout.setContentsMargins(0, 0, 0, 0)
+        tag_color_layout.setSpacing(4)
+        tag_color_layout.addWidget(QLabel("Tag Color:"))
+        self._tag_color_btn = QPushButton()
+        self._tag_color_btn.setFixedHeight(24)
+        self._tag_color_btn.setToolTip(
+            "Color of tag label text, for every tag in the scene.\n"
+            "Ignored while 'Tag Text Matches Node Color' is checked."
+        )
+        self._tag_color_btn.clicked.connect(self._on_tag_text_color)
+        tag_color_layout.addWidget(self._tag_color_btn, 1)
+        self._set_color_btn(self._tag_color_btn, *TAG_DEFAULT_TEXT_RGB, 255)
+
+        self._cb_tag_color_node = QCheckBox("Tag Text Matches Node Color")
+        self._cb_tag_color_node.setChecked(False)
+        self._cb_tag_color_node.setToolTip(
+            "When checked, each tag label is drawn in its own node's color\n"
+            "instead of the single Tag Color above, so a label reads as\n"
+            "belonging to the glyph it names."
+        )
+        self._cb_tag_color_node.toggled.connect(self._on_tag_color_mode_toggled)
+
         disp_layout.addWidget(self._cb_axes)
         disp_layout.addWidget(self._cb_grid)
         disp_layout.addWidget(self._cb_hidden)
         disp_layout.addWidget(self._cb_tags)
         disp_layout.addWidget(self._cb_tags_selected)
+        disp_layout.addWidget(tag_color_row)
+        disp_layout.addWidget(self._cb_tag_color_node)
 
         tex_row = QWidget()
         tex_row_layout = QHBoxLayout(tex_row)
@@ -1159,6 +1190,19 @@ class MainWindow(QMainWindow):
         self._insp_text.setToolTip("Text label shown near node in 3D view  [T toggles display]")
         self._insp_text.textChanged.connect(self._on_insp_text_changed)
 
+        self._insp_show_text = QCheckBox("Always Show Text")
+        self._insp_show_text.setToolTip(
+            "Keep this node's tag text on screen no matter how the scene-wide\n"
+            "tag settings are set — neither 'Show Tag Labels' nor 'Show Tag\n"
+            "Labels of Selected' can turn it off, and it is exempt from the\n"
+            "all-tags frame cap. Hiding the node still hides its text.\n"
+            "Applies to every selected node. Saved with the scene (show_text)."
+        )
+        # 'clicked' rather than 'toggled': a mixed selection shows the box
+        # partially-checked, and only a real click should push one value onto
+        # every selected node.
+        self._insp_show_text.clicked.connect(self._on_insp_show_text_toggled)
+
         self._insp_link = QLineEdit()
         self._insp_link.setPlaceholderText("URL or file path  (U key opens)")
         self._insp_link.setToolTip(
@@ -1187,6 +1231,7 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Color Index:", self._insp_color_index)
         insp_layout.addRow("Color:",    self._insp_color_btn)
         insp_layout.addRow("Tag Text:", self._insp_text)
+        insp_layout.addRow("",          self._insp_show_text)
         insp_layout.addRow("Link:",     self._insp_link)
 
         # --- World Grid group: extents window + grid lines for a selected
@@ -2391,6 +2436,7 @@ class MainWindow(QMainWindow):
         self._insp_text.blockSignals(True)
         self._insp_text.setText(node.text)
         self._insp_text.blockSignals(False)
+        self._refresh_show_text_check([node])
         self._insp_link.blockSignals(True)
         self._insp_link.setText(node.link)
         self._insp_link.blockSignals(False)
@@ -2468,6 +2514,7 @@ class MainWindow(QMainWindow):
         self._insp_text.blockSignals(True)
         self._insp_text.setText(primary.text)
         self._insp_text.blockSignals(False)
+        self._refresh_show_text_check(nodes)
         self._insp_link.blockSignals(True)
         self._insp_link.setText(primary.link)
         self._insp_link.blockSignals(False)
@@ -2481,6 +2528,20 @@ class MainWindow(QMainWindow):
             f"background-color: rgba({r},{g},{b},{a}); border: 1px solid #666;"
         )
         btn.setText(f"#{r:02X}{g:02X}{b:02X}")
+
+    def _refresh_show_text_check(self, nodes: list[Node]):
+        """Sync the Always Show Text box from the selection, showing the
+        partially-checked state when the selected nodes disagree."""
+        on = sum(1 for n in nodes if n.show_text)
+        cb = self._insp_show_text
+        cb.blockSignals(True)
+        if on and on < len(nodes):
+            cb.setTristate(True)
+            cb.setCheckState(Qt.CheckState.PartiallyChecked)
+        else:
+            cb.setTristate(False)
+            cb.setChecked(bool(on))
+        cb.blockSignals(False)
 
     def _refresh_color_btn(self, node: Node):
         self._set_color_btn(self._insp_color_btn, node.color_r, node.color_g, node.color_b, node.color_a)
@@ -2651,6 +2712,25 @@ class MainWindow(QMainWindow):
             node.text = value
         self._viewport.update()
 
+    def _on_insp_show_text_toggled(self, checked: bool):
+        """Pin (or unpin) the selected nodes' tag text — see Node.show_text.
+        scene_touch(), not just update(): the viewport's per-revision scene
+        scan caches whether any node is pinned at all."""
+        if not self._selected_nodes:
+            return
+        self._insp_show_text.setTristate(False)   # a click resolves 'mixed'
+        flag = 1 if checked else 0
+        for node in self._selected_nodes:
+            node.show_text = flag
+        n = len(self._selected_nodes)
+        untagged = sum(1 for node in self._selected_nodes if not node.text)
+        self._viewport.scene_touch()
+        msg = (f"Tag text pinned on for {n} node(s)." if checked
+               else f"Tag text unpinned for {n} node(s).")
+        if checked and untagged:
+            msg += f"  {untagged} of them have no tag text to show yet."
+        self.statusBar().showMessage(msg)
+
     def _on_insp_link_changed(self, value: str):
         if not self._selected_nodes:
             return
@@ -2794,8 +2874,16 @@ class MainWindow(QMainWindow):
         fog_on = bool(world.fog_enabled) if world else False
         fog_start = world.fog_start if world and world.fog_start else 20.0
         fog_end = world.fog_end if world and world.fog_end else 200.0
+        tag_rgb = ((world.tag_color_r, world.tag_color_g, world.tag_color_b)
+                   if world else TAG_DEFAULT_TEXT_RGB)
+        tag_by_node = bool(world and world.tag_color_mode == TAG_COLOR_MODE_NODE)
 
         self._set_color_btn(self._scene_bg_btn, r, g, b, 255)
+        self._set_color_btn(self._tag_color_btn, *tag_rgb, 255)
+        self._cb_tag_color_node.blockSignals(True)
+        self._cb_tag_color_node.setChecked(tag_by_node)
+        self._cb_tag_color_node.blockSignals(False)
+        self._tag_color_btn.setEnabled(not tag_by_node)
         idx = self._scene_render_mode.findData(mode)
         self._scene_render_mode.blockSignals(True)
         self._scene_render_mode.setCurrentIndex(max(idx, 0))
@@ -2827,6 +2915,26 @@ class MainWindow(QMainWindow):
         rgb = 0 if is_white else 255
         world.color_r = world.color_g = world.color_b = rgb
         self._set_color_btn(self._scene_bg_btn, rgb, rgb, rgb, 255)
+        self._table.refresh_node(world.id)
+        self._viewport.update()
+
+    def _on_tag_text_color(self):
+        world = self._ensure_world_node()
+        initial = QColor(world.tag_color_r, world.tag_color_g, world.tag_color_b)
+        color = QColorDialog.getColor(initial, self, "Tag Text Color")
+        if not color.isValid():
+            return
+        world.tag_color_r = color.red()
+        world.tag_color_g = color.green()
+        world.tag_color_b = color.blue()
+        self._set_color_btn(self._tag_color_btn, color.red(), color.green(), color.blue(), 255)
+        self._table.refresh_node(world.id)
+        self._viewport.update()
+
+    def _on_tag_color_mode_toggled(self, checked: bool):
+        world = self._ensure_world_node()
+        world.tag_color_mode = TAG_COLOR_MODE_NODE if checked else TAG_COLOR_MODE_UNIFORM
+        self._tag_color_btn.setEnabled(not checked)
         self._table.refresh_node(world.id)
         self._viewport.update()
 

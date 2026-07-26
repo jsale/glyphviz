@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from .node import Node, ROTATION_MODE_HEADING_TILT_ROLL, RENDER_MODE_NORMAL
+from .node import (
+    Node, ROTATION_MODE_HEADING_TILT_ROLL, RENDER_MODE_NORMAL,
+    TAG_COLOR_MODE_UNIFORM, TAG_DEFAULT_TEXT_RGB,
+)
 
 # Columns that GlyphViz reads into explicit Node fields.
 # Everything else in the CSV is stashed in Node.extras for round-trip preservation.
@@ -16,8 +19,9 @@ _TRACKED_COLS = frozenset({
     'scale_x', 'scale_y', 'scale_z',
     'color_r', 'color_g', 'color_b', 'color_a', 'color_index', 'palette_id',
     'geometry', 'hide', 'topo', 'ratio', 'subspace', 'facet', 'texture_id',
-    'mesh_id', 'text', 'link', 'rotation_mode',
+    'mesh_id', 'text', 'link', 'rotation_mode', 'show_text',
     'render_mode', 'fog_enabled', 'fog_start', 'fog_end',
+    'tag_color_mode', 'tag_color_r', 'tag_color_g', 'tag_color_b',
     'translate_rate_x', 'translate_rate_y', 'translate_rate_z',
     'rotate_rate_x', 'rotate_rate_y', 'rotate_rate_z',
     'scale_rate_x', 'scale_rate_y', 'scale_rate_z',
@@ -308,10 +312,19 @@ def load_node_csv(path: str) -> list[Node]:
     # exactly as before. New Node() calls elsewhere get EULER_XYZ via the
     # dataclass default instead.
     rotation_modes = _int_col(df, 'rotation_mode', n, ROTATION_MODE_HEADING_TILT_ROLL)
+    # show_text / tag_color_* have no ANTz/GaiaViz column slot (see node.py).
+    # A missing column means the same value a fresh Node() gets, so the
+    # fallbacks here are symmetric with the dataclass defaults (unlike
+    # rotation_mode, whose fallback deliberately differs).
+    show_texts     = _int_col(df, 'show_text', n, 0)
     render_modes   = _int_col(df, 'render_mode', n, RENDER_MODE_NORMAL)
     fog_enableds   = _int_col(df, 'fog_enabled', n, 0)
     fog_starts     = _float_col(df, 'fog_start', n, 0.0)
     fog_ends       = _float_col(df, 'fog_end', n, 0.0)
+    tag_color_modes = _int_col(df, 'tag_color_mode', n, TAG_COLOR_MODE_UNIFORM)
+    tag_color_rs    = _int_col(df, 'tag_color_r', n, TAG_DEFAULT_TEXT_RGB[0])
+    tag_color_gs    = _int_col(df, 'tag_color_g', n, TAG_DEFAULT_TEXT_RGB[1])
+    tag_color_bs    = _int_col(df, 'tag_color_b', n, TAG_DEFAULT_TEXT_RGB[2])
     trx = _float_col(df, 'translate_rate_x', n, 0.0)
     try_ = _float_col(df, 'translate_rate_y', n, 0.0)
     trz = _float_col(df, 'translate_rate_z', n, 0.0)
@@ -349,10 +362,15 @@ def load_node_csv(path: str) -> list[Node]:
             texture_id=texture_ids[i],
             mesh_id=mesh_ids[i],
             rotation_mode=rotation_modes[i],
+            show_text=show_texts[i],
             render_mode=render_modes[i],
             fog_enabled=fog_enableds[i],
             fog_start=fog_starts[i],
             fog_end=fog_ends[i],
+            tag_color_mode=tag_color_modes[i],
+            tag_color_r=tag_color_rs[i],
+            tag_color_g=tag_color_gs[i],
+            tag_color_b=tag_color_bs[i],
             translate_rate_x=trx[i], translate_rate_y=try_[i], translate_rate_z=trz[i],
             rotate_rate_x=rrx[i], rotate_rate_y=rry[i], rotate_rate_z=rrz[i],
             scale_rate_x=srx[i], scale_rate_y=sry[i], scale_rate_z=srz[i],
@@ -384,9 +402,12 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
     Node.extras (preserving the original file values) or from _DEFAULT_EXTRAS
     for newly-created nodes.
 
-    If any node has non-empty text/link, or a non-default rotation_mode,
-    those columns are appended after the 94-column ANTz standard set (ANTz
-    tools ignore unknown extra columns).
+    Columns with no slot in the 94-column ANTz standard set (text/link,
+    rotation_mode, show_text, the World node's tag_color_* styling, …) are
+    appended after it, and only when some node's value would otherwise be
+    misread by load_node_csv's fallback for a missing column — so untouched
+    legacy files stay byte-for-byte stable. ANTz tools ignore unknown extra
+    columns.
     """
     has_text = any(n.text for n in nodes)
     has_link = any(n.link for n in nodes)
@@ -409,6 +430,17 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
     has_fog_enabled = any(n.fog_enabled for n in nodes)
     has_fog_start = any(n.fog_start for n in nodes)
     has_fog_end = any(n.fog_end for n in nodes)
+    has_tag_color_mode = any(n.tag_color_mode != TAG_COLOR_MODE_UNIFORM for n in nodes)
+    # The three tag color channels travel together: a custom color is one
+    # setting, and writing only the channels that happen to differ from the
+    # pastel-yellow default would reload as a mix of custom and default.
+    has_tag_color = any(
+        (n.tag_color_r, n.tag_color_g, n.tag_color_b) != TAG_DEFAULT_TEXT_RGB
+        for n in nodes
+    )
+    # show_text has no ANTz/GaiaViz column slot; omitting it means 0 (not
+    # pinned) on reload, so it only needs writing when some node is pinned.
+    has_show_text = any(n.show_text for n in nodes)
     col_order = list(_COL_ORDER)
     if has_text:
         col_order.append('text')
@@ -428,6 +460,12 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
         col_order.append('fog_start')
     if has_fog_end:
         col_order.append('fog_end')
+    if has_show_text:
+        col_order.append('show_text')
+    if has_tag_color_mode:
+        col_order.append('tag_color_mode')
+    if has_tag_color:
+        col_order.extend(('tag_color_r', 'tag_color_g', 'tag_color_b'))
 
     with open(path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
@@ -492,6 +530,14 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
                 row['fog_start'] = node.fog_start
             if has_fog_end:
                 row['fog_end'] = node.fog_end
+            if has_show_text:
+                row['show_text'] = node.show_text
+            if has_tag_color_mode:
+                row['tag_color_mode'] = node.tag_color_mode
+            if has_tag_color:
+                row['tag_color_r'] = node.tag_color_r
+                row['tag_color_g'] = node.tag_color_g
+                row['tag_color_b'] = node.tag_color_b
 
             # Format each cell: strings as-is, floats with 6 dp, others as int.
             cells = []

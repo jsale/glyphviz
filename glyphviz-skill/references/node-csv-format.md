@@ -57,8 +57,11 @@ All 20: `id`, `type`, `parent_id`, `branch_level`, `translate_x/y/z`,
 | `color_index`, `palette_id` | 0, 0 | ANTz-style palette color selection. Inert on load/render — resolved into `color_r/g/b` only when the user cycles with =/− (color_index) or Alt+=/Alt+− (palette). 26 built-in palettes (0 = the 20-distinct-colors default). `palette_id` has no slot in the 94 columns; appended as an extension column only when nonzero. Full palette tables, gradient formulas, and authoring recipes: `color-palettes.md`. |
 | `translate_rate_x/y/z`, `rotate_rate_x/y/z`, `scale_rate_x/y/z` | 0.0 | Per-cycle velocities added every animation tick (nominally 60/s, ANTz convention). Nonzero `freeze` (extras) suspends them. `rotate_rate_z` also scrolls a Link prism's texture (flow animation). |
 | `text`, `link` | "" | **GlyphViz-only inline label columns.** `text` = label drawn in the viewport; `link` = URL/file opened by the U key. If *neither* column is present, the loader falls back to the companion tag file (see Tag companion file). Written on save only when some node has a value. |
+| `show_text` | 0 | **GlyphViz-only.** 1 = pin this node's tag text on: it draws whenever the node draws, regardless of the viewport's "Show Tag Labels" / "…of Selected" settings, and is exempt from the 500-tags-per-frame cap. The node's own `hide` and the `\` draw limit still apply. Use it for the handful of labels a scene should always show; don't set it on thousands of nodes. |
 | `render_mode` | 0 (Normal) | **World-node-only** scene blend mode: 0 Normal, 1 Additive, 2 Subtractive, 3 Dark/Multiply, 4 Off, 5 Screen, 6 Premultiplied. Extension column, written only when ≠ 0. |
 | `fog_enabled`, `fog_start`, `fog_end` | 0, 0.0, 0.0 | **World-node-only** fog (fades to the World bg color). Extension columns, written only when nonzero. |
+| `tag_color_mode` | 0 (Uniform) | **World-node-only.** 0 = every tag label uses the single `tag_color_r/g/b` below; 1 = each label takes its own node's `color_r/g/b`, so a label reads as belonging to the glyph it names. The dark drop shadow behind tag text is fixed and not configurable. |
+| `tag_color_r/g/b` | 255, 255, 200 | **World-node-only** tag label color (pastel yellow by default), used when `tag_color_mode` = 0. All three are written together or not at all. |
 
 Every other column in the file is preserved verbatim in `Node.extras` and
 round-tripped by `save_node_csv` — unknown columns are never lost or reordered
@@ -141,6 +144,9 @@ Each is written **only when omitting it would misread on reload**:
 | `palette_id` | any node has a non-default palette |
 | `render_mode` | World render mode ≠ Normal |
 | `fog_enabled` / `fog_start` / `fog_end` | fog configured |
+| `show_text` | any node pins its tag text on |
+| `tag_color_mode` | World tag color mode ≠ Uniform (0) |
+| `tag_color_r` / `tag_color_g` / `tag_color_b` | World tag color ≠ the pastel-yellow default |
 
 This rule keeps untouched legacy ANTz/GaiaViz files byte-for-byte stable
 across a load/save round-trip.
@@ -171,7 +177,7 @@ prefix is for genuine GaiaViz files.
 
 | type | Meaning |
 |---|---|
-| 0 | **World** — one optional row holding scene-wide settings: background color in `color_r/g/b/a`, blend `render_mode`, fog. Never drawn or picked; **must be excluded from bulk selection/edits**. Without one, background falls back to (20, 20, 31). |
+| 0 | **World** — one optional row holding scene-wide settings: background color in `color_r/g/b/a`, blend `render_mode`, fog, tag-label color (`tag_color_mode`, `tag_color_r/g/b`). Never drawn or picked; **must be excluded from bulk selection/edits**. Without one, background falls back to (20, 20, 31) and tag text to pastel yellow. |
 | 1 | **Camera** — stored view definitions (C key cycles). Never drawn or picked. |
 | 5 | **Glyph** — the ordinary renderable node; use 5 for normal data (other unlisted values also draw as plain glyphs). |
 | 6 | **World Grid** — a real, movable/scalable node rendering a flat lon/lat plate or (with Sphere/Sphere-Wire geometry) a globe. Children attach **explicitly** via `parent_id` = the grid's id and place by `translate_x` = longitude, `translate_y` = latitude, `translate_z` = elevation within the grid's extents window (`trigger_lo/hi_x/y`). No implicit/default grid exists. Grid scale re-spaces child positions, never child sizes. Full rules: `world-grid.md`. |
