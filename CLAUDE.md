@@ -6,7 +6,12 @@ GlyphViz is **not** a straight reimplementation of ANTz or GaiaViz. The goal is 
 
 ## Feature Target: ANTz vs GaiaViz
 
-This is an open architectural question. When implementing topologies or behaviors, use `gaiaviz-skill/references/` as the primary spec. For features absent from both (Spiral, Plot, Surface), derive from first principles while keeping the ANTz 94-column CSV format as the data contract.
+Two different questions, with two different answers — don't collapse them:
+
+- **Data contract** (what to generate/validate): `glyphviz-skill/references/` is authoritative for GlyphViz's own native `gv_` format. Consult it first for anything producing data. See "GaiaViz Skill vs. GlyphViz Skill" below.
+- **Behavior** (how a topology, placement, or interaction should act): `gaiaviz-skill/references/` is the source, since GlyphViz aims to match ANTz/GaiaViz semantics. For features absent from both (Spiral, Plot, Surface), derive from first principles.
+
+**The ANTz 94-column layout is not GlyphViz's data contract.** `save_node_csv` still *writes* those 94 columns (plus GlyphViz extension columns appended after them) so saved files stay readable by ANTz/GaiaViz tooling, and `load_node_csv` reads them — but that is a compatibility write format, not an authoring requirement. Native `gv_` data needs only the ~20 required columns `glyphviz-skill/references/node-csv-format.md` documents; everything else has a documented load default.
 
 **Key constraint:** We do not have access to the GaiaViz GitHub source. Never assume undocumented GaiaViz behavior — only what the reference docs describe.
 
@@ -14,17 +19,21 @@ This is an open architectural question. When implementing topologies or behavior
 
 GaiaViz's `np_` file/column prefix stands for "neural physics," Shane Saxon's architectural concept underpinning ANTz/GaiaViz — GlyphViz has no equivalent architecture and shouldn't claim the name. GlyphViz's own example/generated data uses a `gv_` prefix instead (`gv_node.csv`, `gv_tag.csv`, `gv_ch-map.csv`, `gv_ch-tracks.csv`). The `np_` prefix is still recognized when *reading* genuine third-party GaiaViz files — both as a filename pattern and as the handful of GaiaViz-specific column names (`np_node_id`, `np_geometry_id`, `np_topo_id`, `np_texture_id`, `np_ch_in_id`) aliased in `glyphviz_core/csv_reader.py` and `channel_engine.py`. Do not rename those aliases — they exist for interop, not branding. `gaiaviz-skill/examples/` also keeps `np_` since it demonstrates the actual GaiaViz spec.
 
-**Node↔tag pairing convention**: a tag CSV's name is its node CSV's name with the `node`/`np_node` stem swapped for `tag`/`np_tag` — e.g. `gv_node.csv` ↔ `gv_tag.csv`, `np_node.csv` ↔ `np_tag.csv`, and timestamped saves carry the same stamp on both (`gv_node20260625182432.csv` ↔ `gv_tag20260625182432.csv`). `glyphviz_core/csv_reader.py`'s `stamp_node_and_tag_paths()` derives the tag path this way and only when the unstamped node-file stem ends in `node`; `load_node_csv` looks for the matching tag file automatically on open. Tag rows: `table_id` is always `0`, `record_id` matches the node CSV's `id` column (see "Pending High-Priority Features" → Tags below for the full row format).
+**Node↔tag pairing convention**: a tag CSV's name is its node CSV's name with the `node`/`np_node` stem swapped for `tag`/`np_tag` — e.g. `gv_node.csv` ↔ `gv_tag.csv`, `np_node.csv` ↔ `np_tag.csv`, and timestamped saves carry the same stamp on both (`gv_node20260625182432.csv` ↔ `gv_tag20260625182432.csv`). `glyphviz_core/csv_reader.py`'s `stamp_node_and_tag_paths()` derives the tag path this way and only when the unstamped node-file stem ends in `node`; `load_node_csv` looks for the matching tag file automatically on open. Tag rows: `table_id` is always `0`, `record_id` matches the node CSV's `id` column (full row format and the three `title` encodings: `glyphviz-skill/references/tags-and-labels.md`).
 
-## Pending High-Priority Features
+## Feature Status
 
-1. **Tags** — Text labels attached to nodes. Load/render the tag CSV (`gv_tag.csv` for GlyphViz-native data, `np_tag.csv` for GaiaViz-format data); support URL, local file, and app-launch encoding. `table_id` must be 0; `record_id` matches the node CSV's id column. Spec: `gaiaviz-skill/references/format/Tag-Format.md` and `Text-Tags-Usage.md`.
+**Shipped** — these were listed here as pending long after they landed; verified against the code 2026-07-24. Don't re-propose them as new work:
 
-2. **Channels (animation)** — Time-series animation of node attributes via the `ch-map`/`ch-tracks` CSV pair (`gv_ch-map.csv`/`gv_ch-tracks.csv` for GlyphViz-native data, `np_ch-map.csv`/`np_ch-tracks.csv` for GaiaViz-format data). Enables EEG, GPS, IoT, and biometric visualizations. See `gaiaviz-skill/examples/Channels_Example/` and `RHR_Channel_Anim1/`.
+- **Tags** — text labels attached to nodes, loaded either from inline `text`/`link` columns or a companion tag CSV (`gv_tag.csv` native, `np_tag.csv` for GaiaViz-format files), with URL, local-file, and app-launch link encoding (U key / Alt+click). Per-node `show_text` pins a label on regardless of the scene-wide tag settings; the World node's `tag_color_mode` / `tag_color_r/g/b` style every label. Native spec: `glyphviz-skill/references/tags-and-labels.md`. `gaiaviz-skill/references/format/Tag-Format.md` covers only the legacy `np_` companion-file dialect — reach for it when reading genuine GaiaViz files, not when generating.
+- **Channels (animation)** — time-series animation of node attributes via the `ch-map`/`ch-tracks` CSV pair (`gv_` native, `np_` for GaiaViz-format files), with a playback transport, FPS control, and a dense-scene fast path. Powers the EEG, GPS, IoT, and biometric examples. Native spec: `glyphviz-skill/references/channels-animation.md`.
+- **Save edits back to CSV** (timestamped node+tag save, K key) and **multi-select**.
 
-3. **Workflow polish** — Save edits back to CSV, undo/redo, multi-select, table search/filter.
+**Pending:**
 
-4. **VR/AR/XR** — Long-term goal: an immersive viewer. No codebase exists yet; desktop 3D is the current focus. Flag any architectural decisions that would make a future XR port harder.
+1. **Workflow polish** — undo/redo, table search/filter, select-descendants.
+
+2. **VR/AR/XR** — Long-term goal: an immersive viewer. No codebase exists yet; desktop 3D is the current focus. Flag any architectural decisions that would make a future XR port harder.
 
 ## Topology Inventory
 
