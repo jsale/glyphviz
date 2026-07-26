@@ -78,9 +78,17 @@ NA-token parsing can eat them.
   **Pinned labels are exempt** for the same reason. If a generated scene
   labels thousands of nodes, tell users to use selected-only mode to see
   any specific subset in full.
-- Eligibility: hidden nodes (unless Show Hidden), World/Camera rows, and
-  Link nodes never draw tags — pinning does not override any of those, nor
-  the `\` draw limit. Label text length itself is not limited.
+- Eligibility: hidden nodes (unless Show Hidden) and World/Camera rows
+  never draw tags — pinning does not override either, nor the `\` draw
+  limit. Label text length itself is not limited.
+- **Link (type=7) nodes carry labels too**, under exactly the same
+  settings — global toggle, selected-only, `show_text` pinning, and both
+  color modes (a link's label takes the *link's* own `color_r/g/b` under
+  match-node-color). A link's label anchors to the **middle of the edge**
+  it draws; a malformed link with no resolvable B-end falls back to its
+  own position, which is where it sits for click-picking too. Links are
+  not subject to the `\` draw limit, so neither are their labels. Use
+  edge labels for weights, relationship types, flow volumes.
 - **Color**: labels are pastel yellow (255, 255, 200) over a fixed dark
   drop shadow. The World node's `tag_color_r/g/b` changes that single
   color scene-wide, and `tag_color_mode` = 1 instead draws each label in

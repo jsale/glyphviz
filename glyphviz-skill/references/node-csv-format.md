@@ -181,7 +181,7 @@ prefix is for genuine GaiaViz files.
 | 1 | **Camera** — stored view definitions (C key cycles). Never drawn or picked. |
 | 5 | **Glyph** — the ordinary renderable node; use 5 for normal data (other unlisted values also draw as plain glyphs). |
 | 6 | **World Grid** — a real, movable/scalable node rendering a flat lon/lat plate or (with Sphere/Sphere-Wire geometry) a globe. Children attach **explicitly** via `parent_id` = the grid's id and place by `translate_x` = longitude, `translate_y` = latitude, `translate_z` = elevation within the grid's extents window (`trigger_lo/hi_x/y`). No implicit/default grid exists. Grid scale re-spaces child positions, never child sizes. Full rules: `world-grid.md`. |
-| 7 | **Link** — a graph edge from node `parent_id` (A-end) to node `child_id` (B-end). Geometry 27 (Line) = classic thin line; 28 (Prism) = textured 4-sided tube, texture scrollable via `rotate_rate_z` for directed flow. |
+| 7 | **Link** — a graph edge from node `parent_id` (A-end) to node `child_id` (B-end). Geometry 27 (Line) = classic thin line; 28 (Prism) = textured 4-sided tube, texture scrollable via `rotate_rate_z` for directed flow. Links take `text`/`link` and `show_text` like any other node — an edge label draws at the middle of the edge (`tags-and-labels.md`). |
 
 ## Topology ids (`topo` — how children of this node are placed)
 

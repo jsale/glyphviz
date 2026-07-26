@@ -1615,6 +1615,41 @@ class Viewport(QOpenGLWidget):
 
         glEnable(GL_LIGHTING)  # restore for subsequent passes (rubber band, etc.)
 
+    def _tag_pin_state(self, node: Node) -> bool | None:
+        """Whether this node's label should draw at all, and if so whether it
+        is pinned. None = don't draw. Shared by the ordinary-node and Link
+        collection passes so the two can't drift apart on tag settings.
+
+        A pinned node (show_text) ignores both scene-wide tag settings. Its
+        own hide flag and the draw limit are NOT checked here — those decide
+        whether the object is on screen at all, and each caller applies the
+        rule its own draw path uses."""
+        if not node.text:
+            return None
+        pinned = bool(node.show_text)
+        if not pinned:
+            if not self.show_tags:
+                return None
+            if self.show_tags_selected_only and node.id not in self.selected_node_ids:
+                return None
+        return pinned
+
+    def _link_label_anchor(self, link: Node) -> tuple[float, float, float] | None:
+        """World position for a Link's tag label: the midpoint of the edge it
+        draws. When the B-end is missing or unresolvable — the link draws no
+        line but is still selectable — fall back to the link's own position,
+        which is exactly where _begin_pick_scene puts its fallback pick
+        sphere, so the label sits on what a click would hit."""
+        a_id = link.parent_id
+        b_id = int(float(link.extras.get('child_id', 0)))
+        a_pos = self._scene.world_pos(a_id) if a_id else None
+        b_pos = self._scene.world_pos(b_id) if b_id else None
+        if a_pos is not None and b_pos is not None:
+            return ((a_pos[0] + b_pos[0]) / 2.0,
+                    (a_pos[1] + b_pos[1]) / 2.0,
+                    (a_pos[2] + b_pos[2]) / 2.0)
+        return self._scene.world_pos(link.id)
+
     def _project_tagged_nodes(self, mv: np.ndarray, pr: np.ndarray,
                                vx: int, vy: int, vw: int, vh: int
                                ) -> list[tuple[str, int, int, tuple | None]]:
@@ -1622,6 +1657,9 @@ class Viewport(QOpenGLWidget):
         the given camera matrices into the (vx, vy, vw, vh) viewport sub-rect
         (Qt widget coordinates). Used for both the full-widget single-eye
         view and each half-width stereo eye view.
+
+        Covers ordinary glyphs and Link (type=7) nodes alike — a link's label
+        anchors to the middle of the edge — under identical tag settings.
 
         Returns (text, screen_x, screen_y, rgb) tuples; rgb is the node's own
         color under TAG_COLOR_MODE_NODE and None under the uniform mode, where
@@ -1647,23 +1685,15 @@ class Viewport(QOpenGLWidget):
             if node.type in NON_VISUAL_TYPES:
                 continue
             if node.type == NODE_TYPE_LINK:
-                continue
+                continue   # links carry labels too — collected in pass 1b
             if not self.show_hidden and node.hide:
                 continue
             if self._draw_limit is not None and visible_count >= self._draw_limit:
                 break
             visible_count += 1
-            if not node.text:
+            pinned = self._tag_pin_state(node)
+            if pinned is None:
                 continue
-            # A pinned node's label ignores both scene-wide tag settings; a
-            # node's own hide flag and the draw limit above still win, since
-            # those decide whether the glyph is on screen at all.
-            pinned = bool(node.show_text)
-            if not pinned:
-                if not self.show_tags:
-                    continue
-                if self.show_tags_selected_only and node.id not in self.selected_node_ids:
-                    continue
             wp = self._scene.world_pos(node.id) or (node.translate_x, node.translate_y, node.translate_z)
             texts.append(node.text)
             positions.append(wp)
@@ -1671,6 +1701,30 @@ class Viewport(QOpenGLWidget):
                           if per_node_color else None)
             pinned_flags.append(pinned)
             any_pinned |= pinned
+
+        # Pass 1b: Link (type=7) labels, anchored to the middle of the edge.
+        # Links get their own pass off the scan list because that is exactly
+        # how _draw_topology_overlays draws them — irrespective of the \ draw
+        # limit, whose early break above exists to keep that limit O(visible)
+        # instead of O(scene). Every tag setting applies to them identically.
+        # They land after the ordinary nodes, so in the rare scene that both
+        # exceeds the cap AND labels its links, node labels win the budget.
+        for link in self._scene_scan().link_nodes:
+            if not self.show_hidden and link.hide:
+                continue
+            pinned = self._tag_pin_state(link)
+            if pinned is None:
+                continue
+            anchor = self._link_label_anchor(link)
+            if anchor is None:
+                continue
+            texts.append(link.text)
+            positions.append(anchor)
+            colors.append((link.color_r, link.color_g, link.color_b)
+                          if per_node_color else None)
+            pinned_flags.append(pinned)
+            any_pinned |= pinned
+
         if not texts:
             return []
 
