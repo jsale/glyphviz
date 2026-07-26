@@ -6,25 +6,33 @@ This page walks through the smallest possible end-to-end GlyphViz workflow: a no
 
     ## 1. Launch GlyphViz
 
-    Open GlyphViz from the Start menu or the folder you extracted it to. You'll see the **Viewer** (the main 3D scene window), with the **Node Panel** and **Properties Panel** docked to the side.
+    Run `GlyphViz.exe` from the folder you extracted. You'll see the 3D **Viewer** filling the window, with two docks alongside it: the **Node Table** (one row per node, sortable by any column) and the **Properties** panel (scene-wide display settings on top, the selected node's fields below).
 
-    !!! warning "Placeholder — exact panel layout pending"
-        The default window layout, panel names, and docking arrangement described here need to be confirmed against the actual GUI. See the [Reference](../reference/index.md) section once it's filled in from the real interface.
+    Full tours of both: [Node Panel](../reference/node-panel.md) and [Properties Panel](../reference/properties-panel.md).
 
     ## 2. Load a scene
 
-    Use the **File → Open** menu (or the equivalent toolbar button) to load a node CSV. If you don't have one yet, GlyphViz ships with a small demo scene — look for a **File → Open Demo Scene** option, or load one of the samples from the [Examples Gallery](../examples/index.md).
+    Use the **File → Open** menu to load a node CSV — the file ending in `_gv_node.csv`. Companion tag and channel files sitting next to it load automatically.
+
+    If you don't have a scene yet, grab the example set: **[GlyphVizExamples20260729.zip](https://iluvdata.org/glyphviz/examples/GlyphVizExamples20260729.zip)** (see [Installation → Example scenes](installation.md#example-scenes)). Extract it, then open any example's node CSV. `Topology_Example` and `Palette_Example` are good first ones — small, fast, and they show the node model clearly.
 
     ## 3. Navigate the Viewer
 
-    Once a scene is loaded, you can orbit, pan, and zoom around it with the mouse.
+    | Action | Binding |
+    |---|---|
+    | Orbit | Left-drag (or right-drag) |
+    | Pan | Middle-drag |
+    | Zoom | Scroll wheel |
+    | Frame a node | Double-click it |
+    | Reframe everything | **View → Reset Camera** |
 
-    !!! warning "Placeholder — exact mouse bindings pending"
-        The specific mouse/keyboard bindings for orbit, pan, and zoom need to be confirmed and documented in [Viewer Navigation](../reference/viewer-navigation.md).
+    The full binding list — including selection, the Move/Rotate/Size gizmos, and the single-key shortcuts — is in [Viewer Navigation](../reference/viewer-navigation.md).
 
     ## 4. Inspect and edit a node
 
-    Click any node in the Viewer to select it. Its properties appear in the **Properties Panel**, where you can adjust things like color, scale, and geometry. The **Node Panel** shows the full hierarchy as a tree you can navigate directly.
+    Click any node in the Viewer to select it (Ctrl+click to add to the selection, Shift+drag for a rubber-band box). Its fields appear in the **Properties** panel's *Selected Node* group, where you can edit position, rotation, scale, color, geometry, and topology live — the Viewer repaints as you change them.
+
+    The **Node Table** is the same selection, seen as data: a flat, sortable row per node with a `Parent` column carrying the hierarchy. Selecting in one highlights in the other; double-clicking a row frames that node in the Viewer.
 
     ## 5. What's next
 
