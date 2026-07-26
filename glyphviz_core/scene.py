@@ -99,6 +99,9 @@ class Scene:
         self._draw_M: np.ndarray | None = None
         self._draw_gl: np.ndarray | None = None
         self._draw_radius: np.ndarray | None = None
+        # world_node() result, cached per revision — the renderer asks every
+        # frame and a full node-list scan costs ~50 ms at 700k nodes.
+        self._world_node_cache: tuple[int, 'Node | None'] | None = None
 
     def invalidate(self):
         """Mark cached transforms stale; they will be recomputed on next access."""
@@ -297,9 +300,16 @@ class Scene:
     def world_node(self) -> Node | None:
         """The World node (type=0), holding scene-wide background/render-mode/
         fog settings — see node.py. Returns the lowest-id match, or None if
-        the file has no World row (old files render with hardcoded defaults)."""
+        the file has no World row (old files render with hardcoded defaults).
+        Cached per revision (any node add/remove bumps it via invalidate/
+        register_node/touch, same contract the draw-data caches rely on)."""
+        cached = self._world_node_cache
+        if cached is not None and cached[0] == self._revision:
+            return cached[1]
         world_nodes = [n for n in self.nodes if n.type == NODE_TYPE_WORLD]
-        return min(world_nodes, key=lambda n: n.id) if world_nodes else None
+        result = min(world_nodes, key=lambda n: n.id) if world_nodes else None
+        self._world_node_cache = (self._revision, result)
+        return result
 
     @classmethod
     def load(cls, path, base_scale: float = 3.0) -> 'Scene':

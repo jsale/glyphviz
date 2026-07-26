@@ -101,6 +101,52 @@ def _apply_render_mode(mode: int):
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
 
+class _SceneScan:
+    """Special-role node membership paintGL needs every frame — rate-driven
+    movers, link/plot/surface nodes, World Grid presence — collected in ONE
+    pass over the node list and cached per Scene revision (see
+    Viewport._scene_scan). Before this cache, each frame re-scanned the
+    whole scene several times over in Python, which at 700k nodes cost
+    ~900 ms/frame no matter how few nodes the \\-key draw limit let render."""
+    __slots__ = ('rate_nodes', 'link_nodes', 'plot_nodes', 'surface_nodes',
+                 'has_grid', '_children_of')
+
+    def __init__(self, nodes: list[Node]):
+        self.rate_nodes: list[Node] = []
+        self.link_nodes: list[Node] = []
+        self.plot_nodes: list[Node] = []
+        self.surface_nodes: list[Node] = []
+        self.has_grid = False
+        self._children_of: dict[int, list[Node]] | None = None
+        for n in nodes:
+            if (n.translate_rate_x or n.translate_rate_y or n.translate_rate_z
+                    or n.rotate_rate_x or n.rotate_rate_y or n.rotate_rate_z
+                    or n.scale_rate_x or n.scale_rate_y or n.scale_rate_z):
+                self.rate_nodes.append(n)
+            if n.type == NODE_TYPE_LINK:
+                self.link_nodes.append(n)
+            else:
+                if n.topo == TOPO_PLOT:
+                    self.plot_nodes.append(n)
+                elif n.topo == TOPO_SURFACE:
+                    self.surface_nodes.append(n)
+                if n.type == NODE_TYPE_GRID:
+                    self.has_grid = True
+
+    def children_map(self, nodes: list[Node]) -> dict[int, list[Node]]:
+        """parent_id → children (links excluded), built lazily on first use —
+        only Plot/Surface overlay drawing needs it, so scenes without those
+        topologies never pay for the dict."""
+        if self._children_of is None:
+            m: dict[int, list[Node]] = {}
+            for n in nodes:
+                if (n.type != NODE_TYPE_LINK and n.parent_id
+                        and n.parent_id != n.id):
+                    m.setdefault(n.parent_id, []).append(n)
+            self._children_of = m
+        return self._children_of
+
+
 class Viewport(QOpenGLWidget):
     # Plain left-click on a node: replaces the selection
     nodeClicked = Signal(int)
@@ -224,6 +270,13 @@ class Viewport(QOpenGLWidget):
 
         # Draw-limit culling: None = show all; int = show first N visual nodes
         self._draw_limit: int | None = None
+
+        # Per-revision scene-membership scan (see _SceneScan) — rebuilt only
+        # when Scene._revision moves, so per-frame consumers (rate animation,
+        # topology overlays, grid-presence check) stop re-scanning the whole
+        # node list every paintGL.
+        self._scan_cache: _SceneScan | None = None
+        self._scan_cache_rev: int | None = None
 
         # FPS tracking
         self._fps_frames = 0
@@ -427,6 +480,10 @@ class Viewport(QOpenGLWidget):
         self._ch_cache_rev = None
         self._ch_dynamic_rev += 1
         self._scene = Scene(nodes, self._base_scale)
+        # A new Scene restarts its revision counter, so the old scan could
+        # alias the new scene's revision — drop it explicitly.
+        self._scan_cache = None
+        self._scan_cache_rev = None
         self._scene._ensure()   # pre-compute so camera init can read positions
         self._update_render_timer_state()
         visible = [n for n in nodes if n.type not in NON_VISUAL_TYPES]
@@ -745,18 +802,23 @@ class Viewport(QOpenGLWidget):
         self._update_render_timer_state()
         self.update()
 
+    def _scene_scan(self) -> _SceneScan:
+        """The current scene's _SceneScan, rebuilt when Scene._revision moved
+        since the last build (same change-detection contract as the retained
+        display list). set_nodes resets the cache explicitly because a new
+        Scene restarts its revision counter."""
+        rev = self._scene._revision
+        if self._scan_cache is None or self._scan_cache_rev != rev:
+            self._scan_cache = _SceneScan(self._scene.nodes)
+            self._scan_cache_rev = rev
+        return self._scan_cache
+
     def _has_active_rates(self) -> bool:
         """True if any non-frozen node has a nonzero translate/rotate/scale rate
         (ANTz's freeze flag, preserved in Node.extras, suspends a node's own
         rates but doesn't need to be checked against other nodes still moving)."""
-        for n in self._scene.nodes:
-            if n.extras.get('freeze', 0):
-                continue
-            if (n.translate_rate_x or n.translate_rate_y or n.translate_rate_z
-                    or n.rotate_rate_x or n.rotate_rate_y or n.rotate_rate_z
-                    or n.scale_rate_x or n.scale_rate_y or n.scale_rate_z):
-                return True
-        return False
+        return any(not n.extras.get('freeze', 0)
+                   for n in self._scene_scan().rate_nodes)
 
     def _update_render_timer_state(self):
         """Start/stop the ~30fps continuous-repaint timer based on whether
@@ -785,8 +847,18 @@ class Viewport(QOpenGLWidget):
         cycles = dt_ms / _RATE_CYCLE_MS
         if cycles <= 0:
             return set()
+        candidates = self._scene_scan().rate_nodes
+        if self._ch_dynamic_ids:
+            # Channels playback can write rate fields through the
+            # no-revision-bump fast path (refresh_rows), so the revision-keyed
+            # scan can miss a channel-driven mover — always consider the
+            # dynamic set too.
+            self._ch_ensure_playback_cache()
+            seen = {n.id for n in candidates}
+            candidates = candidates + [n for n in self._ch_dynamic_nodes
+                                       if n.id not in seen]
         moved: set[int] = set()
-        for n in self._scene.nodes:
+        for n in candidates:
             if n.extras.get('freeze', 0):
                 continue
             if n.translate_rate_x or n.translate_rate_y or n.translate_rate_z:
@@ -884,6 +956,10 @@ class Viewport(QOpenGLWidget):
                 self._scene.refresh_rows(self._ch_transform_rows)
             else:
                 self._scene.invalidate()
+                # Rate integration only moved already-known movers — scene
+                # membership is unchanged, so re-key the scan cache to the
+                # bumped revision instead of rescanning every node next frame.
+                self._scan_cache_rev = self._scene._revision
         if self.follow_selected:
             self._apply_follow_target()
         # QPainter's GL paint engine (used by _draw_tags_qpainter) can leave
@@ -1070,8 +1146,7 @@ class Viewport(QOpenGLWidget):
         loop pass its own just-captured matrices in for frustum culling
         (self._mv_matrix/_proj_matrix are left None in stereo mode -- see
         paintGL -- since each eye needs its own off-axis projection)."""
-        if self.show_grid and not any(n.type == NODE_TYPE_GRID
-                                      for n in self._scene.nodes):
+        if self.show_grid and not self._scene_scan().has_grid:
             # Procedural backdrop only for scenes with no real World Grid —
             # once one exists, its own lattice is the reference plane and the
             # decoration's unrelated spacing would just fight it.
@@ -1381,19 +1456,18 @@ class Viewport(QOpenGLWidget):
 
     def _draw_topology_overlays(self):
         """Draw type=7 link lines, TOPO_PLOT polylines, and TOPO_SURFACE quad meshes."""
-        # Build parent→children map and collect link nodes in a single pass.
-        children_of: dict[int, list[Node]] = {}
-        link_nodes: list[Node] = []
-        for node in self._scene.nodes:
-            if node.type == NODE_TYPE_LINK:
-                link_nodes.append(node)
-            elif node.parent_id and node.parent_id != node.id:
-                children_of.setdefault(node.parent_id, []).append(node)
-
-        any_plot    = any(n.topo == TOPO_PLOT    for n in self._scene.nodes)
-        any_surface = any(n.topo == TOPO_SURFACE for n in self._scene.nodes)
-        if not link_nodes and not any_plot and not any_surface:
+        # Membership comes from the per-revision scene scan — most scenes
+        # (no links/plots/surfaces) return here without touching the node
+        # list, and the parent→children map is built once per revision, not
+        # once per frame.
+        scan = self._scene_scan()
+        link_nodes = scan.link_nodes
+        plot_nodes = scan.plot_nodes
+        surface_nodes = scan.surface_nodes
+        if not link_nodes and not plot_nodes and not surface_nodes:
             return
+        children_of = (scan.children_map(self._scene.nodes)
+                       if (plot_nodes or surface_nodes) else {})
 
         glDisable(GL_LIGHTING)
 
@@ -1430,10 +1504,8 @@ class Viewport(QOpenGLWidget):
             glEnd()
 
         # ---- TOPO_PLOT polylines ----
-        if any_plot:
-            for node in self._scene.nodes:
-                if node.topo != TOPO_PLOT:
-                    continue
+        if plot_nodes:
+            for node in plot_nodes:
                 if not self.show_hidden and node.hide:
                     continue
                 kids = [k for k in children_of.get(node.id, [])
@@ -1468,11 +1540,9 @@ class Viewport(QOpenGLWidget):
         glPointSize(1.0)
 
         # ---- TOPO_SURFACE quad meshes (with lighting for 3-D shading) ----
-        if any_surface:
+        if surface_nodes:
             glEnable(GL_LIGHTING)
-            for node in self._scene.nodes:
-                if node.topo != TOPO_SURFACE:
-                    continue
+            for node in surface_nodes:
                 if not self.show_hidden and node.hide:
                     continue
                 kids = [k for k in children_of.get(node.id, [])

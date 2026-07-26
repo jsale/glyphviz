@@ -50,6 +50,8 @@ def main() -> int:
     parser.add_argument("--no-grid", dest="show_grid", action="store_false")
     parser.add_argument("--no-axes", dest="show_axes", action="store_false")
     parser.add_argument("--stereo", action="store_true", help="Benchmark the cross-eye stereo path.")
+    parser.add_argument("--draw-limit", type=int, default=None,
+                        help="Cap visible nodes like the \\ key does (default: draw everything).")
     parser.add_argument("--media-folder", default=None,
                         help="Folder of images/videos for texture_id. Default: 'media' next to --csv.")
     args = parser.parse_args()
@@ -65,6 +67,8 @@ def main() -> int:
     vp.show_axes = args.show_axes
     vp.stereo_mode = args.stereo
     vp.set_nodes(nodes)
+    if args.draw_limit is not None:
+        vp._draw_limit = args.draw_limit
     vp.resize(args.width, args.height)
 
     media = Path(args.media_folder) if args.media_folder else Path(args.csv).resolve().parent / "media"
