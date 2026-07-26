@@ -72,6 +72,9 @@ run `conda env list` and take the `glyphviz` row, or check `%USERPROFILE%\.conda
 Never use `conda run -n glyphviz ...`: it hangs silently on Jeff's Windows setup (broken
 stdout/stderr inheritance in some terminal environments) and needs Ctrl+C to escape.
 
-## GaiaViz Skill
+## GaiaViz Skill vs. GlyphViz Skill
 
-`gaiaviz-skill/` is a Claude skill for generating GaiaViz-format CSV data — separate from the visualizer but sharing the same data contract. Treat `gaiaviz-skill/references/` as the authoritative spec for the 94-column node format.
+Two separate Claude skills exist, for two separate formats — neither stands in for the other:
+
+- **`glyphviz-skill/`** — the actively-maintained skill for GlyphViz's own **native** format (`gv_` prefix, only 20 required columns, no mandatory infrastructure rows). This is the skill Jeff shares externally, and `glyphviz-skill/references/` is the authoritative spec for GlyphViz's own CSV data contract — consult it first for anything generating or validating `gv_` data.
+- **`gaiaviz-skill/`** — reference material for the actual legacy GaiaViz/ANTz format (`np_` prefix, 94 columns, mandatory infrastructure rows). Its role is interop and behavioral fidelity only: reading genuine third-party GaiaViz files, and grounding topology/behavior decisions in GaiaViz's documented conventions (see "Feature Target: ANTz vs GaiaViz" above). It is not the contract for anything GlyphViz generates natively — `glyphviz-skill/` is.
