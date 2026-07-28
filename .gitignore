@@ -22,6 +22,11 @@ hyperglyph_lab/output/
 build/
 dist/
 
+# tools/release.py fallback output folder, used only when the local iluvdata
+# mirror isn't present (normally the release zips are written straight into
+# that mirror, outside the repo).
+release/
+
 # Build wrapper: bakes in the local conda env path, which differs across
 # Jeff's machines (anaconda3\envs vs .conda\envs) -- keep it local-only so a
 # stale hardcoded path from one machine never lands on another via git.
