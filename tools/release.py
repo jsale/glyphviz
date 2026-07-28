@@ -13,6 +13,12 @@ the previous release shipped as ``GlyphViz20260729.zip`` on 2026-07-26:
   4. Re-stamp the docs           -> every GlyphViz<date>.zip name/URL on the
                                     Installation page, plus its size and
                                     build-date line
+  5. Rebuild the docs site and publish it into that same mirror folder, so
+     one folder holds both the new zip and the pages that link to it
+
+Steps 4 and 5 are the default, not an opt-in: the 2026-07-28 release re-stamped
+the Installation page but never rebuilt the site, so the published pages still
+advertised the previous zip. Pass --no-docs to leave the docs alone entirely.
 
 Run it with the glyphviz conda env's python (see CLAUDE.md):
 
@@ -97,14 +103,11 @@ def mib(n_bytes: int) -> int:
     return round(n_bytes / (1024 * 1024))
 
 
-def mirror_root() -> Path | None:
-    """The local copy of the iluvdata web root that holds the published zips.
+def site_dir() -> Path | None:
+    """Where mkdocs build writes the site: mkdocs.yml's site_dir.
 
-    Derived from mkdocs.yml's site_dir rather than hardcoded: site_dir points
-    at <web root>/glyphviz-docs-site-preview, so its parent is the web root
-    and the published site (and its versions/ and examples/ folders) sits at
-    <web root>/glyphviz. Deriving it keeps this tracked file free of the
-    machine-specific absolute paths that got build.bat gitignored.
+    Read from the config rather than hardcoded, which keeps this tracked file
+    free of the machine-specific absolute paths that got build.bat gitignored.
     """
     cfg = REPO / 'glyphviz-docs' / 'mkdocs.yml'
     try:
@@ -114,9 +117,33 @@ def mirror_root() -> Path | None:
     m = re.search(r'^site_dir:\s*(.+?)\s*$', text, re.MULTILINE)
     if not m:
         return None
-    site_dir = Path(m.group(1).strip().strip('"\''))
-    candidate = site_dir.parent / 'glyphviz'
+    return Path(m.group(1).strip().strip('"\''))
+
+
+def mirror_root() -> Path | None:
+    """The local copy of the iluvdata web root that holds the published zips.
+
+    site_dir points at <web root>/glyphviz-docs-site-preview, so its parent is
+    the web root and the published site (and its versions/ and examples/
+    folders) sits at <web root>/glyphviz. That folder is what gets uploaded.
+    """
+    site = site_dir()
+    if site is None:
+        return None
+    candidate = site.parent / 'glyphviz'
     return candidate if candidate.is_dir() else None
+
+
+def publish_site(site: Path, dest: Path) -> int:
+    """Merge the built site into dest, overwriting pages but deleting nothing.
+
+    dest also holds versions/ and examples/ with the release zips, which the
+    site build knows nothing about — so this must never be a mirror-with-delete.
+    Returns the number of files copied.
+    """
+    n = sum(1 for _ in site.rglob('*') if _.is_file())
+    shutil.copytree(site, dest, dirs_exist_ok=True)
+    return n
 
 
 def walk_files(root: Path):
@@ -231,9 +258,11 @@ def main() -> int:
                          '(default: the local iluvdata mirror, derived from '
                          "mkdocs.yml's site_dir)")
     ap.add_argument('--no-docs', action='store_true',
-                    help='publish the archive but leave the docs alone')
-    ap.add_argument('--docs-build', action='store_true',
-                    help='run mkdocs build afterwards, into its site_dir')
+                    help='publish the archive but leave the docs alone: no '
+                         're-stamp, no site build, no site publish')
+    ap.add_argument('--no-docs-build', action='store_true',
+                    help='re-stamp the docs but skip rebuilding and publishing '
+                         'the site (you will have to run mkdocs build yourself)')
     ap.add_argument('--force', action='store_true',
                     help='overwrite an archive that already exists under that name')
     ap.add_argument('--dry-run', action='store_true',
@@ -348,19 +377,25 @@ def main() -> int:
         log()
 
     # --- 4. docs site ---------------------------------------------------
-    if args.docs_build:
+    site_published = False
+    if not args.no_docs and not args.no_docs_build:
         log("[4] Building the docs site (mkdocs build)...")
         # MkDocs lives in glyphviz-docs/.venv, NOT the glyphviz conda env, and
         # must run from the folder holding mkdocs.yml. Using sys.executable
         # here would fail with "No module named mkdocs".
         docs_dir = REPO / 'glyphviz-docs'
         docs_python = docs_dir / '.venv' / 'Scripts' / 'python.exe'
+        site = site_dir()
         if not docs_python.exists():
             log(f"    ERROR: no docs venv at {docs_python}")
-            log("    Create it, or run mkdocs build yourself from glyphviz-docs/.")
+            log("    Create it, or re-run with --no-docs-build and build by hand.")
+            return 1
+        if site is None:
+            log("    ERROR: no site_dir in glyphviz-docs/mkdocs.yml.")
             return 1
         if args.dry_run:
             log(f"    (dry run — would run {docs_python} -m mkdocs build)")
+            log(f"    (dry run — would publish {site} -> {out_root})")
         else:
             try:
                 subprocess.run([str(docs_python), '-m', 'mkdocs', 'build'],
@@ -368,19 +403,33 @@ def main() -> int:
             except subprocess.CalledProcessError as exc:
                 log(f"    mkdocs build failed (exit {exc.returncode}).")
                 return 1
-            log("    Output went to mkdocs.yml's site_dir — the PREVIEW folder.")
-            log("    Copying preview -> the live glyphviz/ folder is a separate step.")
+            log(f"    built into {site}")
+            log()
+            # The zips published in step 2 live under out_root, so the site has
+            # to land there too — one folder to upload, pages and downloads in
+            # agreement. Merge-copy, never mirror-with-delete: the build output
+            # does not contain versions/ or examples/*.zip.
+            log(f"[5] Publishing the site into {out_root}...")
+            n = publish_site(site, out_root)
+            log(f"    {n} files copied (release zips left in place)")
+            site_published = True
         log()
 
     # --- what's left for a human ----------------------------------------
     log('=' * 62)
-    log(" Done. To publish:")
-    for key in wanted:
-        spec = ARTIFACTS[key]
-        log(f"   upload {out_root / spec['subdir'] / (spec['prefix'] + args.date + '.zip')}")
-        log(f"       -> https://iluvdata.org/glyphviz/{spec['subdir']}/")
-    if not args.no_docs:
-        log("   commit the docs change, rebuild the site, upload it")
+    if site_published:
+        log(" Done. Everything to upload is in one folder:")
+        log(f"   {out_root}")
+        log("       -> https://iluvdata.org/glyphviz/")
+        log("   (then commit the docs change)")
+    else:
+        log(" Done. To publish:")
+        for key in wanted:
+            spec = ARTIFACTS[key]
+            log(f"   upload {out_root / spec['subdir'] / (spec['prefix'] + args.date + '.zip')}")
+            log(f"       -> https://iluvdata.org/glyphviz/{spec['subdir']}/")
+        if not args.no_docs:
+            log("   commit the docs change, rebuild the site, upload it")
     log('=' * 62)
     return 0
 
