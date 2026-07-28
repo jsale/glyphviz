@@ -123,6 +123,14 @@ class Scene:
         self._dirty = True
         self._revision += 1
 
+    def register_nodes(self, nodes: list[Node]):
+        """Bulk register_node, for a batch appended in one go (a scene merge).
+        One revision bump for the whole batch instead of one per node."""
+        for node in nodes:
+            self._by_id[node.id] = node
+        self._dirty = True
+        self._revision += 1
+
     def _ensure(self):
         if not self._dirty:
             return

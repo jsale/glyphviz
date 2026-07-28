@@ -473,6 +473,14 @@ class Viewport(QOpenGLWidget):
         self._update_render_timer_state()
         self.update()
 
+    def register_nodes(self, nodes: list[Node]):
+        """Bulk register_node for a batch appended in one go (a scene merge).
+        Unlike set_nodes() this keeps the existing Scene — and therefore the
+        camera, draw limit, and channel dynamic set — untouched."""
+        self._scene.register_nodes(nodes)
+        self._update_render_timer_state()
+        self.update()
+
     def remove_nodes(self, ids: set[int]):
         """Remove nodes (by id) from the scene in place, without resetting the camera.
         Mutates self._scene.nodes in place — MainWindow.nodes aliases the same list

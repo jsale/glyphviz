@@ -31,6 +31,7 @@ from glyphviz_core.csv_reader import (
     load_node_csv, save_node_csv, save_tag_csv, stamp_node_and_tag_paths,
 )
 from glyphviz_core.pdb_loader import load_pdb_file
+from glyphviz_core.scene_merge import merge_nodes
 from glyphviz_core.geometry_data import (
     GEO_NAMES, GEO_COUNT, GEO_GRID, GEO_GRID_WIRE, GEO_MESH, GEO_OCTA,
     GEO_SPHERE, GEO_SPHERE_WIRE, GEO_LINE, GEO_LINE_PRISM, _WIRE_IDS,
@@ -208,6 +209,16 @@ class MainWindow(QMainWindow):
         open_act = file_menu.addAction("&Open Node CSV…")
         open_act.setShortcut("Ctrl+O")
         open_act.triggered.connect(self._open_csv)
+
+        merge_act = file_menu.addAction("&Merge Node CSV…")
+        merge_act.setShortcut("Ctrl+M")
+        merge_act.setToolTip(
+            "Load a second node CSV (and its companion tag file) INTO the\n"
+            "current scene instead of replacing it. The merged nodes get fresh\n"
+            "ids above the existing ones and keep their own coordinates, so the\n"
+            "two scenes overlay in the same world space.  [Ctrl+M]"
+        )
+        merge_act.triggered.connect(self._merge_csv)
 
         self._watch_act = file_menu.addAction("Watch and &Reload")
         self._watch_act.setCheckable(True)
@@ -1473,6 +1484,89 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(msg)
         except Exception as exc:
             self.statusBar().showMessage(f"Error: {exc}")
+
+    def _merge_csv(self):
+        """File > Merge Node CSV… (Ctrl+M): load a second node CSV (plus its
+        companion tag file, which load_node_csv picks up automatically) INTO
+        the current scene rather than replacing it.
+
+        The incoming nodes are rebased onto fresh ids above everything already
+        loaded (see glyphviz_core.scene_merge.merge_nodes) and appended in
+        place, so the camera, the current texture set, and any running
+        Channels playback all survive. Coordinates are preserved, so the two
+        scenes overlay in the same world space.
+        """
+        start = str(Path(self._current_path).parent) if self._current_path else str(Path.home())
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Merge Node CSV into Current Scene",
+            start,
+            "CSV Files (*.csv);;All Files (*)",
+        )
+        if not path:
+            return
+        try:
+            incoming = load_node_csv(path)
+        except Exception as exc:
+            self.statusBar().showMessage(f"Merge failed: {exc}")
+            return
+        if not incoming:
+            self.statusBar().showMessage(f"Merge: {Path(path).name} has no node rows.")
+            return
+
+        result = merge_nodes(self.nodes, incoming)
+        if not result.nodes:
+            self.statusBar().showMessage(
+                f"Merge: nothing to add from {Path(path).name} "
+                "(only per-file World/Camera rows, already present here)."
+            )
+            return
+
+        # A merge is a manual edit of the in-memory scene; leaving Watch and
+        # Reload armed would silently throw it away on the next disk change.
+        if self._watch_act.isChecked():
+            self._watch_act.setChecked(False)
+            self._toggle_watch_reload(False)
+
+        self.nodes.extend(result.nodes)          # same list object as _scene.nodes
+        self._viewport.register_nodes(result.nodes)
+        self._table.set_nodes(self.nodes)
+        self._on_table_selection()               # model reset drops the old selection silently
+        self._update_stats()
+        self._update_sel_values()
+        self._table.select_by_ids({n.id for n in result.nodes})
+
+        msg = (f"Merged {result.count} node(s) from {Path(path).name} "
+               f"— {len(self.nodes)} nodes total")
+        msg += self._merge_notes(path, result)
+        self.statusBar().showMessage(msg)
+
+    def _merge_notes(self, path: str, result) -> str:
+        """Trailing ' | …' notes for the merge status line: what was dropped or
+        rewritten, and the two things a merge deliberately does NOT carry over
+        (the incoming file's texture set and its Channels animation), each
+        reported only when that file actually has them."""
+        notes = []
+        if result.skipped_global:
+            notes.append(f"skipped {result.skipped_global} World/Camera row(s)")
+        if result.dropped_links:
+            notes.append(f"dropped {result.dropped_links} link(s) with an outside B-end")
+        if result.rerooted:
+            notes.append(f"re-rooted {result.rerooted} orphan(s)")
+        if result.cleared_channels:
+            notes.append(f"cleared channel bindings on {result.cleared_channels} node(s)")
+        # Textures: the merged nodes' texture_id values index the incoming
+        # file's own media/ folder, which load_texture_folder would have to
+        # REPLACE the current set to honour — so merging leaves textures alone.
+        incoming_media = Path(path).parent / "media"
+        current_media = self._viewport.texture_folder
+        if (any(n.texture_id for n in result.nodes) and incoming_media.is_dir()
+                and (current_media is None or Path(current_media) != incoming_media)):
+            notes.append(f"textures not loaded from {incoming_media.parent.name}/media/")
+        from glyphviz_core.channel_loader import find_channel_files
+        map_path, tracks_path = find_channel_files(path)
+        if map_path and tracks_path:
+            notes.append("Channels animation not merged")
+        return (" | " + "; ".join(notes)) if notes else ""
 
     # --- Watch and Reload ---
 

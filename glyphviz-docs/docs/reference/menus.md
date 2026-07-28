@@ -13,6 +13,7 @@ File, Edit, Textures, Meshes, Tools, View. There is no Node or Help menu.
 | Item | Shortcut | Action |
 |---|---|---|
 | Open Node CSV… | Ctrl+O | Opens a node CSV via file dialog; auto-loads a matching tag file, a `media/` texture folder next to the CSV, and a Channels animation pair if present (`_open_csv` — `main_window.py:927-958`) |
+| Merge Node CSV… | Ctrl+M | Loads a second node CSV (and its companion tag file) **into** the current scene instead of replacing it. The merged nodes get fresh ids above the existing ones and keep their own coordinates, so the two scenes overlay in the same world space; the camera, the loaded texture set, and any running Channels playback all survive (`_merge_csv`) |
 | Save | Ctrl+S | Overwrites the currently-open file; if it was opened un-stamped, silently stamps it first rather than clobbering the original (`_save_csv` — `main_window.py:1055-1065`) |
 | Save As… | Ctrl+Shift+S | Saves under a fresh `YYYYMMDDHHMMSS`-stamped name (`_save_csv_as` — `main_window.py:1067-1078`) |
 | *(separator)* | | |
