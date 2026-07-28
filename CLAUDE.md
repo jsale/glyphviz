@@ -28,6 +28,7 @@ GaiaViz's `np_` file/column prefix stands for "neural physics," Shane Saxon's ar
 - **Tags** — text labels attached to nodes, loaded either from inline `text`/`link` columns or a companion tag CSV (`gv_tag.csv` native, `np_tag.csv` for GaiaViz-format files), with URL, local-file, and app-launch link encoding (U key / Alt+click). Per-node `show_text` pins a label on regardless of the scene-wide tag settings; the World node's `tag_color_mode` / `tag_color_r/g/b` style every label. Native spec: `glyphviz-skill/references/tags-and-labels.md`. `gaiaviz-skill/references/format/Tag-Format.md` covers only the legacy `np_` companion-file dialect — reach for it when reading genuine GaiaViz files, not when generating.
 - **Channels (animation)** — time-series animation of node attributes via the `ch-map`/`ch-tracks` CSV pair (`gv_` native, `np_` for GaiaViz-format files), with a playback transport, FPS control, and a dense-scene fast path. Powers the EEG, GPS, IoT, and biometric examples. Native spec: `glyphviz-skill/references/channels-animation.md`.
 - **Save edits back to CSV** (timestamped node+tag save, K key) and **multi-select**.
+- **Scene merge** — File > Merge Node CSV… (Ctrl+M) loads a second node file (and its companion tag file) *into* the loaded scene instead of replacing it, rebasing ids and every id-bearing `extras` field (`parent_id`, a link's `child_id`, the tag join key `record_id`). `glyphviz_core/scene_merge.py`. Channel animation from the merged file is deliberately not imported — that's the known gap if it ever comes up.
 
 **Pending:**
 
