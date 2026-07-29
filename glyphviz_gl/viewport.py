@@ -843,7 +843,17 @@ class Viewport(QOpenGLWidget):
         """True when the tag overlay pass has anything to do: either the
         scene-wide tag display is on, or some node pins its own text with
         show_text (which draws regardless of the scene-wide settings)."""
-        return self.show_tags or self._scene_scan().has_pinned_tags
+        if self.show_tags or self._scene_scan().has_pinned_tags:
+            return True
+        # Channels can animate show_text, and the scan behind has_pinned_tags
+        # is keyed on Scene._revision — which the playback fast path
+        # deliberately never bumps. A label pinned mid-playback in a scene
+        # that had none at load time would otherwise never draw, because
+        # this gate skips the whole overlay pass.
+        if self._ch_dynamic_ids:
+            self._ch_ensure_playback_cache()
+            return any(n.show_text for n in self._ch_dynamic_nodes)
+        return False
 
     def _has_active_rates(self) -> bool:
         """True if any non-frozen node has a nonzero translate/rotate/scale rate
@@ -1497,6 +1507,26 @@ class Viewport(QOpenGLWidget):
         link_nodes = scan.link_nodes
         plot_nodes = scan.plot_nodes
         surface_nodes = scan.surface_nodes
+        if self._ch_dynamic_ids:
+            # Channels can animate `topo`, so a node may have entered or left
+            # Plot/Surface since the scan was built — and the scan is keyed on
+            # Scene._revision, which the playback fast path deliberately never
+            # bumps (same reasoning as the rate-node union in
+            # _apply_rate_animation). Re-derive membership for the dynamic set
+            # only: drop every dynamic node from the cached lists, then re-add
+            # the ones whose topo currently says so. A type=7 link's topo is
+            # meaningless — it renders as a line, not a polyline parent.
+            self._ch_ensure_playback_cache()
+            dyn = self._ch_dynamic_ids
+            plot_nodes = [n for n in plot_nodes if n.id not in dyn]
+            surface_nodes = [n for n in surface_nodes if n.id not in dyn]
+            for n in self._ch_dynamic_nodes:
+                if n.type == NODE_TYPE_LINK:
+                    continue
+                if n.topo == TOPO_PLOT:
+                    plot_nodes.append(n)
+                elif n.topo == TOPO_SURFACE:
+                    surface_nodes.append(n)
         if not link_nodes and not plot_nodes and not surface_nodes:
             return
         children_of = (scan.children_map(self._scene.nodes)

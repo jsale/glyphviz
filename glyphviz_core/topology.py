@@ -640,11 +640,14 @@ def update_world_transform_rows(nodes: list[Node], base_scale: float,
       state depends on it). Depth ordering below then guarantees any dirty
       parent is recomputed before its children; a parent NOT in `rows` has,
       by the closure rule, no changed ancestor, so its cached state is valid.
-    * Structural inputs (parent_id, topo, ratio, subspace, rotation_mode,
-      the node list itself) must be unchanged since the last full
-      compute_world_transforms — only translate/rotate/scale may differ.
-      (Channels can only bind translate/rotate/scale/rate/color fields, so
-      playback satisfies this by construction.)
+    * The HIERARCHY (parent_id, and the node list itself) must be unchanged
+      since the last full compute_world_transforms: t.eff_parent, t.depth
+      and t.row_of_id are reused as-is rather than rederived. Every other
+      per-node input IS re-read fresh below — translate/rotate/scale plus
+      rotation_mode, subspace, and the parent's topo/ratio/grid form — so a
+      Channels animation binding shape fields (ratio, topo, geometry; see
+      channel_engine._TRANSFORM_FIELDS) is handled correctly here, provided
+      the closure rule above puts the changed node's descendants in `rows`.
 
     The math here must stay numerically identical to
     compute_world_transforms — same helpers, same composition order — since

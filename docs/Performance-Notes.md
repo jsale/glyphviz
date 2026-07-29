@@ -69,7 +69,10 @@ now compiled GL commands.
   pause them.
 - Torus per-ratio lists are pre-warmed before baking — `glNewList` cannot
   nest, so `GeoRenderer.ensure_torus_list()` exists to compile them outside
-  the bake.
+  the bake. Nothing evicts those lists (a compiled one may be referenced by
+  the retained scene list), so the ratio key is quantized to 1% steps: a
+  Channels animation sweeping `ratio` continuously costs ~100 lists per
+  geo/textured pair instead of one per distinct float.
 
 ### Tier 2 — Per-node draw-data cache (`scene.py`)
 

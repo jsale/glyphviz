@@ -630,17 +630,27 @@ class GeoRenderer:
         this node's `ratio`. Each node may set its own torus ratio
         (major/minor radius proportions), so — unlike the other glyphs — its
         shape can't be baked into one fixed-shape list at setup() time;
-        instead one list is cached per distinct (rounded) ratio actually
+        instead one list is cached per distinct (quantized) ratio actually
         seen, and reused by every node/frame sharing that ratio.
+
+        Ratio is a proportion of the overall radius, quantized to 1% steps
+        here so the cache stays bounded (~100 lists per geo/textured pair)
+        even when a Channels animation sweeps ratio continuously — nothing
+        evicts these lists, and a compiled one may be referenced by the
+        retained scene display list, so they can never be freed. 1% of a
+        glyph's radius is well under a pixel of tube thickness at normal
+        zoom. The geometry is built from the quantized value, so every node
+        landing in a bucket renders identically to the list it shares.
 
         Kept separate from draw() so callers about to compile their own
         display list (the viewport's retained scene list) can pre-warm every
         torus ratio first — glNewList must never nest, so the lazy compile
         here would be an invalid operation if it fired mid-bake."""
-        key = (geo_id, textured, round(ratio, 4))
+        quantized = round(ratio, 2)
+        key = (geo_id, textured, quantized)
         dl = self._torus_lists.get(key)
         if dl is None:
-            r_major, r_minor = torus_radii(ratio)
+            r_major, r_minor = torus_radii(quantized)
             dl = glGenLists(1)
             glNewList(dl, GL_COMPILE)
             _draw_torus(geo_id == GEO_TORUS, r_major, r_minor, textured=textured)

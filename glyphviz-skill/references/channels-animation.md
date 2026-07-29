@@ -29,10 +29,11 @@ Three pieces cooperate:
    frame**; total row count = the animation's frame count.
 
 Values are **absolute attribute values, not deltas**: each frame the engine
-replaces the bound attribute with the track's value for that row. Color
-values are rounded and clamped to 0–255; `texture_id` is rounded with a
-floor of 0. When playback stops (Stop button / Shift+Space), bound
-attributes are restored to their CSV values.
+replaces the bound attribute with the track's value for that row.
+Integer-valued attributes are rounded and clamped to their own valid range
+(see the table); float attributes are applied exactly as written, negatives
+included. When playback stops (Stop button / Shift+Space), bound attributes
+are restored to their CSV values.
 
 ## Bindable attributes (the complete list)
 
@@ -40,8 +41,12 @@ attributes are restored to their CSV values.
 |---|---|---|
 | Position/orientation/size | `translate_x/y/z`, `rotate_x/y/z`, `scale_x/y/z` | hard-set each frame — **no interpolation between frames**; author enough frames for smooth motion (a GPS track played as `translate_x/y/z` works directly) |
 | Velocities | `translate_rate_x/y/z`, `rotate_rate_x/y/z`, `scale_rate_x/y/z` | the channel sets the *speed*; the viewport integrates it at ~60 cycles/s. The integrated position/rotation persists after Stop (only the rate itself resets) |
-| Color | `color_r/g/b/a` | literal 0–255 values; palettes play no role (see `color-palettes.md`) |
+| Color | `color_r/g/b/a` | literal values, rounded and clamped 0–255 |
+| Palette color | `palette_id`, `color_index` | resolved to literal `color_r/g/b` **every frame** — the one place palette resolution happens automatically instead of on a `=`/`-`/`Alt+=` keypress. `palette_id` clamps to 0–25, `color_index` wraps within the palette's own size (20 or 128), `color_a` is never touched. See `color-palettes.md` |
+| Shape | `ratio`, `topo`, `geometry`, `mesh_id` | morph a glyph's *form*, not just its size. `topo` clamps 0–17, `geometry` 0–28, `mesh_id` floors at 0. All three of `ratio`/`topo`/`geometry` re-place a node's **children** as well (see below) |
 | Texture | `texture_id` | flip-book texture switching by `media/` index (see `textures-and-media.md`) |
+| Visibility | `hide`, `show_text` | flags — any positive track value reads as on, `0` as off. `hide` blanks the glyph without disturbing anything else; `show_text` pins/unpins its tag label |
+| Scene settings (World node only) | `render_mode`, `fog_enabled`, `fog_start`, `fog_end` | read only off the **World row (type=0)** — give that row a `ch_input_id` like any other node. `render_mode` clamps 0–6, `fog_enabled` is a flag, the two fog distances are plain floats. Inert on any other node type. The World row's own `color_r/g/b` is the scene **background color**, animated through the ordinary Color binding above |
 
 Any other attribute name in the map is **silently skipped** — as is a
 `track_id` with no matching `ch<id>` column, and a `ch_input_id` with no
@@ -49,6 +54,29 @@ matching `channel_id`. Nothing warns; validate the three-way join yourself
 before shipping.
 
 Animated `scale_*` is still subject to the 0.2 render floor.
+
+### What cascades to children
+
+`translate`/`rotate`/`scale` (and their rates) plus the three shape fields
+`ratio`, `topo`, `geometry` change where a node's **descendants** sit, so
+animating them on a parent re-places the whole subtree:
+
+- `ratio` is the parent's placement radius on Torus/Ztorus topologies.
+- `topo` *is* the child-placement rule — animating it re-lays-out the
+  children into a different arrangement entirely.
+- `geometry` matters on a World Grid (type=6), where sphere vs. non-sphere
+  geometry is what switches children between globe (KML lon/lat) and flat
+  window placement. On an ordinary glyph it is purely cosmetic.
+
+Everything else — color, palette, texture, mesh, `hide`, `show_text`, the
+World scene settings — changes what is drawn but never where anything sits.
+
+### One caution on animating `ratio`
+
+A **Torus** glyph's mesh is rebuilt per distinct `ratio`, cached and never
+freed, so the renderer quantizes it to 1% steps. Sweeping `ratio` on a torus
+is fine and bounded; just don't expect sub-1% tube-thickness resolution.
+Other geometries read `ratio` directly with no such cache.
 
 ## File discovery and playback (app behavior)
 
@@ -102,3 +130,26 @@ supported way to sync animation to sound; video-texture audio cannot sync
   (`topologies.md`).
 - **Flip-book**: an integer track bound to `texture_id` steps through
   `media/` images.
+- **One track, one color**: bind a single track to `color_index` and set the
+  node's `palette_id` once in the node CSV. The track then carries a
+  quantity directly — a pitch class into "20 Distinct Colors" (palette 0,
+  wraps at 20), or a normalized 0–127 intensity into any gradient palette.
+  Replaces the three-track `color_r/g/b` recipe above whenever a built-in
+  ramp is close enough, and drops the tracks file to a third of the width.
+- **Strobe / gate**: a 0-or-1 track bound to `hide`. Cheaper to author than
+  an alpha ramp and it removes the glyph outright rather than fading it —
+  good for beat-locked flashes. Bind `show_text` the same way to pop a label
+  on a specific event.
+- **Morphing glyph**: a track bound to `topo` re-lays-out a node's children
+  into a different arrangement each time it steps; a track bound to
+  `geometry` swaps the glyph's own shape. Both are integer flip-books like
+  `texture_id` — hold a value for many frames rather than stepping it every
+  frame, or the scene reads as noise.
+- **Breathing torus**: a track bound to `ratio` swells a torus's tube (and
+  moves its children's placement radius with it) without changing the
+  glyph's overall size the way `scale_*` would.
+- **Scene-wide mood**: give the World row (type=0) a `ch_input_id` and bind
+  `color_r/g/b` for a background that shifts with the piece, `fog_start`/
+  `fog_end` to pull depth in and out, or `render_mode` to switch the whole
+  scene into Additive (1) for a glow-stacking chorus and back to Normal (0).
+  One channel, four tracks, and every glyph is affected at once.
