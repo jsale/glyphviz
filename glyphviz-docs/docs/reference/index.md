@@ -60,6 +60,15 @@ GlyphViz is primarily a visual, interactive tool — most users will spend their
 
     [:octicons-arrow-right-24: Reference](topologies.md)
 
+- **Channels Animation**
+
+    ---
+
+    Playing a time series into node attributes — the complete list of what
+    Channels can drive, and what cascades to children.
+
+    [:octicons-arrow-right-24: Reference](channels-animation.md)
+
 </div>
 
 ## Formats & scripting

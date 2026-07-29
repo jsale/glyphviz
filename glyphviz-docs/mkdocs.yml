@@ -86,6 +86,7 @@ nav:
       - Node Panel: reference/node-panel.md
       - Geometries: reference/geometries.md
       - Topologies: reference/topologies.md
+      - Channels Animation: reference/channels-animation.md
       - ANTz Node CSV Format Spec: reference/antz-format-spec.md
       - CLI Reference: reference/cli.md
       - API Reference: reference/api/index.md
