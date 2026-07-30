@@ -73,13 +73,20 @@ Implemented in `glyphviz_core/topology.py`'s `local_rotation_matrix()` dispatche
 ## Tech Stack
 
 Python 3.12, PySide6 (Qt6), PyOpenGL, numpy, pandas.
-Run: locate the `glyphviz` conda env's `python.exe` and call it directly for *every*
-invocation (running the app, one-off scripts, headless verification scripts, tests) —
-e.g. `<glyphviz-env-python> main.py`. Its path is **not fixed** — Jeff works across
-multiple machines and Anaconda/conda landed in a different location on each (seen so
-far: `anaconda3\envs\glyphviz\python.exe` and `.conda\envs\glyphviz\python.exe`, both
-under `%USERPROFILE%`). Resolve it fresh each session rather than assuming either path:
-run `conda env list` and take the `glyphviz` row, or check `%USERPROFILE%\.conda\environments.txt`.
+Run: call the `glyphviz` conda env's `python.exe` directly for *every* invocation
+(running the app, one-off scripts, headless verification scripts, tests) —
+e.g. `& $env:GLYPHVIZ_PYTHON main.py`.
+
+**`$env:GLYPHVIZ_PYTHON` is the answer when it's set.** Each machine defines it (plus
+the other machine-local paths) in the gitignored `.claude/settings.local.json` `env`
+block, so this file never has to carry a path that's wrong on the other machine. Use it
+without re-deriving it. Only if the variable is empty — a fresh clone on a machine that
+hasn't been set up yet — resolve the path (`conda env list`, take the `glyphviz` row, or
+read `%USERPROFILE%\.conda\environments.txt`), then write it into
+`.claude/settings.local.json` so the next session doesn't repeat the search. The path is
+**not fixed** across Jeff's machines: seen so far `anaconda3\envs\glyphviz\python.exe`
+and `.conda\envs\glyphviz\python.exe`, both under `%USERPROFILE%`.
+
 Never use `conda run -n glyphviz ...`: it hangs silently on Jeff's Windows setup (broken
 stdout/stderr inheritance in some terminal environments) and needs Ctrl+C to escape.
 
