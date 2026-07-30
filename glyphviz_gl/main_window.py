@@ -58,6 +58,7 @@ from glyphviz_core.color_palette import (
 
 from .audio_player import AudioPlayer
 from .node_table import NodeTableView
+from .texture_manager import _IMAGE_EXTS as _TEX_IMAGE_EXTS
 from .viewport import Viewport
 
 _AUDIO_TICK_MS = 33   # redraw rate while Channels playback is audio-driven (~30 Hz)
@@ -1386,10 +1387,22 @@ class MainWindow(QMainWindow):
         )
         self._grid_shape.currentIndexChanged.connect(self._on_grid_shape_changed)
 
+        self._grid_basemap_btn = QPushButton("Fetch Basemap…")
+        self._grid_basemap_btn.setToolTip(
+            "Download a map image (OpenStreetMap, satellite, or terrain) for\n"
+            "this grid: the lon/lat window is prefilled from the grid's\n"
+            "children, the map is reprojected to line up exactly with child\n"
+            "placement, saved into the scene's media/ folder, and applied as\n"
+            "the grid's texture. Free services, no API key; tiles are cached\n"
+            "so refetches don't re-download."
+        )
+        self._grid_basemap_btn.clicked.connect(self._on_fetch_basemap)
+
         grid_form.addRow("Shape:", self._grid_shape)
         grid_form.addRow("Lon Min/Max:", lon_widget)
         grid_form.addRow("Lat Min/Max:", lat_widget)
         grid_form.addRow("Grid Cells (X,Y):", seg_widget)
+        grid_form.addRow("", self._grid_basemap_btn)
 
         # --- Channels / playback group ---
         self._ch_grp = QGroupBox("Channels")
@@ -3526,6 +3539,8 @@ class MainWindow(QMainWindow):
         for sb in (self._grid_lon_min, self._grid_lon_max,
                    self._grid_lat_min, self._grid_lat_max):
             sb.setEnabled(not globe)
+        # A regional map can't wrap a globe — basemap fetch is flat-form only.
+        self._grid_basemap_btn.setEnabled(not globe)
 
     def _on_grid_shape_changed(self, _idx: int):
         """Toggle the selected grid between flat rectangle and globe by
@@ -3567,6 +3582,74 @@ class MainWindow(QMainWindow):
         # Segment counts change only the grid's own line rendering — no
         # transform recompute needed, but the retained scene list must rebake.
         self._viewport.scene_touch()
+
+    def _on_fetch_basemap(self):
+        """Fetch Basemap button (World Grid panel): download map imagery for
+        the selected grid's lon/lat window (glyphviz_core.basemap), write it
+        into the scene's media/ folder, and wire it up — grid extents set to
+        the map's exact coverage, texture_id assigned, wire geometry promoted
+        to solid so the texture is actually visible."""
+        grid = self._selected_single_grid()
+        if grid is None:
+            return
+        if grid.grid_is_globe():
+            self.statusBar().showMessage(
+                "Fetch Basemap needs the flat form — a regional map can't wrap a "
+                "globe. Switch Shape to Flat Rectangle first.")
+            return
+        if not self._current_path:
+            self.statusBar().showMessage(
+                "Open or save the scene as a CSV first — the basemap image is "
+                "stored in a media/ folder beside it.")
+            return
+
+        from .basemap_dialog import BasemapFetchDialog
+        media_dir = Path(self._current_path).parent / "media"
+        # A stable per-grid name: refetching overwrites in place (same
+        # texture_id, no renumbering); the zz_ prefix keeps it sorted after
+        # the scene's own deliberately-ordered media files.
+        out_path = media_dir / f"zz_basemap_grid{grid.id}.png"
+        existed = out_path.is_file()
+        dlg = BasemapFetchDialog(grid, self.nodes, out_path, parent=self)
+        if not dlg.exec() or dlg.result_path is None:
+            return
+
+        # texture_id is a 1-based index into media/ sorted alphanumerically
+        # (images first, then videos) — inserting a NEW image shifts every id
+        # at or after its sort position, so shift referencing nodes to match.
+        # An overwrite keeps its old position: nothing moves.
+        new_id = self._media_image_index(media_dir, out_path.name)
+        if not existed and new_id:
+            for n in self.nodes:
+                if n.texture_id >= new_id:
+                    n.texture_id += 1
+        bbox = dlg.result_bbox
+        grid.set_grid_extents(bbox.lon_min, bbox.lon_max, bbox.lat_min, bbox.lat_max)
+        if new_id:
+            grid.texture_id = new_id
+        if grid.geometry == GEO_GRID_WIRE:
+            grid.geometry = GEO_GRID
+        self._apply_texture_folder(media_dir, silent=True)
+        self._table.refresh_node(grid.id)
+        self._refresh_inspector(grid)   # geometry combo + grid panel resync
+        self._viewport.scene_invalidate()
+        self.statusBar().showMessage(
+            f"Basemap applied to World Grid {grid.id}: {out_path.name} "
+            f"(texture {new_id}), extents lon {bbox.lon_min:.3f}..{bbox.lon_max:.3f}, "
+            f"lat {bbox.lat_min:.3f}..{bbox.lat_max:.3f}. {dlg.result_attribution}")
+
+    @staticmethod
+    def _media_image_index(media_dir: Path, name: str) -> int:
+        """1-based texture_id of *name* within media_dir's sorted image files
+        (the TextureManager numbering), or 0 if it isn't there."""
+        images = sorted(
+            p.name for p in media_dir.iterdir()
+            if p.is_file() and p.suffix.lower() in _TEX_IMAGE_EXTS
+        )
+        try:
+            return images.index(name) + 1
+        except ValueError:
+            return 0
 
     def _add_node_to_scene(self, node: Node, select_new: bool = True):
         """Append a node to the live scene, table, and stats without resetting the camera."""

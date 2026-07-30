@@ -118,7 +118,13 @@ exaggeration control for elevation-as-data scenes.
   solid geometry + an equirect world-map `texture_id`, raw lon/lat data as
   children. Works identically as a globe — same rows, geometry 3.
 - **Regional map**: set the window to the region; feed raw coordinates.
-  Grid scale zooms; segments to taste.
+  Grid scale zooms; segments to taste. You don't have to ship a map image:
+  the app's World Grid panel has a **Fetch Basemap…** button that measures
+  the children's lon/lat bounding box, downloads free map imagery
+  (OpenStreetMap / satellite / terrain, no API key) for exactly that
+  window, reprojects it to plate carrée, saves it into `media/`, and sets
+  the grid's extents + `texture_id` to match. A generator only needs to
+  put the data on the grid.
 - **Map + globe twins**: two grids, two copies of the child rows (a node
   has one parent) — or one grid the user toggles live via the panel.
 - **Stacked layers**: several region grids at different `translate_z` (or
