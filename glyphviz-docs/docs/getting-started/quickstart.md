@@ -14,6 +14,8 @@ This page walks through the smallest possible end-to-end GlyphViz workflow: a no
 
     Use the **File → Open** menu to load a node CSV — the file ending in `_gv_node.csv`. Companion tag and channel files sitting next to it load automatically.
 
+    Or just **drag it onto the window**. Drag and drop takes a node CSV, a whole example folder, or a zip of one — GlyphViz finds the node CSV inside and brings the tag file, Channels animation, and `media/` textures with it, so you can drop the example zip straight from your downloads without extracting it first. Hold **Shift** while dropping to merge into the current scene instead of replacing it. Details: [Drag and Drop](../reference/drag-and-drop.md).
+
     If you don't have a scene yet, grab the example set: **[GlyphVizExamples20260729.zip](https://iluvdata.org/glyphviz/examples/GlyphVizExamples20260729.zip)** (see [Installation → Example scenes](installation.md#example-scenes)). Extract it, then open any example's node CSV. `Topology_Example` and `Palette_Example` are good first ones — small, fast, and they show the node model clearly.
 
     ## 3. Navigate the Viewer

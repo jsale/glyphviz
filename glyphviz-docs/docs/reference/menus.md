@@ -21,6 +21,10 @@ File, Edit, Textures, Meshes, Tools, View. There is no Node or Help menu.
 | *(separator)* | | |
 | Quit | — | Closes the window |
 
+Open and Merge both have a drag-and-drop equivalent: dropping a node CSV, a
+scene folder, or a zip onto the window opens it, and Shift+drop merges. See
+[Drag and Drop](drag-and-drop.md).
+
 ## Edit
 
 ![Edit menu](../assets/screenshots/reference/menu-edit.png)

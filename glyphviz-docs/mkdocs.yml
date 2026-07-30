@@ -82,6 +82,7 @@ nav:
       - Overview: reference/index.md
       - Viewer Navigation: reference/viewer-navigation.md
       - Menus: reference/menus.md
+      - Drag and Drop: reference/drag-and-drop.md
       - Properties Panel: reference/properties-panel.md
       - Node Panel: reference/node-panel.md
       - Geometries: reference/geometries.md

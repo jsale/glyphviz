@@ -30,6 +30,10 @@ from PySide6.QtWidgets import (
 from glyphviz_core.csv_reader import (
     load_node_csv, save_node_csv, save_tag_csv, stamp_node_and_tag_paths,
 )
+from glyphviz_core.drop_router import (
+    ACTION_MERGE_CSV, ACTION_MESH, ACTION_OPEN_CSV, ACTION_PDB, ACTION_TEXTURES,
+    DropPlan, can_accept, resolve_drop,
+)
 from glyphviz_core.pdb_loader import load_pdb_file
 from glyphviz_core.scene_merge import merge_nodes
 from glyphviz_core.geometry_data import (
@@ -92,6 +96,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("GlyphViz")
         self.resize(1280, 800)
+        # Drops land on the window, not the viewport: QOpenGLWidget leaves
+        # acceptDrops off, so a drop anywhere over the 3D view propagates up.
+        self.setAcceptDrops(True)
         self.nodes: list[Node] = []
         self._current_path: str | None = None   # path of the currently open file
         self._current_tag_path: str | None = None   # companion tag-file path, if any
@@ -1505,6 +1512,11 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return
+        self._load_csv_path(path)
+
+    def _load_csv_path(self, path: str) -> bool:
+        """Open *path* as the current scene. Shared by File > Open and drag and
+        drop; returns True on success so a drop can report per-file results."""
         try:
             self._ch_stop()
             self.nodes = load_node_csv(path)
@@ -1528,8 +1540,10 @@ class MainWindow(QMainWindow):
             if ch_msg:
                 msg += f" | {ch_msg}"
             self.statusBar().showMessage(msg)
+            return True
         except Exception as exc:
             self.statusBar().showMessage(f"Error: {exc}")
+            return False
 
     def _merge_csv(self):
         """File > Merge Node CSV… (Ctrl+M): load a second node CSV (plus its
@@ -1550,14 +1564,19 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return
+        self._merge_csv_path(path)
+
+    def _merge_csv_path(self, path: str) -> bool:
+        """Merge *path* into the current scene. Shared by File > Merge and
+        Shift+drop; returns True when nodes were actually added."""
         try:
             incoming = load_node_csv(path)
         except Exception as exc:
             self.statusBar().showMessage(f"Merge failed: {exc}")
-            return
+            return False
         if not incoming:
             self.statusBar().showMessage(f"Merge: {Path(path).name} has no node rows.")
-            return
+            return False
 
         result = merge_nodes(self.nodes, incoming)
         if not result.nodes:
@@ -1565,7 +1584,7 @@ class MainWindow(QMainWindow):
                 f"Merge: nothing to add from {Path(path).name} "
                 "(only per-file World/Camera rows, already present here)."
             )
-            return
+            return False
 
         # A merge is a manual edit of the in-memory scene; leaving Watch and
         # Reload armed would silently throw it away on the next disk change.
@@ -1585,6 +1604,7 @@ class MainWindow(QMainWindow):
                f"— {len(self.nodes)} nodes total")
         msg += self._merge_notes(path, result)
         self.statusBar().showMessage(msg)
+        return True
 
     def _merge_notes(self, path: str, result) -> str:
         """Trailing ' | …' notes for the merge status line: what was dropped or
@@ -1613,6 +1633,93 @@ class MainWindow(QMainWindow):
         if map_path and tracks_path:
             notes.append("Channels animation not merged")
         return (" | " + "; ".join(notes)) if notes else ""
+
+    # --- Drag and drop ---
+    #
+    # Dropping a node CSV, a scene folder, or a zip of one loads it the same
+    # way File > Open would — the tag file, ch-map/ch-tracks pair, audio
+    # manifest, and media/ textures all come along, because every one of those
+    # is discovered from the node CSV's own path. Shift held during the drop
+    # merges instead of replacing, mirroring Ctrl+M. All the routing decisions
+    # live in glyphviz_core.drop_router so they're testable without Qt.
+
+    @staticmethod
+    def _dropped_paths(mime) -> list[str]:
+        """Local file-system paths from a drop's mime data (URLs that aren't
+        local files — a link dragged from a browser — yield '' and are
+        dropped here rather than confusing the router)."""
+        if not mime.hasUrls():
+            return []
+        return [p for p in (u.toLocalFile() for u in mime.urls()) if p]
+
+    def dragEnterEvent(self, event):
+        paths = self._dropped_paths(event.mimeData())
+        if paths and can_accept(paths):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        # Qt needs the move accepted too, or the cursor shows "no drop" over
+        # child widgets even though dragEnterEvent said yes.
+        if self._dropped_paths(event.mimeData()):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        paths = self._dropped_paths(event.mimeData())
+        if not paths:
+            event.ignore()
+            return
+        event.acceptProposedAction()
+        merge = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+        # Defer the actual load: the drag SOURCE (Explorer) stays blocked until
+        # dropEvent returns, and unzipping a big example is not a wait to hand
+        # someone else's window. Returning first also lets this status line
+        # paint before the load takes over the thread.
+        self.statusBar().showMessage("Loading dropped item(s)…")
+        QTimer.singleShot(0, lambda: self.apply_drop(paths, merge=merge))
+
+    def apply_drop(self, paths: list[str], merge: bool = False) -> DropPlan:
+        """Resolve dropped paths and carry out the plan.
+
+        Separate from dropEvent so tests can exercise the whole path — router
+        through real loaders — without synthesising Qt drag events. Returns the
+        plan so a caller can see what was done.
+        """
+        plan = resolve_drop(paths, merge=merge)
+
+        if plan.is_empty:
+            reason = "; ".join(plan.errors) if plan.errors else "nothing loadable in that drop"
+            self.statusBar().showMessage(f"Drop: {reason}")
+            return plan
+
+        loaded = 0
+        for action in plan.actions:
+            path = str(action.path)
+            if action.kind == ACTION_OPEN_CSV:
+                ok = self._load_csv_path(path)
+            elif action.kind == ACTION_MERGE_CSV:
+                ok = self._merge_csv_path(path)
+            elif action.kind == ACTION_PDB:
+                ok = self._load_pdb_path(path)
+            elif action.kind == ACTION_MESH:
+                ok = self._load_mesh_path(path)
+            elif action.kind == ACTION_TEXTURES:
+                self._apply_texture_folder(action.path, silent=True)
+                ok = True
+            else:
+                ok = False
+            loaded += bool(ok)
+
+        # Each loader wrote its own status line; append what the routing
+        # decided on top of it, so "why did it open THAT file" is answerable.
+        notes = plan.notes + plan.errors
+        if notes:
+            base = self.statusBar().currentMessage()
+            self.statusBar().showMessage(f"{base} | drop: {'; '.join(notes)}")
+        return plan
 
     # --- Watch and Reload ---
 
@@ -1698,6 +1805,11 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return
+        self._load_pdb_path(path)
+
+    def _load_pdb_path(self, path: str) -> bool:
+        """Import *path* as the current scene. Shared by File > Import PDB and
+        drag and drop."""
         try:
             self._ch_stop()
             result = load_pdb_file(path)
@@ -1715,8 +1827,10 @@ class MainWindow(QMainWindow):
                 f"Imported {result.atom_count} atoms, {result.bond_count} bonds, "
                 f"{result.chain_count} chain(s) from {Path(path).name}"
             )
+            return True
         except Exception as exc:
             self.statusBar().showMessage(f"PDB import failed: {exc}")
+            return False
 
     def _browse_texture_folder(self):
         start = (
@@ -1822,11 +1936,19 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return
+        self._load_mesh_path(path)
+
+    def _load_mesh_path(self, path: str) -> bool:
+        """Import *path* as a GEO_MESH shape. Shared by Meshes > Import Mesh
+        File and drag and drop."""
+        if len(self._selected_nodes) > 1:
+            self.statusBar().showMessage("Select exactly one node (or none) as the import target.")
+            return False
         try:
             mesh_id = self._viewport.load_mesh_file(path)
         except Exception as exc:
             self.statusBar().showMessage(f"Mesh import failed: {exc}")
-            return
+            return False
         name = self._viewport.mesh_name(mesh_id)
         self._add_mesh_combo_entry(mesh_id)
 
@@ -1838,7 +1960,7 @@ class MainWindow(QMainWindow):
             self._update_sel_values()
             self._viewport.scene_invalidate()
             self.statusBar().showMessage(f"Assigned mesh '{name}' (id {mesh_id}) to node {node.id}.")
-            return
+            return True
 
         next_x = self._next_root_x()
         new_id = max((n.id for n in self.nodes), default=0) + 1
@@ -1851,6 +1973,7 @@ class MainWindow(QMainWindow):
             geometry=GEO_MESH, hide=0, topo=0, mesh_id=mesh_id,
         ))
         self.statusBar().showMessage(f"Imported mesh '{name}' (id {mesh_id}) as new node {new_id}.")
+        return True
 
     # --- Imported-mesh entries in the geometry dropdowns ---
     #
