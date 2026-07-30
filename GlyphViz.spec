@@ -58,7 +58,11 @@ a = Analysis(
     # NOTE: scipy is NOT excluded — glyphviz_core/pdb_loader.py imports
     # scipy.spatial.cKDTree for bond inference (PDB import). Excluding it
     # here makes the frozen exe fail at startup with ModuleNotFoundError.
-    excludes=['tkinter', 'matplotlib', 'PIL', 'IPython'],
+    # NOTE: PIL is NOT excluded (it was until 2026-07-30) —
+    # glyphviz_core/basemap.py imports it (and requests) lazily for Fetch
+    # Basemap tile stitching; excluding it makes the frozen exe's fetch fail
+    # with "No module named 'PIL'" while python main.py works fine.
+    excludes=['tkinter', 'matplotlib', 'IPython'],
     noarchive=False,
 )
 
