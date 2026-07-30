@@ -42,24 +42,31 @@ which is what it exists for: composing screen-capture angles.
 
 | Action | Binding | Source |
 |---|---|---|
-| Fly forward / back | Left-click + drag up / down | `_fly_camera` |
-| Turn left / right (with the horizon banking into the turn) | Left-click + drag left / right | `_fly_camera` |
+| Fly forward / back (hold above / below the press point) | Left-click + hold, cursor above/below the click | `_apply_fly_drag` |
+| Turn left / right (hold beside the press point) | Left-click + hold, cursor left/right of the click | `_apply_fly_drag` |
 | Look around from where the camera stands | Right-click + drag | `_look_around_camera` |
 | Slide sideways / up / down without turning | Left + Right together + drag | `_fly_strafe_camera` |
 | Fly forward / back | Scroll wheel | `wheelEvent` |
 | Pan | Middle-click + drag (unchanged) | `mouseMoveEvent` |
 
-This is deliberately *not* the ANTz mapping. In ANTz the right button
-inches the camera forward and back locked to the horizontal plane, and the
-left button looks around; here the left button flies and steers, the right
-button keeps ANTz's look-around, and nothing is confined to a plane.
+Left-button flight is **rate-based**, matching ANTz (but on ANTz's opposite
+button — in ANTz the right button flies and the left looks around; here
+it's reversed). The point where you press becomes the bearings origin, and
+nothing moves until the cursor leaves a small dead zone around it. Holding
+the cursor above the origin flies forward at a speed proportional to the
+held offset — a slight offset gives a slight but *constant* speed for as
+long as the button is down, even with the mouse stationary — and bringing
+the cursor back to the origin stops the flight; holding below it flies
+backward, and holding left/right of it turns at a rate proportional to the
+sideways offset. Flight is locked to the horizontal plane it starts on:
+the camera translates along its heading with the pitch component dropped,
+so altitude never changes no matter where the aim points (use right-drag
+look-around, the wheel, or a Left+Right slide to change altitude).
 
-Flight speed is a fraction of the camera's arm length per pixel of drag
-(`_fly_speed`), so a given drag covers about the same fraction of the view
-whether you're circling a whole scene or nosing around one glyph. The bank is
-transient: a sideways drag feeds roll in (up to 25°) and it eases back to
-level once you stop (`_decay_bank`), so a screengrab is never left with a
-crooked horizon. Pitch is clamped to ±89°, as with the orbit camera.
+Speeds scale with the camera's arm length (`_FLY_RATE_PER_PX_S`), so
+holding the same offset covers about the same fraction of the view whether
+you're circling a whole scene or nosing around one glyph. Pitch is clamped
+to ±89°, as with the orbit camera.
 
 While Camera Mode is on:
 

@@ -59,24 +59,32 @@ _CARTESIAN_PARENT_TOPOS = frozenset({
 })
 
 # --- Camera Mode (free flight, C key) tuning ---------------------------------
-# Translation speed is a fraction of the camera's arm length (_cam_distance)
-# per pixel of drag, so flying feels the same whether you're circling a whole
-# 500-unit scene or nosing around one glyph: a ~250px drag covers roughly one
-# view distance either way.
-_FLY_SPEED_PER_PX = 0.004
+# Left-drag flight is rate-based (ANTz-style): the press point becomes the
+# bearings origin, and the cursor's *held offset* from it sets a continuous
+# speed — flight keeps going while the button is down even with the mouse
+# stationary, and bringing the cursor back to the origin stops it. Speeds
+# scale off the arm length (_cam_distance) so flying feels the same whether
+# you're circling a whole 500-unit scene or nosing around one glyph: holding
+# ~100px above the origin covers roughly one view distance per second.
+_FLY_RATE_PER_PX_S = 0.01       # arm-length fraction per second, per px of vertical offset
+_FLY_TURN_DEG_PER_PX_S = 0.5    # degrees per second, per px of horizontal offset
+_FLY_DEADZONE_PX = 3.0          # per-axis: no motion until the cursor leaves this radius
+_FLY_SPEED_PER_PX = 0.004       # strafe (Left+Right slide): arm-length fraction per px of drag
 _FLY_WHEEL_STEP = 0.12          # fraction of arm length per wheel notch
-_FLY_TURN_DEG_PER_PX = 0.25     # yaw rate of a sideways flight drag
 _LOOK_DEG_PER_PX = 0.25         # look-around (right-drag) rate, both axes
-# Banking: a sideways drag feeds bank in, and it bleeds off with time
-# constant _BANK_TAU_S. A sustained drag therefore settles at a bank angle
-# proportional to drag *speed* (fast turn = steep bank), and letting go
-# levels the horizon out again — so a screengrab is never left crooked.
-_BANK_DEG_PER_PX = 0.6
-_BANK_MAX_DEG = 25.0
-_BANK_TAU_S = 0.18
-_BANK_EPSILON_DEG = 0.05        # below this, snap to exactly level
 
 _Vec3 = tuple[float, float, float]
+
+
+def _past_deadzone(offset: float) -> float:
+    """Pixels of flight-drag cursor offset beyond the dead zone (0 inside
+    it) — measured from the edge, so motion ramps up from zero as the cursor
+    leaves the zone instead of jumping to a dead-zone-sized speed."""
+    if offset > _FLY_DEADZONE_PX:
+        return offset - _FLY_DEADZONE_PX
+    if offset < -_FLY_DEADZONE_PX:
+        return offset + _FLY_DEADZONE_PX
+    return 0.0
 
 
 _DEFAULT_BG = tuple(c / 255.0 for c in WORLD_DEFAULT_BG_RGB)  # used when the scene has no World node
@@ -288,11 +296,14 @@ class Viewport(QOpenGLWidget):
         # which end of the arm the mouse drives: normally the eye swings
         # around a fixed target, in fly mode the target swings around a fixed
         # eye (look-around) and both translate together (flight). See
-        # _fly_camera / _look_around_camera.
+        # _apply_fly_drag / _look_around_camera.
         self.fly_mode: bool = False
-        # Transient bank: sideways flight drags roll the horizon into the
-        # turn, then it eases back to level (see _decay_bank). Degrees.
-        self._cam_bank: float = 0.0
+        # Rate-flight drag state: the left-press point (bearings origin) and
+        # the latest cursor position, both in widget pixels. The held offset
+        # between them drives continuous motion once per repaint tick in
+        # _apply_fly_drag; None = no flight drag in progress.
+        self._fly_anchor: tuple[float, float] | None = None
+        self._fly_cursor: tuple[float, float] | None = None
 
         # Cross-eye free-view stereo: render the scene twice (per-eye lateral
         # camera offset, same look-at target -> toe-in convergence at the
@@ -689,7 +700,7 @@ class Viewport(QOpenGLWidget):
             # undo flight's translation on the spot.
             self.follow_selected = False
         if not on:
-            self._cam_bank = 0.0
+            self._fly_anchor = self._fly_cursor = None
             self._update_render_timer_state()
         self.flyModeChanged.emit(on)
         self.update()
@@ -932,9 +943,11 @@ class Viewport(QOpenGLWidget):
     def _update_render_timer_state(self):
         """Start/stop the ~30fps continuous-repaint timer based on whether
         anything needs per-frame ticking: video/GIF playback, rate-driven
-        node animation, or a flight bank still easing back to level. Call
-        after any scene or texture change that could flip any of those."""
-        needs = (self._needs_video_tick or bool(self._cam_bank)
+        node animation, or a flight drag in progress (rate flight integrates
+        the held cursor offset once per tick, so it must keep repainting even
+        while the mouse sits still). Call after any scene or texture change
+        that could flip any of those."""
+        needs = (self._needs_video_tick or self._fly_anchor is not None
                  or self._has_active_rates())
         if needs and not self._render_timer.isActive():
             self._render_timer.start(33)   # ~30 fps continuous repaint
@@ -1070,7 +1083,7 @@ class Viewport(QOpenGLWidget):
                 # membership is unchanged, so re-key the scan cache to the
                 # bumped revision instead of rescanning every node next frame.
                 self._scan_cache_rev = self._scene._revision
-        self._decay_bank(dt_ms)
+        self._apply_fly_drag(dt_ms)
         if self.follow_selected:
             self._apply_follow_target()
         # QPainter's GL paint engine (used by _draw_tags_qpainter) can leave
@@ -1176,8 +1189,7 @@ class Viewport(QOpenGLWidget):
             self._fps_t0 = now
 
     def _camera_basis(self) -> tuple[_Vec3, _Vec3, _Vec3]:
-        """The camera's (forward, right, up) unit vectors in world space, with
-        the current bank (roll) already folded into `up`.
+        """The camera's (forward, right, up) unit vectors in world space.
 
         `forward` points eye→target, `right` is horizontal (world-Z is up), and
         `up` completes the right-handed frame. Derived from the same
@@ -1191,33 +1203,11 @@ class Viewport(QOpenGLWidget):
         forward = (-ce * ca, -ce * sa, -se)
         right = (-sa, ca, 0.0)
         up = (-ca * se, -sa * se, ce)
-        if self._cam_bank:
-            # Roll about the view axis: forward x up == right (verified from
-            # the expressions above), so this is the standard
-            # rotate-up-toward-right formula. Positive bank tips screen-up to
-            # the right, which reads on screen as banking into a right turn.
-            r = math.radians(self._cam_bank)
-            cr, sr = math.cos(r), math.sin(r)
-            up = tuple(u * cr + rt * sr for u, rt in zip(up, right))
         return forward, right, up
 
     def _camera_up(self) -> _Vec3:
-        """gluLookAt's up vector: plain world-Z unless the camera is banked."""
-        if not self._cam_bank:
-            return (0.0, 0.0, 1.0)
-        return self._camera_basis()[2]
-
-    def _decay_bank(self, dt_ms: float):
-        """Ease a transient flight bank back to level. Time-based (not
-        per-frame), so the level-out takes the same wall-clock time whether
-        the viewport is repainting at 30fps or spinning much faster under a
-        fast mouse-move stream."""
-        if not self._cam_bank:
-            return
-        self._cam_bank *= math.exp(-max(dt_ms, 0.0) / 1000.0 / _BANK_TAU_S)
-        if abs(self._cam_bank) < _BANK_EPSILON_DEG:
-            self._cam_bank = 0.0
-            self._update_render_timer_state()
+        """gluLookAt's up vector: the camera never rolls, so always world-Z."""
+        return (0.0, 0.0, 1.0)
 
     def _eye_position_with_offset(self, lateral_offset: float) -> tuple[float, float, float]:
         """Eye position for the current orbit camera, shifted by lateral_offset
@@ -2699,6 +2689,19 @@ class Viewport(QOpenGLWidget):
             self._maybe_snap_orbit_target()
         self._combo_active = combo
 
+        # ANTz-style rate flight: a lone LeftButton press in Camera Mode drops
+        # the bearings origin where the click landed. Nothing moves yet —
+        # flight engages once the cursor leaves the origin's dead zone (see
+        # _apply_fly_drag) — but the repaint timer starts now, because a held
+        # offset must keep flying even while the mouse sits still.
+        if self.fly_mode:
+            if buttons == Qt.MouseButton.LeftButton:
+                pos = (float(event.pos().x()), float(event.pos().y()))
+                self._fly_anchor = self._fly_cursor = pos
+            else:
+                self._fly_anchor = self._fly_cursor = None
+            self._update_render_timer_state()
+
     def mouseReleaseEvent(self, event):
         # --- rubber-band release ---
         if self._rubber_mode and event.button() == Qt.MouseButton.LeftButton:
@@ -2764,6 +2767,18 @@ class Viewport(QOpenGLWidget):
             self._drag_moved = False
         self._combo_active = bool(remaining & Qt.MouseButton.LeftButton) and bool(remaining & Qt.MouseButton.RightButton)
 
+        # Rate flight tracks the held-button state: ending a combo with Left
+        # still down resumes flight from a fresh origin at the cursor's
+        # current spot (the pre-combo origin is stale — it would lurch the
+        # camera the moment Right lifted); anything else stops flight.
+        if self.fly_mode:
+            if remaining == Qt.MouseButton.LeftButton:
+                pos = (float(event.pos().x()), float(event.pos().y()))
+                self._fly_anchor = self._fly_cursor = pos
+            else:
+                self._fly_anchor = self._fly_cursor = None
+            self._update_render_timer_state()
+
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             node = self._pick_node(event.pos().x(), event.pos().y())
@@ -2805,7 +2820,16 @@ class Viewport(QOpenGLWidget):
             if left and right:
                 self._fly_strafe_camera(dx, dy)
             elif left:
-                self._fly_camera(dx, dy)
+                # Rate flight: only track the cursor here — _apply_fly_drag
+                # turns the held offset from the press origin into motion,
+                # once per repaint tick rather than per mouse-move event.
+                pos = (float(event.pos().x()), float(event.pos().y()))
+                if self._fly_anchor is None:
+                    # Camera Mode was toggled mid-drag (no press seen in fly
+                    # mode): adopt the cursor's current spot as the origin.
+                    self._fly_anchor = pos
+                    self._update_render_timer_state()
+                self._fly_cursor = pos
             else:
                 self._look_around_camera(dx, dy)
 
@@ -2878,8 +2902,8 @@ class Viewport(QOpenGLWidget):
     # target is wherever you last left it, ready to orbit again.
 
     def _fly_speed(self) -> float:
-        """World units per pixel of flight drag — scaled off the arm length so
-        the same drag feels right at any zoom level."""
+        """World units per pixel of a strafe drag — scaled off the arm length
+        so the same drag feels right at any zoom level."""
         return max(self._cam_distance, 1.0) * _FLY_SPEED_PER_PX
 
     def _translate_rig(self, vec: _Vec3, amount: float):
@@ -2911,26 +2935,42 @@ class Viewport(QOpenGLWidget):
             eye[2] - d * math.sin(el),
         ]
 
-    def _fly_camera(self, dx: float, dy: float):
-        """LeftButton drag in Camera Mode: vertical flies forward/back along
-        the view axis, horizontal turns — with the horizon banking into the
-        turn (see _decay_bank for the level-out)."""
-        if dy:
-            # Drag up (dy < 0) = fly forward, like pushing a throttle away.
-            forward, _right, _up = self._camera_basis()
-            self._translate_rig(forward, -dy * self._fly_speed())
-        if dx:
-            # Drag right = turn right. Azimuth runs counter-clockwise from +X
-            # and the camera looks *back* along it, so a right turn decreases
-            # it — the same sign _orbit_camera already uses for a right drag.
-            self._reaim_about_eye(-dx * _FLY_TURN_DEG_PER_PX)
-            was_banked = bool(self._cam_bank)
-            self._cam_bank = max(-_BANK_MAX_DEG, min(_BANK_MAX_DEG,
-                                 self._cam_bank + dx * _BANK_DEG_PER_PX))
-            if not was_banked and self._cam_bank:
-                # Only on the 0 → banked edge: this runs per mouse-move event,
-                # and _update_render_timer_state re-scans the scene for movers.
-                self._update_render_timer_state()   # repaint on so it levels out
+    def _apply_fly_drag(self, dt_ms: float):
+        """LeftButton held in Camera Mode: ANTz-style rate flight, integrated
+        once per repaint tick (called from paintGL, kept ticking by the
+        render timer — see mousePressEvent for where the drag starts).
+
+        The press point is the bearings origin (_fly_anchor). Holding the
+        cursor above it flies forward, below it flies back, and left/right
+        of it turns the camera — each at a rate proportional to the held
+        offset, so a slight offset gives a slight but *constant* motion for
+        as long as the button is down, and bringing the cursor back inside
+        the origin's dead zone stops it. Flight is locked to the horizontal
+        plane it starts on: translation follows the camera's heading with
+        the pitch component dropped, so altitude never changes no matter
+        where the aim points."""
+        if not self.fly_mode or self._fly_anchor is None or self._fly_cursor is None:
+            return
+        dt = max(dt_ms, 0.0) / 1000.0
+        if not dt:
+            return
+        off_x = _past_deadzone(self._fly_cursor[0] - self._fly_anchor[0])
+        off_y = _past_deadzone(self._fly_cursor[1] - self._fly_anchor[1])
+        if off_y:
+            # Cursor above the origin (off_y < 0) = fly forward. World-Z is
+            # up, so the heading-only (horizontal-plane) forward is the full
+            # forward vector with its elevation term dropped, renormalized —
+            # which is just the azimuth direction.
+            az = math.radians(self._cam_azimuth)
+            heading = (-math.cos(az), -math.sin(az), 0.0)
+            speed = max(self._cam_distance, 1.0) * _FLY_RATE_PER_PX_S
+            self._translate_rig(heading, -off_y * speed * dt)
+        if off_x:
+            # Cursor right of the origin = turn right. Azimuth runs counter-
+            # clockwise from +X and the camera looks *back* along it, so a
+            # right turn decreases it — the same sign _orbit_camera already
+            # uses for a right drag.
+            self._reaim_about_eye(-off_x * _FLY_TURN_DEG_PER_PX_S * dt)
 
     def _look_around_camera(self, dx: float, dy: float):
         """RightButton drag in Camera Mode: pivot the view about the eye
