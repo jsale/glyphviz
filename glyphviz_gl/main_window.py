@@ -58,6 +58,23 @@ from .viewport import Viewport
 
 _AUDIO_TICK_MS = 33   # redraw rate while Channels playback is audio-driven (~30 Hz)
 
+# Shared by the Camera toolbar's Fly button and the View menu item.
+_FLY_MODE_TIP = (
+    "Free-flight camera, for composing screen-capture angles without\n"
+    "orbiting a fixed pivot.  [C]\n"
+    "\n"
+    "LeftButton drag:   up/down flies forward/back, left/right turns\n"
+    "                   (the horizon banks into the turn, then levels)\n"
+    "RightButton drag:  look around from where the camera stands\n"
+    "Both buttons:      slide the camera sideways / up / down\n"
+    "Wheel:             fly forward / back\n"
+    "MiddleButton:      pan (unchanged)\n"
+    "\n"
+    "Clicking still selects, and Shift+drag still rubber-band selects,\n"
+    "but Move/Rotate/Size drags are suspended until Camera Mode is off.\n"
+    "Not available on the fixed +X/+Y/+Z reference views."
+)
+
 
 def _app_dir() -> Path:
     """Directory treated as 'next to the executable' (K-key autosave, default
@@ -198,6 +215,7 @@ class MainWindow(QMainWindow):
         self._viewport.channelStopRequested.connect(self._ch_stop)
         self._viewport.glInitialized.connect(self._load_default_media)
         self._viewport.cameraChanged.connect(self._on_camera_changed)
+        self._viewport.flyModeChanged.connect(self._on_fly_mode_changed)
         self.setCentralWidget(self._viewport)
         # Link self.nodes into the viewport scene so appends stay in sync.
         self._viewport.set_nodes(self.nodes)
@@ -372,6 +390,12 @@ class MainWindow(QMainWindow):
         self._pause_rates_act.triggered.connect(self._toggle_rates_paused)
 
         self._view_menu.addSeparator()
+        self._fly_act = self._view_menu.addAction("&Camera Mode (Free Flight)")
+        self._fly_act.setCheckable(True)
+        self._fly_act.setChecked(False)
+        self._fly_act.setToolTip(_FLY_MODE_TIP)
+        self._fly_act.triggered.connect(lambda c: self._viewport.set_fly_mode(c))
+
         self._follow_act = self._view_menu.addAction("&Follow Selected Node")
         self._follow_act.setCheckable(True)
         self._follow_act.setChecked(False)
@@ -443,9 +467,10 @@ class MainWindow(QMainWindow):
 
     def _build_camera_toolbar(self):
         """Ever-present camera picker: Main (free orbit) + the 3 fixed
-        +X/+Y/+Z reference views, matching the viewport's 4 default cameras.
-        C / Shift+C cycles the same list; this stays in sync via
-        cameraChanged (see _on_camera_changed)."""
+        +X/+Y/+Z reference views, matching the viewport's 4 default cameras,
+        plus the Camera Mode (free flight) toggle. Shift+C cycles the camera
+        list and C toggles flight; both stay in sync via cameraChanged /
+        flyModeChanged (see _on_camera_changed, _on_fly_mode_changed)."""
         tb = QToolBar("Camera", self)
         tb.setObjectName("cameraToolbar")
         tb.setMovable(False)
@@ -455,12 +480,19 @@ class MainWindow(QMainWindow):
             btn.setCheckable(True)
             btn.setChecked(i == 0)
             btn.setToolTip(
-                "Fixed reference view: zoom only, no orbit/pan.  [C cycles]"
-                if i else "Free orbit/pan/zoom camera.  [C cycles]"
+                "Fixed reference view: zoom only, no orbit/pan.  [Shift+C cycles]"
+                if i else "Free orbit/pan/zoom camera.  [Shift+C cycles]"
             )
             btn.clicked.connect(lambda _checked=False, idx=i: self._viewport.select_camera(idx))
             self._camera_buttons.append(btn)
             tb.addWidget(btn)
+
+        tb.addSeparator()
+        self._fly_btn = QPushButton("Fly")
+        self._fly_btn.setCheckable(True)
+        self._fly_btn.setToolTip(_FLY_MODE_TIP)
+        self._fly_btn.clicked.connect(lambda checked: self._viewport.set_fly_mode(checked))
+        tb.addWidget(self._fly_btn)
 
         self.addToolBar(tb)
         self._view_menu.addAction(tb.toggleViewAction())
@@ -472,6 +504,20 @@ class MainWindow(QMainWindow):
             btn.blockSignals(False)
         name = self._viewport.camera_names()[index]
         self.statusBar().showMessage(f"Camera: {name}", 2000)
+
+    def _on_fly_mode_changed(self, on: bool):
+        """Keep the Fly button, the View-menu item, and Follow Selected in
+        step with the viewport, whichever of them (or the C key) flipped it."""
+        for widget in (self._fly_btn, self._fly_act):
+            widget.blockSignals(True)
+            widget.setChecked(on)
+            widget.blockSignals(False)
+        if on and self._follow_act.isChecked():
+            # The viewport already cleared follow_selected — just untick it.
+            self._follow_act.setChecked(False)
+        self.statusBar().showMessage(
+            "Camera Mode ON — Left: fly/turn · Right: look around · "
+            "Both: slide · Wheel: fly  [C]" if on else "Camera Mode off", 4000)
 
     def _on_mode_button_clicked(self, name: str):
         new_mode = None if self._gizmo_mode == name else name

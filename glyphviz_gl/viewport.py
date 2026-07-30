@@ -58,6 +58,26 @@ _CARTESIAN_PARENT_TOPOS = frozenset({
     TOPO_NONE, TOPO_PLANE, TOPO_VIDEO, TOPO_PLOT, TOPO_SURFACE,
 })
 
+# --- Camera Mode (free flight, C key) tuning ---------------------------------
+# Translation speed is a fraction of the camera's arm length (_cam_distance)
+# per pixel of drag, so flying feels the same whether you're circling a whole
+# 500-unit scene or nosing around one glyph: a ~250px drag covers roughly one
+# view distance either way.
+_FLY_SPEED_PER_PX = 0.004
+_FLY_WHEEL_STEP = 0.12          # fraction of arm length per wheel notch
+_FLY_TURN_DEG_PER_PX = 0.25     # yaw rate of a sideways flight drag
+_LOOK_DEG_PER_PX = 0.25         # look-around (right-drag) rate, both axes
+# Banking: a sideways drag feeds bank in, and it bleeds off with time
+# constant _BANK_TAU_S. A sustained drag therefore settles at a bank angle
+# proportional to drag *speed* (fast turn = steep bank), and letting go
+# levels the horizon out again — so a screengrab is never left crooked.
+_BANK_DEG_PER_PX = 0.6
+_BANK_MAX_DEG = 25.0
+_BANK_TAU_S = 0.18
+_BANK_EPSILON_DEG = 0.05        # below this, snap to exactly level
+
+_Vec3 = tuple[float, float, float]
+
 
 _DEFAULT_BG = tuple(c / 255.0 for c in WORLD_DEFAULT_BG_RGB)  # used when the scene has no World node
 _DEFAULT_REF_GRID = tuple(c / 255.0 for c in REF_GRID_DEFAULT_RGB)   # ditto, for the backdrop grid
@@ -202,9 +222,12 @@ class Viewport(QOpenGLWidget):
     gridSelectRequested = Signal()       # G → select / cycle World Grid nodes (ANTz-style)
     escapePressed = Signal()             # Esc → cancel current modal action (e.g. a pending Link A-end)
 
-    # Active camera switched (C / Shift+C, or the Camera toolbar) — carries
+    # Active camera switched (Shift+C, or the Camera toolbar) — carries
     # the new active camera's index into self.camera_names().
     cameraChanged = Signal(int)
+
+    # Camera (free-flight) Mode toggled with C — carries the new state.
+    flyModeChanged = Signal(bool)
 
     # ANTz-style per-node attribute cycling: each SELECTED node steps its own
     # geometry (O) or topology (J) to the next id in the list, so a mixed
@@ -259,6 +282,17 @@ class Viewport(QOpenGLWidget):
         # True only while both Left and Right buttons are held together —
         # drives the combined orbit+zoom gesture (see _orbit_zoom_camera).
         self._combo_active = False
+
+        # Camera Mode (free flight, C key). The camera rig stays the same
+        # azimuth/elevation/distance/target orbit rig — fly mode only changes
+        # which end of the arm the mouse drives: normally the eye swings
+        # around a fixed target, in fly mode the target swings around a fixed
+        # eye (look-around) and both translate together (flight). See
+        # _fly_camera / _look_around_camera.
+        self.fly_mode: bool = False
+        # Transient bank: sideways flight drags roll the horizon into the
+        # turn, then it eases back to level (see _decay_bank). Degrees.
+        self._cam_bank: float = 0.0
 
         # Cross-eye free-view stereo: render the scene twice (per-eye lateral
         # camera offset, same look-at target -> toe-in convergence at the
@@ -626,11 +660,42 @@ class Viewport(QOpenGLWidget):
         self._cam_azimuth, self._cam_elevation = cam.azimuth, cam.elevation
         self._cam_distance = cam.distance
         self._cam_target = list(cam.target)
+        if cam.locked and self.fly_mode:
+            # Fixed reference views don't fly — picking one leaves Camera Mode.
+            self.set_fly_mode(False)
         self.cameraChanged.emit(index)
         self.update()
 
     def cycle_camera(self, step: int = 1):
         self.select_camera(self._active_camera + step)
+
+    # --- Camera Mode (free flight) ---
+
+    def set_fly_mode(self, on: bool):
+        """Turn free-flight Camera Mode on or off.
+
+        Flight engages from wherever the view already is — no jump — but it
+        can't run on a locked axis camera (those exist precisely to stay
+        put), so turning it on switches to the Main camera first.
+        """
+        on = bool(on)
+        if on and self.active_camera_locked():
+            self.select_camera(0)
+        if on == self.fly_mode:
+            return
+        self.fly_mode = on
+        if on:
+            # Following pins the target to a node every frame, which would
+            # undo flight's translation on the spot.
+            self.follow_selected = False
+        if not on:
+            self._cam_bank = 0.0
+            self._update_render_timer_state()
+        self.flyModeChanged.emit(on)
+        self.update()
+
+    def toggle_fly_mode(self):
+        self.set_fly_mode(not self.fly_mode)
 
     def camera_state(self) -> dict:
         """Snapshot the live camera, the saved camera list, and the active
@@ -647,6 +712,7 @@ class Viewport(QOpenGLWidget):
                                     c.distance, list(c.target), c.locked)
                         for c in self._cameras],
             'active': self._active_camera,
+            'fly': self.fly_mode,
         }
 
     def restore_camera_state(self, state: dict):
@@ -660,6 +726,7 @@ class Viewport(QOpenGLWidget):
         self._cam_distance = state['distance']
         self._cam_target = list(state['target'])
         self.cameraChanged.emit(self._active_camera)
+        self.set_fly_mode(state.get('fly', False))
         self.update()
 
     def export_png(self, path: str, width: int, height: int) -> None:
@@ -864,10 +931,11 @@ class Viewport(QOpenGLWidget):
 
     def _update_render_timer_state(self):
         """Start/stop the ~30fps continuous-repaint timer based on whether
-        anything needs per-frame ticking: video/GIF playback or rate-driven
-        node animation. Call after any scene or texture change that could
-        flip either condition."""
-        needs = self._needs_video_tick or self._has_active_rates()
+        anything needs per-frame ticking: video/GIF playback, rate-driven
+        node animation, or a flight bank still easing back to level. Call
+        after any scene or texture change that could flip any of those."""
+        needs = (self._needs_video_tick or bool(self._cam_bank)
+                 or self._has_active_rates())
         if needs and not self._render_timer.isActive():
             self._render_timer.start(33)   # ~30 fps continuous repaint
             self._last_tex_tick = time.perf_counter()
@@ -1002,6 +1070,7 @@ class Viewport(QOpenGLWidget):
                 # membership is unchanged, so re-key the scan cache to the
                 # bumped revision instead of rescanning every node next frame.
                 self._scan_cache_rev = self._scene._revision
+        self._decay_bank(dt_ms)
         if self.follow_selected:
             self._apply_follow_target()
         # QPainter's GL paint engine (used by _draw_tags_qpainter) can leave
@@ -1081,7 +1150,8 @@ class Viewport(QOpenGLWidget):
             eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
             eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
             eye_z = tz + self._cam_distance * math.sin(el)
-            gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
+            up_x, up_y, up_z = self._camera_up()
+            gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, up_x, up_y, up_z)
 
             # Capture camera matrices for world→screen tag projection (before node transforms).
             self._mv_matrix, self._proj_matrix = self._capture_camera_matrices()
@@ -1104,6 +1174,50 @@ class Viewport(QOpenGLWidget):
             self.fpsUpdated.emit(self._fps_frames / elapsed)
             self._fps_frames = 0
             self._fps_t0 = now
+
+    def _camera_basis(self) -> tuple[_Vec3, _Vec3, _Vec3]:
+        """The camera's (forward, right, up) unit vectors in world space, with
+        the current bank (roll) already folded into `up`.
+
+        `forward` points eye→target, `right` is horizontal (world-Z is up), and
+        `up` completes the right-handed frame. Derived from the same
+        azimuth/elevation the eye position uses, so it stays exactly in sync
+        with gluLookAt; the elevation clamp (±89°) keeps `right` well away from
+        the degenerate forward-parallel-to-world-up case.
+        """
+        az = math.radians(self._cam_azimuth)
+        el = math.radians(self._cam_elevation)
+        ce, se, ca, sa = math.cos(el), math.sin(el), math.cos(az), math.sin(az)
+        forward = (-ce * ca, -ce * sa, -se)
+        right = (-sa, ca, 0.0)
+        up = (-ca * se, -sa * se, ce)
+        if self._cam_bank:
+            # Roll about the view axis: forward x up == right (verified from
+            # the expressions above), so this is the standard
+            # rotate-up-toward-right formula. Positive bank tips screen-up to
+            # the right, which reads on screen as banking into a right turn.
+            r = math.radians(self._cam_bank)
+            cr, sr = math.cos(r), math.sin(r)
+            up = tuple(u * cr + rt * sr for u, rt in zip(up, right))
+        return forward, right, up
+
+    def _camera_up(self) -> _Vec3:
+        """gluLookAt's up vector: plain world-Z unless the camera is banked."""
+        if not self._cam_bank:
+            return (0.0, 0.0, 1.0)
+        return self._camera_basis()[2]
+
+    def _decay_bank(self, dt_ms: float):
+        """Ease a transient flight bank back to level. Time-based (not
+        per-frame), so the level-out takes the same wall-clock time whether
+        the viewport is repainting at 30fps or spinning much faster under a
+        fast mouse-move stream."""
+        if not self._cam_bank:
+            return
+        self._cam_bank *= math.exp(-max(dt_ms, 0.0) / 1000.0 / _BANK_TAU_S)
+        if abs(self._cam_bank) < _BANK_EPSILON_DEG:
+            self._cam_bank = 0.0
+            self._update_render_timer_state()
 
     def _eye_position_with_offset(self, lateral_offset: float) -> tuple[float, float, float]:
         """Eye position for the current orbit camera, shifted by lateral_offset
@@ -1169,7 +1283,8 @@ class Viewport(QOpenGLWidget):
         eye_x = tx + self._cam_distance * math.cos(el) * math.cos(az)
         eye_y = ty + self._cam_distance * math.cos(el) * math.sin(az)
         eye_z = tz + self._cam_distance * math.sin(el)
-        gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
+        up_x, up_y, up_z = self._camera_up()
+        gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, up_x, up_y, up_z)
 
     def _capture_camera_matrices(self) -> tuple[np.ndarray | None, np.ndarray | None]:
         """Snapshot the current GL modelview/projection matrices (row-major)
@@ -2236,7 +2351,8 @@ class Viewport(QOpenGLWidget):
             glLoadIdentity()
             eye_x, eye_y, eye_z = self._eye_position_with_offset(lateral_offset)
             tx, ty, tz = self._cam_target
-            gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, 0.0, 0.0, 1.0)
+            up_x, up_y, up_z = self._camera_up()
+            gluLookAt(eye_x, eye_y, eye_z, tx, ty, tz, up_x, up_y, up_z)
 
         glDisable(GL_LIGHTING)
         glDisable(GL_BLEND)
@@ -2523,9 +2639,13 @@ class Viewport(QOpenGLWidget):
             self.escapePressed.emit()
             event.accept()
         elif event.key() == Qt.Key.Key_C:
-            # ANTz-style: repeated hits of C step through the cameras.
-            step = -1 if event.modifiers() & Qt.KeyboardModifier.ShiftModifier else 1
-            self.cycle_camera(step)
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                # ANTz-style: repeated hits step through the cameras. (Plain C
+                # used to do this; it now toggles Camera Mode, and the Camera
+                # toolbar still jumps straight to any camera.)
+                self.cycle_camera(1)
+            else:
+                self.toggle_fly_mode()
             event.accept()
         else:
             super().keyPressEvent(event)
@@ -2677,7 +2797,19 @@ class Viewport(QOpenGLWidget):
         right = bool(buttons & Qt.MouseButton.RightButton)
         middle = bool(buttons & Qt.MouseButton.MiddleButton)
 
-        if left and right:
+        if self.fly_mode and (left or right):
+            # Camera Mode owns every drag button outright — that's the point
+            # of a mode. Click-to-select still works (a click isn't a drag),
+            # as does Shift+drag rubber-band, but gizmo manipulation is
+            # suspended until Camera Mode is switched back off.
+            if left and right:
+                self._fly_strafe_camera(dx, dy)
+            elif left:
+                self._fly_camera(dx, dy)
+            else:
+                self._look_around_camera(dx, dy)
+
+        elif left and right:
             # Both buttons together always means camera nav (Dr. Dave
             # Warner's requested ANTz gesture) — takes priority over any
             # in-progress gizmo manipulation.
@@ -2737,13 +2869,98 @@ class Viewport(QOpenGLWidget):
         factor = 1.0 + dy * 0.005
         self._cam_distance = max(1.0, self._cam_distance * factor)
 
+    # --- Camera Mode navigation ---
+    #
+    # All three gestures keep the arm length (_cam_distance) fixed and move
+    # the whole rig, so the orbit target rides along in front of the camera
+    # rather than pinning it. That's what makes flight feel unanchored: there
+    # is no object you're stuck circling. Switch Camera Mode back off and the
+    # target is wherever you last left it, ready to orbit again.
+
+    def _fly_speed(self) -> float:
+        """World units per pixel of flight drag — scaled off the arm length so
+        the same drag feels right at any zoom level."""
+        return max(self._cam_distance, 1.0) * _FLY_SPEED_PER_PX
+
+    def _translate_rig(self, vec: _Vec3, amount: float):
+        """Move eye and target together along `vec` (eye position is derived
+        from the target, so translating the target translates both)."""
+        for i in range(3):
+            self._cam_target[i] += vec[i] * amount
+
+    def _reaim_about_eye(self, d_azimuth: float, d_elevation: float = 0.0):
+        """Swing the *aim* by these angle deltas while the eye stays planted.
+
+        The rig stores a target and derives the eye from it, so naively
+        changing azimuth/elevation orbits the eye around the target — the
+        exact anchored feeling Camera Mode exists to escape. Re-deriving the
+        target from the preserved eye inverts that: the camera pivots where
+        it stands, and whatever it was pointed at slides out of frame.
+        """
+        eye = self._eye_position_with_offset(0.0)
+        self._cam_azimuth += d_azimuth
+        if d_elevation:
+            self._cam_elevation = max(-89.0, min(89.0,
+                                      self._cam_elevation + d_elevation))
+        az = math.radians(self._cam_azimuth)
+        el = math.radians(self._cam_elevation)
+        d = self._cam_distance
+        self._cam_target = [
+            eye[0] - d * math.cos(el) * math.cos(az),
+            eye[1] - d * math.cos(el) * math.sin(az),
+            eye[2] - d * math.sin(el),
+        ]
+
+    def _fly_camera(self, dx: float, dy: float):
+        """LeftButton drag in Camera Mode: vertical flies forward/back along
+        the view axis, horizontal turns — with the horizon banking into the
+        turn (see _decay_bank for the level-out)."""
+        if dy:
+            # Drag up (dy < 0) = fly forward, like pushing a throttle away.
+            forward, _right, _up = self._camera_basis()
+            self._translate_rig(forward, -dy * self._fly_speed())
+        if dx:
+            # Drag right = turn right. Azimuth runs counter-clockwise from +X
+            # and the camera looks *back* along it, so a right turn decreases
+            # it — the same sign _orbit_camera already uses for a right drag.
+            self._reaim_about_eye(-dx * _FLY_TURN_DEG_PER_PX)
+            was_banked = bool(self._cam_bank)
+            self._cam_bank = max(-_BANK_MAX_DEG, min(_BANK_MAX_DEG,
+                                 self._cam_bank + dx * _BANK_DEG_PER_PX))
+            if not was_banked and self._cam_bank:
+                # Only on the 0 → banked edge: this runs per mouse-move event,
+                # and _update_render_timer_state re-scans the scene for movers.
+                self._update_render_timer_state()   # repaint on so it levels out
+
+    def _look_around_camera(self, dx: float, dy: float):
+        """RightButton drag in Camera Mode: pivot the view about the eye
+        (ANTz's left-button look-around) instead of swinging the eye about the
+        target. Same drag directions as the orbit camera — drag right and the
+        view turns right, drag down and it tips down — so muscle memory
+        carries over between the two modes."""
+        self._reaim_about_eye(-dx * _LOOK_DEG_PER_PX, dy * _LOOK_DEG_PER_PX)
+
+    def _fly_strafe_camera(self, dx: float, dy: float):
+        """Left+Right together in Camera Mode: slide the camera sideways and
+        vertically in its own frame (truck/pedestal), without turning. This is
+        the gesture for nudging a composed shot into place — flying and
+        looking both change the aim, this doesn't."""
+        _forward, right, up = self._camera_basis()
+        speed = self._fly_speed()
+        if dx:
+            self._translate_rig(right, dx * speed)
+        if dy:
+            self._translate_rig(up, -dy * speed)   # drag down = move down
+
     def _maybe_snap_orbit_target(self):
         """Called once, at the moment a Left+Right combo drag begins: re-center
         the orbit pivot on the selected node so the combined orbit+zoom
         gesture orbits *the selected object*, not whatever the camera
         happened to be pointed at. Skipped for locked axis cameras, which
-        must always stay aimed at the world origin."""
-        if self.active_camera_locked():
+        must always stay aimed at the world origin, and in Camera Mode, where
+        the eye is derived from the target — moving the pivot there would
+        teleport the camera onto the selected node mid-flight."""
+        if self.active_camera_locked() or self.fly_mode:
             return
         node = self.follow_node()
         if node is None:
@@ -2813,6 +3030,15 @@ class Viewport(QOpenGLWidget):
 
     def wheelEvent(self, event):
         delta = event.angleDelta().y()
-        factor = 0.88 if delta > 0 else 1.14
-        self._cam_distance = max(1.0, self._cam_distance * factor)
+        if self.fly_mode:
+            # In Camera Mode the wheel flies rather than zooms: shortening the
+            # arm would creep the eye toward a target that's supposed to ride
+            # along in front of it, and would quietly slow every later drag
+            # (flight speed scales off arm length).
+            forward, _right, _up = self._camera_basis()
+            step = self._cam_distance * _FLY_WHEEL_STEP
+            self._translate_rig(forward, step if delta > 0 else -step)
+        else:
+            factor = 0.88 if delta > 0 else 1.14
+            self._cam_distance = max(1.0, self._cam_distance * factor)
         self.update()

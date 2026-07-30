@@ -11,7 +11,9 @@ The camera is orbit/target/distance based (`_cam_azimuth`, `_cam_elevation`,
 `_cam_target`, `_cam_distance` — `viewport.py:126-129`). Which mouse button
 does what depends on whether a Move/Rotate/Size **gizmo mode** is active (see
 [Node manipulation](#node-manipulation) below) — the bindings below describe
-plain camera-only interaction, i.e. no gizmo mode selected.
+plain camera-only interaction, i.e. no gizmo mode selected. They also assume
+Camera Mode is off; **C** swaps them all for free flight (see
+[Camera Mode](#camera-mode-free-flight)).
 
 | Action | Binding | Source |
 |---|---|---|
@@ -29,6 +31,44 @@ box of all loaded nodes (the same auto-framing `Viewport.set_nodes()` does on
 load) — it does **not** reset azimuth/elevation back to any default angle,
 since it just calls `set_nodes()` again (`main_window.py:1802-1803`,
 `viewport.py:223-244`).
+
+### Camera Mode (free flight)
+
+Press **C**, click **Fly** on the Camera toolbar, or use **View → Camera Mode
+(Free Flight)** to swap the orbit gestures for flight. The orbit camera is
+always anchored to a target — to get a fresh angle you pan away, re-orient,
+pan again. Camera Mode drops the anchor so you can simply fly to the shot,
+which is what it exists for: composing screen-capture angles.
+
+| Action | Binding | Source |
+|---|---|---|
+| Fly forward / back | Left-click + drag up / down | `_fly_camera` |
+| Turn left / right (with the horizon banking into the turn) | Left-click + drag left / right | `_fly_camera` |
+| Look around from where the camera stands | Right-click + drag | `_look_around_camera` |
+| Slide sideways / up / down without turning | Left + Right together + drag | `_fly_strafe_camera` |
+| Fly forward / back | Scroll wheel | `wheelEvent` |
+| Pan | Middle-click + drag (unchanged) | `mouseMoveEvent` |
+
+This is deliberately *not* the ANTz mapping. In ANTz the right button
+inches the camera forward and back locked to the horizontal plane, and the
+left button looks around; here the left button flies and steers, the right
+button keeps ANTz's look-around, and nothing is confined to a plane.
+
+Flight speed is a fraction of the camera's arm length per pixel of drag
+(`_fly_speed`), so a given drag covers about the same fraction of the view
+whether you're circling a whole scene or nosing around one glyph. The bank is
+transient: a sideways drag feeds roll in (up to 25°) and it eases back to
+level once you stop (`_decay_bank`), so a screengrab is never left with a
+crooked horizon. Pitch is clamped to ±89°, as with the orbit camera.
+
+While Camera Mode is on:
+
+- Clicking still selects, and Shift+drag still rubber-band selects — but
+  Move/Rotate/Size gizmo drags are suspended until it's switched back off.
+- **Follow Selected Node** is switched off (it re-pins the camera target
+  every frame, which would undo flight immediately).
+- The fixed **+X/+Y/+Z** reference views can't fly. Turning Camera Mode on
+  switches to the **Main** camera; picking a reference view turns it off.
 
 Double-clicking a node also moves the camera: it selects the node and zooms
 in to frame it with headroom (`mouseDoubleClickEvent` →
@@ -76,6 +116,8 @@ Shortcuts handled directly in the Viewer (`Viewport.keyPressEvent`/`event`,
 | B | Toggle background black/white | `bgToggleRequested` — `viewport.py:1380-1382` |
 | 8 | Cycle the scene-wide render/blend mode | `renderModeCycleRequested` — `viewport.py:1383-1385` |
 | K | Quick-save — writes fresh, timestamped node + tag CSVs immediately (no dialog), next to the running executable | `quickSaveRequested` → `_quick_save` — `viewport.py:1386-1388`, `main_window.py:1093-1106` |
+| C | Toggle **Camera Mode** (free flight) on/off — see [above](#camera-mode-free-flight) | `toggle_fly_mode` |
+| Shift+C | Step to the next camera (Main → +X → +Y → +Z → Main) | `cycle_camera` |
 | O / Shift+O | Cycle each selected node's **geometry** forward/back one entry (ANTz-style; the step is per node, so a mixed-geometry selection stays mixed) | `geoCycleRequested` → `_cycle_selected_geometry` |
 | J / Shift+J | Cycle each selected node's **topology** forward/back one entry (same per-node rule) | `topoCycleRequested` → `_cycle_selected_topology` |
 
