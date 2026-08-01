@@ -28,13 +28,13 @@ GlyphViz can be installed two ways. Most users should start with the executable 
 
 GlyphViz for Windows is a **portable build** — there's no installer and nothing is written to the registry. Download the archive, extract it, and run the executable.
 
-[:material-download: Download GlyphViz for Windows (GlyphViz20260728.zip)](https://iluvdata.org/glyphviz/versions/GlyphViz20260728.zip){ .md-button .md-button--primary }
+[:material-download: Download GlyphViz for Windows (GlyphViz20260730.zip)](https://iluvdata.org/glyphviz/versions/GlyphViz20260730.zip){ .md-button .md-button--primary }
 
-*Windows 10/11, 64-bit · ~115 MB download, ~276 MB extracted · build 2026-07-28*
+*Windows 10/11, 64-bit · ~165 MB download, ~409 MB extracted · build 2026-07-30*
 
 ### Install and run
 
-1. Download **[GlyphViz20260728.zip](https://iluvdata.org/glyphviz/versions/GlyphViz20260728.zip)**.
+1. Download **[GlyphViz20260730.zip](https://iluvdata.org/glyphviz/versions/GlyphViz20260730.zip)**.
 2. Right-click the file → **Extract All…**, and extract it into **its own folder** — Windows suggests `GlyphViz20260728`, which is exactly right. The archive holds `GlyphViz.exe` plus an `_internal` folder at its top level, so "extract here" into your Downloads folder would scatter them.
 3. Open the extracted folder and run **`GlyphViz.exe`**.
 
@@ -50,13 +50,13 @@ You'll land in the GlyphViz GUI — the Viewer, the Node Table, and the Properti
 
 ### Example scenes
 
-The example scenes are a separate download — 23 ready-to-open GlyphViz scenes covering World Grids and globes, Channels animation, tags, all 18 topologies, plots and surfaces, color palettes, audio and video textures, and real datasets (seismicity, EEG, sleep and biometrics, school testing, terrain, terrorism events, vehicle auctions, protein structures, RSS news). Most ship with the generator script that produced them.
+The example scenes are a separate download — 36 ready-to-open GlyphViz scenes covering World Grids and globes, Channels animation, tags, all 18 topologies, plots and surfaces, color palettes, audio and video textures, and real datasets (seismicity, sleep data, school testing, terrain, terrorism events, vehicle auctions, protein structures, RSS news, hockey history). Most ship with the generator script that produced them. Browse them all, with screenshots, in the [Examples Gallery](../examples/index.md).
 
-[:material-download: Download the examples (GlyphVizExamples20260729.zip)](https://iluvdata.org/glyphviz/examples/GlyphVizExamples20260729.zip){ .md-button }
+[:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~212 MB download, ~340 MB extracted*
+*~196 MB download, ~314 MB extracted*
 
-1. Download **[GlyphVizExamples20260729.zip](https://iluvdata.org/glyphviz/examples/GlyphVizExamples20260729.zip)**.
+1. Download **[GlyphViz_Examples.zip](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip)**.
 2. Extract it into its own folder — the archive puts each example at its top level, each one self-contained. Keep each example's folder structure intact so its scene finds its own data and media.
 3. In GlyphViz, use **File → Open** and pick an example's node CSV — the file ending in `_gv_node.csv`. Companion tag and channel files load automatically, so leave them next to the node CSV. A few of the larger examples hold several scenes, one per sub-folder.
 

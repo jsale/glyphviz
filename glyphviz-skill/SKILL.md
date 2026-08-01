@@ -116,9 +116,10 @@ worked examples: `references/topologies.md`.
 5. **Validate before delivering**: re-read the file with pandas; check
    required columns present, ids unique, every `parent_id` exists (or 0),
    colors in range, visible scales ≥ 0.2, UTF-8 clean.
-6. **Hand off**: tell the user to open the node CSV in GlyphViz (File > Open);
-   a name-paired tag file loads automatically. Suggest small first (dozens of
-   nodes) before scaling to thousands.
+6. **Hand off**: tell the user to open the node CSV in GlyphViz (File > Open,
+   or drag the CSV / scene folder / zip onto the window); a name-paired tag
+   file loads automatically. Suggest small first (dozens of nodes) before
+   scaling to thousands.
 
 ## Animation options (quick pointers)
 

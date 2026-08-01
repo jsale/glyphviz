@@ -76,6 +76,7 @@ EXCLUDE_SUFFIXES = {'.pyc', '.pyo'}
 DOC_FILES = [
     REPO / 'glyphviz-docs' / 'docs' / 'getting-started' / 'installation.md',
     REPO / 'glyphviz-docs' / 'docs' / 'getting-started' / 'quickstart.md',
+    REPO / 'glyphviz-docs' / 'docs' / 'examples' / 'index.md',
 ]
 
 # "GlyphViz20260729" but never "GlyphVizExamples20260729" — the two artifacts

@@ -60,6 +60,7 @@ nav:
   - Getting Started:
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
+      - A Guided Tour: getting-started/guided-tour.md
       - Core Concepts: getting-started/core-concepts.md
   - Tutorials:
       - Overview: tutorials/index.md
@@ -73,11 +74,50 @@ nav:
       - "08 — XR/VR Rendering": tutorials/08-xr-vr-rendering.md
   - Examples Gallery:
       - Overview: examples/index.md
-      - DEG Constellation: examples/deg-constellation.md
-      - Subject Globe: examples/subject-globe.md
-      - Gene Coexpression Network: examples/gene-coexpression-network.md
-      - Cardiac Phase Space Attractor: examples/cardiac-phase-space-attractor.md
-      - Health Chronograph: examples/health-chronograph.md
+      - Starter demos:
+          - "Topology Tour": examples/topology.md
+          - "Channel Parameters": examples/channel-parameters.md
+          - "Color Palettes": examples/palette.md
+          - "Sine Wave Channels": examples/sine-wave.md
+          - "Rotation Conventions": examples/rotation-convention.md
+          - "Texture Animation": examples/texture-animation.md
+          - "Mood Background": examples/mood-background.md
+      - Audio & music:
+          - "Bird Song Spectrogram Surface": examples/bird-song-surface.md
+          - "Cat Scan — Audio Animation": examples/audio-cat-scan.md
+          - "Cat Scan Synesthesia": examples/audio-cat-scan-synesthesia.md
+          - "Four Instruments in C Major": examples/audio-four-instruments.md
+          - "Moby — Go": examples/audio-moby-go.md
+          - "Violin in A Major": examples/audio-violin-a-major.md
+      - Maps & terrain:
+          - "Cowles Mountain Terrain": examples/surface-cowles.md
+          - "Multi-Hike Ghost Race": examples/multi-hike-race.md
+          - "San Diego Seismicity": examples/sd-seismicity.md
+          - "RSS News Globe": examples/rss-news.md
+      - Education data:
+          - "California STAR Test Scores": examples/calstate-testing.md
+          - "SES Achievement Gap Terrain": examples/ses-achievement-gap-terrain.md
+          - "District Heatmap": examples/district-heatmap.md
+      - Global Terrorism Database:
+          - "GTD — Organization Profiles": examples/gtdb-organization-profiles.md
+          - "GTD — Event Cloud": examples/gtdb-event-cloud.md
+          - "GTD — Org–Event Network": examples/gtdb-org-event-network.md
+          - "GTD — Time Replay": examples/gtdb-time-replay.md
+          - "GTD — Campaign Pulse": examples/gtdb-campaign-pulse.md
+      - Vehicle sales:
+          - "Vehicle Sales — Market Galaxy": examples/vehicle-market-galaxy.md
+          - "Vehicle Sales — Depreciation Grid": examples/vehicle-depreciation-grid.md
+          - "Vehicle Sales — Raw Auction Field": examples/vehicle-raw-auction-field.md
+      - Hockey history:
+          - "The Breathing Century": examples/breathing-century.md
+          - "The Century Swarm": examples/century-swarm.md
+          - "Duel of Dynasties": examples/duel-of-dynasties.md
+      - Science & personal data:
+          - "YBCO Superconductor": examples/ybco-superconductor.md
+          - "Protein Import (PDB)": examples/protein-import.md
+          - "Flocking (Boids)": examples/flocking.md
+          - "AutoSleep — A Year of Sleep": examples/autosleep-2025.md
+          - "Hacking Creativity Glyph": examples/hacking-creativity-glyph.md
   - Reference:
       - Overview: reference/index.md
       - Viewer Navigation: reference/viewer-navigation.md
