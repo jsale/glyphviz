@@ -1,9 +1,19 @@
 # Roadmap
 
-> 🚧 **Placeholder** — content coming soon.
+GlyphViz isn't trying to be Matplotlib, Plotly, or ParaView — those tools already do 2D statistical charts and massive scientific pipelines better than GlyphViz ever will. GlyphViz is aimed at something more specific: the idea that a data hierarchy can *be* a navigable 3D space rather than a diagram of one — see [Core Concepts](getting-started/core-concepts.md). That's a narrower, stranger niche, and it's also mostly unoccupied. This page sketches where it's headed. None of it is a committed schedule — treat it as direction, not a promise.
 
-Where GlyphViz is headed, including WebXR deployment and an AI-to-topology bridge.
+## Already underway
 
----
+**A browser-based renderer — live today.** [GlyphViz Web](https://www.iluvdata.org/glyphvizweb/) is a from-scratch WebGL rewrite (Three.js/TypeScript), not a stripped-down port, reading the same native `gv_` scene format as desktop — and it's closed most of the gap: node creation and editing, selection, tags, Channels animation, color palettes, and cross-eye stereo 3D all already work in-browser. It exists to remove the biggest real barrier GlyphViz has had: installing anything at all. A URL you can open is worth more than a better renderer nobody launches — and it's also what's letting this documentation push get done faster, since a browser tab is a much easier thing to point someone at while writing about it than an installer.
 
-*This page is part of the GlyphViz documentation scaffold. Real content will be added in a future pass.*
+**VR, on real hardware, today.** A working GlyphViz VR mode already runs on a Meta Quest 3 over an OpenXR/PC-VR link: stereo rendering, thumbstick flight and grab-drag navigation, controller-ray picking, tag labels as camera-facing billboards, and full Channels time-series playback (with per-node textures) have all been confirmed on-headset — reusing the exact same topology math, CSV pipeline, and channel engine the desktop renderer uses, not a separate reimplementation. It lives in `glyphviz_xr`, built on the same `glyphviz_core` kernel as the desktop app. It's still an internal spike, not a polished shipping feature — no in-headset transport controls yet, no packaged installer — but the hard part, proving a Python/OpenXR renderer can drive GlyphViz's real scene model at headset framerates, is done.
+
+## Near-term
+
+**WebXR.** With the browser renderer now close to desktop parity, the natural next step is bringing VR/AR into it directly via WebXR — a scene that opens in a browser *and* drops you into it in a headset, no PC-VR link, no install, just a link someone can send you. Whether this replaces or complements the existing OpenXR desktop spike is still an open question.
+
+**The AI-to-topology bridge.** Right now, turning a CSV into a well-chosen GlyphViz scene means knowing the vocabulary yourself — which topology fits a hierarchy with strong community structure, when a Surface beats a Point cloud, how ratio and facet actually behave. That gap between "I have data" and "I have a scene" is exactly the kind of structure-to-suggestion mapping language models are already good at: describe your data, or point at a CSV, and get back a proposed topology/geometry encoding with the reasoning attached, not just a rendered image. Nothing here is built yet, but the shape of the tool is clear enough to name.
+
+## The longer view
+
+Some of the more speculative ideas in this space — data mapped to sound as well as sight, spatial encoding chosen by the *meaning* of the data rather than its shape alone — aren't purely hypothetical for GlyphViz specifically: the [music-synesthesia examples](examples/audio-cat-scan-synesthesia.md) already drive node position, color, and geometry directly from audio analysis, which is a working instance of exactly that idea in miniature. Extending that further — collaborative multi-user scenes, richer non-Euclidean topologies for data whose natural structure isn't well served by a sphere or a grid, genuinely 4D-and-beyond navigation — is where this heads if the nearer-term steps land. None of it is scheduled. It's the reason the nearer-term steps are worth doing.

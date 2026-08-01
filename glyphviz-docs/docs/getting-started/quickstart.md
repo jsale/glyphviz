@@ -16,7 +16,7 @@ This page walks through the smallest possible end-to-end GlyphViz workflow: a no
 
     Or just **drag it onto the window**. Drag and drop takes a node CSV, a whole example folder, or a zip of one — GlyphViz finds the node CSV inside and brings the tag file, Channels animation, and `media/` textures with it, so you can drop the example zip straight from your downloads without extracting it first. Hold **Shift** while dropping to merge into the current scene instead of replacing it. Details: [Drag and Drop](../reference/drag-and-drop.md).
 
-    If you don't have a scene yet, grab the example set: **[GlyphVizExamples20260729.zip](https://iluvdata.org/glyphviz/examples/GlyphVizExamples20260729.zip)** (see [Installation → Example scenes](installation.md#example-scenes)). Extract it, then open any example's node CSV. `Topology_Example` and `Palette_Example` are good first ones — small, fast, and they show the node model clearly.
+    If you don't have a scene yet, grab the example set: **[GlyphViz_Examples.zip](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip)** (see [Installation → Example scenes](installation.md#example-scenes)). Extract it, then open any example's node CSV. `Topology_Example` and `Palette_Example` are good first ones — small, fast, and they show the node model clearly.
 
     ## 3. Navigate the Viewer
 
@@ -39,8 +39,8 @@ This page walks through the smallest possible end-to-end GlyphViz workflow: a no
     ## 5. What's next
 
     - [Reference](../reference/index.md) — full guide to the interface: menus, panels, geometries, and topologies
-    - [Tutorial 01 — Your First Scene](../tutorials/01-first-scene.md) — a more detailed walkthrough
-    - [Tutorial 04 — Mapping Real Data](../tutorials/04-mapping-real-data.md) — once you're ready to bring in your own dataset
+    - [A Guided Tour](guided-tour.md) — a longer, hands-on walkthrough of the fundamentals
+    - [Tutorials](../tutorials/index.md) — a guided path from your first scene through hyperdimensional projection and XR
 
 === "CLI (Python install)"
 
@@ -83,5 +83,5 @@ This page walks through the smallest possible end-to-end GlyphViz workflow: a no
     ## 4. What's next
 
     - [Reference](../reference/index.md) — full interface and format reference
-    - [Tutorial 01 — Your First Scene](../tutorials/01-first-scene.md) — a more detailed walkthrough of the same workflow
-    - [Tutorial 04 — Mapping Real Data](../tutorials/04-mapping-real-data.md) — once you're ready to bring in your own dataset
+    - [A Guided Tour](guided-tour.md) — a longer, hands-on walkthrough of the fundamentals
+    - [Tutorials](../tutorials/index.md) — a guided path from your first scene through hyperdimensional projection and XR

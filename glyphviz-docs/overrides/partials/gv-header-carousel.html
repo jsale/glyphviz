@@ -1,0 +1,45 @@
+{#- Home-page-only image carousel, rendered inside the gold <header> band
+    itself (see header.html) rather than in the page content, per Jeff's
+    request: it should sit above the tabs bar as part of the header, not
+    as a content-area block. -#}
+<div class="gv-header-carousel" data-gv-carousel role="region" aria-roledescription="carousel" aria-label="GlyphViz example visualizations">
+  <div class="gv-carousel__viewport">
+    <ul class="gv-carousel__track">
+      <li class="gv-carousel__slide">
+        <img src="{{ 'assets/home/vehicle-raw-auction-field-close.jpg' | url }}" alt="A dense field of thousands of colorful car-shaped glyphs, each colored by its real exterior paint color" loading="eager">
+        <p class="gv-carousel__caption"><strong>Vehicle Sales &mdash; Raw Auction Field</strong> &middot; ~100,000 nodes, one per auction record, colored by real paint color</p>
+      </li>
+      <li class="gv-carousel__slide">
+        <img src="{{ 'assets/home/gtdb-event-cloud-satellite.jpg' | url }}" alt="Thousands of colorful spike towers rising off a satellite-textured world map" loading="lazy">
+        <p class="gv-carousel__caption"><strong>Global Terrorism Database &mdash; Event Cloud</strong> &middot; ~205,000 incidents over a real satellite basemap</p>
+      </li>
+      <li class="gv-carousel__slide">
+        <img src="{{ 'assets/home/audio-cat-scan-synesthesia-close.jpg' | url }}" alt="A coral-like bloom of pastel colored glyphs arranged in concentric rings" loading="lazy">
+        <p class="gv-carousel__caption"><strong>Cat Scan Synesthesia</strong> &middot; a 4,529-node music-synesthesia sphere, driven by audio</p>
+      </li>
+      <li class="gv-carousel__slide">
+        <img src="{{ 'assets/home/breathing-century.jpg' | url }}" alt="A ring of vertical towers built from stacked discs, representing a century of hockey franchises" loading="lazy">
+        <p class="gv-carousel__caption"><strong>The Breathing Century</strong> &middot; a century of NHL hockey, animated season by season</p>
+      </li>
+      <li class="gv-carousel__slide">
+        <img src="{{ 'assets/home/rss-news-closeup.jpg' | url }}" alt="A textured globe of Earth with colorful cube towers rising from news hotspots" loading="lazy">
+        <p class="gv-carousel__caption"><strong>RSS News Globe</strong> &middot; world news as concept towers, live on a globe</p>
+      </li>
+      <li class="gv-carousel__slide">
+        <img src="{{ 'assets/home/century-swarm-close.jpg' | url }}" alt="A dense swarm of thousands of red, yellow, and blue spheres" loading="lazy">
+        <p class="gv-carousel__caption"><strong>The Century Swarm</strong> &middot; 29,140 player-seasons in scoring phase space</p>
+      </li>
+      <li class="gv-carousel__slide">
+        <img src="{{ 'assets/home/duel-of-dynasties.jpg' | url }}" alt="Three colorful interlocking rings of glyphs, like orbiting orreries" loading="lazy">
+        <p class="gv-carousel__caption"><strong>Duel of Dynasties</strong> &middot; three hockey careers as animated orreries</p>
+      </li>
+      <li class="gv-carousel__slide">
+        <img src="{{ 'assets/home/sd-seismicity.jpg' | url }}" alt="An aerial map plate with a zoom-callout frustum of colored earthquake hypocenters glowing beneath it" loading="lazy" style="object-position: 50% 0%;">
+        <p class="gv-carousel__caption"><strong>San Diego Seismicity</strong> &middot; 66 years of earthquakes on a real-world map grid</p>
+      </li>
+    </ul>
+  </div>
+  <button type="button" class="gv-carousel__arrow gv-carousel__arrow--prev" aria-label="Previous example">&#8249;</button>
+  <button type="button" class="gv-carousel__arrow gv-carousel__arrow--next" aria-label="Next example">&#8250;</button>
+  <div class="gv-carousel__dots" role="tablist" aria-label="Choose example"></div>
+</div>

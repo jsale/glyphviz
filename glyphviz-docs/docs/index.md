@@ -12,6 +12,17 @@ GlyphViz is not a charting library. It treats *data structure as scene structure
   <p class="gv-hero__caption">Drag to orbit — this is a live render of GlyphViz's own node hierarchy: parent, children, and one grandchild.</p>
 </div>
 
+*Every frame in the carousel above is an actual GlyphViz scene — no mockups. Full source and data for each ships in the [Examples Gallery](examples/index.md).*
+
+---
+
+## Try it right now — no install
+
+**[GlyphViz Web](https://www.iluvdata.org/glyphvizweb/)** is a full browser implementation: open the link, drag in a node CSV, and you're in a live scene — nothing to download, nothing to install. It's a from-scratch WebGL rewrite (Three.js), not a stripped-down port, reading the same native `gv_` scene format as desktop, and it has closed most of the gap with the desktop app — node creation and editing, selection, tags, Channels animation, color palettes, even cross-eye stereo 3D all work in-browser today.
+
+[:material-open-in-new: Launch GlyphViz Web](https://www.iluvdata.org/glyphvizweb/){ .md-button .md-button--primary target=_blank rel=noopener }
+[:octicons-arrow-right-24: Prefer the desktop app?](getting-started/installation.md){ .md-button }
+
 ---
 
 ## Why GlyphViz
@@ -20,15 +31,17 @@ GlyphViz is not a charting library. It treats *data structure as scene structure
 - **Validated, not just tested** — every release is checked against a golden-master oracle: the original ANTz C renderer, instrumented to dump its exact transformation matrices, compared frame-for-frame against GlyphViz's output.
 - **Built for real scientific data** — spatiotemporal EEG, RNA-seq expression networks, longitudinal health records, and chaotic dynamical systems are first-class use cases, not afterthoughts.
 - **Hyperdimensional-aware** — when your data has more than three dimensions, GlyphViz doesn't just drop the rest. Projective geometry and phase-space embedding techniques (Takens delay embedding, strange attractor reconstruction) bring higher-dimensional structure into a space you can actually navigate.
-- **Desktop and XR** — a shared core (`glyphviz_core`) powers both the standard desktop renderer (`glyphviz_gl`) and immersive XR rendering (`glyphviz_xr`), so a scene you build once renders consistently everywhere.
+- **Everywhere you want it** — the desktop renderer (`glyphviz_gl`) and immersive XR (`glyphviz_xr`) share one core engine (`glyphviz_core`); GlyphViz Web is a separate, browser-native implementation of that same scene format, so the same CSV opens with no install, in the full desktop app, or in VR.
 
 ---
 
 ## Where to start
 
-<div class="grid cards" markdown>
+<div class="grid cards gv-nav-cards" markdown>
 
-- :material-rocket-launch:{ .lg .middle } **New to GlyphViz?**
+- ![A DEM terrain surface rendered in GlyphViz](assets/home/thumb-quickstart.jpg)
+
+    :material-rocket-launch:{ .lg .middle } **New to GlyphViz?**
 
     ---
 
@@ -36,7 +49,9 @@ GlyphViz is not a charting library. It treats *data structure as scene structure
 
     [:octicons-arrow-right-24: Quickstart](getting-started/quickstart.md)
 
-- :material-book-open-page-variant:{ .lg .middle } **Want to understand the model first?**
+- ![A ring of orbiting glyphs representing a node hierarchy](assets/home/thumb-core-concepts.jpg)
+
+    :material-book-open-page-variant:{ .lg .middle } **Want to understand the model first?**
 
     ---
 
@@ -44,7 +59,9 @@ GlyphViz is not a charting library. It treats *data structure as scene structure
 
     [:octicons-arrow-right-24: Core Concepts](getting-started/core-concepts.md)
 
-- :material-image-multiple:{ .lg .middle } **Want to see what's possible?**
+- ![Colorful data points over a satellite map](assets/home/thumb-examples-gallery.jpg)
+
+    :material-image-multiple:{ .lg .middle } **Want to see what's possible?**
 
     ---
 
@@ -52,7 +69,9 @@ GlyphViz is not a charting library. It treats *data structure as scene structure
 
     [:octicons-arrow-right-24: Examples Gallery](examples/index.md)
 
-- :material-map:{ .lg .middle } **Curious where this is headed?**
+- ![A YBCO superconductor crystal structure rendered in GlyphViz](assets/home/thumb-roadmap.jpg)
+
+    :material-map:{ .lg .middle } **Curious where this is headed?**
 
     ---
 
