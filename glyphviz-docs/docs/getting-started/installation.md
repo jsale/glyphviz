@@ -20,6 +20,14 @@ GlyphViz can be installed two ways. Most users should start with the executable 
 
     [:octicons-arrow-right-24: Jump to instructions](#cli-python-install)
 
+- :material-robot-outline:{ .lg .middle } **Claude Skill**
+
+    ---
+
+    Teach Claude to generate and validate GlyphViz scene CSVs directly from your data.
+
+    [:octicons-arrow-right-24: Jump to instructions](#claude-skill)
+
 </div>
 
 ---
@@ -70,6 +78,37 @@ Good first ones: `Topology_Example` (every topology side by side), `Palette_Exam
 ### Next step
 
 Jump to [Quickstart](quickstart.md) to open your first scene in the GUI.
+
+---
+
+## Claude Skill
+
+The **GlyphViz Skill** teaches [Claude](https://claude.ai) — Claude Code, Claude Desktop, or claude.ai with Skills enabled — how to turn your data into a valid GlyphViz scene: the required `gv_node.csv` columns, choosing a topology that fits your data's shape, color and palette wiring, tags, and Channels animation. It's the same skill the GTDB, RSS News, and NHL history examples in the [Examples Gallery](../examples/index.md) were built with — describe your dataset, and Claude generates (and validates) the CSV directly, rather than you learning the format by hand.
+
+[:material-download: Download the GlyphViz Skill (glyphviz-skill.zip)](https://www.iluvdata.org/glyphviz/skills/glyphviz-skill.zip){ .md-button .md-button--primary }
+
+Download **[glyphviz-skill.zip](https://www.iluvdata.org/glyphviz/skills/glyphviz-skill.zip)**, then install it one of two ways depending on which Claude you use — the zip itself is the same either way.
+
+=== "claude.ai or Claude Desktop"
+
+    No unzipping needed — upload the zip file itself.
+
+    1. Open **Settings → Capabilities → Skills** (the "Customize" area of your Claude settings).
+    2. Upload `glyphviz-skill.zip` directly, as downloaded.
+    3. Claude unpacks and registers it for you.
+
+    (This menu is Anthropic's, not GlyphViz's, so the exact wording may shift as Skills matures — "Customize" is the reliable landmark to look for if "Capabilities" moves.)
+
+=== "Claude Code (CLI / IDE extension)"
+
+    Here you extract the zip yourself into a skills folder Claude Code already looks in.
+
+    1. Extract `glyphviz-skill.zip` — you'll get a `SKILL.md` plus a `references/` folder of format specs and an `examples/` folder of worked scenes.
+    2. Place the extracted `glyphviz-skill/` folder under `.claude/skills/` — either your current project's (so it's available there only) or `~/.claude/skills/` (so it's available everywhere).
+
+Once installed, just ask: *"Use the GlyphViz skill to visualize this CSV as a sphere of clustered categories"* — Claude reads the spec, writes the node (and tag/Channels) CSVs, and validates them before handing the file back.
+
+The skill is native to GlyphViz's own `gv_` CSV format (not the legacy 94-column ANTz/GaiaViz dialect), so it produces scenes that open cleanly in either the desktop app or [GlyphViz Web](https://www.iluvdata.org/glyphvizweb/).
 
 ---
 

@@ -74,6 +74,42 @@ The **Facet** field (`Node.subspace`, 0-indexed) names faces `+X, -X, +Y, -Y,
 against real ANTz ground truth via the legacy `facet` CSV column (1-indexed,
 `facet = subspace + 1`).
 
+## Topology animations — a downloadable instructional series
+
+A companion set of Channels-animated scenes, one small probe glyph per
+topology, built specifically to make the table above *visible* rather than
+read. Each scene parks a cone-shaped probe on a topology's surface and sweeps
+it through the three placement axes one at a time (150 frames per axis, 450
+frames total at 30 fps), with an optional "scribe" effect — a fading comet
+trail plus a chalk-line overlay that draws the probe's actual world-space
+path as it moves — so you can watch a topology's coordinate system become a
+literal line in space instead of inferring it from numbers.
+
+[:material-download: Download the topology animations (topology_animations.zip)](https://www.iluvdata.org/glyphviz/animations/topology_animations.zip){ .md-button .md-button--primary }
+
+1. Download and extract **[topology_animations.zip](https://www.iluvdata.org/glyphviz/animations/topology_animations.zip)**, keeping each numbered folder intact — GlyphViz only auto-loads Channels when a node CSV's folder holds exactly one `ch-map` and one `ch-tracks` file.
+2. Open a `*_gv_node.csv` in GlyphViz (**File → Open**); its Channels load automatically and the Channels panel appears.
+3. **Space** plays/pauses, **Shift+Space** stops and resets to frame 0, **T** toggles labels, **C** cycles the scene's stored cameras.
+
+**What's inside:**
+
+| Folder | Teaches |
+|---|---|
+| `01_grid_probe` | The Cartesian baseline (None/Plane/Video/Plot/Surface all share this placement math) — no standoff, the origin is a real place. |
+| `02_sphere_probe` | Longitude/latitude/altitude on the Sphere surface; watch the probe tip over as latitude changes so it always faces outward. |
+| `03_grid_axis_triad` | Three probes reading one shared track column — several channels can read the same track. |
+| `04_sphere_meridian_comb` | One channel driving twelve children, overwriting only latitude/altitude/color while each keeps its own CSV longitude. |
+| `05_rosetta_grid_vs_sphere` | The same byte-identical numbers fed to a Cartesian parent and a Sphere parent side by side — ±10 units vs. ±10 degrees. |
+| `06_sphere_probe_with_screen` | The base sphere scene plus a video plate — drop a lesson video into its `media/` folder. |
+| `next_up/` | The rest of the set: Cube, Torus, Cylinder, Pin, Rod, and Point probes. |
+
+The zip also ships the generator itself (`glyphviz_topology_anim.py` and a
+Jupyter notebook), so the whole series — or a single topology, or slower
+sweeps — can be regenerated rather than hand-edited.
+
+!!! note "Thumbnails coming"
+    Screenshots of each animation, placed alongside its topology's row in the table above, are planned for a future pass.
+
 ## Next step
 
 See [Geometries](geometries.md) for what individual nodes look like, or

@@ -91,13 +91,13 @@ GlyphViz is primarily a visual, interactive tool — most users will spend their
 
     [:octicons-arrow-right-24: Reference](cli.md)
 
-- **API Reference**
+- **Claude Skill**
 
     ---
 
-    `glyphviz_core`, `glyphviz_gl`, and `glyphviz_xr`, auto-generated from source.
+    Teach Claude to generate and validate GlyphViz scene CSVs from your data.
 
-    [:octicons-arrow-right-24: Reference](api/index.md)
+    [:octicons-arrow-right-24: Download](../getting-started/installation.md#claude-skill)
 
 - **Glyph Composer Reference**
 
@@ -106,6 +106,14 @@ GlyphViz is primarily a visual, interactive tool — most users will spend their
     Reference for the Glyph Composer tool. Coming once Glyph Composer development is further along.
 
     [:octicons-arrow-right-24: Reference](glyph-composer.md)
+
+- **Hyperglyph Generator Reference**
+
+    ---
+
+    Reference for the Hyperglyph Generator tool. Coming once Hyperglyph Generator development is further along.
+
+    [:octicons-arrow-right-24: Reference](hyperglyph-generator.md)
 
 </div>
 

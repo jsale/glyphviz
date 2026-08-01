@@ -68,11 +68,6 @@ nav:
       - "01 — Your First Scene": tutorials/01-first-scene.md
       - "02 — Tags & Hierarchy": tutorials/02-tags-hierarchy.md
       - "03 — Topology & Geometry Choices": tutorials/03-topology-geometry.md
-      - "04 — Mapping Real Data": tutorials/04-mapping-real-data.md
-      - "05 — Spatiotemporal EEG Visualization": tutorials/05-eeg-spatiotemporal.md
-      - "06 — Strange Attractors & Phase Space Embedding": tutorials/06-strange-attractors.md
-      - "07 — Hyperdimensional Projection": tutorials/07-hyperdimensional-projection.md
-      - "08 — XR/VR Rendering": tutorials/08-xr-vr-rendering.md
   - Examples Gallery:
       - Overview: examples/index.md
       - Starter demos:
@@ -132,9 +127,10 @@ nav:
       - Channels Animation: reference/channels-animation.md
       - ANTz Node CSV Format Spec: reference/antz-format-spec.md
       - CLI Reference: reference/cli.md
-      - API Reference: reference/api/index.md
       - Glyph Composer Reference: reference/glyph-composer.md
+      - Hyperglyph Generator Reference: reference/hyperglyph-generator.md
   - Architecture:
+      - Overview: architecture/index.md
       - Package Boundary: architecture/package-boundary.md
       - Golden-Master Validation: architecture/golden-master-validation.md
       - ANTz & GaiaViz Format Notes: architecture/antz-gaiaviz-format-notes.md

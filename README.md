@@ -103,7 +103,7 @@ system, and the scene-graph conventions that GlyphViz implements and
 extends. The original source is available at
 [github.com/openantz](https://github.com/openantz).
 
-**GaiaViz**, developed by **Shane Saxon** and **Lukas Eriksson**, extended
+**GaiaViz**, developed by **Shane Saxon** and **Lucas Erickson**, extended
 ANTz's data format and visualization concepts with new topologies, animation
 channels, and a modernized scene model, including the `np_` ("neural
 physics") file/column naming convention that reflects GaiaViz's own
