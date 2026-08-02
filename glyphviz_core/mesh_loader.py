@@ -31,7 +31,17 @@ def load_mesh_file(path: str) -> MeshData:
     """Load *path* and normalize it to the same unit-scale convention every
     other GEO_* shape uses (geometry.py: "fits within radius ~1"), so it
     composes with a node's scale_x/y/z exactly like the built-in glyphs."""
-    mesh = trimesh.load(path, force='mesh')
+    # validate=True is required, not just process's default True: process()
+    # alone (validate=False) runs remove_infinite_values(), but that drops
+    # NaN/Inf *vertices* without dropping the faces that referenced them --
+    # update_vertices() remaps those faces onto whatever vertex now sits at
+    # the old index (often vertex 0), leaving a "hub" of degenerate spike
+    # triangles fanning out from real geometry to that one point. validate=True
+    # additionally runs nondegenerate_faces()/fix_normals(), which removes
+    # exactly those spikes. Confirmed on Jeff's isosurface5.stl: vertex 0 was
+    # referenced by 73,862 of 126,846 faces (vs. ~10 for a normal vertex)
+    # without validate=True, rendering as radial lines converging on one point.
+    mesh = trimesh.load(path, force='mesh', validate=True)
     if not isinstance(mesh, trimesh.Trimesh) or len(mesh.vertices) == 0:
         raise ValueError(f"No usable triangle mesh found in {path!r}")
 
