@@ -78,8 +78,9 @@ Node and Reset Camera have no panel counterpart.
 | Show Hidden Nodes | ☐ unchecked | `main_window.py:314-317` |
 | Show Tag Labels | ☐ unchecked | Tooltip notes the **T** key toggles the same state (`main_window.py:319-323`) |
 | Show Selection Box | ✓ checked | **Ctrl+B** — hide the yellow bounding box around selected nodes without deselecting them, e.g. for a clean screengrab. Mirrored by *Show selection box* in the Properties panel's Select By group, not the Display group (`main_window.py:325-336`) |
+| Show Transform Handles | ✓ checked | Draw the red/green/blue X/Y/Z handles on the selected node while Move/Rotate/Size is armed, and let them be dragged directly. Unchecking leaves the armed mode and its free-form axis drags exactly as they were — see [Transform handles](viewer-navigation.md#transform-handles) |
 | *(separator)* | | |
-| Stereo 3D (Cross-Eye) | ☐ unchecked | Side-by-side cross-eye stereo pair; disables rubber-band select while active (`main_window.py:339-348`) |
+| Stereo 3D (Cross-Eye) | ☐ unchecked | Side-by-side cross-eye stereo pair; disables rubber-band select and the transform handles while active (`main_window.py:339-348`) |
 | *(separator)* | | |
 | Pause Rate Animation | ☐ unchecked | **P** — freeze all `translate_rate`/`rotate_rate`/`scale_rate` animation in place, then resume with the original rates (`main_window.py:351-360`) |
 | *(separator)* | | |

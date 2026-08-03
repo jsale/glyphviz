@@ -159,10 +159,66 @@ active:
   all three X/Y/Z boxes are checked — otherwise Right-click still just orbits
   the camera.
 
-(`mouseMoveEvent`, `_apply_axis_deltas` — `viewport.py:1499-1567`.) Move drag
-speed matches camera-pan speed; Rotate drag speed matches orbit sensitivity
-(0.4° per pixel); Size drag applies a `1.0 + raw*0.004` per-pixel multiplier,
-floored at `0.001` (`viewport.py:1552-1562`).
+(`mouseMoveEvent`, `_apply_axis_deltas`.) Move drag speed matches camera-pan
+speed (`_MOVE_WORLD_PER_PX`); Rotate drag speed matches orbit sensitivity
+(`_ROTATE_DEG_PER_PX`, 0.4° per pixel); Size drag applies a per-pixel
+multiplier (`_SIZE_FACTOR_PER_PX`), floored at `0.001`.
+
+### Transform handles
+
+Arming a mode also puts red/green/blue **X/Y/Z handles** on the selected node
+— arrows for Move, rings for Rotate, capped bars for Size. They hold a
+constant on-screen size however far away the node is, highlight as the cursor
+comes over them, and are drawn on top of the scene so a handle stays
+grabbable even when the glyph is larger than it is.
+
+Dragging a handle constrains the edit to that one axis and **tracks the
+cursor**: pull the red arrow 60 pixels along itself and the node moves 60
+pixels' worth of world distance, however the node's parent is scaled or
+rotated. Dragging *across* a handle does nothing. On a multi-selection the
+handles sit on the first selected node and every other selected node takes
+the same field change.
+
+The handles are purely additive — a press that misses every one of them still
+gets the free-form axis drag described above, so the existing gesture is
+unchanged. **View → Show Transform Handles** turns the handles off without
+disarming the mode.
+
+Which direction a handle points is per-mode, because the three field groups
+do not act in the same frame (`glyphviz_core/gizmo.py`):
+
+| Mode | Handles point along | Why |
+|---|---|---|
+| Move | the direction each `translate_x/y/z` field actually pushes the node | translate is a placement coordinate in the *parent's* topology, so on a Sphere parent the red arrow is the longitude tangent, not world X |
+| Rotate | the axis each `rotate_x/y/z` field spins the node about | under ANTz's Heading/Tilt/Roll convention `rotate_y` and `rotate_z` both drive Z rotations, so the rings are derived from the rotation matrix rather than assumed |
+| Size | the node's own local axes | `scale_x/y/z` genuinely stretch those |
+
+Handles are not drawn on Link nodes (a link's own transform is inert), in
+Camera Mode (which owns every drag button), or in stereo mode (where the
+scene is drawn twice and a cursor measured against the whole widget would
+grab at neither) — the armed mode and its free-form drags still work in all
+three cases.
+
+#### Scaling uniformly
+
+**Lock X/Y/Z together**, in the Properties panel's Selected Node group, also
+governs Size mode: with it ticked, dragging *any* bar — or any free-form Size
+drag — applies the same factor to all three axes, and a pale triangle joins
+the three bar ends to show they are tied. A drag shares the **factor** rather
+than forcing the three fields equal the way the panel's spin boxes do, so a
+deliberately 3:1:1 glyph keeps its proportions instead of snapping to a cube
+on the first pixel.
+
+#### When two rotate rings coincide
+
+Each ring is a true circle in the plane perpendicular to its own axis — the
+path a point on the glyph actually travels. Two rings landing on top of each
+other is **Euler gimbal lock**, reported honestly: near `rotate_y` = ±90° in
+Euler XYZ mode, `rotate_x` and `rotate_z` really do spin the node about the
+same axis, so there is nothing left for one of them to do independently.
+(Heading/Tilt/Roll has its own lock, at tilt 0° / 180°.) Dragging still works
+— the hover highlight shows which ring you have — and the rings separate
+again as you move the middle angle away from the singularity.
 
 ## Next step
 

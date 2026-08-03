@@ -18,6 +18,7 @@ from glyphviz_core.node import (
     WORLD_DEFAULT_BG_RGB, REF_GRID_DEFAULT_RGB,
     TAG_COLOR_MODE_NODE, TAG_DEFAULT_TEXT_RGB, TAG_TEXT_ALPHA, TAG_SHADOW_RGBA,
 )
+from glyphviz_core import gizmo as gz
 from glyphviz_core.scene import Scene
 from glyphviz_core.topology import (
     TOPO_NONE, TOPO_PLANE, TOPO_PLOT, TOPO_SURFACE, TOPO_VIDEO,
@@ -57,6 +58,16 @@ _RATE_CYCLE_MS = 1000.0 / 60.0
 _CARTESIAN_PARENT_TOPOS = frozenset({
     TOPO_NONE, TOPO_PLANE, TOPO_VIDEO, TOPO_PLOT, TOPO_SURFACE,
 })
+
+# --- Manipulation sensitivity -------------------------------------------------
+# The per-pixel rates of the axis-checkbox drags (_apply_axis_deltas). Named
+# constants rather than literals because the transform gizmo's drag math has
+# to speak the same currency: a handle drag arrives already converted into
+# world units / degrees / a multiplier, and these are what the free-form drag
+# converts ITS pixels into, so the two paths stay comparable.
+_MOVE_WORLD_PER_PX = 0.0015    # x arm length — matches the camera-pan speed
+_ROTATE_DEG_PER_PX = 0.4       # matches the camera-orbit sensitivity
+_SIZE_FACTOR_PER_PX = 0.004    # multiplicative, per drag step
 
 # --- Camera Mode (free flight, C key) tuning ---------------------------------
 # Left-drag flight is rate-based (ANTz-style): the press point becomes the
@@ -275,6 +286,27 @@ class Viewport(QOpenGLWidget):
         # Gizmo manipulation state (Move/Rotate/Size).  None = camera-only.
         self.gizmo_mode: str | None = None
         self.gizmo_axes = {'x': True, 'y': True, 'z': True}
+
+        # On-screen red/green/blue handles for the armed mode, drawn on the
+        # first selected visual node. Purely ADDITIVE to the axis-checkbox
+        # drags above: grabbing a handle constrains the drag to that one axis
+        # and tracks the cursor exactly, while a press that misses every
+        # handle still gets the free-form ANTz-style drag it always did.
+        self.show_gizmo_handles = True
+        # Size mode only: every axis takes the same factor, whichever bar is
+        # dragged, so the glyph keeps its proportions. Driven by the
+        # Properties panel's "Lock X/Y/Z together" checkbox (MainWindow keeps
+        # the two in step). A drag shares the same FACTOR rather than forcing
+        # the three fields equal the way the panel's spin boxes do — equalizing
+        # would snap a deliberately 3:1:1 glyph to a cube on the first pixel.
+        self.uniform_scale = False
+        self._gizmo_hover: str | None = None    # axis under the cursor, for highlight
+        # Live handle drag. The frame (origin, axis direction, handle length)
+        # is FROZEN at the press: a handle that re-aimed itself as the node
+        # moved under it would chase the cursor. See _begin_gizmo_drag.
+        self._gizmo_drag: dict | None = None
+        # Hover highlighting needs move events with no button held.
+        self.setMouseTracking(True)
 
         self._cam_distance = 500.0
         self._cam_azimuth = 45.0
@@ -1346,6 +1378,7 @@ class Viewport(QOpenGLWidget):
 
         self._draw_selected_outlines()
         self._draw_topology_overlays()
+        self._draw_gizmo()
 
     def _draw_nodes_immediate(self, planes, nodes: list[Node] | None = None,
                               skip_ids: set[int] | None = None):
@@ -2661,6 +2694,22 @@ class Viewport(QOpenGLWidget):
     # --- mouse ---
 
     def mousePressEvent(self, event):
+        # A press on a gizmo handle beats everything else a left-press can
+        # start — including Shift+drag rubber-band, so a handle stays
+        # grabbable whatever modifier happens to be down (matching GlyphViz
+        # Web). Nothing else about the press is recorded: the drag is
+        # single-axis and self-contained, and its release must not fall
+        # through to the click-picker and clear the selection.
+        if event.button() == Qt.MouseButton.LeftButton:
+            axis = self._gizmo_pick(event.pos().x(), event.pos().y())
+            if axis is not None:
+                self._begin_gizmo_drag(axis, event.pos())
+                if self._gizmo_drag is not None:
+                    self._last_pos = self._press_pos = event.pos()
+                    self._drag_button = Qt.MouseButton.LeftButton
+                    self._drag_moved = True
+                    return
+
         # Shift+LeftButton starts rubber-band region select (disabled in
         # stereo mode: a single screen-space rectangle can't be mapped back
         # to one node set when the two eyes show different projections of
@@ -2703,6 +2752,18 @@ class Viewport(QOpenGLWidget):
             self._update_render_timer_state()
 
     def mouseReleaseEvent(self, event):
+        # --- gizmo handle release --- (returns before the click-picker: a
+        # handle press that never moved is a no-op, not a click on empty
+        # space, and must not clear the selection out from under the handles)
+        if (self._gizmo_drag is not None
+                and event.button() == Qt.MouseButton.LeftButton):
+            self._gizmo_drag = None
+            self._drag_button = None
+            self._drag_moved = False
+            self._update_gizmo_hover(event.pos())
+            self.update()
+            return
+
         # --- rubber-band release ---
         if self._rubber_mode and event.button() == Qt.MouseButton.LeftButton:
             self.unsetCursor()
@@ -2779,6 +2840,14 @@ class Viewport(QOpenGLWidget):
                 self._fly_anchor = self._fly_cursor = None
             self._update_render_timer_state()
 
+    def leaveEvent(self, event):
+        """Drop any handle highlight when the cursor leaves the viewport, so
+        a hover doesn't stay lit while the mouse is off in a panel."""
+        if self._gizmo_hover is not None and self._gizmo_drag is None:
+            self._gizmo_hover = None
+            self.update()
+        super().leaveEvent(event)
+
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             node = self._pick_node(event.pos().x(), event.pos().y())
@@ -2787,6 +2856,12 @@ class Viewport(QOpenGLWidget):
                 self.focus_on_node(node)
 
     def mouseMoveEvent(self, event):
+        # Gizmo handle drag: single-axis, and it owns the whole gesture.
+        if self._gizmo_drag is not None:
+            self._apply_gizmo_drag(event.pos())
+            self._last_pos = event.pos()
+            return
+
         # Rubber-band mode: just track the end corner, no camera movement
         if self._rubber_mode:
             self._rubber_end = event.pos()
@@ -2794,6 +2869,9 @@ class Viewport(QOpenGLWidget):
             return
 
         if self._drag_button is None:
+            # No button down: the only thing motion means is hovering a
+            # handle (mouse tracking is on for exactly this).
+            self._update_gizmo_hover(event.pos())
             return
         dx = event.pos().x() - self._last_pos.x()
         dy = event.pos().y() - self._last_pos.y()
@@ -3009,40 +3087,344 @@ class Viewport(QOpenGLWidget):
         if pos is not None:
             self._cam_target = list(pos)
 
-    def _apply_axis_deltas(self, raw_deltas: dict):
+    def _apply_axis_deltas(self, raw_deltas: dict, field_deltas: dict | None = None):
         """Apply one drag-step of Move/Rotate/Size to every selected node.
 
-        raw_deltas maps axis letter ('x'/'y'/'z') to a raw screen-space pixel
-        delta for that axis; sign/scale conversion to world units happens here
-        based on the active gizmo_mode.
+        Two callers, two currencies:
+
+        * `raw_deltas` (the axis-checkbox free-form drag) maps axis letter to
+          a raw screen-pixel delta, converted here at the fixed per-pixel
+          rates. Move additionally divides out the parent's cumulative scale
+          per node (_move_axis_divisors), which is what keeps the on-screen
+          drag speed constant under a scaled parent.
+
+        * `field_deltas` (a gizmo handle drag) maps axis letter to a change
+          already expressed in the FIELD's own units — translate units for
+          Move, degrees for Rotate, a multiplier for Size — because the
+          handle worked out exactly how far the cursor pushed it (see
+          _apply_gizmo_drag). No per-node conversion: every selected node
+          takes the identical field change the grabbed node did, matching
+          GlyphViz Web's multi-select rule. For a selection that sits under
+          one parent — the usual case — the two rules agree anyway.
+
+        Exactly one of the two is passed.
         """
-        if not raw_deltas or not self.selected_node_ids:
+        deltas = field_deltas if field_deltas is not None else raw_deltas
+        if not deltas or not self.selected_node_ids:
             return
+        direct = field_deltas is not None
+        if self.gizmo_mode == 'size' and self.uniform_scale:
+            # Locked: one factor for all three axes, whichever bar (or which
+            # drag direction) produced it. The first entry wins — for a
+            # handle drag there is only one, and for the free-form drag it is
+            # the first checked axis, i.e. the horizontal component.
+            amount = next(iter(deltas.values()))
+            deltas = {a: amount for a in ('x', 'y', 'z')}
         changed = set()
         for nid in self.selected_node_ids:
             node = self._scene.node_by_id(nid)
             if node is None:
                 continue
             move_div = (self._move_axis_divisors(node)
-                        if self.gizmo_mode == 'move' else None)
-            for axis, raw in raw_deltas.items():
+                        if self.gizmo_mode == 'move' and not direct else None)
+            for axis, raw in deltas.items():
                 if self.gizmo_mode == 'move':
-                    speed = self._cam_distance * 0.0015   # matches camera-pan speed
                     attr = f'translate_{axis}'
-                    setattr(node, attr, getattr(node, attr)
-                            + raw * speed / move_div[axis])
+                    step = raw if direct else (
+                        raw * self._cam_distance * _MOVE_WORLD_PER_PX
+                        / move_div[axis])
+                    setattr(node, attr, getattr(node, attr) + step)
                 elif self.gizmo_mode == 'rotate':
                     attr = f'rotate_{axis}'
-                    setattr(node, attr, getattr(node, attr) + raw * 0.4)  # matches orbit sensitivity
+                    step = raw if direct else raw * _ROTATE_DEG_PER_PX
+                    setattr(node, attr, getattr(node, attr) + step)
                 elif self.gizmo_mode == 'size':
                     attr = f'scale_{axis}'
-                    factor = 1.0 + raw * 0.004
+                    factor = raw if direct else 1.0 + raw * _SIZE_FACTOR_PER_PX
                     setattr(node, attr, max(0.001, getattr(node, attr) * factor))
             changed.add(nid)
         if changed:
             self._scene.invalidate()
             self.update()
             self.nodesManipulated.emit(changed)
+
+    # --- transform gizmo (red/green/blue handles) ---------------------------
+    #
+    # The handles are drawn on ONE node (the first selected visual one) and
+    # constrain a drag to a single axis, but the resulting field change is
+    # applied to the whole selection like any other manipulation.
+    #
+    # Each mode's handles point along the frame that mode's fields genuinely
+    # act in — which is not the same frame for all three, and for two of them
+    # is not the node's local axes at all. glyphviz_core/gizmo.py works those
+    # out (and explains why); everything here is GL drawing, hit-testing
+    # against the live camera, and drag bookkeeping.
+
+    def gizmo_node(self) -> Node | None:
+        """The node the handles attach to: the first selected node in scene
+        order that has a transform worth showing them on. Same first-in-scene-
+        order rule as follow_node(), minus Links — a Link's own transform is
+        inert (the edge follows its two endpoints), so handles on one would
+        promise an edit that does nothing."""
+        if not self.selected_node_ids:
+            return None
+        for n in self._scene.nodes:
+            if (n.id in self.selected_node_ids
+                    and n.type not in NON_VISUAL_TYPES
+                    and n.type != NODE_TYPE_LINK):
+                return n
+        return None
+
+    def _gizmo_frame(self) -> dict | None:
+        """Everything needed to draw or hit-test the handles right now, or
+        None when they shouldn't be on screen at all.
+
+        Suppressed in Camera Mode (which owns every drag button outright) and
+        in stereo mode, where the handles would be drawn once per eye and a
+        cursor measured against the whole widget would grab at neither —
+        the same restriction rubber-band select already carries. The armed
+        mode and the axis-checkbox drags keep working in both.
+        """
+        if (not self.show_gizmo_handles or self.gizmo_mode not in gz.MODES
+                or self.fly_mode or self.stereo_mode):
+            return None
+        node = self.gizmo_node()
+        if node is None:
+            return None
+        origin = self._scene.world_pos(node.id)
+        bases = self._scene.basis_matrices(node.id)
+        if origin is None or bases is None:
+            return None
+        world_basis, parent_basis, child_local = bases
+
+        if self.gizmo_mode == gz.MODE_ROTATE:
+            axes = gz.rotation_axes(node, parent_basis, child_local)
+            field_per_unit = np.ones(3)
+        elif self.gizmo_mode == gz.MODE_SIZE:
+            axes = gz.unit_columns(world_basis)
+            field_per_unit = np.ones(3)
+        else:
+            parent = self._scene.node_by_id(node.parent_id)
+            if parent is node:
+                parent = None
+            pwb = None
+            if parent is not None:
+                pbases = self._scene.basis_matrices(parent.id)
+                pwb = pbases[0] if pbases is not None else None
+            grad = gz.translate_gradient(parent, node, self._base_scale, pwb)
+            axes = gz.unit_columns(grad)
+            # World units per unit of the field: the drag converts cursor
+            # travel to world distance, then to a field change through this.
+            norms = np.linalg.norm(grad, axis=0)
+            field_per_unit = np.where(norms > 1e-9, norms, 1.0)
+
+        length = gz.handle_world_length(
+            self._eye_position_with_offset(0.0), origin,
+            gz.HANDLE_PX, 45.0, float(self.height()))
+        return {
+            'node': node,
+            'origin': np.asarray(origin, dtype=np.float64),
+            'axes': axes,
+            'length': length,
+            'world_per_field': field_per_unit,
+        }
+
+    def _gizmo_screen_handles(self, frame: dict) -> dict | None:
+        """Project the frame's handles into widget pixels with the camera
+        matrices the last paint used. None before the first paint (or in
+        stereo, where they aren't captured)."""
+        if self._mv_matrix is None or self._proj_matrix is None:
+            return None
+        mvp = self._proj_matrix @ self._mv_matrix
+        pts = gz.handle_points(self.gizmo_mode, frame['origin'],
+                               frame['axes'], frame['length'])
+        return {a: gz.project(mvp, p, float(self.width()), float(self.height()))[0]
+                for a, p in pts.items()}
+
+    def _gizmo_pick(self, x: float, y: float) -> str | None:
+        """Axis letter of the handle under the cursor, or None."""
+        frame = self._gizmo_frame()
+        if frame is None:
+            return None
+        screen = self._gizmo_screen_handles(frame)
+        if screen is None:
+            return None
+        return gz.pick(screen, (x, y))
+
+    def _update_gizmo_hover(self, pos):
+        """Highlight the handle under an un-pressed cursor. Repaints only on
+        a change, so plain mouse motion over a scene costs one hit test."""
+        axis = None
+        if self.show_gizmo_handles and self.gizmo_mode is not None:
+            axis = self._gizmo_pick(pos.x(), pos.y())
+        if axis != self._gizmo_hover:
+            self._gizmo_hover = axis
+            self.update()
+
+    def _begin_gizmo_drag(self, axis: str, pos):
+        """Grab a handle. The frame is snapshotted here and held for the whole
+        drag: the node moves/rotates/scales under it, and re-deriving the
+        handle from the moved node each step would feed that motion back into
+        the next step's direction."""
+        frame = self._gizmo_frame()
+        if frame is None:
+            return
+        i = gz.AXIS_INDEX[axis]
+        direction = frame['axes'][:, i]
+        eye = np.asarray(self._eye_position_with_offset(0.0), dtype=np.float64)
+        self._gizmo_drag = {
+            'axis': axis,
+            'origin': frame['origin'],
+            'direction': direction,
+            'length': frame['length'],
+            'world_per_field': float(frame['world_per_field'][i]),
+            # A ring seen from its back turns clockwise for a right-handed
+            # rotation; decided once, from where the camera stood at the grab.
+            'toward_viewer': bool(np.dot(direction, eye - frame['origin']) > 0.0),
+            'last': (float(pos.x()), float(pos.y())),
+        }
+        self._gizmo_hover = axis
+        self.update()
+
+    def _apply_gizmo_drag(self, pos):
+        """One step of a handle drag: cursor motion in, one field change out."""
+        drag = self._gizmo_drag
+        if drag is None or self._mv_matrix is None or self._proj_matrix is None:
+            return
+        cur = (float(pos.x()), float(pos.y()))
+        last = drag['last']
+        drag['last'] = cur
+        mvp = self._proj_matrix @ self._mv_matrix
+        w, h = float(self.width()), float(self.height())
+        axis = drag['axis']
+
+        if self.gizmo_mode == gz.MODE_ROTATE:
+            centre, _ = gz.project(mvp, drag['origin'][None, :], w, h)
+            if not np.isfinite(centre[0]).all():
+                return
+            delta = gz.sweep_degrees(centre[0], last, cur, drag['toward_viewer'])
+            if delta:
+                self._apply_axis_deltas({}, field_deltas={axis: delta})
+            return
+
+        shaft = np.array([
+            drag['origin'] + drag['direction'] * drag['length'] * gz.SHAFT_START,
+            drag['origin'] + drag['direction'] * drag['length'],
+        ])
+        screen, _ = gz.project(mvp, shaft, w, h)
+        pixels = gz.axis_drag_pixels(screen, cur[0] - last[0], cur[1] - last[1])
+        if not pixels:
+            return
+        if self.gizmo_mode == gz.MODE_SIZE:
+            self._apply_axis_deltas(
+                {}, field_deltas={axis: 1.0 + pixels * _SIZE_FACTOR_PER_PX})
+            return
+        world_per_px = gz.axis_world_per_pixel(screen, drag['length'])
+        if not world_per_px:
+            return   # handle is edge-on: no unambiguous drag direction
+        self._apply_axis_deltas(
+            {}, field_deltas={axis: pixels * world_per_px / drag['world_per_field']})
+
+    def _draw_gizmo(self):
+        """Draw the armed mode's handles: arrows (Move), rings (Rotate), or
+        capped bars (Size), in X-red / Y-green / Z-blue.
+
+        Chrome, so drawn unlit, unfogged, and with the depth test off — a
+        handle you can grab has to be a handle you can see, even when the
+        glyph it sits on is bigger than it is.
+
+        In Size mode with the scale lock on, a pale triangle joins the three
+        bar ends: the handles still read X/Y/Z, but the tie says out loud
+        that dragging any one of them moves all three."""
+        frame = self._gizmo_frame()
+        if frame is None:
+            return
+        active = (self._gizmo_drag['axis'] if self._gizmo_drag is not None
+                  else self._gizmo_hover)
+        points = gz.handle_points(self.gizmo_mode, frame['origin'],
+                                  frame['axes'], frame['length'])
+        unit = gz.unit_columns(frame['axes'])
+
+        was_fogged = glIsEnabled(GL_FOG)
+        glDisable(GL_LIGHTING)
+        glDisable(GL_FOG)
+        glDisable(GL_DEPTH_TEST)
+        glDisable(GL_CULL_FACE)
+        for name in gz.AXES:
+            i = gz.AXIS_INDEX[name]
+            r, g, b = gz.AXIS_COLORS[name]
+            if name == active:
+                r, g, b = min(r + 0.45, 1.0), min(g + 0.45, 1.0), min(b + 0.45, 1.0)
+            glColor4f(r, g, b, 1.0)
+            glLineWidth(3.5 if name == active else 2.0)
+            path = points[name]
+            if self.gizmo_mode == gz.MODE_ROTATE:
+                glBegin(GL_LINE_STRIP)
+                for p in path:
+                    glVertex3f(*p)
+                glEnd()
+            else:
+                glBegin(GL_LINES)
+                glVertex3f(*path[0])
+                glVertex3f(*path[1])
+                glEnd()
+                cap = frame['length'] * gz.ARROW_HEAD * (0.55 if self.gizmo_mode
+                                                         == gz.MODE_SIZE else 1.0)
+                # Cross-section basis from the handle's OWN axis, not the
+                # other two: they need not be perpendicular to it (see
+                # gizmo.perpendicular_basis), and a cone or box built on
+                # skewed vectors comes out sheared.
+                u, v = gz.perpendicular_basis(unit[:, i])
+                self._draw_gizmo_cap(path[1], unit[:, i], u, v,
+                                     cap, self.gizmo_mode == gz.MODE_SIZE)
+
+        if self.gizmo_mode == gz.MODE_SIZE and self.uniform_scale:
+            glColor4f(0.85, 0.85, 0.6, 1.0)
+            glLineWidth(1.5)
+            glBegin(GL_LINE_LOOP)
+            for name in gz.AXES:
+                glVertex3f(*points[name][1])
+            glEnd()
+        glLineWidth(1.0)
+        glEnable(GL_CULL_FACE)
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_LIGHTING)
+        if was_fogged:
+            glEnable(GL_FOG)   # the scene's own fog setting, left as found
+
+    @staticmethod
+    def _draw_gizmo_cap(tip, axis, u, v, size: float, boxy: bool):
+        """The blob at the end of a Move/Size handle: a cone tip for Move
+        (which way the arrow points is the whole message), a cube for Size
+        (a corner to pull). Unlit flat color, so both read as silhouettes."""
+        if boxy:
+            h = size * 0.5
+            centre = np.asarray(tip, dtype=np.float64) - np.asarray(axis) * h
+            corners = [centre + axis * (h * sx) + u * (h * sy) + v * (h * sz)
+                       for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)]
+            # (index triples into `corners`, ordered so each quad is one face)
+            for face in ((0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1),
+                         (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)):
+                glBegin(GL_QUADS)
+                for k in face:
+                    glVertex3f(*corners[k])
+                glEnd()
+            return
+        base = np.asarray(tip, dtype=np.float64) - np.asarray(axis) * size
+        radius = size * 0.32
+        segs = 12
+        rim = [base + u * (radius * math.cos(t)) + v * (radius * math.sin(t))
+               for t in (2.0 * math.pi * k / segs for k in range(segs + 1))]
+        glBegin(GL_TRIANGLE_FAN)
+        glVertex3f(*tip)
+        for p in rim:
+            glVertex3f(*p)
+        glEnd()
+        glBegin(GL_TRIANGLE_FAN)    # cap the base so the cone isn't hollow
+        glVertex3f(*base)
+        for p in reversed(rim):
+            glVertex3f(*p)
+        glEnd()
 
     def _move_axis_divisors(self, node: Node) -> dict[str, float]:
         """Per-axis divisors converting a Move-drag's world-unit step into

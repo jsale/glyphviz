@@ -189,6 +189,24 @@ class Scene:
         norms = np.sqrt((wb * wb).sum(axis=0))
         return (float(norms[0]), float(norms[1]), float(norms[2]))
 
+    def basis_matrices(self, node_id: int):
+        """(world_basis, parent_basis, child_local) 3x3s for one node, or None.
+
+        The raw compositions SceneTransforms already holds — copies, so a
+        caller can't scribble on the cache. The transform gizmo needs all
+        three to answer three different questions about the same node: which
+        world direction each scale field stretches (world_basis columns),
+        which direction each translate field pushes it (the PARENT's
+        world_basis, times the placement gradient), and which world axis each
+        rotate field spins it about (parent_basis @ child_local, with the
+        node's own rotation divided back out)."""
+        row = self._row_of(node_id)
+        if row is None:
+            return None
+        t = self._transforms
+        return (t.world_basis[row].copy(), t.parent_basis[row].copy(),
+                t.child_local[row].copy())
+
     def _bake_draw_data(self):
         """Batch-compute node_world_matrix's formula for every node at once.
 

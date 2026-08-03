@@ -1047,6 +1047,35 @@ _TOPO_OFFSET_FUNCS = {
 }
 
 
+def placement_offset(parent: Node | None, tx: float, ty: float, tz: float,
+                      base_scale: float, subspace: int = 0
+                      ) -> tuple[float, float, float]:
+    """One child's local-frame offset from its parent, for arbitrary
+    translate values rather than the child's current ones.
+
+    Single-node counterpart of the offset half of compute_world_transforms:
+    same three cases in the same order (root, World Grid parent, parent
+    topology), so the two must be kept numerically identical. World space is
+    then `parent.world_pos + parent.world_basis @ this` — for a root, where
+    there is no parent basis, translate IS the world position, which is why
+    the None case returns the coordinates unchanged.
+
+    The transform gizmo differentiates this numerically to find the world
+    direction each translate field actually pushes a node (glyphviz_core/
+    gizmo.py's translate_gradient) — exact for every topology, including the
+    angular ones whose mapping is nonlinear.
+    """
+    if parent is None:
+        return (tx, ty, tz)
+    if parent.type == NODE_TYPE_GRID:
+        if parent.grid_is_globe():
+            return kml_offset(tx, ty, tz, GRID_GLOBE_RADIUS)
+        cx, cy = parent.grid_center()
+        return (tx - cx, ty - cy, tz)
+    fn = _TOPO_OFFSET_FUNCS.get(parent.topo, _cartesian_offset)
+    return fn(tx, ty, tz, base_scale, parent.ratio, subspace)
+
+
 def compute_world_positions(
     nodes: list[Node],
     base_scale: float,

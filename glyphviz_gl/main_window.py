@@ -373,6 +373,17 @@ class MainWindow(QMainWindow):
         )
         self._selbox_act.triggered.connect(lambda c: self._set_selection_box(c))
 
+        self._gizmo_act = self._view_menu.addAction("Show Transform &Handles")
+        self._gizmo_act.setCheckable(True)
+        self._gizmo_act.setChecked(True)   # matches Viewport.show_gizmo_handles
+        self._gizmo_act.setToolTip(
+            "Draw the red/green/blue X/Y/Z handles on the selected node while\n"
+            "Move, Rotate or Size is armed, and let them be dragged directly.\n"
+            "Unchecking leaves the armed mode and its free-form axis drags\n"
+            "exactly as they were -- only the on-screen handles go away."
+        )
+        self._gizmo_act.triggered.connect(lambda c: self._set_gizmo_handles(c))
+
         self._view_menu.addSeparator()
         self._stereo_act = self._view_menu.addAction("Stereo &3D (Cross-Eye)")
         self._stereo_act.setCheckable(True)
@@ -424,9 +435,17 @@ class MainWindow(QMainWindow):
         tb.setMovable(False)
 
         for name, label, tip in (
-            ("move", "Move", "Drag selected node(s) (LeftButton).  Click again to return to camera-only."),
-            ("rotate", "Rotate", "Rotate selected node(s) (LeftButton).  Click again to return to camera-only."),
-            ("size", "Size", "Scale selected node(s) (LeftButton).  Click again to return to camera-only."),
+            ("move", "Move", "Move selected node(s): drag a red/green/blue arrow to go along\n"
+                             "that one axis, or drag anywhere else for the free-form axis drag\n"
+                             "(LeftButton).  Click again to return to camera-only."),
+            ("rotate", "Rotate", "Rotate selected node(s): drag a red/green/blue ring to turn about\n"
+                                 "that one axis, or drag anywhere else for the free-form axis drag\n"
+                                 "(LeftButton).  Click again to return to camera-only."),
+            ("size", "Size", "Scale selected node(s): drag a red/green/blue bar to stretch that\n"
+                             "one axis, or drag anywhere else for the free-form axis drag\n"
+                             "(LeftButton).  Tick 'Lock X/Y/Z together' in the Properties\n"
+                             "panel to scale all three axes uniformly instead.\n"
+                             "Click again to return to camera-only."),
         ):
             btn = QPushButton(label)
             btn.setCheckable(True)
@@ -540,6 +559,15 @@ class MainWindow(QMainWindow):
         self._viewport.gizmo_mode = mode
         if mode is not None and self._link_mode_active:
             self._set_link_mode(False)   # mutually exclusive with Link mode
+        self._viewport.update()
+        if mode is not None:
+            labels = {'move': 'Move', 'rotate': 'Rotate', 'size': 'Size'}
+            hint = ("drag a handle for one axis, or drag anywhere else for the "
+                    "free-form drag" if self._viewport.show_gizmo_handles
+                    else "drag to edit the checked axes")
+            if mode == 'size' and self._viewport.uniform_scale:
+                hint += "; X/Y/Z locked together"
+            self.statusBar().showMessage(f"{labels[mode]} mode — {hint}.", 5000)
 
     def _on_link_mode_button_clicked(self):
         self._set_link_mode(not self._link_mode_active)
@@ -1129,8 +1157,13 @@ class MainWindow(QMainWindow):
 
         self._insp_scale_lock = QCheckBox("Lock X/Y/Z together")
         self._insp_scale_lock.setToolTip(
-            "When checked, editing one scale axis sets all three to the same value."
+            "Keep the three scale axes tied together.\n"
+            "In these boxes: editing one axis sets all three to the same value.\n"
+            "In Size mode: dragging any handle (or any free-form Size drag)\n"
+            "applies the same factor to all three, so the glyph keeps its\n"
+            "proportions rather than being flattened to a cube."
         )
+        self._insp_scale_lock.toggled.connect(self._on_scale_lock_toggled)
 
         # --- Rate widgets (ANTz translate_rate/rotate_rate/scale_rate) ---
         # Per-cycle velocities added to position/rotation/scale every cycle
@@ -2178,6 +2211,15 @@ class MainWindow(QMainWindow):
         self._cb_tags.setChecked(checked)
         self._tags_act.setChecked(checked)
 
+    def _set_gizmo_handles(self, checked: bool):
+        self._viewport.show_gizmo_handles = checked
+        self._viewport.update()
+        self.statusBar().showMessage(
+            "Transform handles shown — drag an axis to constrain the edit."
+            if checked else
+            "Transform handles hidden (Move/Rotate/Size drags unchanged)."
+        )
+
     def _set_selection_box(self, checked: bool):
         self._viewport.show_selection_box = checked
         self._cb_selbox.setChecked(checked)
@@ -2921,6 +2963,23 @@ class MainWindow(QMainWindow):
         self._update_sel_values()
         self._refresh_grid_group()   # a grid's geometry decides flat vs globe
         self._viewport.scene_invalidate()
+
+    def _on_scale_lock_toggled(self, checked: bool):
+        """The Properties panel's scale lock also governs Size-mode dragging.
+
+        One control for one idea ("these three move together"), rather than a
+        second checkbox on the Manipulate toolbar meaning nearly the same
+        thing. The two act differently only because a drag has to: the spin
+        boxes set an absolute value and can honestly equalize all three, while
+        a drag is multiplicative and shares its FACTOR — equalizing mid-drag
+        would collapse a deliberately non-uniform glyph on the first pixel.
+        """
+        self._viewport.uniform_scale = checked
+        self._viewport.update()
+        if self._gizmo_mode == 'size':
+            self.statusBar().showMessage(
+                "Size drags scale X/Y/Z together." if checked
+                else "Size drags scale each axis on its own.", 4000)
 
     def _on_insp_scale_changed(self, value: float):
         if not self._selected_nodes:
