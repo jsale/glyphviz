@@ -51,6 +51,17 @@ Thumbs.db
 examples/Global_Terrorism_Example/Event_Cloud/
 examples/Global_Terrorism_Example/Org_Event_Network/
 
+# Tropical cyclone example: same deal — the two big scenes ship zipped
+# (Global_Tracks.zip / Seasonal_Pulse.zip, 42 MB -> 5.6 MB); the unzipped
+# working copies stay local-only. Poleward_Drift is small enough to commit
+# as a folder. Regenerate everything with
+# examples/Tropical_Cyclone_Example/build_cyclone_scenes.py
+examples/Tropical_Cyclone_Example/Global_Tracks/
+examples/Tropical_Cyclone_Example/Seasonal_Pulse/
+# ...and never commit the ~330 MB raw archive that --download fetches; the
+# 3.9 MB data/ibtracs_tidy.csv.gz snapshot beside it is what rebuilds offline.
+examples/Tropical_Cyclone_Example/data/ibtracs.ALL.raw.csv
+
 # Commercial music recordings — not licensed for public redistribution.
 # The examples that use them commit all *generated* files; supply the WAV
 # yourself (see each example's README) to enable synced audio playback.
