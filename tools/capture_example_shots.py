@@ -77,13 +77,38 @@ MANIFEST = [
     ("autosleep-2025", EX / "AutoSleep_2025_Example", None),
     ("hacking-creativity-glyph", EX / "Hacking_Creativity_Glyph_Example",
      "Hacking_Creativity_Glyph_Example_gv_node.csv"),
+    # Each of the five below ships 2-3 scenes; the gallery page carries one
+    # hero shot, so the scene named here is the one that reads whole at
+    # frame 0 (the animated siblings start dark or near-empty by design).
+    ("tropical-cyclones", EX / "Tropical_Cyclone_Example" / "Global_Tracks", None),
+    ("geomagnetic-field", EX / "Geomagnetic_Field_Example" / "Field_And_Poles", None),
+    ("wind-rose", EX / "Wind_Rose_Example" / "Rose_Anatomy", None),
+    ("decay-chains", EX / "Decay_Chain_Example" / "Chain_Forest", None),
+    ("periodic-system", EX / "Periodic_System_Example" / "Madelung_Helix", None),
 ]
 
 
-# Auto-framing fits a bounding box; for a few scenes that reads too distant.
-# Values multiply the fitted camera distance after load.
-ZOOM = {
-    "protein-import": 0.35,
+# Auto-framing fits the bounding box of everything in the scene, title and
+# legend nodes included, so a scene whose caption floats off to one side gets
+# framed around empty space. These overrides run after the load:
+#   zoom       multiplies the fitted camera distance
+#   origin     re-aim at the world origin instead of the bbox centre
+#   azimuth    orbit angle in degrees (default 45)
+#   elevation  degrees above the horizon (default 25; 90 looks straight down)
+CAMERA = {
+    "protein-import": {"zoom": 0.35},
+    # Globe scenes: the caption sits well off the sphere, so aim at the
+    # globe itself and size the distance off its radius rather than the bbox.
+    "tropical-cyclones": {"origin": True, "zoom": 0.80, "elevation": 18},
+    "geomagnetic-field": {"origin": True, "zoom": 0.78, "elevation": 18},
+    # The rose anatomy plate reads as a plate, from fairly high up.
+    "wind-rose": {"zoom": 0.72, "elevation": 45},
+    # The forest is a skyline: low angle, and nearly square-on to the row of
+    # chains (they march along +Y, so the eye swings toward +X). Not dead-on —
+    # a few degrees of obliquity separates the per-chain labels.
+    "decay-chains": {"zoom": 0.55, "azimuth": 22, "elevation": 12},
+    # Down the helix axis: every group becomes a radial spoke (see README).
+    "periodic-system": {"origin": True, "zoom": 0.97, "elevation": 89},
 }
 
 
@@ -124,8 +149,15 @@ def main() -> int:
                 failed.append(slug)
                 continue
             pump(0.4)   # texture uploads / first frame of a big scene
-            if slug in ZOOM:
-                cap.vp._cam_distance *= ZOOM[slug]
+            if slug in CAMERA:
+                cam = CAMERA[slug]
+                if cam.get("origin"):
+                    cap.vp._cam_target = [0.0, 0.0, 0.0]
+                if "azimuth" in cam:
+                    cap.vp._cam_azimuth = cam["azimuth"]
+                if "elevation" in cam:
+                    cap.vp._cam_elevation = cam["elevation"]
+                cap.vp._cam_distance *= cam.get("zoom", 1.0)
                 cap.vp.update()
                 pump(0.1)
             cap.viewport_png(OUT_DIR / f"{slug}.png")

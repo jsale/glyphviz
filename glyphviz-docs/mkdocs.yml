@@ -100,6 +100,9 @@ nav:
           - "Multi-Hike Ghost Race": examples/multi-hike-race.md
           - "San Diego Seismicity": examples/sd-seismicity.md
           - "RSS News Globe": examples/rss-news.md
+          - "Tropical Cyclones": examples/tropical-cyclones.md
+          - "Earth's Magnetic Field": examples/geomagnetic-field.md
+          - "The Wind Rose as a Hyperglyph": examples/wind-rose.md
       - Education data:
           - "California STAR Test Scores": examples/calstate-testing.md
           - "SES Achievement Gap Terrain": examples/ses-achievement-gap-terrain.md
@@ -119,6 +122,8 @@ nav:
           - "The Century Swarm": examples/century-swarm.md
           - "Duel of Dynasties": examples/duel-of-dynasties.md
       - Science & personal data:
+          - "The Periodic System": examples/periodic-system.md
+          - "Decay Chains": examples/decay-chains.md
           - "YBCO Superconductor": examples/ybco-superconductor.md
           - "Protein Import (PDB)": examples/protein-import.md
           - "Flocking (Boids)": examples/flocking.md

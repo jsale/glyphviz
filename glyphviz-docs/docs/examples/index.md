@@ -33,6 +33,9 @@ Install notes and good first scenes: [Installation → Example scenes](../gettin
 - **[Multi-Hike Ghost Race](multi-hike-race.md)** — six GPS hikes racing up real terrain
 - **[San Diego Seismicity](sd-seismicity.md)** — 66 years of earthquakes on a World Grid
 - **[RSS News Globe](rss-news.md)** — world news as concept towers on a globe
+- **[Tropical Cyclones](tropical-cyclones.md)** — 184 years of storms, wind speed as height
+- **[Earth's Magnetic Field](geomagnetic-field.md)** — four centuries of secular variation
+- **[The Wind Rose as a Hyperglyph](wind-rose.md)** — the standard chart, nested three levels deep
 
 ## Education data
 
@@ -62,6 +65,8 @@ Install notes and good first scenes: [Installation → Example scenes](../gettin
 
 ## Science & personal data
 
+- **[The Periodic System](periodic-system.md)** — the table as a helix of nested atoms
+- **[Decay Chains](decay-chains.md)** — sixteen chains whose depth is the data
 - **[YBCO Superconductor](ybco-superconductor.md)** — crystal structure meets its physics
 - **[Protein Import (PDB)](protein-import.md)** — an ideal α-helix through the PDB importer
 - **[Flocking (Boids)](flocking.md)** — a boids murmuration baked into Channels
