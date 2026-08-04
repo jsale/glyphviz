@@ -41,6 +41,16 @@ theme:
 plugins:
   - search
 
+# Google Analytics (GA4). Emitted by the theme into <head> on every generated page.
+# Using the theme's own integration rather than a hand-pasted gtag snippet because
+# navigation.instant swaps pages via XHR: a raw snippet only ever registers one
+# pageview per full browser load, while this hooks the theme's location$ stream and
+# sends a page_path config on every in-site navigation (plus search-term events).
+extra:
+  analytics:
+    provider: google
+    property: G-Q0G8ECKDFZ
+
 markdown_extensions:
   - admonition
   - attr_list
@@ -138,3 +148,4 @@ nav:
   - Media: media/index.md
   - FAQ: faq.md
   - Changelog: changelog.md
+  - About: about.md
