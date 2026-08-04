@@ -2,6 +2,11 @@
 
 ## Jeff Sale
 
+<figure class="gv-photo" markdown>
+![Jeff Sale](assets/about/jeff-portrait.jpg)
+<figcaption>Jeff, out in Yellowstone with a camera around his neck — one of the "all things 3D, and above all else, life-long learning" habits that never switched off after retirement.</figcaption>
+</figure>
+
 Jeff has championed the ANTz visualization tool since its creation in 2011, but his data visualization work started two decades earlier — in 1990, at Loma Linda University Medical Center's Department of Neurology, as a staff researcher on the newly-formed Neurology Research Team (NRT) with Dr. Dave Warner, Steve Price, and Jodi Reed (Jeff's better half), under the tutelage of Dr. Doug Will, who would go on to become Dean of the School of Medicine. The lab's own line was that NRT was "pronounced *nert*, as opposed to *inert*."
 
 It was in the NRT lab that Jeff cut his teeth on the AVS visualization tool and immediately conceived of a genius idea called spatiotemporal isosurfaces. Long story short: he went on to pioneer new visualization methods while simultaneously developing online, technology-based instructional resources for a broad community of science educators and their students.
@@ -21,6 +26,11 @@ Jeff is retired now — and with time on his hands and AI reaching a critical ma
 ## Research background
 
 Jeff's B.S. in Physics from San Diego State University carried an emphasis in condensed matter. After graduation he did two years of graduate research in neurophysiology at Loma Linda University, working as a research assistant at the Parkinson's Research Center, Jerry L. Pettis Veterans Affairs Medical Center, under Dr. Jeff Tosk in the research wing of Dr. Ross Adey. His research focused on the biophysical basis of Parkinson's Disease and related movement disorders: *in vitro* cell culture work with dopaminergic neurons, HPLC measurement of dose-response to amphetamine, photoacoustic spectroscopy of the optical absorption properties of neuromelanin, and chemiluminescent studies of oxidative burst in J774 macrophage cells as a model for microglial cell death.
+
+<figure class="gv-photo gv-photo--left" markdown>
+![Jeff with Dr. Dave Warner](assets/about/jeff-dave-warner.jpg)
+<figcaption>Jeff with Dr. Dave Warner, on a helicopter pad. The two have been working on the same idea — data you can move through rather than look at — since the Neurology Research Team days.</figcaption>
+</figure>
 
 In parallel, Jeff supported clinical neuroscience research under Dr. A. Douglas Will and alongside Dr. Dave Warner at Loma Linda University Medical Center's Neurology Research Center. There he helped pioneer new ways of applying virtual reality technologies and data visualization techniques in the clinical setting:
 
@@ -42,6 +52,11 @@ At the same time, Jeff was Co-Director of a medical education computer-based lea
 Jeff's Master's Degree in Learning Design and Technology comes from the SDSU Online Education Technology Master's Program, and he has extensive experience in courseware development with an emphasis on challenging concepts in science. He has published and presented work on visualization of electrophysiological data, virtual reality technologies applied to neurorehabilitation, distributed medical intelligence, and instructional design of CD-ROM video-based case studies for pre-service math and science teachers. His CV is available on request.
 
 ## Away from the screen
+
+<figure class="gv-photo" markdown>
+![Jeff and Jodi Reed at the beach](assets/about/jeff-jodi.jpg)
+<figcaption>Jeff and his wife, Jodi Reed, at Torrey Pines. Jodi was on the original Neurology Research Team with him in 1990.</figcaption>
+</figure>
 
 Jeff enjoys hiking, biking (road and mountain), all kinds of art, gardening and composting, all things 3D, and above all else, life-long learning.
 

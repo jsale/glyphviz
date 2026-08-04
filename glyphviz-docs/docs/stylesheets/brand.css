@@ -287,3 +287,51 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* About page portraits — text wraps around them. Floats rather than a grid
+   so the surrounding paragraphs flow past; they unfloat and centre on narrow
+   viewports, where a 220px float would leave a column of two-word lines. */
+.md-typeset figure.gv-photo {
+  width: 220px;
+  max-width: 45%;
+  margin: 0.2rem 0 1rem 1.4rem;
+  float: right;
+  clear: right;
+}
+
+.md-typeset figure.gv-photo--left {
+  float: left;
+  clear: left;
+  margin: 0.2rem 1.4rem 1rem 0;
+}
+
+.md-typeset figure.gv-photo img {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+.md-typeset figure.gv-photo figcaption {
+  margin-top: 0.45rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--md-default-fg-color--light);
+  text-align: left;
+}
+
+/* A float that outlives its section would drift into the next heading. */
+.md-typeset h2 {
+  clear: both;
+}
+
+@media screen and (max-width: 44.9375em) {
+  .md-typeset figure.gv-photo,
+  .md-typeset figure.gv-photo--left {
+    float: none;
+    width: 260px;
+    max-width: 100%;
+    margin: 0 auto 1.2rem;
+  }
+  .md-typeset figure.gv-photo figcaption { text-align: center; }
+}
