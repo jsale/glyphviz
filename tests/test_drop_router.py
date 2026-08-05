@@ -291,6 +291,27 @@ def test_empty_zip_is_refused(tmp_path):
         extract_zip(z)
 
 
+def test_zip_holding_only_a_pdb_imports_it(tmp_path):
+    """Protein_Import_Example's per-example download has no node CSV in it."""
+    z = _make_zip(tmp_path / 'Protein_Import_Example.zip', {
+        'alpha_helix_example.pdb': 'ATOM\n',
+        'generate_protein_example.py': '# recipe\n',
+    })
+    plan = resolve_drop([str(z)])
+    assert _kinds(plan) == [ACTION_PDB]
+    assert plan.actions[0].path.name == 'alpha_helix_example.pdb'
+    assert not plan.errors
+
+
+def test_zip_node_csv_wins_over_a_pdb_sitting_beside_it(tmp_path):
+    z = _make_zip(tmp_path / 'Both.zip', {
+        'gv_node.csv': _node_csv_text(),
+        'model.pdb': 'ATOM\n',
+    })
+    plan = resolve_drop([str(z)])
+    assert _kinds(plan) == [ACTION_OPEN_CSV]
+
+
 def test_zip_without_a_node_csv_errors(tmp_path):
     z = _make_zip(tmp_path / 'docs.zip', {'readme.txt': 'hello'})
     plan = resolve_drop([str(z)])

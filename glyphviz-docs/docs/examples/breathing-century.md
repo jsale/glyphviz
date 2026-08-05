@@ -4,7 +4,9 @@ A century of NHL hockey (1909–2012): every franchise stands as a vertical towe
 
 ![The Breathing Century loaded in GlyphViz](../assets/examples/breathing-century.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Breathing_Century_Example/century_reef_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Breathing_Century_Example/century_reef_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+
+[:material-download: Download this example (550 KB)](https://iluvdata.org/glyphviz/zips/Breathing_Century_Example.zip){ .md-button }
 
 ---
 

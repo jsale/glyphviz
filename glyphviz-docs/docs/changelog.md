@@ -2,6 +2,11 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-08-05
+
+- Added per-example downloads: every Examples Gallery page now offers a zip of just that example, and the examples that hold several scenes offer one zip per scene. The full examples set is unchanged.
+- Made a dropped zip whose only payload is a `.pdb` import that structure, instead of being refused for having no node CSV.
+
 ## 2026-07-31
 
 - Redesigned the home page: header carousel, a GlyphViz Web deployment call-to-action, and real (non-placeholder) content pages.

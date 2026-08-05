@@ -4,7 +4,11 @@ Every tropical cyclone humanity has tracked, 1842–2025, placed on a Blue Marbl
 
 ![184 years of cyclone tracks on a globe](../assets/examples/tropical-cyclones.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then drag `Tropical_Cyclone_Example/Global_Tracks.zip` onto the GlyphViz window — it extracts beside itself and loads.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then drag `Tropical_Cyclone_Example/Global_Tracks.zip` onto the GlyphViz window — it extracts beside itself and loads.
+
+[:material-download: Global_Tracks (3 MB)](https://iluvdata.org/glyphviz/zips/Tropical_Cyclone_Example_Global_Tracks.zip){ .md-button }
+[:material-download: Seasonal_Pulse (2 MB)](https://iluvdata.org/glyphviz/zips/Tropical_Cyclone_Example_Seasonal_Pulse.zip){ .md-button }
+[:material-download: Poleward_Drift (1 MB)](https://iluvdata.org/glyphviz/zips/Tropical_Cyclone_Example_Poleward_Drift.zip){ .md-button }
 
 ## The three scenes
 

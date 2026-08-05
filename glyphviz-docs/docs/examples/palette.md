@@ -4,7 +4,9 @@ GlyphViz's 26 built-in color palettes and the `color_index` field, laid out for 
 
 ![Color Palettes loaded in GlyphViz](../assets/examples/palette.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Palette_Example/Palette_Example_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Palette_Example/Palette_Example_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+
+[:material-download: Download this example (3 KB)](https://iluvdata.org/glyphviz/zips/Palette_Example.zip){ .md-button }
 
 ---
 

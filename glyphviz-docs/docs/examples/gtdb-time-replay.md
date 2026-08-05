@@ -6,7 +6,9 @@ Fifty years in sixty seconds: the event cloud flattened onto a Blue Marble World
 
 *Data: Global Terrorism Database (START, University of Maryland), 1970–2020.*
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Global_Terrorism_Example/Time_Replay/TimeReplay_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Global_Terrorism_Example/Time_Replay/TimeReplay_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+
+[:material-download: Download this example (2 MB)](https://iluvdata.org/glyphviz/zips/Global_Terrorism_Example_Time_Replay.zip){ .md-button }
 
 ---
 

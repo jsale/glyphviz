@@ -4,7 +4,9 @@ A start-to-finish World Grids + Channels demonstration: a live USGS catalog pull
 
 ![San Diego Seismicity loaded in GlyphViz](../assets/examples/sd-seismicity.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `SD_Seismicity_Example/sd_quakes_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `SD_Seismicity_Example/sd_quakes_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+
+[:material-download: Download this example (7 MB)](https://iluvdata.org/glyphviz/zips/SD_Seismicity_Example.zip){ .md-button }
 
 ---
 

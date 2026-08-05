@@ -6,6 +6,8 @@ Every scene below ships in the GlyphViz examples set — download it once and ev
 
 *~196 MB download, ~314 MB extracted*
 
+You can also take just one. Every page below has its own download button, and the examples that hold several scenes offer one zip per scene — most are a few megabytes. Each single-example zip contains that scene's files at its top level: extract it and you have one self-contained folder, or drag the zip onto the GlyphViz window and it extracts beside itself and loads.
+
 Install notes and good first scenes: [Installation → Example scenes](../getting-started/installation.md#example-scenes).
 
 ## Starter demos

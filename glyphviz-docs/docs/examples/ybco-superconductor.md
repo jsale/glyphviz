@@ -4,7 +4,9 @@ The 1987 liquid-nitrogen superconductor YBa₂Cu₃O₇ as a materials-science s
 
 ![YBCO Superconductor loaded in GlyphViz](../assets/examples/ybco-superconductor.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `YBCO_Superconductor_Example/ybco_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `YBCO_Superconductor_Example/ybco_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+
+[:material-download: Download this example (320 KB)](https://iluvdata.org/glyphviz/zips/YBCO_Superconductor_Example.zip){ .md-button }
 
 ---
 

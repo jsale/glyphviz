@@ -163,6 +163,21 @@ def folder_has_media(folder: Path) -> bool:
         return False
 
 
+def find_pdbs(folder: Path) -> list[Path]:
+    """Every PDB directly inside *folder*, name-sorted.
+
+    Only zips consult this: the per-example downloads include one whose whole
+    payload is a PDB (Protein_Import_Example), and refusing it for having no
+    node CSV would be a surprising way to greet a scene that imports fine when
+    the .pdb itself is dropped.
+    """
+    try:
+        return sorted(p for p in folder.iterdir()
+                      if p.is_file() and p.suffix.lower() in PDB_EXTS)
+    except OSError:
+        return []
+
+
 # --- zip handling ------------------------------------------------------------
 
 MAX_ZIP_ENTRIES = 20_000
@@ -314,6 +329,9 @@ def resolve_drop(paths, *, merge: bool = False) -> DropPlan:
                 plan.notes.append(f"extracted {p.name} to {where}")
                 if used_temp:
                     plan.notes.append("saves from this scene would go to temp — use Save As")
+            elif (inner_pdbs := find_pdbs(folder)):
+                pdbs.append(inner_pdbs[0])
+                plan.notes.append(f"extracted {p.name} — imported {inner_pdbs[0].name}")
             elif folder_has_media(folder):
                 tex_folders.append(folder)
                 plan.notes.append(f"extracted {p.name} — no node CSV, loaded as textures")

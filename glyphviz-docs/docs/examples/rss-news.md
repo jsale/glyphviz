@@ -4,7 +4,9 @@ A GlyphViz take on GaiaViz's RSS Viz concept: about twenty international news fe
 
 ![RSS News Globe loaded in GlyphViz](../assets/examples/rss-news.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `RSS_News_Example/rss_news_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `RSS_News_Example/rss_news_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+
+[:material-download: Download this example (3 MB)](https://iluvdata.org/glyphviz/zips/RSS_News_Example.zip){ .md-button }
 
 ---
 

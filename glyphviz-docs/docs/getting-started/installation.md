@@ -70,6 +70,12 @@ The example scenes are a separate download — 36 ready-to-open GlyphViz scenes 
 
 Good first ones: `Topology_Example` (every topology side by side), `Palette_Example` (the built-in color palettes), and `SD_Seismicity_Example` (a real World Grid you can flip between flat map and globe). See [Quickstart](quickstart.md) for the walkthrough.
 
+#### One example at a time
+
+You don't have to take all 196 MB. Every page in the [Examples Gallery](../examples/index.md) carries its own download button, and the larger examples offer one zip per scene — so the wind rose is a 2 MB download rather than the whole set.
+
+A single-example zip holds that one scene's files at its top level, so extracting it gives you one folder, ready to open. You can also drag the zip straight onto the GlyphViz window: it extracts beside itself and loads. Because the scene's folder is the whole archive, the file path is shorter than the one each gallery page quotes — that path is where the file sits in the full examples set.
+
 ### macOS
 
 !!! warning "No macOS executable yet"

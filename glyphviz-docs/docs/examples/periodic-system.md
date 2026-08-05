@@ -8,7 +8,10 @@ This builds the same information as a **helix of nested atoms**: 118 elements on
 
 *Down the axis. Every radial spoke is a group — one column of the periodic table, seen end-on.*
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Periodic_System_Example/Madelung_Helix/PeriodicHelix_gv_node.csv` — or drag its folder onto the window.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Periodic_System_Example/Madelung_Helix/PeriodicHelix_gv_node.csv` — or drag its folder onto the window.
+
+[:material-download: Madelung_Helix (47 KB)](https://iluvdata.org/glyphviz/zips/Periodic_System_Example_Madelung_Helix.zip){ .md-button }
+[:material-download: Aufbau_Sequence (54 KB)](https://iluvdata.org/glyphviz/zips/Periodic_System_Example_Aufbau_Sequence.zip){ .md-button }
 
 ## Why a helix, and why *this* helix
 

@@ -6,7 +6,9 @@ No aggregation: every incident in the database (~205,000) is one octahedron plac
 
 *Data: Global Terrorism Database (START, University of Maryland), 1970–2020.*
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Global_Terrorism_Example/Event_Cloud/EventCloud_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Global_Terrorism_Example/Event_Cloud/EventCloud_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+
+[:material-download: Download this example (8 MB)](https://iluvdata.org/glyphviz/zips/Global_Terrorism_Example_Event_Cloud.zip){ .md-button }
 
 ---
 

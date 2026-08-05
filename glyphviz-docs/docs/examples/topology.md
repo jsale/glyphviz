@@ -4,7 +4,9 @@ One labeled station per topology — all 18 types — each showing how that topo
 
 ![Topology Tour loaded in GlyphViz](../assets/examples/topology.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Topology_Example/topology_example_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Topology_Example/topology_example_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+
+[:material-download: Download this example (10 KB)](https://iluvdata.org/glyphviz/zips/Topology_Example.zip){ .md-button }
 
 ---
 

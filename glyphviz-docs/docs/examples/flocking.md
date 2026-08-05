@@ -4,7 +4,9 @@ A classic Reynolds boids flocking simulation, precomputed and baked into Channel
 
 ![Flocking (Boids) loaded in GlyphViz](../assets/examples/flocking.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Flocking_Example/Flocking_Example_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Flocking_Example/Flocking_Example_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+
+[:material-download: Download this example (2 MB)](https://iluvdata.org/glyphviz/zips/Flocking_Example.zip){ .md-button }
 
 ---
 

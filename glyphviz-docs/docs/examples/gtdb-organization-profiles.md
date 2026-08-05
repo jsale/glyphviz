@@ -6,7 +6,9 @@ A wall of profile-rosette hyperglyphs, one per organization with ten or more att
 
 *Data: Global Terrorism Database (START, University of Maryland), 1970–2020.*
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Global_Terrorism_Example/Organization_Profiles/OrgProfiles_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Global_Terrorism_Example/Organization_Profiles/OrgProfiles_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+
+[:material-download: Download this example (272 KB)](https://iluvdata.org/glyphviz/zips/Global_Terrorism_Example_Organization_Profiles.zip){ .md-button }
 
 ---
 

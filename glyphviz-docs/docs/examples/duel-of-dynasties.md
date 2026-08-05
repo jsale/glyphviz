@@ -4,7 +4,9 @@ Three complete career orreries — Wayne Gretzky, Gordie Howe, Mario Lemieux —
 
 ![Duel of Dynasties loaded in GlyphViz](../assets/examples/duel-of-dynasties.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Duel_Of_Dynasties_Example/duel_of_dynasties_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Duel_Of_Dynasties_Example/duel_of_dynasties_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+
+[:material-download: Download this example (299 KB)](https://iluvdata.org/glyphviz/zips/Duel_Of_Dynasties_Example.zip){ .md-button }
 
 ---
 

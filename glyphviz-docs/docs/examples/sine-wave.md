@@ -4,7 +4,9 @@ The smallest end-to-end Channels demonstration: one root per topology, animated 
 
 ![Sine Wave Channels loaded in GlyphViz](../assets/examples/sine-wave.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `SineWave_Example/SineWave_Example_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `SineWave_Example/SineWave_Example_gv_node.csv` — or just drag its folder onto the GlyphViz window. Press **Space** to start the animation.
+
+[:material-download: Download this example (41 KB)](https://iluvdata.org/glyphviz/zips/SineWave_Example.zip){ .md-button }
 
 ---
 

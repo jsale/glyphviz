@@ -4,7 +4,10 @@ A radioactive decay chain is a tree whose depth is not a design choice. U-238 ta
 
 ![Sixteen chains as a skyline](../assets/examples/decay-chains.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Decay_Chain_Example/Chain_Forest/chain_forest_gv_node.csv` — or drag its folder onto the window.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Decay_Chain_Example/Chain_Forest/chain_forest_gv_node.csv` — or drag its folder onto the window.
+
+[:material-download: Chain_Forest (9 KB)](https://iluvdata.org/glyphviz/zips/Decay_Chain_Example_Chain_Forest.zip){ .md-button }
+[:material-download: Secular_Equilibrium (13 KB)](https://iluvdata.org/glyphviz/zips/Decay_Chain_Example_Secular_Equilibrium.zip){ .md-button }
 
 ## The two scenes
 

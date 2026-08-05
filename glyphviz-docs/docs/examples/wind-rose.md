@@ -4,7 +4,10 @@ A wind rose is not an encoding invented to justify a nested glyph. It is the sta
 
 ![Twelve archetype stations, drawn large](../assets/examples/wind-rose.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Wind_Rose_Example/Rose_Anatomy/rose_anatomy_gv_node.csv` — or drag its folder onto the window.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Wind_Rose_Example/Rose_Anatomy/rose_anatomy_gv_node.csv` — or drag its folder onto the window.
+
+[:material-download: Rose_Anatomy (11 KB)](https://iluvdata.org/glyphviz/zips/Wind_Rose_Example_Rose_Anatomy.zip){ .md-button }
+[:material-download: Monsoon_Year (2 MB)](https://iluvdata.org/glyphviz/zips/Wind_Rose_Example_Monsoon_Year.zip){ .md-button }
 
 ## The two scenes — learn, then read
 

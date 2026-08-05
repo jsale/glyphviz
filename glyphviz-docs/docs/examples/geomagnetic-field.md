@@ -4,7 +4,10 @@ The field that moves a compass needle is not fixed. It drifts, tilts and weakens
 
 ![The field lattice and both dip poles](../assets/examples/geomagnetic-field.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Geomagnetic_Field_Example/Field_And_Poles/GeomagField_gv_node.csv` — or drag its folder onto the window. Press **Space** to run the four centuries.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Geomagnetic_Field_Example/Field_And_Poles/GeomagField_gv_node.csv` — or drag its folder onto the window. Press **Space** to run the four centuries.
+
+[:material-download: Field_And_Poles (2 MB)](https://iluvdata.org/glyphviz/zips/Geomagnetic_Field_Example_Field_And_Poles.zip){ .md-button }
+[:material-download: Intensity_Shell (2 MB)](https://iluvdata.org/glyphviz/zips/Geomagnetic_Field_Example_Intensity_Shell.zip){ .md-button }
 
 ## The two scenes
 

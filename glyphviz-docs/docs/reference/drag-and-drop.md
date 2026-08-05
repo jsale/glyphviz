@@ -2,7 +2,9 @@
 
 Dragging files onto the GlyphViz window loads them. It's the fastest route from
 a downloaded example to a rendered scene: you can drop the example zip itself,
-without extracting it first.
+without extracting it first. Each page in the
+[Examples Gallery](../examples/index.md) offers a single-example zip for exactly
+this — download, drag, done.
 
 Everything a scene needs is discovered from the node CSV's own path — the
 companion tag file, the `ch-map`/`ch-tracks` Channels pair, the audio manifest,
@@ -20,7 +22,7 @@ the Qt event handlers in `main_window.py` so it can be tested on its own
 |---|---|
 | **Node CSV** | Opens it as the current scene, same as File → Open |
 | **Folder** | Finds the node CSV inside and opens it, with its tag/Channels/media companions |
-| **Zip** | Extracts it, then treats the result as a folder |
+| **Zip** | Extracts it, then treats the result as a folder. A zip holding no node CSV but a `.pdb` — the per-example download for the protein example — imports that instead |
 | **Tag or channel CSV** | Redirects to the node CSV it belongs with — grabbing the wrong file of a pair still works |
 | **`.pdb`** | Imports the protein structure (File → Import PDB File) |
 | **`.obj` `.stl` `.ply` `.glb` `.gltf`** | Imports as a mesh, onto the selected node or a new one |

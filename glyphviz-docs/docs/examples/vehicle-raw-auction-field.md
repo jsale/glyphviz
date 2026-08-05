@@ -6,7 +6,9 @@ No aggregation: a seeded sample of 20,000 raw sale records, one five-node glyph 
 
 *Data: Kaggle used-vehicle auction dataset (~559,000 sale records).*
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Vehicle_Sales_Example/Raw_Auction_Field/RawAuctionField_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Vehicle_Sales_Example/Raw_Auction_Field/RawAuctionField_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+
+[:material-download: Download this example (1 MB)](https://iluvdata.org/glyphviz/zips/Vehicle_Sales_Example_Raw_Auction_Field.zip){ .md-button }
 
 ---
 

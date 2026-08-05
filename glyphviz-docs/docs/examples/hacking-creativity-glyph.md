@@ -4,7 +4,9 @@ A legible single-person "creative style" glyph for the Hacking Creativity datase
 
 ![Hacking Creativity Glyph loaded in GlyphViz](../assets/examples/hacking-creativity-glyph.png)
 
-**Try it:** [download the examples set](../getting-started/installation.md#example-scenes), then open `Hacking_Creativity_Glyph_Example/Hacking_Creativity_Glyph_Example_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+**Try it:** download this example below (or [the full examples set](../getting-started/installation.md#example-scenes)), then open `Hacking_Creativity_Glyph_Example/Hacking_Creativity_Glyph_Example_gv_node.csv` — or just drag its folder onto the GlyphViz window.
+
+[:material-download: Download this example (16 KB)](https://iluvdata.org/glyphviz/zips/Hacking_Creativity_Glyph_Example.zip){ .md-button }
 
 ---
 
