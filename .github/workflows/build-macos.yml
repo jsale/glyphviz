@@ -1,0 +1,122 @@
+name: Build macOS app
+
+# GlyphViz is developed on Windows, so this workflow is how a macOS .app gets
+# produced at all: PyInstaller cannot cross-compile, and a Mac bundle can only
+# be built on a Mac.
+#
+# Run it from the Actions tab (Run workflow), or push a v* tag to build and
+# attach the app to that release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pyside:
+        description: >-
+          PySide6 pin. The wheel's platform tag IS the app's macOS floor:
+          6.7.x -> macOS 11, 6.8-6.9 -> macOS 12, 6.10+ -> macOS 13.
+        default: 'PySide6>=6.7,<6.8'
+        type: string
+      intel:
+        description: 'Also build an Intel (x86_64) app'
+        default: false
+        type: boolean
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Apple Silicon. macos-15 is a standard runner, so it is free on
+          # public repos.
+          - runner: macos-15
+            arch: arm64
+            enabled: 'true'
+          # Intel. Left opt-in: GitHub retired the free Intel macos-13 image,
+          # and the remaining x86_64 labels are not clearly in the free
+          # standard-runner tier. Enable it deliberately, not by default.
+          - runner: macos-15-intel
+            arch: x86_64
+            enabled: ${{ inputs.intel == true }}
+
+    runs-on: ${{ matrix.runner }}
+    # Compared as a string on purpose: matrix values interpolate to text, and
+    # GitHub treats the non-empty string "false" as truthy — a bare
+    # `if: matrix.enabled` would run the Intel job every time.
+    if: matrix.enabled == 'true'
+    name: ${{ matrix.arch }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          # Pins first so they win over pyproject.toml's floors. numpy<2 and
+          # scipy<1.14 are not about age: newer releases ship a second
+          # macosx_14_0 wheel variant per arch, and pip prefers it on these
+          # runners — silently raising the built app's macOS floor to 14.
+          # These are the last series with a single old-floor wheel per arch,
+          # keeping the app floor at macOS 11 (Intel) / 12 (arm64).
+          python -m pip install "${{ inputs.pyside || 'PySide6>=6.7,<6.8' }}" "numpy<2" "scipy<1.14"
+          python -m pip install -e ".[build]"
+          python -c "import PySide6, sys; print('PySide6', PySide6.__version__, 'on', sys.version)"
+
+      - name: Report effective macOS floor
+        # Best-effort visibility: the app's true minimum macOS is the highest
+        # 'minos' among the extension modules pip picked. Never fails the build.
+        continue-on-error: true
+        run: |
+          for mod in PySide6.QtCore numpy.linalg._umath_linalg scipy.spatial._ckdtree pandas._libs.lib; do
+            lib=$(python -c "import importlib.util; s=importlib.util.find_spec('$mod'); print(s.origin or '')" 2>/dev/null)
+            if [ -n "$lib" ] && [ -f "$lib" ]; then
+              minos=$(otool -l "$lib" | awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; exit} /LC_VERSION_MIN_MACOSX/{g=1} g&&/version/{print $2; exit}')
+              echo "$mod  minos=${minos:-?}  ($lib)"
+            fi
+          done
+
+      - name: Build GlyphViz.app
+        run: python -m PyInstaller GlyphViz-macOS.spec --clean -y
+
+      - name: Smoke test
+        run: |
+          BIN=dist/GlyphViz.app/Contents/MacOS/GlyphViz
+          # --version doesn't touch Qt or OpenGL, so it is a fair gate on a
+          # headless runner: if it fails, the bundle is genuinely broken.
+          "$BIN" --version
+          # --check needs a GL context, which a CI runner may not have. Report
+          # it, but never fail the build on it.
+          "$BIN" --check || echo "(--check failed; expected on a headless runner)"
+          codesign --verify --deep --verbose=2 dist/GlyphViz.app || true
+
+      - name: Package
+        id: package
+        run: |
+          VERSION=$(python -c "from glyphviz_core import __version__; print(__version__)")
+          NAME="GlyphViz-${VERSION}-macOS-${{ matrix.arch }}"
+          # ditto, not zip: `zip` mangles the symlinks inside Qt's .framework
+          # bundles and drops the extended attributes the code signature covers,
+          # so a zip round trip produces an app macOS refuses to open.
+          ditto -c -k --sequesterRsrc --keepParent dist/GlyphViz.app "${NAME}.zip"
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: ${{ steps.package.outputs.name }}.zip
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.package.outputs.name }}.zip

@@ -1,4 +1,5 @@
 import copy
+import os
 import sys
 from pathlib import Path
 
@@ -86,9 +87,26 @@ def _app_dir() -> Path:
     media/ folder): the frozen executable's folder (e.g. PyInstaller), or the
     folder containing main.py when running from source. No ANTz-style
     usr/csv/ subfolder yet — that's a future convention, not implemented
-    here."""
+    here.
+
+    On macOS the executable lives at GlyphViz.app/Contents/MacOS/GlyphViz, and
+    that folder is the wrong answer twice over: it's inside the bundle (so an
+    autosave would vanish on upgrade, and code-signature validation breaks when
+    a signed bundle's contents change), and it's read-only once the app sits in
+    /Applications. Walk back out to the folder *containing* the .app instead."""
     if getattr(sys, 'frozen', False):
-        return Path(sys.executable).resolve().parent
+        exe_dir = Path(sys.executable).resolve().parent
+        if sys.platform == 'darwin':
+            for parent in exe_dir.parents:
+                if parent.suffix == '.app':
+                    beside = parent.parent
+                    # ...and if the .app was installed to /Applications, that
+                    # folder isn't user-writable either. ~/GlyphViz is, and
+                    # _quick_save creates it on demand.
+                    if os.access(beside, os.W_OK):
+                        return beside
+                    return Path.home() / 'GlyphViz'
+        return exe_dir
     return Path(__file__).resolve().parents[1]
 
 
@@ -2149,6 +2167,9 @@ class MainWindow(QMainWindow):
         of whatever file is currently open via Open/Save As."""
         node_path, tag_path = stamp_node_and_tag_paths(_app_dir() / "gv_node.csv")
         try:
+            # No-op everywhere the folder already exists; matters on macOS,
+            # where _app_dir() can name a ~/GlyphViz that hasn't been made yet.
+            node_path.parent.mkdir(parents=True, exist_ok=True)
             save_node_csv(self.nodes, str(node_path))
             save_tag_csv(self.nodes, str(tag_path))
             self.statusBar().showMessage(

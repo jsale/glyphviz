@@ -16,7 +16,7 @@ GlyphViz can be installed two ways. Most users should start with the executable 
 
     ---
 
-    For scripting, automation, and macOS/Linux — where the executable isn't available yet.
+    For scripting, automation, contributors, and Linux — where the executable isn't available yet.
 
     [:octicons-arrow-right-24: Jump to instructions](#cli-python-install)
 
@@ -78,8 +78,28 @@ A single-example zip holds that one scene's files at its top level, so extractin
 
 ### macOS
 
-!!! warning "No macOS executable yet"
-    GlyphViz's rendering layer (`glyphviz_gl`) currently depends on the legacy fixed-function OpenGL pipeline, which macOS no longer accelerates natively. A packaged macOS executable isn't available until the render pipeline is modernized to use VBOs/VAOs and GLSL shaders. In the meantime, macOS users can run GlyphViz from source — see [CLI / Python install](#cli-python-install) below — though rendering performance and compatibility may be limited until that work lands.
+GlyphViz for macOS is a standard `.app` bundle, built with the same PyInstaller pipeline as the Windows build.
+
+**Requirements: macOS 11 Big Sur or later on Intel Macs; macOS 12 Monterey or later on Apple Silicon** (every Apple Silicon Mac can run 12). The Intel floor comes from Qt itself — no PySide6 (Qt 6) build for older macOS exists — so it can't be lowered by building from source, either.
+
+1. Download the zip for your Mac's chip — `arm64` for Apple Silicon (M1 and later), `x86_64` for Intel — from the [GitHub releases page](https://github.com/jsale/glyphviz/releases), and double-click it to extract `GlyphViz.app`.
+2. The app is not notarized with Apple (that requires a paid developer account), so macOS will quarantine it on first launch. Clear the flag once in Terminal:
+
+    ```bash
+    xattr -dr com.apple.quarantine ~/Downloads/GlyphViz.app
+    ```
+
+    then double-click `GlyphViz.app` normally. (Right-click → **Open** → **Open** also works on Intel Macs, but Apple Silicon requires the `xattr` route for ad-hoc-signed apps.)
+
+3. Drag it to **Applications** if you want it to stick around.
+
+Node CSVs can be opened with **File → Open**, dragged onto the window, or dropped onto the Dock icon.
+
+!!! note "OpenGL on macOS"
+    Apple deprecated OpenGL in macOS 10.14, but still ships it on every macOS to date, including Apple Silicon — GlyphViz renders through that built-in support. If you want to verify a particular Mac before committing to a download, the [CLI install](#cli-python-install) below has a one-line `glyphviz --check` that reports exactly what the machine's driver offers.
+
+??? info "Building the .app yourself"
+    `build_mac.sh` in the repo builds `dist/GlyphViz.app` on any Mac running macOS 11+ with Python 3.10+ installed — it creates its own throwaway venv, so it won't disturb your Python setup. The repo's `build-macos.yml` GitHub Actions workflow runs the same build on GitHub's macOS runners. One deliberate choice to know about: the build pins PySide6 to 6.7.x (the last series whose wheels support macOS 11) and numpy/scipy to their last single-wheel-per-arch series — newer releases ship an extra macOS-14-only wheel variant that pip silently prefers on new Macs, which would raise the app's minimum to macOS 14. Building with `--latest` drops all the pins for a newest-everything build (macOS 13+/14+ only).
 
 ### Next step
 
@@ -120,58 +140,58 @@ The skill is native to GlyphViz's own `gv_` CSV format (not the legacy 94-column
 
 ## CLI / Python install
 
-This path is for macOS and Linux users, contributors, and anyone scripting GlyphViz rather than using it interactively.
+This path is for Linux users, contributors, and anyone scripting GlyphViz rather than using it interactively. It also works on macOS (11+) and Windows if you prefer running from source over the packaged builds.
 
 ### Requirements
 
 - Python 3.10 or later
-- A working OpenGL environment (most desktop systems have this already; headless/server environments need an offscreen context — see [Headless & CI Environments](#headless-ci-environments) below)
+- A working OpenGL environment (most desktop systems have this already)
 
 ### Install from PyPI
 
 !!! note "Placeholder"
     GlyphViz is not yet published to PyPI. This section will be updated once a release is cut. For now, install from source (below).
 
-```bash
-pip install glyphviz
-```
-
 ### Install from source
 
 Clone the repository and install in editable mode:
 
 ```bash
-git clone https://github.com/YOUR-ORG/glyphviz.git
+git clone https://github.com/jsale/glyphviz.git
 cd glyphviz
 pip install -e .
 ```
 
-This installs `glyphviz_core` and `glyphviz_gl`. If you're working with XR/VR rendering, also install the XR extra:
+This installs the `glyphviz_core` and `glyphviz_gl` packages plus a `glyphviz` command. If you're working with XR/VR rendering, also install the XR extra:
 
 ```bash
 pip install -e ".[xr]"
 ```
 
+!!! tip "macOS 11 Big Sur: pin PySide6 first"
+    Current PySide6 wheels require macOS 13+ (and 6.8/6.9 requires 12+), so on Big Sur a plain install pulls a Qt that won't import. Install the 6.7 series first and the GlyphViz install will keep it:
+
+    ```bash
+    pip install "PySide6>=6.7,<6.8"
+    pip install -e .
+    ```
+
 ### Verifying your installation
 
-Run the version check:
+Run the version check, then the environment report:
 
 ```bash
 glyphviz --version
+glyphviz --check
 ```
 
-And render a quick test scene to confirm your OpenGL setup works:
+`--check` opens no window — it prints your Python/Qt/OpenGL versions and confirms an OpenGL context with the fixed-function pipeline GlyphViz renders through is available. Then open a real window with a small built-in test scene:
 
 ```bash
-glyphviz render --demo
+glyphviz --demo
 ```
 
-If you see a 3D scene window open with a simple test hierarchy, you're set. If nothing renders or you get an OpenGL context error, see [Headless & CI Environments](#headless-ci-environments) below.
-
-### Headless & CI Environments
-
-!!! note "Placeholder"
-    Detailed guidance on offscreen rendering (EGL headless, OSMesa, or Xvfb as a virtual display) for CI pipelines and the `--export-frame` screenshot pipeline will be added here once finalized.
+If a 3D window opens showing a sphere studded with smaller glyphs around its equator and poles, you're set. From here, `glyphviz path/to/your_gv_node.csv` opens a scene directly.
 
 ### Next step
 

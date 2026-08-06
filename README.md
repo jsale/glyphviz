@@ -36,10 +36,10 @@ you inspect, select, and edit node properties interactively.
 
 ## Requirements
 
-- Python 3.12
+- Python 3.10+ (3.12 recommended)
 - [PySide6](https://pypi.org/project/PySide6/), [PyOpenGL](https://pypi.org/project/PyOpenGL/),
   [numpy](https://pypi.org/project/numpy/), [pandas](https://pypi.org/project/pandas/)
-  (see `requirements.txt`)
+  (see `pyproject.toml` / `requirements.txt`)
 
 > **Windows/Anaconda note:** use a dedicated conda environment to avoid
 > Qt5/Qt6 DLL conflicts with Anaconda's base environment (which ships
@@ -49,16 +49,42 @@ you inspect, select, and edit node properties interactively.
 > conda run -n glyphviz pip install -r requirements.txt
 > ```
 
-## Running
+> **macOS note:** macOS 11 Big Sur or later (the floor for PySide6/Qt 6
+> wheels). On Big Sur specifically, install `"PySide6>=6.7,<6.8"` first —
+> newer PySide6 wheels require macOS 12+/13+.
+
+## Installing / Running
+
+Either run in place:
 
 ```
+pip install -r requirements.txt
 python main.py
+```
+
+or install the package, which puts a `glyphviz` command on your PATH:
+
+```
+pip install -e .
+glyphviz --version        # version check, no GUI needed
+glyphviz --check          # environment/OpenGL report, no window
+glyphviz --demo           # open a small built-in test scene
+glyphviz path/to/scene_gv_node.csv
 ```
 
 (On Windows with the conda environment above:
 `C:\Users\<you>\anaconda3\envs\glyphviz\python.exe main.py`)
 
-Then use **File > Open Node CSV…** to load an ANTz/GaiaViz node export.
+Then use **File > Open Node CSV…** to load a node CSV, or drag one onto the
+window.
+
+### Packaged builds
+
+- **Windows**: `GlyphViz.spec` (see the [docs site](https://www.iluvdata.org/glyphviz/) for
+  ready-made downloads).
+- **macOS**: `./build_mac.sh` builds `dist/GlyphViz.app` on any Mac running
+  macOS 11+; the `.github/workflows/build-macos.yml` workflow runs the same
+  build on GitHub's macOS runners and attaches the zipped app to releases.
 
 ## Project layout
 

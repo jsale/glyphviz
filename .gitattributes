@@ -1,0 +1,4 @@
+# Shell scripts must check out with LF everywhere — a CRLF build_mac.sh
+# breaks on macOS ("bad interpreter: /bin/bash^M"), and this repo is
+# developed on Windows where autocrlf would otherwise convert it.
+*.sh text eol=lf

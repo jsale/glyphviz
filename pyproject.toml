@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "glyphviz"
+dynamic = ["version"]
+description = "3D node-graph visualizer for ANTz/GaiaViz-style CSV scene data"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Jeff Sale" }]
+keywords = ["visualization", "3d", "opengl", "antz", "gaiaviz", "csv"]
+classifiers = [
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
+]
+
+# Kept in lockstep with requirements.txt. Pillow and requests are here because
+# glyphviz_core/basemap.py imports them (lazily) for Fetch Basemap tile
+# stitching -- they used to arrive only as transitive deps, which is why the
+# frozen Windows build once shipped without PIL.
+dependencies = [
+    "PySide6>=6.6.0",
+    "PyOpenGL>=3.1.7",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "trimesh>=4.0.0",
+    "scipy>=1.11.0",
+    "biopython>=1.83",
+    "Pillow>=10.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+# VR/XR exploration -- not needed to run the desktop app. See requirements-xr.txt.
+xr = ["pyopenxr>=1.1.0"]
+# Everything needed to produce a frozen desktop build (PyInstaller).
+build = ["pyinstaller>=6.6.0"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+glyphviz = "glyphviz_gl.cli:main"
+
+[project.urls]
+Homepage = "https://www.iluvdata.org/glyphviz/"
+Documentation = "https://www.iluvdata.org/glyphviz/"
+Source = "https://github.com/jsale/glyphviz"
+
+[tool.setuptools.dynamic]
+version = { attr = "glyphviz_core.__version__" }
+
+# Listed explicitly: the repo root is full of non-package directories
+# (examples/, tools/, docs/, glyphviz-docs/, ...), and setuptools' flat-layout
+# auto-discovery refuses to guess when it sees them -- that refusal is what
+# makes a bare `pip install -e .` fail with a multi-package error.
+[tool.setuptools]
+packages = [
+    "glyphviz_core",
+    "glyphviz_gl",
+    "glyphviz_xr",
+    "hyperglyph_lab",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
