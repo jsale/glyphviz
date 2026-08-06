@@ -36,14 +36,14 @@ GlyphViz can be installed two ways. Most users should start with the executable 
 
 GlyphViz for Windows is a **portable build** — there's no installer and nothing is written to the registry. Download the archive, extract it, and run the executable.
 
-[:material-download: Download GlyphViz for Windows (GlyphViz20260730.zip)](https://iluvdata.org/glyphviz/versions/GlyphViz20260730.zip){ .md-button .md-button--primary }
+[:material-download: Download GlyphViz for Windows (GlyphViz20260806.zip)](https://iluvdata.org/glyphviz/versions/GlyphViz20260806.zip){ .md-button .md-button--primary }
 
-*Windows 10/11, 64-bit · ~165 MB download, ~409 MB extracted · build 2026-07-30*
+*Windows 10/11, 64-bit · ~165 MB download, ~408 MB extracted · build 2026-08-06*
 
 ### Install and run
 
-1. Download **[GlyphViz20260730.zip](https://iluvdata.org/glyphviz/versions/GlyphViz20260730.zip)**.
-2. Right-click the file → **Extract All…**, and extract it into **its own folder** — Windows suggests `GlyphViz20260728`, which is exactly right. The archive holds `GlyphViz.exe` plus an `_internal` folder at its top level, so "extract here" into your Downloads folder would scatter them.
+1. Download **[GlyphViz20260806.zip](https://iluvdata.org/glyphviz/versions/GlyphViz20260806.zip)**.
+2. Right-click the file → **Extract All…**, and extract it into **its own folder** — Windows suggests `GlyphViz20260806`, which is exactly right. The archive holds `GlyphViz.exe` plus an `_internal` folder at its top level, so "extract here" into your Downloads folder would scatter them.
 3. Open the extracted folder and run **`GlyphViz.exe`**.
 
     !!! tip "Keep the folder together"
@@ -58,11 +58,11 @@ You'll land in the GlyphViz GUI — the Viewer, the Node Table, and the Properti
 
 ### Example scenes
 
-The example scenes are a separate download — 36 ready-to-open GlyphViz scenes covering World Grids and globes, Channels animation, tags, all 18 topologies, plots and surfaces, color palettes, audio and video textures, and real datasets (seismicity, sleep data, school testing, terrain, terrorism events, vehicle auctions, protein structures, RSS news, hockey history). Most ship with the generator script that produced them. Browse them all, with screenshots, in the [Examples Gallery](../examples/index.md).
+The example scenes are a separate download — 53 ready-to-open GlyphViz scenes covering World Grids and globes, Channels animation, tags, all 18 topologies, plots and surfaces, color palettes, audio and video textures, and real datasets (seismicity, sleep data, school testing, terrain, terrorism events, vehicle auctions, protein structures, RSS news, hockey history, tropical cyclones, the geomagnetic field, wind climatology, radioactive decay chains, the periodic table, 43,000 galaxies, and 57 years of internet standards). Most ship with the generator script that produced them. Browse them all, with screenshots, in the [Examples Gallery](../examples/index.md).
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~196 MB download, ~314 MB extracted*
+*~218 MB download, ~388 MB extracted*
 
 1. Download **[GlyphViz_Examples.zip](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip)**.
 2. Extract it into its own folder — the archive puts each example at its top level, each one self-contained. Keep each example's folder structure intact so its scene finds its own data and media.
@@ -72,7 +72,7 @@ Good first ones: `Topology_Example` (every topology side by side), `Palette_Exam
 
 #### One example at a time
 
-You don't have to take all 196 MB. Every page in the [Examples Gallery](../examples/index.md) carries its own download button, and the larger examples offer one zip per scene — so the wind rose is a 2 MB download rather than the whole set.
+You don't have to take all 218 MB. Every page in the [Examples Gallery](../examples/index.md) carries its own download button, and the larger examples offer one zip per scene — so the wind rose is a 2 MB download rather than the whole set.
 
 A single-example zip holds that one scene's files at its top level, so extracting it gives you one folder, ready to open. You can also drag the zip straight onto the GlyphViz window: it extracts beside itself and loads. Because the scene's folder is the whole archive, the file path is shorter than the one each gallery page quotes — that path is where the file sits in the full examples set.
 
