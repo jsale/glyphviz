@@ -4,7 +4,7 @@ Every scene below ships in the GlyphViz examples set — download it once and ev
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~196 MB download, ~314 MB extracted*
+*~218 MB download, ~388 MB extracted*
 
 You can also take just one. Every page below has its own download button, and the examples that hold several scenes offer one zip per scene — most are a few megabytes. Each single-example zip contains that scene's files at its top level: extract it and you have one self-contained folder, or drag the zip onto the GlyphViz window and it extracts beside itself and loads.
 
@@ -67,6 +67,7 @@ Install notes and good first scenes: [Installation → Example scenes](../gettin
 
 ## Science & personal data
 
+- **[The Cosmic Web](cosmic-web.md)** — 43,414 real galaxies, all sky, in three dimensions
 - **[The Periodic System](periodic-system.md)** — the table as a helix of nested atoms
 - **[Decay Chains](decay-chains.md)** — sixteen chains whose depth is the data
 - **[YBCO Superconductor](ybco-superconductor.md)** — crystal structure meets its physics
@@ -74,3 +75,4 @@ Install notes and good first scenes: [Installation → Example scenes](../gettin
 - **[Flocking (Boids)](flocking.md)** — a boids murmuration baked into Channels
 - **[AutoSleep — A Year of Sleep](autosleep-2025.md)** — a year of sleep as monthly towers
 - **[Hacking Creativity Glyph](hacking-creativity-glyph.md)** — one person's creative style as one glyph
+- **[RFC Genealogy](rfc-genealogy.md)** — 57 years of internet standards and what replaced what

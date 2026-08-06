@@ -122,6 +122,7 @@ nav:
           - "The Century Swarm": examples/century-swarm.md
           - "Duel of Dynasties": examples/duel-of-dynasties.md
       - Science & personal data:
+          - "The Cosmic Web": examples/cosmic-web.md
           - "The Periodic System": examples/periodic-system.md
           - "Decay Chains": examples/decay-chains.md
           - "YBCO Superconductor": examples/ybco-superconductor.md
@@ -129,6 +130,7 @@ nav:
           - "Flocking (Boids)": examples/flocking.md
           - "AutoSleep — A Year of Sleep": examples/autosleep-2025.md
           - "Hacking Creativity Glyph": examples/hacking-creativity-glyph.md
+          - "RFC Genealogy": examples/rfc-genealogy.md
   - Reference:
       - Overview: reference/index.md
       - Viewer Navigation: reference/viewer-navigation.md
