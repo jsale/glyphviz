@@ -449,7 +449,17 @@ def _draw_grid_solid(textured: bool = False):
     glEnd()
 
 
-def _flat_double_sided_fan(points: list[tuple[float, float]]):
+def _flat_marker_uv(x: float, y: float) -> tuple[float, float]:
+    """Map a flat XY marker vertex to texture space. Circle/Cross/Star are all
+    built on a unit radius, so the same [-1,1]^2 -> [0,1]^2 mapping the Grid
+    uses across its own square applies unchanged -- which means the texture is
+    *cropped* to the glyph's silhouette (a Circle shows a circular crop of the
+    image, a Cross the image's central strips) rather than stretched to fit."""
+    return (x + 1.0) * 0.5, (y + 1.0) * 0.5
+
+
+def _flat_double_sided_fan(points: list[tuple[float, float]],
+                           textured: bool = False):
     """Shared helper for Circle/Star: triangle-fan a flat, star-shaped (i.e.
     every boundary point visible from the center) 2-D outline from the
     origin, drawn double-sided like _draw_grid_solid so it reads correctly
@@ -457,27 +467,35 @@ def _flat_double_sided_fan(points: list[tuple[float, float]]):
     loop = points + [points[0]]
     glBegin(GL_TRIANGLE_FAN)
     glNormal3f(0.0, 0.0, 1.0)
+    if textured:
+        glTexCoord2f(0.5, 0.5)
     glVertex3f(0.0, 0.0, 0.0)
     for x, y in loop:
+        if textured:
+            glTexCoord2f(*_flat_marker_uv(x, y))
         glVertex3f(x, y, 0.0)
     glEnd()
     glBegin(GL_TRIANGLE_FAN)
     glNormal3f(0.0, 0.0, -1.0)
+    if textured:
+        glTexCoord2f(0.5, 0.5)
     glVertex3f(0.0, 0.0, 0.0)
     for x, y in reversed(loop):
+        if textured:
+            glTexCoord2f(*_flat_marker_uv(x, y))
         glVertex3f(x, y, 0.0)
     glEnd()
 
 
-def _draw_circle(segments=24):
+def _draw_circle(segments=24, textured: bool = False):
     """Flat circular disc in the XY plane -- a Point glyph with a real,
     lit/scaled outline instead of a fixed-pixel GL_POINTS sprite."""
     pts = [(math.cos(2.0 * math.pi * i / segments),
             math.sin(2.0 * math.pi * i / segments)) for i in range(segments)]
-    _flat_double_sided_fan(pts)
+    _flat_double_sided_fan(pts, textured)
 
 
-def _draw_star(points=5, inner_ratio=0.382):
+def _draw_star(points=5, inner_ratio=0.382, textured: bool = False):
     """Flat N-pointed star outline in the XY plane (default inner_ratio
     approximates a classic regular 5-point star)."""
     verts = []
@@ -485,10 +503,10 @@ def _draw_star(points=5, inner_ratio=0.382):
         r = 1.0 if i % 2 == 0 else inner_ratio
         a = math.pi / 2.0 + i * math.pi / points
         verts.append((r * math.cos(a), r * math.sin(a)))
-    _flat_double_sided_fan(verts)
+    _flat_double_sided_fan(verts, textured)
 
 
-def _draw_cross(half_width=0.3):
+def _draw_cross(half_width=0.3, textured: bool = False):
     """Flat plus-sign ("+") marker: two perpendicular bars in the XY plane,
     each drawn double-sided like _draw_grid_solid. Built from two quads
     rather than one concave outline since legacy GL_POLYGON requires convex
@@ -502,10 +520,14 @@ def _draw_cross(half_width=0.3):
     glNormal3f(0.0, 0.0, 1.0)
     for bar in bars:
         for x, y in bar:
+            if textured:
+                glTexCoord2f(*_flat_marker_uv(x, y))
             glVertex3f(x, y, 0.0)
     glNormal3f(0.0, 0.0, -1.0)
     for bar in bars:
         for x, y in reversed(bar):
+            if textured:
+                glTexCoord2f(*_flat_marker_uv(x, y))
             glVertex3f(x, y, 0.0)
     glEnd()
 
@@ -572,6 +594,9 @@ class GeoRenderer:
             GEO_OCTA:     lambda: _draw_tri_solid(_OCTA_VERTS, _OCTA_FACES, True),
             GEO_ICOSA:    lambda: _draw_tri_solid(_ICOSA_VERTS, _ICOSA_FACES, True),
             GEO_DODECA:   lambda: _draw_poly_solid(_DODECA_VERTS, _DODECA_FACES, True),
+            GEO_CIRCLE:   lambda: _draw_circle(textured=True),
+            GEO_CROSS:    lambda: _draw_cross(textured=True),
+            GEO_STAR:     lambda: _draw_star(textured=True),
         }
 
         for geo_id in range(GEO_COUNT):

@@ -51,6 +51,21 @@ extensions with no ANTz/GaiaViz equivalent.
 
 `GEO_COUNT = 27` (`geometry_data.py:46`).
 
+## Texture support
+
+Setting a node's `texture_id` maps the image onto the solid geometries: Cube,
+Sphere, Cone, Cylinder, Torus, Grid, Pin, the four Platonic solids, and the
+flat markers Circle, Cross, and Star. Two geometries take no texture — the
+11 **wireframe** variants (there is no surface to map onto), and **Point**,
+whose fixed-pixel `GL_POINTS` sprite has no geometry to carry coordinates. In
+both cases the node simply renders in its solid color; nothing errors.
+
+The flat markers **crop** the image to their silhouette rather than stretching
+it to fit, using the same image window the Grid uses across its square. A
+Circle shows a circular crop of the picture, a Star a star-shaped one, and a
+Cross the picture's central vertical and horizontal strips. Being flat, they
+show their texture face-on and disappear to an edge when viewed side-on.
+
 ## Picking behavior
 
 The 11 wireframe geometries render as outlines, but for click-picking
