@@ -31,24 +31,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Apple Silicon. macos-15 is a standard runner, so it is free on
-          # public repos.
-          - runner: macos-15
-            arch: arm64
-            enabled: 'true'
-          # Intel. Left opt-in: GitHub retired the free Intel macos-13 image,
-          # and the remaining x86_64 labels are not clearly in the free
-          # standard-runner tier. Enable it deliberately, not by default.
-          - runner: macos-15-intel
-            arch: x86_64
-            enabled: ${{ inputs.intel == true }}
+        # The matrix itself is conditional (job-level `if` cannot see the
+        # matrix context): always Apple Silicon (macos-15 is a standard
+        # runner, free on public repos); Intel (macos-15-intel) only when the
+        # dispatch input asks for it — GitHub retired the free Intel macos-13
+        # image, and the newer x86_64 labels are not clearly in the free
+        # standard-runner tier, so it stays a deliberate choice. Tag pushes
+        # have no inputs, so they build arm64 only.
+        include: ${{ inputs.intel == true
+          && fromJSON('[{"runner":"macos-15","arch":"arm64"},{"runner":"macos-15-intel","arch":"x86_64"}]')
+          || fromJSON('[{"runner":"macos-15","arch":"arm64"}]') }}
 
     runs-on: ${{ matrix.runner }}
-    # Compared as a string on purpose: matrix values interpolate to text, and
-    # GitHub treats the non-empty string "false" as truthy — a bare
-    # `if: matrix.enabled` would run the Intel job every time.
-    if: matrix.enabled == 'true'
     name: ${{ matrix.arch }}
 
     steps:
