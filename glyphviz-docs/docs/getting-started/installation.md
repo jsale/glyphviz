@@ -1,6 +1,6 @@
 # Installation
 
-GlyphViz can be installed two ways. Most users should start with the executable — no Python required.
+GlyphViz can be installed several ways. Most users should start with the native app for their platform — no Python required.
 
 <div class="grid cards" markdown>
 
@@ -11,6 +11,14 @@ GlyphViz can be installed two ways. Most users should start with the executable 
     Download and run. No installation, no command line, no Python.
 
     [:octicons-arrow-right-24: Jump to instructions](#windows-executable)
+
+- :material-apple:{ .lg .middle } **macOS app**
+
+    ---
+
+    A native `.app` for Apple Silicon or Intel. Download, clear quarantine once, run.
+
+    [:octicons-arrow-right-24: Jump to instructions](#macos)
 
 - :material-language-python:{ .lg .middle } **CLI / Python install**
 
@@ -78,11 +86,16 @@ A single-example zip holds that one scene's files at its top level, so extractin
 
 ### macOS
 
-GlyphViz for macOS is a standard `.app` bundle, built with the same PyInstaller pipeline as the Windows build.
+GlyphViz for macOS is a standard `.app` bundle, built with the same PyInstaller pipeline as the Windows build. Two builds are available — pick the one matching your Mac's chip.
 
 **Requirements: macOS 11 Big Sur or later on Intel Macs; macOS 12 Monterey or later on Apple Silicon** (every Apple Silicon Mac can run 12). The Intel floor comes from Qt itself — no PySide6 (Qt 6) build for older macOS exists — so it can't be lowered by building from source, either.
 
-1. Download the zip for your Mac's chip — `arm64` for Apple Silicon (M1 and later), `x86_64` for Intel — from the [GitHub releases page](https://github.com/jsale/glyphviz/releases), and double-click it to extract `GlyphViz.app`.
+[:material-download: Download for Apple Silicon (GlyphViz-2026.8.6-macOS-arm64.zip)](https://www.iluvdata.org/glyphviz/versions/GlyphViz-2026.8.6-macOS-arm64.zip){ .md-button .md-button--primary }
+[:material-download: Download for Intel (GlyphViz-2026.8.6-macOS-x86_64.zip)](https://www.iluvdata.org/glyphviz/versions/GlyphViz-2026.8.6-macOS-x86_64.zip){ .md-button }
+
+*Apple Silicon (arm64): ~98 MB download, ~268 MB extracted · Intel (x86_64): ~117 MB download, ~382 MB extracted · build 2026-08-06*
+
+1. Download **[GlyphViz-2026.8.6-macOS-arm64.zip](https://www.iluvdata.org/glyphviz/versions/GlyphViz-2026.8.6-macOS-arm64.zip)** for Apple Silicon (M1 and later) or **[GlyphViz-2026.8.6-macOS-x86_64.zip](https://www.iluvdata.org/glyphviz/versions/GlyphViz-2026.8.6-macOS-x86_64.zip)** for Intel, and double-click it to extract `GlyphViz.app`.
 2. The app is not notarized with Apple (that requires a paid developer account), so macOS will quarantine it on first launch. Clear the flag once in Terminal:
 
     ```bash

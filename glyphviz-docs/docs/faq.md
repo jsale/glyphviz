@@ -24,8 +24,8 @@ Questions that have come up repeatedly while building GlyphViz and its documenta
 ??? question "Does GlyphViz run on Windows?"
     Yes — that's the primary supported platform today, distributed as a portable executable. See [Installation](getting-started/installation.md).
 
-??? question "When will there be a macOS build?"
-    Very soon — it's an active near-term goal, not a someday one. The blocker is technical, not a lack of intent: GlyphViz's renderer (`glyphviz_gl`) currently depends on the legacy fixed-function OpenGL pipeline, which macOS no longer accelerates natively. A packaged macOS build needs that pipeline modernized to VBOs/VAOs and GLSL shaders first. In the meantime, macOS users can run GlyphViz from source — see [CLI / Python install](getting-started/installation.md#cli-python-install).
+??? question "Does GlyphViz run on macOS?"
+    Yes — a native `.app` build is available for both Apple Silicon and Intel Macs, built with the same PyInstaller pipeline as the Windows executable and rendering through macOS's built-in (if deprecated) OpenGL support. See [Installation → macOS](getting-started/installation.md#macos).
 
 ??? question "What about Linux?"
     A Linux/NVIDIA spike is done and works, including a browser-based GUI over noVNC for remote/headless boxes — audio playback doesn't work in that mode yet, which is the main reason it isn't a packaged release. Running from source works today on Linux with a working OpenGL environment.
