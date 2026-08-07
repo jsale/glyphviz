@@ -20,11 +20,19 @@ GlyphViz can be installed several ways. Most users should start with the native 
 
     [:octicons-arrow-right-24: Jump to instructions](#macos)
 
+- :material-linux:{ .lg .middle } **Linux**
+
+    ---
+
+    A `.AppImage` (no install) or `.tar.gz`, built with the same PyInstaller pipeline as Windows and macOS.
+
+    [:octicons-arrow-right-24: Jump to instructions](#linux)
+
 - :material-language-python:{ .lg .middle } **CLI / Python install**
 
     ---
 
-    For scripting, automation, contributors, and Linux — where the executable isn't available yet.
+    For scripting, automation, and contributors — or any platform if you prefer running from source over the packaged builds.
 
     [:octicons-arrow-right-24: Jump to instructions](#cli-python-install)
 
@@ -117,6 +125,32 @@ Node CSVs can be opened with **File → Open**, dragged onto the window, or drop
 ### Next step
 
 Jump to [Quickstart](quickstart.md) to open your first scene in the GUI.
+
+---
+
+## Linux
+
+!!! note "Placeholder"
+    A published Linux download isn't up yet — the build pipeline exists (a PyInstaller spec, a local build script, and a GitHub Actions workflow, same shape as the Windows and macOS builds), but no build has been through Jeff's own test pass yet, so nothing is linked here as a real download. This section will gain download buttons once one has. In the meantime, build it yourself:
+
+```bash
+git clone https://github.com/jsale/glyphviz.git
+cd glyphviz
+./build_linux.sh
+```
+
+This creates a throwaway venv (`.venv-build`), builds a one-folder PyInstaller bundle, and packages it two ways:
+
+- **`dist/GlyphViz-<version>-Linux-<arch>.AppImage`** — download, `chmod +x`, run. No extraction, no install, no system Python required.
+- **`dist/GlyphViz-<version>-Linux-<arch>.tar.gz`** — extract and run `GlyphViz/GlyphViz` directly, if you'd rather not use an AppImage.
+
+Requires Python 3.10+ (`python3` on `PATH`, or set `$GLYPHVIZ_PYTHON`) and `curl` (to fetch `appimagetool` on first run — skip that with `--no-appimage` if you only want the tar.gz).
+
+!!! note "OpenGL on Linux"
+    Like the Windows and macOS builds, GlyphViz renders through whatever `libGL.so.1` / vendor driver your system already has — nothing GL-related is bundled. Any desktop Linux with a working X11 or Wayland session and a GPU driver should have this already. Verify a specific machine with `glyphviz --check` (see [Verifying your installation](#verifying-your-installation) below) — build from source with the [CLI / Python install](#cli-python-install) instructions first if you want to check before building the packaged app.
+
+??? info "Building in CI"
+    `.github/workflows/build-linux.yml` runs the same build on an `ubuntu-22.04` GitHub Actions runner (an older LTS image keeps the produced build's glibc floor lower than a `-latest` runner would — see `GlyphViz-Linux.spec`'s header comment) and produces both the `.tar.gz` and the `.AppImage` as workflow artifacts. Trigger it from the Actions tab, or push a `v*` tag to attach both to that release. An `aarch64` (ARM64) build is available as an opt-in workflow input, off by default because GitHub's ARM Linux runners aren't confirmed free-tier for a private repo.
 
 ---
 
