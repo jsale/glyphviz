@@ -35,6 +35,8 @@ from glyphviz_core.drop_router import (
     ACTION_MERGE_CSV, ACTION_MESH, ACTION_OPEN_CSV, ACTION_PDB, ACTION_TEXTURES,
     DropPlan, can_accept, resolve_drop,
 )
+from glyphviz_core.draw_mode import place_stamp
+from glyphviz_core.glyph_recipe import generate_nodes, load_recipe
 from glyphviz_core.pdb_loader import load_pdb_file
 from glyphviz_core.scene import DEFAULT_SCALE_FLOOR
 from glyphviz_core.scene_merge import merge_nodes
@@ -258,7 +260,8 @@ class MainWindow(QMainWindow):
         self._viewport.glInitialized.connect(self._load_default_media)
         self._viewport.cameraChanged.connect(self._on_camera_changed)
         self._viewport.flyModeChanged.connect(self._on_fly_mode_changed)
-        self._draw_stroke_count = 0   # objects stamped in the current draw stroke
+        self._draw_stroke_count = 0   # stamps in the current draw stroke
+        self._draw_stroke_nodes = 0   # nodes those stamps created (hyperglyphs make several per stamp)
         self._viewport.drawModeChanged.connect(self._on_draw_mode_changed)
         self._viewport.drawStampRequested.connect(self._on_draw_stamp)
         self._viewport.drawStrokeFinished.connect(self._on_draw_stroke_finished)
@@ -1044,10 +1047,58 @@ class MainWindow(QMainWindow):
         self._draw_spacing.valueChanged.connect(
             lambda v: setattr(self._viewport, 'draw_stamp_spacing_px', float(v)))
 
+        # What each stamp is: a single object from the New Object Defaults,
+        # or a whole Glyph Composer hyperglyph. Templates arrive via the
+        # Load… button (a saved composer JSON) or the Glyph Composer's own
+        # "Use as Draw Brush" button; each becomes a combo entry.
+        self._draw_stamp_combo = QComboBox()
+        self._draw_stamp_combo.addItem("Single Object (defaults above)", None)
+        self._draw_stamp_combo.setToolTip(
+            "What Draw Mode stamps: one object built from the New Object\n"
+            "Defaults, or a whole Glyph Composer hyperglyph. Load a saved\n"
+            "template with Load…, or send one straight from Tools > Glyph\n"
+            "Composer with its Use as Draw Brush button."
+        )
+        self._draw_stamp_load_btn = QPushButton("Load…")
+        self._draw_stamp_load_btn.setToolTip(
+            "Load a Glyph Composer template (.json) as the Draw Mode brush.")
+        self._draw_stamp_load_btn.clicked.connect(self._on_draw_stamp_load)
+        stamp_row = QWidget()
+        stamp_row_layout = QHBoxLayout(stamp_row)
+        stamp_row_layout.setContentsMargins(0, 0, 0, 0)
+        stamp_row_layout.setSpacing(4)
+        stamp_row_layout.addWidget(self._draw_stamp_combo, stretch=1)
+        stamp_row_layout.addWidget(self._draw_stamp_load_btn)
+
+        self._draw_heading_jitter = QDoubleSpinBox()
+        self._draw_heading_jitter.setRange(0.0, 180.0)
+        self._draw_heading_jitter.setDecimals(0)
+        self._draw_heading_jitter.setValue(0.0)
+        self._draw_heading_jitter.setSuffix("°")
+        self._draw_heading_jitter.setToolTip(
+            "Spin each stamp by a random heading in ±this many degrees\n"
+            "(added to rotate_z, so a hyperglyph turns as a whole).\n"
+            "0 = every stamp faces the same way."
+        )
+
+        self._draw_scale_jitter = QDoubleSpinBox()
+        self._draw_scale_jitter.setRange(0.0, 90.0)
+        self._draw_scale_jitter.setDecimals(0)
+        self._draw_scale_jitter.setValue(0.0)
+        self._draw_scale_jitter.setSuffix(" %")
+        self._draw_scale_jitter.setToolTip(
+            "Grow or shrink each stamp by a random factor in ±this percent\n"
+            "(one factor for all three axes, so proportions are preserved).\n"
+            "0 = every stamp the same size."
+        )
+
         draw_form = QFormLayout()
         draw_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+        draw_form.addRow("Stamp:", stamp_row)
         draw_form.addRow("Draw Z:", self._draw_z)
         draw_form.addRow("Stamp Spacing:", self._draw_spacing)
+        draw_form.addRow("Heading Jitter:", self._draw_heading_jitter)
+        draw_form.addRow("Scale Jitter:", self._draw_scale_jitter)
 
         create_layout.addWidget(self._draw_mode_btn)
         create_layout.addLayout(draw_form)
@@ -3696,9 +3747,55 @@ class MainWindow(QMainWindow):
                 return n
         return next((n for n in self.nodes if n.type == NODE_TYPE_GRID), None)
 
+    def set_draw_stamp_recipe(self, recipe):
+        """Register a Glyph Composer recipe as a Draw Mode brush and select
+        it. Called by the panel's Load… button and the Glyph Composer's
+        Use as Draw Brush button; each call adds a combo entry (loading two
+        templates keeps both available for alternating strokes)."""
+        self._draw_stamp_combo.addItem(recipe.name or "Template", recipe)
+        self._draw_stamp_combo.setCurrentIndex(self._draw_stamp_combo.count() - 1)
+
+    def _on_draw_stamp_load(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Load Glyph Template as Draw Brush", "",
+            "Glyph Template (*.json)")
+        if not path:
+            return
+        try:
+            recipe = load_recipe(path)
+        except Exception as e:
+            self.statusBar().showMessage(f"Template load failed: {e}")
+            return
+        self.set_draw_stamp_recipe(recipe)
+        self.statusBar().showMessage(
+            f'Draw brush: "{recipe.name}" — Draw Mode stamps this hyperglyph.')
+
+    def _draw_stamp_nodes(self, grid: Node, start_id: int) -> list[Node]:
+        """The nodes one stamp creates, at the stamp frame's origin (roots
+        at translate 0,0,0 — place_stamp then lands them on the cursor):
+        the selected Glyph Composer hyperglyph, or a single object from the
+        New Object Defaults."""
+        recipe = self._draw_stamp_combo.currentData()
+        if recipe is not None:
+            return generate_nodes(recipe, start_id=start_id,
+                                  parent_id=grid.id,
+                                  base_branch_level=grid.branch_level + 1)
+        geo, mesh_id, topo, sx, sy, sz, color = self._new_object_defaults()
+        return [Node(
+            id=start_id, type=5, parent_id=grid.id,
+            branch_level=grid.branch_level + 1,
+            translate_x=0.0, translate_y=0.0, translate_z=0.0,
+            rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
+            scale_x=sx, scale_y=sy, scale_z=sz,
+            color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
+            geometry=geo, hide=0, topo=topo, mesh_id=mesh_id,
+        )]
+
     def _on_draw_stamp(self, x: float, y: float):
         """One Draw Mode stamp: land the click on the target grid's drawing
-        plane and create a child there from the New Object Defaults."""
+        plane and create the current brush there — a single New-Object-
+        Defaults object or a whole Glyph Composer hyperglyph, with the
+        panel's heading/scale jitter applied per stamp."""
         grid = self._draw_target_grid()
         if grid is None:
             # The mode-entry grid was deleted mid-mode; make a fresh one.
@@ -3716,25 +3813,29 @@ class MainWindow(QMainWindow):
         if hit is None:
             return   # plane edge-on or behind the camera: nothing to place
         lon, lat = hit
-        new_id = max((n.id for n in self.nodes), default=0) + 1
-        geo, mesh_id, topo, sx, sy, sz, color = self._new_object_defaults()
-        self._add_node_to_scene(Node(
-            id=new_id, type=5, parent_id=grid.id,
-            branch_level=grid.branch_level + 1,
-            translate_x=lon, translate_y=lat, translate_z=draw_z,
-            rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
-            scale_x=sx, scale_y=sy, scale_z=sz,
-            color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
-            geometry=geo, hide=0, topo=topo, mesh_id=mesh_id,
-        ), select_new=False)
+        start_id = max((n.id for n in self.nodes), default=0) + 1
+        nodes = self._draw_stamp_nodes(grid, start_id)
+        if not nodes:
+            return
+        place_stamp(nodes, grid.branch_level + 1, lon, lat, draw_z,
+                    self._draw_heading_jitter.value(),
+                    self._draw_scale_jitter.value())
+        for nd in nodes:
+            self._add_node_to_scene(nd, select_new=False)
         self._draw_stroke_count += 1
+        self._draw_stroke_nodes += len(nodes)
 
     def _on_draw_stroke_finished(self):
         if self._draw_stroke_count:
+            what = (f"{self._draw_stroke_count} stamp(s), "
+                    f"{self._draw_stroke_nodes} node(s)"
+                    if self._draw_stroke_nodes != self._draw_stroke_count
+                    else f"{self._draw_stroke_count} object(s)")
             self.statusBar().showMessage(
-                f"Drew {self._draw_stroke_count} object(s) — Shift+drag "
-                "selects a region, Delete removes it.")
+                f"Drew {what} — Shift+drag selects a region, "
+                "Delete removes it.")
         self._draw_stroke_count = 0
+        self._draw_stroke_nodes = 0
 
     def _select_next_grid(self):
         """G key (ANTz-style): select the scene's World Grid; press again to

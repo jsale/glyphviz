@@ -109,8 +109,11 @@ stamps a trail of them. Two controls tune it:
 
 | Field | Type | Default |
 |---|---|---|
+| Stamp | combo + **Load…** button | **Single Object (defaults above)** — or any loaded Glyph Composer template, which stamps the whole hyperglyph per click. Load… opens a saved template `.json`; the Glyph Composer's **Use as Draw Brush** button sends one over directly |
 | Draw Z | spin box, ±100,000 | 0.0 — each stamped object's `translate_z` (elevation above the grid plane) |
 | Stamp Spacing | spin box, 0–500 px | 30 px — cursor travel between stamps while dragging; 0 stamps on every mouse move |
+| Heading Jitter | spin box, 0–180° | 0° — each stamp spun by a random heading in ± this range (one draw per stamp, whole hyperglyph turns together) |
+| Scale Jitter | spin box, 0–90 % | 0 % — each stamp scaled by a random factor in ± this percent (one factor, all three axes, proportions preserved) |
 
 See [Viewer Navigation → Draw Mode](viewer-navigation.md#draw-mode-painting-objects)
 for the full gesture reference. Source: `_on_draw_stamp`, `main_window.py`.

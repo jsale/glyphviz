@@ -191,6 +191,92 @@ def test_grid_hit_rejects_parallel_and_behind():
                        center) is None
 
 
+# --- place_stamp (v2: hyperglyph stamping + per-stamp jitter) ---
+
+def test_place_stamp_offsets_roots_only():
+    """Only base-branch-level roots move to the stamp point; deeper nodes
+    keep their recipe-local placement (they ride along via the hierarchy)."""
+    from glyphviz_core.glyph_recipe import default_recipe, generate_nodes
+    grid = _grid()
+    nodes = generate_nodes(default_recipe(), start_id=100, parent_id=grid.id,
+                           base_branch_level=grid.branch_level + 1)
+    child_before = [(n.translate_x, n.translate_y, n.translate_z)
+                    for n in nodes if n.branch_level > 1]
+    heading, factor = dm.place_stamp(nodes, 1, 25.0, -40.0, 3.0)
+    assert (heading, factor) == (0.0, 1.0)          # jitter off by default
+    roots = [n for n in nodes if n.branch_level == 1]
+    assert roots and all(n.parent_id == grid.id for n in roots)
+    for n in roots:
+        assert (n.translate_x, n.translate_y, n.translate_z) == (25.0, -40.0, 3.0)
+    child_after = [(n.translate_x, n.translate_y, n.translate_z)
+                   for n in nodes if n.branch_level > 1]
+    assert child_after == child_before
+
+
+def test_place_stamp_jitter_is_bounded_and_shared():
+    """One heading and one proportion-preserving scale factor per stamp,
+    inside the requested bounds, same for every root of the stamp."""
+    import random
+    from glyphviz_core.glyph_recipe import (
+        DIST_CIRCULAR, GlyphRecipe, LevelSpec, generate_nodes)
+    cluster = GlyphRecipe(name="cluster", levels=[
+        LevelSpec(count=4, dist_mode=DIST_CIRCULAR, dist_radius=3.0,
+                  scale_x=2.0, scale_y=1.0, scale_z=0.5)])
+    rng = random.Random(42)
+    seen_headings = set()
+    for _ in range(20):
+        nodes = generate_nodes(cluster, start_id=1, parent_id=7,
+                               base_branch_level=1)
+        heading, factor = dm.place_stamp(nodes, 1, 0.0, 0.0, 0.0,
+                                         heading_jitter_deg=25.0,
+                                         scale_jitter_pct=40.0, rng=rng)
+        assert -25.0 <= heading <= 25.0
+        assert 0.6 <= factor <= 1.4
+        seen_headings.add(round(heading, 6))
+        for n in nodes:
+            assert n.rotate_z == pytest.approx(heading)
+            # 2 : 1 : 0.5 proportions preserved under the shared factor.
+            assert n.scale_x == pytest.approx(2.0 * factor)
+            assert n.scale_y == pytest.approx(1.0 * factor)
+            assert n.scale_z == pytest.approx(0.5 * factor)
+    assert len(seen_headings) > 1     # it actually varies stamp to stamp
+
+
+def test_place_stamp_root_lands_on_grid_and_subtree_follows():
+    """A stamped hyperglyph's root sits at the stamp's world point, and
+    heading jitter swings the whole subtree around it coherently."""
+    import random
+    from glyphviz_core.glyph_recipe import default_recipe, generate_nodes
+    grid = _grid()
+    grid.set_grid_extents(-180.0, 180.0, -90.0, 90.0)
+
+    def build(heading_jitter, rng):
+        nodes = generate_nodes(default_recipe(), start_id=100,
+                               parent_id=grid.id, base_branch_level=1)
+        heading, _ = dm.place_stamp(nodes, 1, 30.0, 10.0, 0.0,
+                                    heading_jitter_deg=heading_jitter,
+                                    rng=rng)
+        return Scene([grid] + nodes, base_scale=1.0), nodes, heading
+
+    scene, nodes, _ = build(0.0, None)
+    root = next(n for n in nodes if n.branch_level == 1)
+    assert np.allclose(scene.world_pos(root.id), (30.0, 10.0, 0.0))
+
+    # With heading jitter the root stays put but its children orbit it:
+    # same distance from the root, different world direction.
+    rng = random.Random(7)
+    scene_j, nodes_j, heading = build(45.0, rng)
+    assert heading != 0.0
+    root_j = next(n for n in nodes_j if n.branch_level == 1)
+    assert np.allclose(scene_j.world_pos(root_j.id), (30.0, 10.0, 0.0))
+    child = next(n for n in nodes if n.branch_level == 2)
+    child_j = next(n for n in nodes_j if n.branch_level == 2)
+    v0 = np.asarray(scene.world_pos(child.id)) - (30.0, 10.0, 0.0)
+    v1 = np.asarray(scene_j.world_pos(child_j.id)) - (30.0, 10.0, 0.0)
+    assert np.linalg.norm(v0) == pytest.approx(np.linalg.norm(v1))
+    assert not np.allclose(v0, v1)
+
+
 # --- should_stamp (drag spacing gate) ---
 
 def test_should_stamp_spacing():

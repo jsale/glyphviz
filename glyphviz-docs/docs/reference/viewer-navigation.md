@@ -236,6 +236,28 @@ group) to paint new objects into the scene with the mouse:
   stamped object's `translate_z` — its elevation above the grid plane. The
   object always lands directly under the cursor *at that elevation*.
 
+The brush doesn't have to be a single object. The **Stamp** combo (Create
+group) switches between **Single Object** and any loaded **Glyph Composer
+template** — with a template selected, every click or drag-stamp plants the
+whole hyperglyph (its root lands on the cursor, its levels hang beneath it as
+usual). Get a template into the combo either way:
+
+- **Load…** next to the combo opens a saved composer template (`.json`), or
+- **Tools → Glyph Composer → Use as Draw Brush** sends the template you're
+  editing straight over and turns Draw Mode on — compose a tree, press,
+  paint a forest. (It registers a snapshot; press it again after edits to
+  update the brush.) Loaded templates accumulate in the combo, so you can
+  alternate brushes stroke to stroke.
+
+Two **jitter** controls give strokes an organic, hand-scattered feel; both
+draw one random value per stamp (so a hyperglyph stays coherent), and both
+default to 0 = off:
+
+- **Heading Jitter ±°** spins each stamp by a random heading (added to the
+  root's `rotate_z`, which turns the whole subtree).
+- **Scale Jitter ±%** grows or shrinks each stamp by one random factor on
+  all three axes, preserving its proportions.
+
 Every stamped object is a real child of the grid (`parent_id = grid.id`,
 `translate_x/y` = its longitude/latitude in the grid's extents window), so a
 drawn scene saves, reloads, and merges like any other — and moving, rotating,

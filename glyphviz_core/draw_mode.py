@@ -20,6 +20,8 @@ intersects it with the z = draw_z plane, so a stamped child at the returned
 translate/rotate/scale or nesting.
 """
 
+import random
+
 import numpy as np
 
 _EPS = 1e-9
@@ -80,6 +82,48 @@ def grid_hit(ray_origin, ray_direction, grid_pos, grid_basis, grid_center,
     hit = local_o + local_d * t
     c_lon, c_lat = grid_center
     return float(hit[0] + c_lon), float(hit[1] + c_lat)
+
+
+def place_stamp(nodes, base_branch_level: int, lon: float, lat: float,
+                z: float, heading_jitter_deg: float = 0.0,
+                scale_jitter_pct: float = 0.0, rng=None
+                ) -> tuple[float, float]:
+    """Land a freshly generated stamp at (lon, lat, z) on its grid, with
+    per-stamp jitter. Mutates `nodes` in place; returns the (heading_deg,
+    scale_factor) actually drawn, for status display and tests.
+
+    `nodes` is either the single object of a plain stamp or a whole
+    hyperglyph from glyph_recipe.generate_nodes(..., parent_id=grid.id,
+    base_branch_level=grid.branch_level + 1). Only the stamp's ROOTS (rows
+    at base_branch_level — usually one, but a recipe whose level 0 is a
+    cluster has several) are touched: their translate is offset to the
+    stamp point, and every deeper node rides along through the hierarchy.
+
+    Jitter is drawn ONCE per stamp, not per node, so a multi-root cluster
+    stays coherent: heading_jitter_deg adds a uniform random spin in
+    [-j, +j] to each root's rotate_z (which rotates its whole subtree —
+    child placement composes the parent's rotation), and scale_jitter_pct
+    multiplies all three root scale axes by one uniform random factor in
+    [1 - p/100, 1 + p/100] (proportions preserved; subtree spacing scales
+    with it). Both default to 0 = off. Pass a random.Random as `rng` for
+    reproducibility.
+    """
+    if rng is None:
+        rng = random
+    heading = rng.uniform(-heading_jitter_deg, heading_jitter_deg) \
+        if heading_jitter_deg else 0.0
+    factor = 1.0 + rng.uniform(-scale_jitter_pct, scale_jitter_pct) / 100.0 \
+        if scale_jitter_pct else 1.0
+    for n in nodes:
+        if n.branch_level == base_branch_level:
+            n.translate_x += lon
+            n.translate_y += lat
+            n.translate_z += z
+            n.rotate_z += heading
+            n.scale_x *= factor
+            n.scale_y *= factor
+            n.scale_z *= factor
+    return heading, factor
 
 
 def should_stamp(last_xy: tuple[float, float] | None, x: float, y: float,

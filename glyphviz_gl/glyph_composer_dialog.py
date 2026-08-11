@@ -31,6 +31,7 @@ from glyphviz_core.glyph_recipe import (
     DIST_LABELS, ROOT_DIST_MODES, NONROOT_DIST_MODES,
     GlyphRecipe, LevelSpec,
     default_recipe, generate_nodes, load_recipe, save_recipe,
+    recipe_from_dict, recipe_to_dict,
 )
 from glyphviz_core.topology import TOPO_NAMES, TOPO_SPHERE, TOPO_NONE
 
@@ -181,6 +182,17 @@ class GlyphComposerDialog(QDialog):
         insert_btn.setDefault(True)
         insert_btn.clicked.connect(self._insert_into_scene)
         footer.addWidget(insert_btn)
+
+        brush_btn = QPushButton("Use as Draw Brush")
+        brush_btn.setToolTip(
+            "Make Draw Mode stamp this glyph: registers a snapshot of the\n"
+            "template as the brush (Properties panel > Create > Stamp) and\n"
+            "turns Draw Mode on — click / drag in the viewer to paint it.\n"
+            "Later edits here don't change the registered brush; press\n"
+            "again to register the edited version."
+        )
+        brush_btn.clicked.connect(self._use_as_draw_brush)
+        footer.addWidget(brush_btn)
 
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.close)
@@ -622,6 +634,20 @@ class GlyphComposerDialog(QDialog):
     # ------------------------------------------------------------------ #
     # Insert into scene                                                    #
     # ------------------------------------------------------------------ #
+
+    def _use_as_draw_brush(self):
+        """Register a snapshot of the current template as the Draw Mode
+        brush and switch Draw Mode on — compose, press, paint. A snapshot
+        (dict round-trip deep copy), so continuing to edit levels here
+        doesn't silently mutate what an in-progress drawing stamps."""
+        self._save_params()
+        recipe = recipe_from_dict(recipe_to_dict(self._recipe))
+        mw = self._main_win
+        mw.set_draw_stamp_recipe(recipe)
+        mw._viewport.set_draw_mode(True)
+        mw.statusBar().showMessage(
+            f'Draw brush: "{recipe.name}" — Draw Mode is on, click / drag '
+            "in the viewer to paint it.")
 
     def _insert_into_scene(self):
         self._save_params()

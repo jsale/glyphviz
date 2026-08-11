@@ -5,6 +5,7 @@ GlyphViz doesn't cut numbered releases yet — development moves in daily commit
 ## 2026-08-11
 
 - Added **Draw Mode** (**D** key, or the Properties panel's Draw Mode button): paint objects into the scene with the mouse. A click stamps one object — built from the New Object Defaults — onto the World Grid where the cursor lands; a drag stamps a trail of them at a configurable pixel spacing, and **Draw Z** sets each object's elevation. Stamped objects are real grid children, so a drawn scene saves and reloads like any other.
+- Made Draw Mode stamp whole **hyperglyphs**: the new **Stamp** combo takes any Glyph Composer template (via its **Load…** button, or the Glyph Composer's new **Use as Draw Brush** button, which sets the brush and turns Draw Mode on in one press), planting the full hierarchy per click. New **Heading Jitter** and **Scale Jitter** controls randomize each stamp's spin and size — one draw per stamp, so hyperglyphs stay coherent — for organic, hand-scattered strokes like drawing a forest of glyph trees.
 - Removed the long-standing 0.2-per-axis minimum on rendered glyph size as a default: glyphs now render at exactly the size their `scale_x/y/z` fields ask for, however small. The old clamp is still available as **View → Enforce Minimum Glyph Size (0.2)** (also in the Properties panel's Global Scale group), for when tiny nodes need to stay visible and clickable. World Grid footprints were never clamped and still aren't.
 
 ## 2026-08-05
