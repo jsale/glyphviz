@@ -18,6 +18,7 @@ from glyphviz_core.node import (
     WORLD_DEFAULT_BG_RGB, REF_GRID_DEFAULT_RGB,
     TAG_COLOR_MODE_NODE, TAG_DEFAULT_TEXT_RGB, TAG_TEXT_ALPHA, TAG_SHADOW_RGBA,
 )
+from glyphviz_core import draw_mode as dm
 from glyphviz_core import gizmo as gz
 from glyphviz_core.scene import DEFAULT_SCALE_FLOOR, NO_SCALE_FLOOR, Scene
 from glyphviz_core.topology import (
@@ -248,6 +249,16 @@ class Viewport(QOpenGLWidget):
     # Camera (free-flight) Mode toggled with C — carries the new state.
     flyModeChanged = Signal(bool)
 
+    # Draw Mode toggled with D — carries the new state.
+    drawModeChanged = Signal(bool)
+    # Draw Mode stamp request: widget-pixel coordinates where a click (or a
+    # drag crossing the stamp-spacing threshold) wants a new object placed.
+    # MainWindow owns node creation; the viewport only tracks the gesture.
+    drawStampRequested = Signal(float, float)
+    # Left button released with a draw stroke in progress — lets MainWindow
+    # summarize the stroke in the status bar.
+    drawStrokeFinished = Signal()
+
     # ANTz-style per-node attribute cycling: each SELECTED node steps its own
     # geometry (O) or topology (J) to the next id in the list, so a mixed
     # selection stays mixed. Payload is the step (+1, or -1 with Shift held).
@@ -339,6 +350,18 @@ class Viewport(QOpenGLWidget):
         # _apply_fly_drag; None = no flight drag in progress.
         self._fly_anchor: tuple[float, float] | None = None
         self._fly_cursor: tuple[float, float] | None = None
+
+        # Draw Mode (D key): a plain left click stamps a new object (built
+        # from MainWindow's New Object Defaults) onto a World Grid where the
+        # cursor lands; a drag stamps one every draw_stamp_spacing_px of
+        # cursor travel (the fractal-forest "stamp spacing" rule; 0 = every
+        # move event). The viewport owns the gesture and the screen→grid
+        # math (draw_plane_hit); MainWindow owns node creation via
+        # drawStampRequested. _draw_stroke_last is the last stamped cursor
+        # position — None means no stroke is in progress.
+        self.draw_mode: bool = False
+        self.draw_stamp_spacing_px: float = 30.0
+        self._draw_stroke_last: tuple[float, float] | None = None
 
         # Cross-eye free-view stereo: render the scene twice (per-eye lateral
         # camera offset, same look-at target -> toe-in convergence at the
@@ -750,6 +773,11 @@ class Viewport(QOpenGLWidget):
             # Following pins the target to a node every frame, which would
             # undo flight's translation on the spot.
             self.follow_selected = False
+            # Camera Mode and Draw Mode both claim the left button outright,
+            # so they're mutually exclusive (each setter only ever turns the
+            # other OFF — no recursion).
+            if self.draw_mode:
+                self.set_draw_mode(False)
         if not on:
             self._fly_anchor = self._fly_cursor = None
             self._update_render_timer_state()
@@ -758,6 +786,46 @@ class Viewport(QOpenGLWidget):
 
     def toggle_fly_mode(self):
         self.set_fly_mode(not self.fly_mode)
+
+    def set_draw_mode(self, on: bool):
+        """Turn Draw Mode on or off. Mutually exclusive with Camera Mode
+        (both claim the left button outright — see set_fly_mode)."""
+        on = bool(on)
+        if on == self.draw_mode:
+            return
+        if on and self.fly_mode:
+            self.set_fly_mode(False)
+        self.draw_mode = on
+        self._draw_stroke_last = None
+        if on:
+            self.setCursor(Qt.CursorShape.CrossCursor)
+        else:
+            self.unsetCursor()
+        self.drawModeChanged.emit(on)
+        self.update()
+
+    def toggle_draw_mode(self):
+        self.set_draw_mode(not self.draw_mode)
+
+    def draw_plane_hit(self, x: float, y: float, grid: Node, draw_z: float
+                       ) -> tuple[float, float] | None:
+        """(lon, lat) child coordinates on `grid`'s drawing plane (grid-local
+        z = draw_z) under widget pixel (x, y), using the camera matrices the
+        last paint captured — same convention as the gizmo hit test. None
+        before the first paint, in stereo (per-eye matrices aren't captured),
+        or when the click misses the plane (edge-on, or behind the camera)."""
+        if self._mv_matrix is None or self._proj_matrix is None:
+            return None
+        ray = dm.screen_ray(self._mv_matrix, self._proj_matrix, x, y,
+                            float(self.width()), float(self.height()))
+        if ray is None:
+            return None
+        pos = self._scene.world_pos(grid.id)
+        bases = self._scene.basis_matrices(grid.id)
+        if pos is None or bases is None:
+            return None
+        return dm.grid_hit(ray[0], ray[1], np.asarray(pos, dtype=np.float64),
+                           bases[0], grid.grid_center(), draw_z)
 
     def camera_state(self) -> dict:
         """Snapshot the live camera, the saved camera list, and the active
@@ -2677,7 +2745,12 @@ class Viewport(QOpenGLWidget):
             else:
                 self.channelPlayToggleRequested.emit()
             event.accept()
+        elif event.key() == Qt.Key.Key_D:
+            self.toggle_draw_mode()
+            event.accept()
         elif event.key() == Qt.Key.Key_Escape:
+            if self.draw_mode:
+                self.set_draw_mode(False)
             self.escapePressed.emit()
             event.accept()
         elif event.key() == Qt.Key.Key_C:
@@ -2743,6 +2816,23 @@ class Viewport(QOpenGLWidget):
             self.setCursor(Qt.CursorShape.CrossCursor)
             return
 
+        # Draw Mode: a plain left press stamps an object and starts a stroke
+        # (dragging stamps more every draw_stamp_spacing_px of travel — see
+        # mouseMoveEvent). Ctrl presses fall through so additive selection
+        # clicks keep working; stereo gets no stamping (the per-eye camera
+        # matrices aren't captured — the same restriction rubber-band select
+        # and the gizmo carry). No fly_mode check: the modes are mutually
+        # exclusive by construction (set_draw_mode / set_fly_mode).
+        if (self.draw_mode and not self.stereo_mode
+                and event.button() == Qt.MouseButton.LeftButton
+                and not event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+            pos = (float(event.pos().x()), float(event.pos().y()))
+            self._draw_stroke_last = pos
+            self._drag_button = Qt.MouseButton.LeftButton
+            self._drag_moved = False
+            self.drawStampRequested.emit(*pos)
+            return
+
         self._last_pos = event.pos()
         self._press_pos = event.pos()
         self._drag_button = event.button()
@@ -2785,7 +2875,10 @@ class Viewport(QOpenGLWidget):
 
         # --- rubber-band release ---
         if self._rubber_mode and event.button() == Qt.MouseButton.LeftButton:
-            self.unsetCursor()
+            if self.draw_mode:
+                self.setCursor(Qt.CursorShape.CrossCursor)  # keep Draw Mode's cursor
+            else:
+                self.unsetCursor()
             self._rubber_mode = False
             if self._rubber_start is not None and self._rubber_end is not None:
                 dx = abs(self._rubber_end.x() - self._rubber_start.x())
@@ -2807,6 +2900,17 @@ class Viewport(QOpenGLWidget):
             self._rubber_start = None
             self._rubber_end = None
             self.update()
+            return
+
+        # --- draw stroke release --- (returns before the click-picker: a
+        # draw click already stamped an object; it must not also select or
+        # clear the selection)
+        if (self._draw_stroke_last is not None
+                and event.button() == Qt.MouseButton.LeftButton):
+            self._draw_stroke_last = None
+            self._drag_button = None
+            self._drag_moved = False
+            self.drawStrokeFinished.emit()
             return
 
         # --- normal click --- (single-node picking works in stereo mode too;
@@ -2885,6 +2989,18 @@ class Viewport(QOpenGLWidget):
         if self._rubber_mode:
             self._rubber_end = event.pos()
             self.update()
+            return
+
+        # Draw stroke: stamp another object each time the cursor gets
+        # draw_stamp_spacing_px away from the previous stamp. The stroke owns
+        # the whole left-drag — no orbiting underneath it.
+        if (self._draw_stroke_last is not None
+                and event.buttons() & Qt.MouseButton.LeftButton):
+            x, y = float(event.pos().x()), float(event.pos().y())
+            if dm.should_stamp(self._draw_stroke_last, x, y,
+                               self.draw_stamp_spacing_px):
+                self._draw_stroke_last = (x, y)
+                self.drawStampRequested.emit(x, y)
             return
 
         if self._drag_button is None:

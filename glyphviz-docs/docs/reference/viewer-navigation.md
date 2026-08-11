@@ -124,6 +124,7 @@ Shortcuts handled directly in the Viewer (`Viewport.keyPressEvent`/`event`,
 | 8 | Cycle the scene-wide render/blend mode | `renderModeCycleRequested` — `viewport.py:1383-1385` |
 | K | Quick-save — writes fresh, timestamped node + tag CSVs immediately (no dialog), next to the running executable | `quickSaveRequested` → `_quick_save` — `viewport.py:1386-1388`, `main_window.py:1093-1106` |
 | C | Toggle **Camera Mode** (free flight) on/off — see [above](#camera-mode-free-flight) | `toggle_fly_mode` |
+| D | Toggle **Draw Mode** (paint objects onto a World Grid) — see [below](#draw-mode-painting-objects); Esc also exits | `toggle_draw_mode` |
 | Shift+C | Step to the next camera (Main → +X → +Y → +Z → Main) | `cycle_camera` |
 | O / Shift+O | Cycle each selected node's **geometry** forward/back one entry (ANTz-style; the step is per node, so a mixed-geometry selection stays mixed) | `geoCycleRequested` → `_cycle_selected_geometry` |
 | J / Shift+J | Cycle each selected node's **topology** forward/back one entry (same per-node rule) | `topoCycleRequested` → `_cycle_selected_topology` |
@@ -219,6 +220,44 @@ same axis, so there is nothing left for one of them to do independently.
 (Heading/Tilt/Roll has its own lock, at tilt 0° / 180°.) Dragging still works
 — the hover highlight shows which ring you have — and the rings separate
 again as you move the middle angle away from the singularity.
+
+## Draw Mode (painting objects)
+
+Press **D** or click the Properties panel's **Draw Mode** button (Create
+group) to paint new objects into the scene with the mouse:
+
+- **Left click** stamps one new object — built from the **New Object
+  Defaults** (geometry, topology, scale, color) — exactly where the cursor
+  meets the World Grid's plane.
+- **Left click + drag** stamps a trail of them, one every **Stamp Spacing**
+  pixels of cursor travel (default 30 px; 0 stamps on every mouse move for
+  maximum density).
+- **Draw Z** (Properties panel, next to the Draw Mode button) sets each
+  stamped object's `translate_z` — its elevation above the grid plane. The
+  object always lands directly under the cursor *at that elevation*.
+
+Every stamped object is a real child of the grid (`parent_id = grid.id`,
+`translate_x/y` = its longitude/latitude in the grid's extents window), so a
+drawn scene saves, reloads, and merges like any other — and moving, rotating,
+or scaling the grid afterward carries the whole drawing with it. Drawing
+targets the selected grid when one is selected, else the scene's first grid;
+entering Draw Mode in a gridless scene creates a default whole-earth grid
+automatically. Globe-form grids aren't drawable yet — switch the grid's Shape
+to Flat first.
+
+While Draw Mode is on, the left button belongs to the brush: plain
+click-select is suspended (Ctrl+click still adds to the selection, Shift+drag
+still rubber-band selects — handy for grabbing a misplaced stroke to
+Delete it). **Right-drag still orbits**, the wheel still zooms, and the
+middle button still pans, so you can reposition the camera mid-drawing.
+**Esc** or **D** exits; Draw Mode and Camera Mode displace each other, since
+both claim the left button outright.
+
+Screen-to-grid math lives in `glyphviz_core/draw_mode.py` (the click ray is
+intersected with the grid's plane in the grid's own frame, so drawing is
+exact under any grid translate/rotate/scale); gesture wiring in
+`viewport.py` (`set_draw_mode`, `draw_plane_hit`), node creation in
+`main_window.py` (`_on_draw_stamp`). Tests: `tests/test_draw_mode.py`.
 
 ## Next step
 

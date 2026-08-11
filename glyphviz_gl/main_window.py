@@ -82,6 +82,21 @@ _FLY_MODE_TIP = (
     "Not available on the fixed +X/+Y/+Z reference views."
 )
 
+_DRAW_MODE_TIP = (
+    "Draw Mode: paint objects onto a World Grid with the mouse.  [D]\n"
+    "\n"
+    "Left click stamps one new object (built from the New Object Defaults\n"
+    "above) where the cursor meets the grid's plane; click-drag stamps a\n"
+    "trail of them, one per Stamp Spacing pixels of cursor travel. Draw Z\n"
+    "sets each object's elevation above the plane.\n"
+    "\n"
+    "Draws onto the selected grid, else the scene's first grid; entering\n"
+    "Draw Mode creates a grid if the scene has none. Right-drag still\n"
+    "orbits, the wheel still zooms, Shift+drag still rubber-band selects,\n"
+    "and Ctrl+click still adds to the selection — but plain click-select\n"
+    "is suspended until Draw Mode is off. Esc or D exits."
+)
+
 
 def _app_dir() -> Path:
     """Directory treated as 'next to the executable' (K-key autosave, default
@@ -243,6 +258,10 @@ class MainWindow(QMainWindow):
         self._viewport.glInitialized.connect(self._load_default_media)
         self._viewport.cameraChanged.connect(self._on_camera_changed)
         self._viewport.flyModeChanged.connect(self._on_fly_mode_changed)
+        self._draw_stroke_count = 0   # objects stamped in the current draw stroke
+        self._viewport.drawModeChanged.connect(self._on_draw_mode_changed)
+        self._viewport.drawStampRequested.connect(self._on_draw_stamp)
+        self._viewport.drawStrokeFinished.connect(self._on_draw_stroke_finished)
         self.setCentralWidget(self._viewport)
         # Link self.nodes into the viewport scene so appends stay in sync.
         self._viewport.set_nodes(self.nodes)
@@ -993,6 +1012,45 @@ class MainWindow(QMainWindow):
 
         create_layout.addWidget(QLabel("New Object Defaults:"))
         create_layout.addLayout(new_defaults_form)
+
+        # --- Draw Mode: paint New-Object-Defaults objects onto a World Grid
+        # with the mouse (single click = one object, drag = a stamped trail).
+        self._draw_mode_btn = QPushButton("Draw Mode")
+        self._draw_mode_btn.setCheckable(True)
+        self._draw_mode_btn.setToolTip(_DRAW_MODE_TIP)
+        # clicked (not toggled): fires on user presses only, so the sync in
+        # _on_draw_mode_changed can setChecked without looping.
+        self._draw_mode_btn.clicked.connect(
+            lambda checked: self._viewport.set_draw_mode(checked))
+
+        self._draw_z = QDoubleSpinBox()
+        self._draw_z.setRange(-100_000.0, 100_000.0)
+        self._draw_z.setDecimals(3)
+        self._draw_z.setValue(0.0)
+        self._draw_z.setToolTip(
+            "translate_z given to every drawn object — its elevation above\n"
+            "the grid's drawing plane. 0 draws directly on the plane."
+        )
+
+        self._draw_spacing = QDoubleSpinBox()
+        self._draw_spacing.setRange(0.0, 500.0)
+        self._draw_spacing.setDecimals(0)
+        self._draw_spacing.setValue(30.0)
+        self._draw_spacing.setSuffix(" px")
+        self._draw_spacing.setToolTip(
+            "While dragging, stamp a new object every this many pixels of\n"
+            "cursor travel. 0 stamps on every mouse move (maximum density)."
+        )
+        self._draw_spacing.valueChanged.connect(
+            lambda v: setattr(self._viewport, 'draw_stamp_spacing_px', float(v)))
+
+        draw_form = QFormLayout()
+        draw_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+        draw_form.addRow("Draw Z:", self._draw_z)
+        draw_form.addRow("Stamp Spacing:", self._draw_spacing)
+
+        create_layout.addWidget(self._draw_mode_btn)
+        create_layout.addLayout(draw_form)
 
         # --- Delete group ---
         delete_grp = QGroupBox("Delete")
@@ -3613,6 +3671,70 @@ class MainWindow(QMainWindow):
             f"World Grid created (node {new_id}): lon -180..180, lat -90..90, "
             "1:1 world units. G selects/cycles grids; New Child adds glyphs onto it."
         )
+
+    # --- Draw Mode (paint objects onto a World Grid; see viewport.set_draw_mode) ---
+
+    def _on_draw_mode_changed(self, on: bool):
+        """Sync the panel button with the viewport's Draw Mode state (D key,
+        Esc, or Camera Mode displacing it), and make sure there's a grid to
+        draw on — entering Draw Mode in a gridless scene creates one, since
+        the mode is meaningless without a target."""
+        self._draw_mode_btn.setChecked(on)
+        if on and not any(n.type == NODE_TYPE_GRID for n in self.nodes):
+            self._create_world_grid()
+        self.statusBar().showMessage(
+            "Draw Mode ON — click / drag stamps New Object Defaults onto the "
+            "grid at Draw Z; right-drag orbits  [D or Esc exits]" if on
+            else "Draw Mode off", 6000)
+
+    def _draw_target_grid(self) -> Node | None:
+        """The grid Draw Mode stamps onto: a selected grid when there is one
+        (same precedence the World Grid panel uses), else the scene's first
+        grid in scene order."""
+        for n in self._selected_nodes:
+            if n.type == NODE_TYPE_GRID:
+                return n
+        return next((n for n in self.nodes if n.type == NODE_TYPE_GRID), None)
+
+    def _on_draw_stamp(self, x: float, y: float):
+        """One Draw Mode stamp: land the click on the target grid's drawing
+        plane and create a child there from the New Object Defaults."""
+        grid = self._draw_target_grid()
+        if grid is None:
+            # The mode-entry grid was deleted mid-mode; make a fresh one.
+            self._create_world_grid()
+            grid = self._draw_target_grid()
+            if grid is None:
+                return
+        if grid.grid_is_globe():
+            self.statusBar().showMessage(
+                "Draw Mode draws on flat grids only for now — switch the "
+                "grid's Shape to Flat in the World Grid panel.")
+            return
+        draw_z = self._draw_z.value()
+        hit = self._viewport.draw_plane_hit(x, y, grid, draw_z)
+        if hit is None:
+            return   # plane edge-on or behind the camera: nothing to place
+        lon, lat = hit
+        new_id = max((n.id for n in self.nodes), default=0) + 1
+        geo, mesh_id, topo, sx, sy, sz, color = self._new_object_defaults()
+        self._add_node_to_scene(Node(
+            id=new_id, type=5, parent_id=grid.id,
+            branch_level=grid.branch_level + 1,
+            translate_x=lon, translate_y=lat, translate_z=draw_z,
+            rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
+            scale_x=sx, scale_y=sy, scale_z=sz,
+            color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
+            geometry=geo, hide=0, topo=topo, mesh_id=mesh_id,
+        ), select_new=False)
+        self._draw_stroke_count += 1
+
+    def _on_draw_stroke_finished(self):
+        if self._draw_stroke_count:
+            self.statusBar().showMessage(
+                f"Drew {self._draw_stroke_count} object(s) — Shift+drag "
+                "selects a region, Delete removes it.")
+        self._draw_stroke_count = 0
 
     def _select_next_grid(self):
         """G key (ANTz-style): select the scene's World Grid; press again to

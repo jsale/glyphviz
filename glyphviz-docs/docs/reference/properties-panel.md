@@ -102,6 +102,19 @@ Position and rotation for newly-created nodes are not part of these defaults
 — they use the existing auto-placement logic (each **N** press increments X
 by 10 units). Source: `main_window.py:499-572`.
 
+Below the defaults sits **Draw Mode** (**D** key) — a checkable button that
+turns the mouse into a brush: left click stamps one object built from the
+New Object Defaults onto the World Grid where the cursor lands, click-drag
+stamps a trail of them. Two controls tune it:
+
+| Field | Type | Default |
+|---|---|---|
+| Draw Z | spin box, ±100,000 | 0.0 — each stamped object's `translate_z` (elevation above the grid plane) |
+| Stamp Spacing | spin box, 0–500 px | 30 px — cursor travel between stamps while dragging; 0 stamps on every mouse move |
+
+See [Viewer Navigation → Draw Mode](viewer-navigation.md#draw-mode-painting-objects)
+for the full gesture reference. Source: `_on_draw_stamp`, `main_window.py`.
+
 ## Delete
 
 One button, **Delete Selected Objects** (also **Delete**/**Backspace**),
