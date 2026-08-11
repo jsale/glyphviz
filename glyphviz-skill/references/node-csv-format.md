@@ -39,7 +39,7 @@ All 20: `id`, `type`, `parent_id`, `branch_level`, `translate_x/y/z`,
 | `branch_level` | int | Tree depth: **roots are 0**, children 1, etc. (GaiaViz files use 1 for roots; GlyphViz uses this field for select-by-level and sibling navigation, not for attachment.) |
 | `translate_x/y/z` | float | Position **in the parent's topology coordinate system** (Cartesian offsets for topo None/Plane; longitude/latitude/altitude for Sphere; orbital-angle/tube-angle/elevation for Torus; etc. — see `topologies.md`). |
 | `rotate_x/y/z` | float | Orientation in degrees, interpreted per `rotation_mode` (see optional columns). |
-| `scale_x/y/z` | float | Per-axis scale. **Renderer floors the rendered scale at 0.2 per axis** — author visible nodes with raw scale ≥ 0.2 and never encode size as huge-parent × tiny-child. |
+| `scale_x/y/z` | float | Per-axis scale, rendered exactly as authored. **An optional viewer setting (View → Enforce Minimum Glyph Size, off by default) clamps rendered scale to 0.2 per axis** — so a scene whose sizes carry meaning reads correctly either way if you keep visible nodes at raw scale ≥ 0.2, and never encode size as huge-parent × tiny-child. Below ~0.2 a glyph also gets hard to click. |
 | `color_r/g/b/a` | int | 0–255. Alpha blends per the World node's `render_mode`. |
 | `geometry` | int | Shape id 0–28 (see Geometry ids). |
 | `hide` | int | 1 = do not render this node. |

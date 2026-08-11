@@ -47,6 +47,15 @@ from .topology import (
 
 _MAT_IDENTITY_3 = ((1., 0., 0.), (0., 1., 0.), (0., 0., 1.))
 
+# Optional per-axis minimum on a glyph's rendered scale (scale * base_scale).
+# GlyphViz clamped every glyph to this in its earliest commits, to keep a
+# near-zero-scale node big enough to click; the clamp silently overrode
+# authored data, so it is now OFF by default (Scene.scale_floor = 0.0) and
+# opt-in via View > Enforce Minimum Glyph Scale. World Grid (type=6) draw
+# matrices never floor at all, whatever this is set to — see _grid_draw_scale.
+DEFAULT_SCALE_FLOOR = 0.2
+NO_SCALE_FLOOR = 0.0
+
 _ROD_SCALE_FACTORS = np.array([ROD_RADIUS_FACTOR, ROD_RADIUS_FACTOR,
                                ROD_HEIGHT_FACTOR])
 
@@ -56,8 +65,8 @@ def _grid_draw_scale(node: Node) -> tuple[float, float, float]:
 
     The grid's geometry is drawn in ±1 local units (see the viewport's
     _draw_world_grid), so the matrix scale is the node's RAW scale times the
-    shape's half-spans — with neither base_scale nor the 0.2 render floor
-    applied. Both exemptions are alignment requirements, not style: child
+    shape's half-spans — with neither base_scale nor the optional render
+    floor applied. Both exemptions are alignment requirements, not style: child
     POSITIONS map through the grid's raw world_basis (base_scale plays no
     part there), so the rendered surface only stays under the children it
     frames if its own footprint uses exactly the same raw factors.
@@ -76,9 +85,13 @@ def _grid_draw_scale(node: Node) -> tuple[float, float, float]:
 class Scene:
     """Collection of nodes with lazily cached world-space transforms."""
 
-    def __init__(self, nodes: list[Node], base_scale: float = 3.0):
+    def __init__(self, nodes: list[Node], base_scale: float = 3.0,
+                 scale_floor: float = NO_SCALE_FLOOR):
         self.nodes = nodes
         self.base_scale = base_scale
+        # Per-axis minimum applied to rendered scale (see DEFAULT_SCALE_FLOOR).
+        # 0.0 = authored scale is honoured exactly, however small.
+        self.scale_floor = scale_floor
         self._by_id: dict[int, Node] = {n.id: n for n in nodes}
         self._dirty = True
         # Monotonic change counter, bumped by invalidate()/register_node().
@@ -222,7 +235,9 @@ class Scene:
         bs = self.base_scale
         scale = np.array([(nd.scale_x, nd.scale_y, nd.scale_z)
                           for nd in self.nodes], dtype=np.float64)
-        sc = np.maximum(scale * bs, 0.2)
+        sc = scale * bs
+        if self.scale_floor:
+            sc = np.maximum(sc, self.scale_floor)
         topo = np.array([nd.topo for nd in self.nodes], dtype=np.int64)
         types = np.array([nd.type for nd in self.nodes], dtype=np.int64)
         grids = types == NODE_TYPE_GRID
@@ -259,7 +274,9 @@ class Scene:
         sub = [self.nodes[int(i)] for i in rows]
         scale = np.array([(nd.scale_x, nd.scale_y, nd.scale_z)
                           for nd in sub], dtype=np.float64)
-        sc = np.maximum(scale * bs, 0.2)
+        sc = scale * bs
+        if self.scale_floor:
+            sc = np.maximum(sc, self.scale_floor)
         topo = np.array([nd.topo for nd in sub], dtype=np.int64)
         types = np.array([nd.type for nd in sub], dtype=np.int64)
         grids = types == NODE_TYPE_GRID
@@ -338,9 +355,10 @@ class Scene:
         return result
 
     @classmethod
-    def load(cls, path, base_scale: float = 3.0) -> 'Scene':
+    def load(cls, path, base_scale: float = 3.0,
+             scale_floor: float = NO_SCALE_FLOOR) -> 'Scene':
         """Load a node CSV (GlyphViz gv_node.csv or GaiaViz/ANTz np_node.csv) and return a Scene."""
-        return cls(load_node_csv(str(path)), base_scale)
+        return cls(load_node_csv(str(path)), base_scale, scale_floor)
 
 
 def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
@@ -357,7 +375,9 @@ def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
     rather than a flat cumulative-scale vector that doesn't commute with
     intervening rotation), child_local is this node's own topo_base+rotation
     contribution, and S_child = diag(this node's own scale * base_scale,
-    floored at 0.2). base_scale is applied here, exactly once, rather than
+    floored at scene.scale_floor when that opt-in clamp is on — it is off
+    (0.0) by default, so authored scale is honoured exactly however small
+    the glyph gets). base_scale is applied here, exactly once, rather than
     inside the recursive composition — applying it once per hierarchy level
     would compound it as base_scale**depth.
 
@@ -393,10 +413,11 @@ def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
         # World Grid: extent-sized footprint at RAW scale (see _grid_draw_scale).
         sc = np.array(_grid_draw_scale(node), dtype=np.float64)
     else:
+        fl = scene.scale_floor
         sc = np.array([
-            max(node.scale_x * bs, 0.2),
-            max(node.scale_y * bs, 0.2),
-            max(node.scale_z * bs, 0.2),
+            max(node.scale_x * bs, fl),
+            max(node.scale_y * bs, fl),
+            max(node.scale_z * bs, fl),
         ], dtype=np.float64)
 
     if node.topo == TOPO_ROD and node.type != NODE_TYPE_GRID:

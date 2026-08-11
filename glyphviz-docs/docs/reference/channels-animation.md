@@ -36,8 +36,10 @@ float attributes are applied exactly as written, negatives included.
 ### Position, orientation, size
 
 `translate_x/y/z`, `rotate_x/y/z`, `scale_x/y/z` — hard-set each frame. A GPS
-track played into `translate_x/y/z` works directly. Animated `scale_*` is
-still subject to the renderer's 0.2-per-axis floor.
+track played into `translate_x/y/z` works directly. Animated `scale_*` renders
+at exactly the values in the track, unless **View → Enforce Minimum Glyph
+Size** is on — that clamps rendered size to 0.2 per axis, flattening the bottom
+of a track that dips below it.
 
 ### Velocities
 

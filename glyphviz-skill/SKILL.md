@@ -44,9 +44,11 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 
 1. `id` unique, ≥ 1. `parent_id = 0` means root. `branch_level`: roots are
    **0**, children 1, etc.
-2. **Visible nodes need raw `scale_x/y/z` ≥ 0.2** — the renderer floors
-   rendered scale at 0.2/axis, so smaller values silently render bigger than
-   authored. Never encode size as huge-parent × tiny-child.
+2. **Author visible nodes at raw `scale_x/y/z` ≥ 0.2.** Scale renders exactly
+   as written, but the viewer has an optional clamp (View → Enforce Minimum
+   Glyph Size, off by default) that lifts rendered scale to 0.2/axis, and a
+   sub-0.2 glyph is also hard to click. Staying above 0.2 makes a scene read
+   the same either way. Never encode size as huge-parent × tiny-child.
 3. Colors are ints 0–255 (all four of r/g/b/a).
 4. Save with **`encoding="utf-8"`** and CRLF line endings
    (`lineterminator='\r\n'`); sanitize control characters out of any label

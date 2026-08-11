@@ -53,7 +53,8 @@ Any other attribute name in the map is **silently skipped** — as is a
 matching `channel_id`. Nothing warns; validate the three-way join yourself
 before shipping.
 
-Animated `scale_*` is still subject to the 0.2 render floor.
+Animated `scale_*` renders at exactly the track's values, unless the viewer's
+optional minimum-glyph-size clamp is on (0.2 per axis, off by default).
 
 ### What cascades to children
 
@@ -122,7 +123,8 @@ supported way to sync animation to sound; video-texture audio cannot sync
 - **Appear-and-stay timeline**: per-cohort step-function alpha track
   (`0,0,…,A,A,A`) bound to `color_a`.
 - **Breathing glyph**: one track feeding `scale_x/y/z` via three map rows;
-  keep the track's minimum ≥ 0.2.
+  keep the track's minimum ≥ 0.2 so the optional minimum-glyph-size clamp
+  can't flatten the bottom of the breath.
 - **Heat shift**: three tracks feeding `color_r/g/b`; precompute the
   gradient per frame (`color-palettes.md` has the built-in ramp formulas).
 - **Path playback**: three tracks feeding `translate_x/y/z` directly —

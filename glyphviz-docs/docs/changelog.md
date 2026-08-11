@@ -2,6 +2,10 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-08-11
+
+- Removed the long-standing 0.2-per-axis minimum on rendered glyph size as a default: glyphs now render at exactly the size their `scale_x/y/z` fields ask for, however small. The old clamp is still available as **View → Enforce Minimum Glyph Size (0.2)** (also in the Properties panel's Global Scale group), for when tiny nodes need to stay visible and clickable. World Grid footprints were never clamped and still aren't.
+
 ## 2026-08-05
 
 - Added per-example downloads: every Examples Gallery page now offers a zip of just that example, and the examples that hold several scenes offer one zip per scene. The full examples set is unchanged.

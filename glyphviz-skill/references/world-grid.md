@@ -66,7 +66,8 @@ rotation scaffold.
   `child (-95.5, 36.5, 0) → world (0, 0, 0)` ·
   `child (-66, 49, 0) → world (29.5, 12.5, 0)`.
 - The rendered rectangle spans exactly the extents window × the grid's
-  **raw** scale (no Global Scale factor, no 0.2 floor — unique to grids),
+  **raw** scale (no Global Scale factor, and never the optional
+  minimum-glyph-size clamp — that exemption is unique to grids),
   so the plate always sits under its children: the default window draws
   360×180 world units at scale 1.
 
@@ -138,8 +139,8 @@ exaggeration control for elevation-as-data scenes.
 
 - Attach children explicitly — a type-6 row in a legacy file renders, but
   nothing attaches to it unless `parent_id` says so.
-- Keep child scales ≥ 0.2 as usual (the no-floor exemption is for the
-  grid's own rendered plate, not for glyphs).
+- Keep child scales ≥ 0.2 as usual (the clamp exemption is for the grid's
+  own rendered plate, not for glyphs).
 - Rotating a grid rotates the whole layout (children ride along); rotating
   it 90° about X turns a floor map into a wall map.
 - Don't use `gluSphere`-style UV assumptions for globe textures — GlyphViz

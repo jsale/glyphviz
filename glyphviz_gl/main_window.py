@@ -36,6 +36,7 @@ from glyphviz_core.drop_router import (
     DropPlan, can_accept, resolve_drop,
 )
 from glyphviz_core.pdb_loader import load_pdb_file
+from glyphviz_core.scene import DEFAULT_SCALE_FLOOR
 from glyphviz_core.scene_merge import merge_nodes
 from glyphviz_core.geometry_data import (
     GEO_NAMES, GEO_COUNT, GEO_GRID, GEO_GRID_WIRE, GEO_MESH, GEO_OCTA,
@@ -402,6 +403,18 @@ class MainWindow(QMainWindow):
         )
         self._gizmo_act.triggered.connect(lambda c: self._set_gizmo_handles(c))
 
+        self._scale_floor_act = self._view_menu.addAction(
+            f"Enforce &Minimum Glyph Size ({DEFAULT_SCALE_FLOOR:g})")
+        self._scale_floor_act.setCheckable(True)
+        self._scale_floor_act.setChecked(False)  # matches Viewport._scale_floor
+        self._scale_floor_act.setToolTip(
+            f"Clamp every glyph's rendered size (scale x Global Scale) to at least\n"
+            f"{DEFAULT_SCALE_FLOOR:g} per axis, so a very small or zero-scale node stays visible\n"
+            "and clickable. Off by default: glyphs render at exactly their\n"
+            "authored scale. World Grids are never clamped."
+        )
+        self._scale_floor_act.triggered.connect(lambda c: self._set_scale_floor(c))
+
         self._view_menu.addSeparator()
         self._stereo_act = self._view_menu.addAction("Stereo &3D (Cross-Eye)")
         self._stereo_act.setCheckable(True)
@@ -765,6 +778,22 @@ class MainWindow(QMainWindow):
         self._scale_slider.valueChanged.connect(self._update_scale)
         scale_layout.addWidget(self._scale_label)
         scale_layout.addWidget(self._scale_slider)
+
+        # Opt-in revival of GlyphViz's original always-on minimum rendered
+        # scale (see scene.DEFAULT_SCALE_FLOOR) — off by default so a glyph
+        # renders at exactly the size its scale fields ask for.
+        self._cb_scale_floor = QCheckBox(
+            f"Enforce Minimum Glyph Size ({DEFAULT_SCALE_FLOOR:g})")
+        self._cb_scale_floor.setChecked(False)
+        self._cb_scale_floor.setToolTip(
+            f"Clamp every glyph's rendered size (scale x Global Scale) to at\n"
+            f"least {DEFAULT_SCALE_FLOOR:g} per axis, so a very small or zero-scale node stays\n"
+            "visible and clickable.\n"
+            "Off by default: glyphs render at exactly their authored scale.\n"
+            "World Grids are never clamped."
+        )
+        self._cb_scale_floor.toggled.connect(self._set_scale_floor)
+        scale_layout.addWidget(self._cb_scale_floor)
 
         # --- Stereo 3D group: side-by-side cross-eye free-view pair ---
         stereo_grp = QGroupBox("Stereo 3D (Cross-Eye)")
@@ -2293,6 +2322,23 @@ class MainWindow(QMainWindow):
         self._scale_label.setText(f"Scale: {scale:.1f}")
         self._viewport.base_scale = scale
         self._viewport.update()
+
+    def _set_scale_floor(self, checked: bool):
+        """Toggle the opt-in minimum rendered glyph size (scene.scale_floor).
+
+        Kept in sync between the Global Scale panel checkbox and the View
+        menu action, the same two-surface pattern _set_hidden uses."""
+        self._viewport.enforce_scale_floor = checked
+        for w in (self._cb_scale_floor, self._scale_floor_act):
+            if w.isChecked() != checked:
+                w.blockSignals(True)
+                w.setChecked(checked)
+                w.blockSignals(False)
+        self._viewport.update()
+        self.statusBar().showMessage(
+            f"Minimum glyph size {DEFAULT_SCALE_FLOOR:g} enforced."
+            if checked else
+            "Minimum glyph size off — glyphs render at their authored scale.")
 
     def _set_follow(self, checked: bool):
         self._viewport.follow_selected = checked

@@ -36,7 +36,7 @@ Two things this example demonstrates that generalize to any scene you build:
 
 **Grid scale buys glyph size for free.** A World Grid's scale re-spaces child *positions* without touching subtree size — measured here, at scale 3 the hub separation goes from 9.99 to 29.96 world units while the arm offset stays 4.000 and the segment's world scale stays 0.5000. That's what lets the roses be 13 world units across without colliding.
 
-**The 0.2 render floor lands on each node's own scale**, so a node authored below it is drawn bigger than it encodes and the encoding quietly lies. Rather than silently inflate a rare speed bin, sub-floor segments are **merged into a neighbour** — which keeps the petal's total length exactly right and costs only colour resolution in the tail.
+**Keep every encoded length above the minimum-glyph-size clamp (0.2 per axis).** That clamp is now off by default — glyphs render at exactly their authored scale — but it's one checkbox away (**View → Enforce Minimum Glyph Size**), and with it on, a segment authored below 0.2 is drawn bigger than it encodes and the encoding quietly lies. Rather than let a rare speed bin be inflatable, sub-0.2 segments are **merged into a neighbour** — which keeps the petal's total length exactly right, whichever way the setting is switched, and costs only colour resolution in the tail.
 
 ## Honest caveats
 

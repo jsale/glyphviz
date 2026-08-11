@@ -19,7 +19,7 @@ from glyphviz_core.node import (
     TAG_COLOR_MODE_NODE, TAG_DEFAULT_TEXT_RGB, TAG_TEXT_ALPHA, TAG_SHADOW_RGBA,
 )
 from glyphviz_core import gizmo as gz
-from glyphviz_core.scene import Scene
+from glyphviz_core.scene import DEFAULT_SCALE_FLOOR, NO_SCALE_FLOOR, Scene
 from glyphviz_core.topology import (
     TOPO_NONE, TOPO_PLANE, TOPO_PLOT, TOPO_SURFACE, TOPO_VIDEO,
 )
@@ -278,6 +278,9 @@ class Viewport(QOpenGLWidget):
         super().__init__(parent)
         self._scene = Scene([])
         self._base_scale = 1.0
+        # Opt-in minimum rendered scale per axis (see scene.DEFAULT_SCALE_FLOOR).
+        # Off by default: a glyph renders at exactly the scale it was authored at.
+        self._scale_floor = NO_SCALE_FLOOR
         self.show_axes = True
         self.show_grid = True
         self.show_hidden = False
@@ -454,6 +457,17 @@ class Viewport(QOpenGLWidget):
         self._scene.invalidate()
 
     @property
+    def enforce_scale_floor(self) -> bool:
+        """Whether the opt-in minimum rendered scale is being applied."""
+        return self._scale_floor > 0.0
+
+    @enforce_scale_floor.setter
+    def enforce_scale_floor(self, enabled: bool):
+        self._scale_floor = DEFAULT_SCALE_FLOOR if enabled else NO_SCALE_FLOOR
+        self._scene.scale_floor = self._scale_floor
+        self._scene.invalidate()
+
+    @property
     def nodes(self) -> list[Node]:
         """The current node list (read-only; use set_nodes to replace)."""
         return self._scene.nodes
@@ -582,7 +596,7 @@ class Viewport(QOpenGLWidget):
         self._ch_transform_rows = None
         self._ch_cache_rev = None
         self._ch_dynamic_rev += 1
-        self._scene = Scene(nodes, self._base_scale)
+        self._scene = Scene(nodes, self._base_scale, self._scale_floor)
         # A new Scene restarts its revision counter, so the old scan could
         # alias the new scene's revision — drop it explicitly.
         self._scan_cache = None
@@ -629,22 +643,27 @@ class Viewport(QOpenGLWidget):
         return self._scene.world_pos(node_id)
 
     def _radius_of(self, node: Node) -> tuple[float, float, float]:
-        """Per-axis rendered radii (rx, ry, rz) for camera focus and UI hints."""
+        """Per-axis rendered radii (rx, ry, rz) for camera focus and UI hints.
+
+        Mirrors the draw matrices' scale, including whether the opt-in
+        minimum (self._scale_floor) is in force, so framing matches what is
+        actually on screen."""
+        fl = self._scale_floor
         if node.type == NODE_TYPE_GRID:
             # World Grid: footprint = shape half-spans x raw scale, no
             # base_scale/floor (mirrors scene._grid_draw_scale).
             if node.grid_is_globe():
                 gr = GRID_GLOBE_RADIUS
-                return (max(node.scale_x * gr, 0.2),
-                        max(node.scale_y * gr, 0.2),
-                        max(node.scale_z * gr, 0.2))
+                return (max(node.scale_x * gr, fl),
+                        max(node.scale_y * gr, fl),
+                        max(node.scale_z * gr, fl))
             half_lon, half_lat = node.grid_half_extents()
-            return (max(node.scale_x * half_lon, 0.2),
-                    max(node.scale_y * half_lat, 0.2),
-                    max(node.scale_z, 0.2))
+            return (max(node.scale_x * half_lon, fl),
+                    max(node.scale_y * half_lat, fl),
+                    max(node.scale_z, fl))
         s = self._scene.world_scale(node.id) or (node.scale_x, node.scale_y, node.scale_z)
         bs = self._base_scale
-        return (max(s[0]*bs, 0.2), max(s[1]*bs, 0.2), max(s[2]*bs, 0.2))
+        return (max(s[0]*bs, fl), max(s[1]*bs, fl), max(s[2]*bs, fl))
 
     def set_camera(self, azimuth: float = None, elevation: float = None,
                    distance: float = None, target: tuple[float, float, float] = None):

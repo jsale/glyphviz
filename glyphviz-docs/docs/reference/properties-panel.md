@@ -36,9 +36,20 @@ Source: `main_window.py:321-376`.
 
 ## Global Scale
 
-A single slider, range 1–100 (displayed as 0.1–10.0), default value 10
+A slider, range 1–100 (displayed as 0.1–10.0), default value 10
 (→ scale **1.0**). Sets `Viewport.base_scale`, the global geometry-to-world-units
-conversion factor. Source: `main_window.py:379-389`.
+conversion factor.
+
+Below it, **Enforce Minimum Glyph Size (0.2)** (checkbox, **unchecked** by
+default) clamps every glyph's *rendered* size — `scale_x/y/z` × Global Scale —
+to at least 0.2 per axis, so a very small or zero-scale node stays visible and
+clickable. Off by default, glyphs render at exactly the size their scale fields
+ask for, and a sub-0.2 node can be too small to click. The clamp is per axis,
+so it changes the proportions of anything thinner than 0.2 on one axis only.
+World Grid (type 6) footprints are never clamped either way — a grid's
+rectangle has to stay aligned with where its children land. Mirrors the
+**View → Enforce Minimum Glyph Size** menu toggle; sets
+`Viewport.enforce_scale_floor` → `Scene.scale_floor`.
 
 ## Stereo 3D (Cross-Eye)
 

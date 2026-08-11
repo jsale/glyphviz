@@ -228,4 +228,6 @@ but never child sizes. Full rules and engine-verified examples:
   sphere of plots, …).
 - Deep hierarchies inherit cumulative scale: a 0.5-scale parent halves its
   children's spacing *and* rendered size (except World Grid parents). Keep
-  every visible node's raw scale ≥ 0.2 (render floor).
+  every visible node's raw scale ≥ 0.2 so the viewer's optional
+  minimum-glyph-size clamp (off by default) can't alter your proportions,
+  and so glyphs stay easy to click.

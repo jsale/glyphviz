@@ -20,7 +20,7 @@ A GlyphViz scene needs exactly **20 required columns** — no more, no less, and
 | `branch_level` | Tree depth. Roots are `0`. |
 | `translate_x/y/z` | Position. With `topo=0` below, these are plain Cartesian offsets. |
 | `rotate_x/y/z` | Orientation, in degrees. `0,0,0` is unrotated. |
-| `scale_x/y/z` | Size per axis. Keep this **≥ 0.2** — smaller silently renders bigger than you asked for (a renderer floor, not a bug in your file). |
+| `scale_x/y/z` | Size per axis, rendered exactly as written. Anything much below **0.2** gets hard to click — turn on **View → Enforce Minimum Glyph Size** if you want tiny nodes clamped up to a grabbable size. |
 | `color_r/g/b/a` | 0–255 each. |
 | `geometry` | Which shape. `11` is a solid Octahedron — ANTz's traditional starter glyph. |
 | `hide` | `0` = visible. |
