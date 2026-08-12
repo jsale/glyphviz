@@ -86,8 +86,17 @@ APP_STAMP_RE = re.compile(r'GlyphViz(?!Examples)(\d{8})')
 EXAMPLES_STAMP_RE = re.compile(r'GlyphVizExamples(\d{8})')
 
 # "*Windows 10/11, 64-bit · ~116 MB download, ~300 MB extracted · build 2026-07-29*"
+#
+# Anchored on the "Windows 10/11, 64-bit" prefix, and not merely on the
+# "~N MB download, ~N MB extracted · build <date>" shape: the macOS line
+# ("Apple Silicon (arm64): ~98 MB … · Intel (x86_64): ~117 MB download, ~382 MB
+# extracted · build 2026-08-06") ends in exactly that shape too, so the
+# unanchored pattern stamped the WINDOWS size and date onto the Intel Mac
+# build — which this release does not even rebuild. Caught and reverted by
+# hand on 2026-08-12; keep the anchor.
 APP_SIZE_RE = re.compile(
-    r'(~)\d+( MB download, ~)\d+( MB extracted · build )\d{4}-\d{2}-\d{2}')
+    r'(\*Windows 10/11, 64-bit · ~)\d+( MB download, ~)\d+'
+    r'( MB extracted · build )\d{4}-\d{2}-\d{2}')
 # "*~212 MB download, ~340 MB extracted*"
 EXAMPLES_SIZE_RE = re.compile(r'(~)\d+( MB download, ~)\d+( MB extracted\*)')
 
