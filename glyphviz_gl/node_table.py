@@ -29,12 +29,16 @@ _COLUMNS = [
     ("Sy",      "scale_y"),
     ("Sz",      "scale_z"),
     ("Ratio",   "ratio"),
+    ("TopoScl", "topo_scale"),
     ("Color",   None),
 ]
 
 _FLOAT_ATTRS = frozenset({"translate_x", "translate_y", "translate_z",
                            "rotate_x", "rotate_y", "rotate_z",
                            "scale_x", "scale_y", "scale_z", "ratio"})
+# Float columns shown at significant-figure rather than fixed-decimal
+# precision (see the DisplayRole branch below).
+_SIGFIG_ATTRS = frozenset({"topo_scale"})
 _COLOR_COL = len(_COLUMNS) - 1
 
 
@@ -158,6 +162,10 @@ class NodeTableModel(QAbstractTableModel):
 
         val = getattr(node, attr)
         if role == Qt.ItemDataRole.DisplayRole:
+            if attr in _SIGFIG_ATTRS:
+                # A multiplier spanning decades: 3 dp would render the ANTz
+                # topo_scale (1/180) as a flat "0.006".
+                return f"{val:g}"
             return f"{val:.3f}" if attr in _FLOAT_ATTRS else str(val)
         if role == Qt.ItemDataRole.UserRole:
             return val

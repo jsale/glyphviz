@@ -340,6 +340,56 @@ class Scene:
     def node_by_id(self, node_id: int) -> Node | None:
         return self._by_id.get(node_id)
 
+    def worst_child_placement_ratio(self, parent_ids) -> tuple[float, int]:
+        """How far the given parents' children have been thrown, measured in
+        multiples of the parent's own rendered radius.
+
+        Returns (ratio, parent_id) for the worst offender, or (0.0, -1) if
+        none of them has a visible child. A ratio near 1 means children sit on
+        or near their parent's surface; a large one means they are somewhere
+        off in the distance, which is what happens when translate values
+        authored as degrees are read as world units by a linear topology (see
+        Node.topo_scale). The GUI uses this to notice that a topology change
+        just scattered a subtree and point at the field that reels it back in.
+
+        One pass over the node list, so cost is independent of how many
+        parents are asked about.
+        """
+        ids = set(parent_ids)
+        if not ids:
+            return (0.0, -1)
+        self._ensure()
+        row_of_id = self._transforms.row_of_id
+        world_pos = self._transforms.world_pos
+        worst = 0.0
+        worst_id = -1
+        radii: dict[int, float] = {}
+        for node in self.nodes:
+            if node.parent_id not in ids or node.type in NON_VISUAL_TYPES:
+                continue
+            crow = row_of_id.get(node.id)
+            prow = row_of_id.get(node.parent_id)
+            if crow is None or prow is None:
+                continue
+            radius = radii.get(node.parent_id)
+            if radius is None:
+                parent = self._by_id.get(node.parent_id)
+                if parent is None:
+                    continue
+                # Bounding-sphere radius of the parent's own glyph. Falls back
+                # to base_scale for a degenerate (zero-scale) parent so the
+                # ratio stays meaningful instead of dividing by ~nothing.
+                radius = self.node_draw_data(parent)[2] or self.base_scale
+                radii[node.parent_id] = radius
+            if radius <= 0.0:
+                continue
+            dist = float(np.linalg.norm(world_pos[crow] - world_pos[prow]))
+            ratio = dist / radius
+            if ratio > worst:
+                worst = ratio
+                worst_id = node.parent_id
+        return (worst, worst_id)
+
     def world_node(self) -> Node | None:
         """The World node (type=0), holding scene-wide background/render-mode/
         fog settings — see node.py. Returns the lowest-id match, or None if

@@ -40,6 +40,54 @@ chain (`compute_world_positions`, `topology.py:523-574`).
 `TOPO_COUNT = 18` (`topology.py:37`). Default topology for newly-created
 nodes is **Point** (`main_window.py:536`).
 
+## Topology Scale — when children fly off after a topology change
+
+Read the table above and one distinction stands out: some topologies read a
+child's `translate` axis as an **angle** (Sphere's longitude, Torus's orbital
+angle) and others read it as a **distance** (Cube's position across a facet,
+Pin's height, all three axes of the Cartesian family). An angle of 330° is a
+perfectly ordinary value; 330 *world units* is enormous — far larger than any
+glyph. So a parent switched from Sphere to Cube reads its children's
+coordinates in units 180× bigger than they were authored for, and they
+disappear into the distance.
+
+Each node carries a **Topology Scale** (`topo_scale`, the Properties panel row
+under Topology) that multiplies exactly the distance-valued axes of its own
+topology, and nothing else. Longitude, latitude and every orbital or tube angle
+are left alone, so turning it down can never distort a circular layout — a
+sphere's children stay exactly on the sphere.
+
+| Value | Meaning |
+|---|---|
+| **1.0** (default) | One translate unit is one world unit. GlyphViz's original behavior, and what any file without a `topo_scale` column loads as — no existing scene changes. |
+| **1/180 ≈ 0.005556** (**ANTz** preset) | A linear axis spans the parent's own extent: a cube facet is 360 units across, so translate 180 lands on its edge exactly as 180° of longitude reaches the far side of a sphere. At this setting a layout authored in degrees survives a switch between an angular and a linear topology. |
+
+Twelve children at `translate_x = 0, 30, … 330` under a parent of radius 9,
+farthest child:
+
+| Parent topology | at 1.0 | at 1/180 |
+|---|---|---|
+| Sphere | 9.0 | 9.0 |
+| Torus | 9.0 | 9.0 |
+| Cylinder | 405.1 | 9.3 |
+| Spiral | 413.3 | 13.8 |
+| Cube | **2997.5** | 18.9 |
+
+Notes:
+
+- Set it on the **parent** — it describes that node's coordinate system, the
+  same way Topology and Ratio do.
+- Edits apply to the whole selection, so *Edit → Select By → Topology → Cube*
+  followed by one slider drag retunes every cube parent in a scene at once.
+- **World Grid children and root nodes are exempt.** A grid's footprint is
+  drawn from the same extents window its children's coordinates are read in,
+  and a root's `translate` *is* its world position, not an offset.
+- It is bindable as a Channels attribute, so a scene that animates `topo` can
+  animate `topo_scale` alongside it — see
+  [Channels](channels-animation.md) and the Channel Parameters example.
+- If a topology change does scatter a subtree, the status bar says so and
+  names this field.
+
 ## Orientation ("facing outward")
 
 Independent of position, most topologies also insert a base rotation between

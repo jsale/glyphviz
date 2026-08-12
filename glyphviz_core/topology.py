@@ -14,7 +14,7 @@ import numpy as np
 
 from .geometry_data import ROD_HEIGHT_FACTOR, torus_radii
 from .node import (
-    Node, GRID_GLOBE_RADIUS, NODE_TYPE_GRID,
+    Node, DEFAULT_TOPO_SCALE, GRID_GLOBE_RADIUS, NODE_TYPE_GRID,
     ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
 )
 
@@ -62,6 +62,94 @@ TOPO_NAMES = {
     TOPO_PLOT:      "Plot",
     TOPO_SURFACE:   "Surface",
 }
+
+
+# ---------------------------------------------------------------------------
+# Which of a child's translate_x/y/z each topology reads as a DISTANCE, and
+# which it reads as an angle (or as a parameter already proportional to the
+# parent's base radius, which is a distance that already tracks the parent's
+# size and so needs no further scaling).
+#
+# The parent's Node.topo_scale multiplies exactly the True axes below, and
+# nothing else. That is the whole implementation of the feature: every offset
+# function further down stays untouched, because scaling an axis before the
+# math is algebraically identical to scaling the distance term the math
+# derives from it — `radial = base_radius + tz` becomes
+# `base_radius + k*tz`, `dist * n + tx * u` becomes `dist * n + k*tx * u`,
+# and so on. Keeping it to a pre-multiply is also what guarantees the
+# property the field is for: an angular axis is never touched, so no value of
+# topo_scale can disturb a circular layout.
+#
+# Per-topology reasoning for the False entries:
+#   Sphere/Point/Zsphere — tx/ty are longitude/latitude degrees.
+#   Torus/Ztorus         — tx/ty are orbital and tube angles.
+#   Cylinder/Zcylinder   — tx is the angle around the axis.
+#   Rod                  — ty is the angle around the axis; tx maps [0,180]
+#                          onto the rod's full rendered LENGTH, so it is
+#                          already expressed as a fraction of the parent's
+#                          size (this is ANTz's own normalization, the very
+#                          convention TOPO_SCALE_ANTZ generalizes).
+#   Zrod                 — delegates to Zcylinder, so tx is the angle.
+#   Spiral               — tx is the helix angle AND drives the helical rise
+#                          as a fraction of base_radius; both size-relative.
+# Anything absent (TOPO_NONE, Plane, Video, Plot, Surface, and any unknown
+# id, which falls back to Cartesian placement) reads all three as distances.
+# ---------------------------------------------------------------------------
+
+_ALL_AXES_LINEAR = (True, True, True)
+
+LINEAR_PLACEMENT_AXES: dict[int, tuple[bool, bool, bool]] = {
+    TOPO_CUBE:      (True,  True,  True),    # face u, face v, height off face
+    TOPO_SPHERE:    (False, False, True),    # lon, lat, altitude
+    TOPO_TORUS:     (False, False, True),    # orbital angle, tube angle, tube offset
+    TOPO_CYLINDER:  (False, True,  True),    # angle, height, radial
+    TOPO_PIN:       (True,  True,  True),    # height, and two lateral offsets
+    TOPO_ROD:       (False, False, True),    # length fraction, angle, radial
+    TOPO_POINT:     (False, False, True),    # lon, lat, distance from center
+    TOPO_PLANE:     (True,  True,  True),
+    TOPO_ZCUBE:     (True,  True,  True),
+    TOPO_ZSPHERE:   (False, False, True),
+    TOPO_ZTORUS:    (False, False, True),
+    TOPO_ZCYLINDER: (False, True,  True),
+    TOPO_ZROD:      (False, True,  True),    # same math as Zcylinder
+    TOPO_SPIRAL:    (False, True,  True),    # helix angle, rise offset, radial
+    TOPO_VIDEO:     (True,  True,  True),
+    TOPO_PLOT:      (True,  True,  True),
+    TOPO_SURFACE:   (True,  True,  True),
+}
+
+# Row `topo` -> boolean mask, for the batched engine. Out-of-range/unknown ids
+# are handled by the callers (all-linear, matching the Cartesian fallback).
+_LINEAR_AXES_ARR = np.array(
+    [LINEAR_PLACEMENT_AXES.get(t, _ALL_AXES_LINEAR) for t in range(TOPO_COUNT)],
+    dtype=bool,
+)
+
+
+def linear_placement_axes(parent: Node | None) -> tuple[bool, bool, bool]:
+    """Which of a child's translate axes this parent reads as a distance —
+    i.e. which ones its topo_scale multiplies.
+
+    A World Grid parent returns all-False: grid children are exempt from
+    topo_scale entirely, because the grid's rendered footprint is sized from
+    the same extents window their coordinates are read in, and scaling one
+    without the other would slide the frame out from under its children.
+    """
+    if parent is None or parent.type == NODE_TYPE_GRID:
+        return (False, False, False)
+    return LINEAR_PLACEMENT_AXES.get(parent.topo, _ALL_AXES_LINEAR)
+
+
+def scale_linear_axes(parent: Node | None, tx: float, ty: float, tz: float
+                      ) -> tuple[float, float, float]:
+    """Apply the parent's topo_scale to whichever of tx/ty/tz that parent
+    reads as a distance. Scalar counterpart of the pre-multiply
+    _batched_topo_offsets does per row."""
+    ax, ay, az = linear_placement_axes(parent)
+    if not (ax or ay or az):
+        return (tx, ty, tz)
+    k = parent.topo_scale
+    return (tx * k if ax else tx, ty * k if ay else ty, tz * k if az else tz)
 
 
 def kml_offset(longitude: float, latitude: float, altitude: float, radius: float):
@@ -425,11 +513,27 @@ def _batched_kml(lon_deg, lat_deg, alt, radius):
 
 def _batched_topo_offsets(ptopo: np.ndarray, tx: np.ndarray, ty: np.ndarray,
                            tz: np.ndarray, base_scale: float,
-                           pratio: np.ndarray, subspace: np.ndarray) -> np.ndarray:
+                           pratio: np.ndarray, subspace: np.ndarray,
+                           ptopo_scale: np.ndarray | None = None) -> np.ndarray:
     """Vectorized _TOPO_OFFSET_FUNCS dispatch: each node's local-frame offset
     from its parent, per the PARENT's topo. Cartesian is both TOPO_NONE's
     behavior and the fallback for unknown topo ids, so it is the default fill
-    (this also covers Plane/Video/Plot/Surface, whose offset IS Cartesian)."""
+    (this also covers Plane/Video/Plot/Surface, whose offset IS Cartesian).
+
+    ptopo_scale is the PARENT's Node.topo_scale per row (None = all 1.0,
+    i.e. the pre-topo_scale behavior). It multiplies only the axes the
+    parent's topology reads as distances — see LINEAR_PLACEMENT_AXES, which
+    is also why this pre-multiply is the only place the whole feature
+    touches the placement math."""
+    if ptopo_scale is not None and not np.all(ptopo_scale == DEFAULT_TOPO_SCALE):
+        linear = np.ones((len(ptopo), 3), dtype=bool)
+        known = (ptopo >= 0) & (ptopo < TOPO_COUNT)
+        linear[known] = _LINEAR_AXES_ARR[ptopo[known]]
+        factor = np.where(linear, ptopo_scale[:, None], 1.0)
+        tx = tx * factor[:, 0]
+        ty = ty * factor[:, 1]
+        tz = tz * factor[:, 2]
+
     off = np.stack([tx, ty, tz], axis=1)   # cartesian default
 
     m = ptopo == TOPO_SPHERE
@@ -522,7 +626,8 @@ def compute_world_transforms(nodes: list[Node], base_scale: float,
         (nd.translate_x, nd.translate_y, nd.translate_z,
          nd.rotate_x, nd.rotate_y, nd.rotate_z,
          nd.scale_x, nd.scale_y, nd.scale_z,
-         nd.rotation_mode, nd.topo, nd.ratio, nd.subspace, nd.type)
+         nd.rotation_mode, nd.topo, nd.ratio, nd.subspace, nd.type,
+         nd.topo_scale)
         for nd in nodes
     ], dtype=np.float64)
     tx, ty, tz = fields[:, 0], fields[:, 1], fields[:, 2]
@@ -533,11 +638,15 @@ def compute_world_transforms(nodes: list[Node], base_scale: float,
     ratio = fields[:, 11]
     subspace = fields[:, 12].astype(np.int64)
     ntype = fields[:, 13].astype(np.int64)
+    topo_scale = fields[:, 14]
 
     is_root = eff_parent < 0
     safe_parent = np.where(is_root, 0, eff_parent)
     ptopo = np.where(is_root, -1, topo[safe_parent])
     pratio = np.where(is_root, 0.0, ratio[safe_parent])
+    # A root's translate IS its world position, never a topology offset, so
+    # its (unused) offset row is computed at the neutral scale.
+    ptopo_scale = np.where(is_root, DEFAULT_TOPO_SCALE, topo_scale[safe_parent])
 
     # World Grid (type=6) parents — see the "World Grid semantics" comment
     # block above _cartesian_offset. Flat grids place children Cartesian at
@@ -569,7 +678,7 @@ def compute_world_transforms(nodes: list[Node], base_scale: float,
     child_local = topo_rot @ own_rot          # identity topo_rot for roots
     local_scaled = child_local * scale[:, None, :]   # m @ diag(scale)
     offsets = _batched_topo_offsets(ptopo, tx, ty, tz, base_scale,
-                                     pratio, subspace)
+                                     pratio, subspace, ptopo_scale)
     if flat_child.any():
         pc = grid_center[safe_parent]
         offsets[flat_child] = np.stack([
@@ -644,7 +753,8 @@ def update_world_transform_rows(nodes: list[Node], base_scale: float,
       since the last full compute_world_transforms: t.eff_parent, t.depth
       and t.row_of_id are reused as-is rather than rederived. Every other
       per-node input IS re-read fresh below — translate/rotate/scale plus
-      rotation_mode, subspace, and the parent's topo/ratio/grid form — so a
+      rotation_mode, subspace, and the parent's topo/ratio/topo_scale/grid
+      form — so a
       Channels animation binding shape fields (ratio, topo, geometry; see
       channel_engine._TRANSFORM_FIELDS) is handled correctly here, provided
       the closure rule above puts the changed node's descendants in `rows`.
@@ -674,6 +784,7 @@ def update_world_transform_rows(nodes: list[Node], base_scale: float,
     is_root = eff_parent < 0
     ptopo = np.full(k, -1, dtype=np.int64)
     pratio = np.zeros(k)
+    ptopo_scale = np.full(k, DEFAULT_TOPO_SCALE)
     pgrid = np.zeros(k, dtype=bool)   # parent is a World Grid (type=6)
     pglobe = np.zeros(k, dtype=bool)  # ... in globe (sphere-geometry) form
     pcenter = np.zeros((k, 2))        # grid parents' extents-window center
@@ -681,6 +792,7 @@ def update_world_transform_rows(nodes: list[Node], base_scale: float,
     if nr.size:
         ptopo[nr] = [nodes[int(p)].topo for p in eff_parent[nr]]
         pratio[nr] = [nodes[int(p)].ratio for p in eff_parent[nr]]
+        ptopo_scale[nr] = [nodes[int(p)].topo_scale for p in eff_parent[nr]]
         for j in nr:
             parent = nodes[int(eff_parent[j])]
             if parent.type == NODE_TYPE_GRID:
@@ -699,7 +811,7 @@ def update_world_transform_rows(nodes: list[Node], base_scale: float,
     child_local = topo_rot @ own_rot          # identity topo_rot for roots
     local_scaled = child_local * scale[:, None, :]
     offsets = _batched_topo_offsets(ptopo, tx, ty, tz, base_scale,
-                                     pratio, subspace)
+                                     pratio, subspace, ptopo_scale)
     if pflat.any():
         offsets[pflat] = np.stack([
             tx[pflat] - pcenter[pflat, 0],
@@ -812,6 +924,12 @@ def compute_world_bases(
 # compute_world_bases), which applies every ancestor's rotation and per-axis
 # stretch in the mathematically correct order, however many levels deep.
 # child_subspace is only used by _cube_offset/_zcube_offset.
+#
+# The parent's topo_scale does not appear here either: callers pre-multiply
+# the distance-valued axes before dispatching (scale_linear_axes /
+# _batched_topo_offsets), which is exactly equivalent and keeps every
+# function below the readable, unqualified statement of its topology's
+# coordinate system. See LINEAR_PLACEMENT_AXES near the top of this file.
 
 # ---------------------------------------------------------------------------
 # World Grid semantics (parent TYPE = 6, not a topo id — see NODE_TYPE_GRID).
@@ -1072,6 +1190,7 @@ def placement_offset(parent: Node | None, tx: float, ty: float, tz: float,
             return kml_offset(tx, ty, tz, GRID_GLOBE_RADIUS)
         cx, cy = parent.grid_center()
         return (tx - cx, ty - cy, tz)
+    tx, ty, tz = scale_linear_axes(parent, tx, ty, tz)
     fn = _TOPO_OFFSET_FUNCS.get(parent.topo, _cartesian_offset)
     return fn(tx, ty, tz, base_scale, parent.ratio, subspace)
 

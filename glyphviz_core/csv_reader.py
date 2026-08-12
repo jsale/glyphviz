@@ -6,7 +6,8 @@ from pathlib import Path
 import pandas as pd
 
 from .node import (
-    Node, ROTATION_MODE_HEADING_TILT_ROLL, RENDER_MODE_NORMAL,
+    Node, DEFAULT_TOPO_SCALE, ROTATION_MODE_HEADING_TILT_ROLL,
+    RENDER_MODE_NORMAL,
     TAG_COLOR_MODE_UNIFORM, TAG_DEFAULT_TEXT_RGB, REF_GRID_DEFAULT_RGB,
 )
 
@@ -18,7 +19,8 @@ _TRACKED_COLS = frozenset({
     'rotate_x', 'rotate_y', 'rotate_z',
     'scale_x', 'scale_y', 'scale_z',
     'color_r', 'color_g', 'color_b', 'color_a', 'color_index', 'palette_id',
-    'geometry', 'hide', 'topo', 'ratio', 'subspace', 'facet', 'texture_id',
+    'geometry', 'hide', 'topo', 'ratio', 'topo_scale', 'subspace', 'facet',
+    'texture_id',
     'mesh_id', 'text', 'link', 'rotation_mode', 'show_text',
     'render_mode', 'fog_enabled', 'fog_start', 'fog_end',
     'tag_color_mode', 'tag_color_r', 'tag_color_g', 'tag_color_b',
@@ -30,6 +32,14 @@ _TRACKED_COLS = frozenset({
 
 # Extra columns written as plain strings (not int/float formatted).
 _STRING_COLS = frozenset({'text', 'link'})
+
+# Columns written with significant-figure rather than fixed-decimal
+# precision. topo_scale is a MULTIPLIER whose useful range spans several
+# orders of magnitude (1.0 down to TOPO_SCALE_ANTZ = 1/180 and below), where
+# a fixed 6 decimal places would quietly round 0.00555555… to four
+# significant figures. Every other float column holds a coordinate or a 0..1
+# proportion, for which 6 dp is ample.
+_PRECISE_FLOAT_COLS = frozenset({'topo_scale'})
 
 # Columns written as ints when the value is integral, 6-dp floats otherwise.
 # The trigger fields are historically integer-formatted (and every legacy
@@ -300,6 +310,11 @@ def load_node_csv(path: str) -> list[Node]:
     topos      = df['topo'].astype('int64').tolist()
 
     ratios      = _float_col(df, 'ratio', n, 0.1)
+    # A missing topo_scale column is every file written before the field
+    # existed; 1.0 means "a translate unit is a world unit", which is how such
+    # a file has always rendered. Symmetric with the Node() default, so no
+    # asymmetric-fallback subtlety here (unlike rotation_mode above).
+    topo_scales = _float_col(df, 'topo_scale', n, DEFAULT_TOPO_SCALE)
     if 'subspace' in df.columns:
         subspaces = df['subspace'].astype('int64').tolist()
     elif 'facet' in df.columns:
@@ -362,6 +377,7 @@ def load_node_csv(path: str) -> list[Node]:
             hide=hides[i],
             topo=topos[i],
             ratio=ratios[i],
+            topo_scale=topo_scales[i],
             subspace=subspaces[i],
             texture_id=texture_ids[i],
             mesh_id=mesh_ids[i],
@@ -453,6 +469,11 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
     # show_text has no ANTz/GaiaViz column slot; omitting it means 0 (not
     # pinned) on reload, so it only needs writing when some node is pinned.
     has_show_text = any(n.show_text for n in nodes)
+    # topo_scale has no ANTz/GaiaViz column slot; omitting it reloads as 1.0
+    # (a translate unit is a world unit), so it only needs writing when some
+    # parent has actually been retuned. This is what keeps every pre-existing
+    # file byte-identical through a load/save round trip.
+    has_topo_scale = any(n.topo_scale != DEFAULT_TOPO_SCALE for n in nodes)
     col_order = list(_COL_ORDER)
     if has_text:
         col_order.append('text')
@@ -474,6 +495,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
         col_order.append('fog_end')
     if has_show_text:
         col_order.append('show_text')
+    if has_topo_scale:
+        col_order.append('topo_scale')
     if has_tag_color_mode:
         col_order.append('tag_color_mode')
     if has_tag_color:
@@ -546,6 +569,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
                 row['fog_end'] = node.fog_end
             if has_show_text:
                 row['show_text'] = node.show_text
+            if has_topo_scale:
+                row['topo_scale'] = node.topo_scale
             if has_tag_color_mode:
                 row['tag_color_mode'] = node.tag_color_mode
             if has_tag_color:
@@ -565,6 +590,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
                     cells.append(str(val) if val else '')
                 elif col in _FLOAT_COLS:
                     cells.append(f'{float(val):.6f}')
+                elif col in _PRECISE_FLOAT_COLS:
+                    cells.append(f'{float(val):.10g}')
                 elif col in _INT_OR_FLOAT_COLS:
                     v = float(val)
                     cells.append(int(v) if v.is_integer() else f'{v:.6f}')

@@ -2,6 +2,11 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-08-12
+
+- Added **Topology Scale** (Properties panel, under Topology): a per-node control over how far one unit of a *child's* `translate` reaches, for the axes a topology reads as a distance rather than an angle. It fixes the long-standing surprise where changing a parent's topology — by hand, or from a Channels track — flung its children off into empty space: values authored as degrees (0–360) are enormous when the new topology reads them as world units. Angular axes (longitude, latitude, orbital and tube angles) are never scaled, so turning it down can't distort a circular layout. The **ANTz** preset (1/180) reproduces ANTz's convention, where a linear axis spans the parent's own extent — a cube facet is 360 units across — and is the setting at which a layout survives switching between an angular and a linear topology. **Existing scenes are unaffected:** the default, and what any file without the new column loads as, is the behavior GlyphViz has always had. Also bindable as a Channels attribute, and a status-bar hint now names the control when a topology change does scatter a subtree.
+- Added a Draw Mode walkthrough to the [Guided Tour](getting-started/guided-tour.md), including painting Glyph Composer hyperglyphs as brushes.
+
 ## 2026-08-11
 
 - Added **Draw Mode** (**D** key, or the Properties panel's Draw Mode button): paint objects into the scene with the mouse. A click stamps one object — built from the New Object Defaults — onto the World Grid where the cursor lands; a drag stamps a trail of them at a configurable pixel spacing, and **Draw Z** sets each object's elevation. Stamped objects are real grid children, so a drawn scene saves and reloads like any other.

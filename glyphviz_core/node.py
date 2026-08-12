@@ -46,6 +46,25 @@ _GEO_SPHERE_IDS = frozenset({2, 3})   # GEO_SPHERE_WIRE, GEO_SPHERE (geometry_da
 ROTATION_MODE_EULER_XYZ = 0
 ROTATION_MODE_HEADING_TILT_ROLL = 1
 
+# Node.topo_scale landmarks (see the field's own comment for the full rule).
+# A translate axis a topology reads as a DISTANCE is multiplied by this; an
+# axis it reads as an ANGLE never is.
+#
+# 1.0 — a translate unit is a world unit. GlyphViz's behavior since its first
+#   commit, so it is also what a CSV missing the column loads as: every file
+#   written before this field existed renders exactly as it always has.
+# 1/180 — ANTz's convention, in which a topology's linear axes span the
+#   parent's own extent: translate ±180 reaches the edge of a cube facet
+#   (360 units across a facet), the same way ±180 of longitude wraps a
+#   sphere. This is the value at which switching a parent between an angular
+#   and a linear topology leaves its children roughly where they were, which
+#   is the whole point of the field. Rod already hardcodes this convention
+#   for its length parameter (topology._rod_offset), and a World Grid globe's
+#   GRID_GLOBE_RADIUS above is the same 180/pi correspondence seen from the
+#   other side.
+DEFAULT_TOPO_SCALE = 1.0
+TOPO_SCALE_ANTZ = 1.0 / 180.0
+
 # Scene-wide blend mode, read from the World node (type=0) only — see
 # Scene.world_node(). Mirrors ANTz's global "transparency mode" hotkey (8),
 # documented as a scene-wide toggle, not a per-glyph one (User-Commands.md's
@@ -125,6 +144,22 @@ class Node:
     hide: int
     topo: int
     ratio: float = 0.1
+    # How far one unit of a CHILD's translate reaches when this node's
+    # topology treats that axis as a DISTANCE rather than an angle (Cube face
+    # u/v, Pin/Cylinder height, altitude above a sphere, plain Cartesian x/y/z
+    # — see topology.LINEAR_PLACEMENT_AXES). Angular axes (longitude/latitude,
+    # orbital and tube angles) and terms already proportional to the parent's
+    # base radius (Rod's length parameter, Spiral's helical rise) are never
+    # scaled, so this cannot disturb a circular layout.
+    #
+    # 1.0 (the default, and what a CSV missing the column loads as) = a
+    # translate unit is a world unit, GlyphViz's behavior since its first
+    # commit. TOPO_SCALE_ANTZ places a child at translate 180 exactly on the
+    # edge of a cube facet, reproducing ANTz's "360 units across a facet"
+    # convention, which is what makes an angular layout survive a switch to a
+    # linear topology intact. Lives on the PARENT because it is the parent's
+    # coordinate system being described — the same reason `ratio` does.
+    topo_scale: float = 1.0
     subspace: int = 0
     texture_id: int = 0
     mesh_id: int = 0   # selects an imported GEO_MESH shape (see mesh_loader.py); no ANTz/GaiaViz equivalent

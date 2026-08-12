@@ -67,9 +67,10 @@ category) rather than a color.
 
 ### Shape
 
-`ratio`, `topo` (clamped 0–17), `geometry` (clamped 0–28), `mesh_id` — morph
-a glyph's form, not just its size. `mesh_id` selects among meshes imported at
-runtime via *File → Import Mesh*.
+`ratio`, `topo` (clamped 0–17), `topo_scale`, `geometry` (clamped 0–28),
+`mesh_id` — morph a glyph's form, not just its size. `mesh_id` selects among
+meshes imported at runtime via *File → Import Mesh*. `topo_scale` is a plain
+float multiplier, unclamped.
 
 `topo` and `geometry` are integer flip-books like `texture_id`: hold a value
 for several frames rather than stepping it every frame, or the scene reads as
@@ -98,13 +99,19 @@ changes the entire scene's mood at once, with no per-glyph animation data.
 
 ## What cascades to children
 
-`translate`/`rotate`/`scale` and their rates, plus the three shape fields
-`ratio`, `topo` and `geometry`, change where a node's **descendants** sit — so
-animating them on a parent re-places the whole subtree:
+`translate`/`rotate`/`scale` and their rates, plus the four shape fields
+`ratio`, `topo`, `topo_scale` and `geometry`, change where a node's
+**descendants** sit — so animating them on a parent re-places the whole
+subtree:
 
 - `ratio` is the parent's placement radius on Torus/Ztorus topologies.
 - `topo` *is* the child-placement rule; animating it re-lays-out the children
   into a different arrangement entirely.
+- `topo_scale` sizes that rule's coordinate system (see
+  [Topologies](topologies.md)). Worth pairing with `topo`: stepping from an
+  angular topology to a linear one reads children authored in degrees as
+  distances ~180× larger, and a `topo_scale` track timed to the same steps
+  keeps them in frame.
 - `geometry` matters on a World Grid (type=6), where sphere vs. non-sphere
   geometry switches children between globe (KML lon/lat) and flat-window
   placement.

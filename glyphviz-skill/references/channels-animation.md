@@ -43,7 +43,7 @@ are restored to their CSV values.
 | Velocities | `translate_rate_x/y/z`, `rotate_rate_x/y/z`, `scale_rate_x/y/z` | the channel sets the *speed*; the viewport integrates it at ~60 cycles/s. The integrated position/rotation persists after Stop (only the rate itself resets) |
 | Color | `color_r/g/b/a` | literal values, rounded and clamped 0–255 |
 | Palette color | `palette_id`, `color_index` | resolved to literal `color_r/g/b` **every frame** — the one place palette resolution happens automatically instead of on a `=`/`-`/`Alt+=` keypress. `palette_id` clamps to 0–25, `color_index` wraps within the palette's own size (20 or 128), `color_a` is never touched. See `color-palettes.md` |
-| Shape | `ratio`, `topo`, `geometry`, `mesh_id` | morph a glyph's *form*, not just its size. `topo` clamps 0–17, `geometry` 0–28, `mesh_id` floors at 0. All three of `ratio`/`topo`/`geometry` re-place a node's **children** as well (see below) |
+| Shape | `ratio`, `topo`, `topo_scale`, `geometry`, `mesh_id` | morph a glyph's *form*, not just its size. `topo` clamps 0–17, `geometry` 0–28, `mesh_id` floors at 0; `topo_scale` is a plain float multiplier, unclamped. All of `ratio`/`topo`/`topo_scale`/`geometry` re-place a node's **children** as well (see below) |
 | Texture | `texture_id` | flip-book texture switching by `media/` index (see `textures-and-media.md`) |
 | Visibility | `hide`, `show_text` | flags — any positive track value reads as on, `0` as off. `hide` blanks the glyph without disturbing anything else; `show_text` pins/unpins its tag label |
 | Scene settings (World node only) | `render_mode`, `fog_enabled`, `fog_start`, `fog_end` | read only off the **World row (type=0)** — give that row a `ch_input_id` like any other node. `render_mode` clamps 0–6, `fog_enabled` is a flag, the two fog distances are plain floats. Inert on any other node type. The World row's own `color_r/g/b` is the scene **background color**, animated through the ordinary Color binding above |
@@ -58,13 +58,19 @@ optional minimum-glyph-size clamp is on (0.2 per axis, off by default).
 
 ### What cascades to children
 
-`translate`/`rotate`/`scale` (and their rates) plus the three shape fields
-`ratio`, `topo`, `geometry` change where a node's **descendants** sit, so
-animating them on a parent re-places the whole subtree:
+`translate`/`rotate`/`scale` (and their rates) plus the four shape fields
+`ratio`, `topo`, `topo_scale`, `geometry` change where a node's **descendants**
+sit, so animating them on a parent re-places the whole subtree:
 
 - `ratio` is the parent's placement radius on Torus/Ztorus topologies.
 - `topo` *is* the child-placement rule — animating it re-lays-out the
   children into a different arrangement entirely.
+- `topo_scale` sizes that rule's coordinate system (see `topologies.md`).
+  Pair it with `topo`: a parent stepping from an angular topology to a linear
+  one throws children authored in degrees ~180× further out on the frame it
+  switches, and a `topo_scale` track timed to the same steps holds them in
+  frame. `Channel_Parameters_Example` uses a static value for this; a track
+  lets each topology in a cycle get its own.
 - `geometry` matters on a World Grid (type=6), where sphere vs. non-sphere
   geometry is what switches children between globe (KML lon/lat) and flat
   window placement. On an ordinary glyph it is purely cosmetic.

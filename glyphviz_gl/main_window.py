@@ -1,4 +1,5 @@
 import copy
+import math
 import os
 import sys
 from pathlib import Path
@@ -6,6 +7,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QAbstractSpinBox,
     QCheckBox,
     QColorDialog,
     QComboBox,
@@ -46,6 +48,7 @@ from glyphviz_core.geometry_data import (
 )
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
+    DEFAULT_TOPO_SCALE, TOPO_SCALE_ANTZ,
     GRID_DEFAULT_EXTENTS, GRID_DEFAULT_SEGMENTS,
     NODE_TYPE_GRID, NODE_TYPE_LINK, NODE_TYPE_WORLD,
     RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
@@ -66,6 +69,50 @@ from .texture_manager import _IMAGE_EXTS as _TEX_IMAGE_EXTS
 from .viewport import Viewport
 
 _AUDIO_TICK_MS = 33   # redraw rate while Channels playback is audio-driven (~30 Hz)
+
+# --- Topology Scale inspector control (Node.topo_scale) ----------------------
+# The useful range spans several orders of magnitude — 1.0 ("a translate unit
+# is a world unit") down past TOPO_SCALE_ANTZ (1/180, "360 units spans a cube
+# facet") and up for deliberately exploded layouts — so the slider is
+# logarithmic: a fixed number of steps per decade, which makes a drag feel the
+# same at 0.005 as at 5. The spin box beside it takes exact values.
+_TOPO_SCALE_MIN = 1e-4
+_TOPO_SCALE_MAX = 1e2
+_TOPO_SCALE_STEPS_PER_DECADE = 100
+
+# A topology change that leaves some child this many times its parent's own
+# rendered radius away gets a status-bar hint pointing at Topology Scale (see
+# MainWindow._hint_scattered_children). 20x is comfortably past any legitimate
+# layout — a child ON its parent's surface sits at ~1x, and even a deliberately
+# spread-out subtree stays within single digits — while the case this is for
+# lands in the hundreds.
+_TOPO_SCALE_HINT_RATIO = 20.0
+_TOPO_SCALE_HINT_MS = 12000
+
+_TOPO_SCALE_SLIDER_MAX = int(
+    round((math.log10(_TOPO_SCALE_MAX) - math.log10(_TOPO_SCALE_MIN))
+          * _TOPO_SCALE_STEPS_PER_DECADE))
+
+
+def _topo_scale_to_slider(value: float) -> int:
+    """Node.topo_scale -> log slider position, clamped to the slider's range."""
+    if value <= _TOPO_SCALE_MIN:
+        return 0
+    pos = ((math.log10(value) - math.log10(_TOPO_SCALE_MIN))
+           * _TOPO_SCALE_STEPS_PER_DECADE)
+    return max(0, min(_TOPO_SCALE_SLIDER_MAX, int(round(pos))))
+
+
+def _slider_to_topo_scale(pos: int) -> float:
+    """Log slider position -> Node.topo_scale. Snaps the exact-decade
+    positions (…, 0.01, 0.1, 1.0, 10.0) to clean values rather than the
+    10**-15.999999 the float math would otherwise land on, so a user who
+    drags to the 1.0 tick gets exactly 1.0 back — the value that omits the
+    CSV column entirely."""
+    exp = math.log10(_TOPO_SCALE_MIN) + pos / _TOPO_SCALE_STEPS_PER_DECADE
+    if pos % _TOPO_SCALE_STEPS_PER_DECADE == 0:
+        return float(10.0 ** round(exp))
+    return 10.0 ** exp
 
 # Shared by the Camera toolbar's Fly button and the View menu item.
 _FLY_MODE_TIP = (
@@ -1417,6 +1464,73 @@ class MainWindow(QMainWindow):
             self._insp_topo.addItem(TOPO_NAMES.get(topo_id, f"Topology {topo_id}"), topo_id)
         self._insp_topo.currentIndexChanged.connect(self._on_insp_topo_changed)
 
+        # Topology Scale (Node.topo_scale) — sits directly under Topology
+        # because it describes the same thing: this node's coordinate system
+        # for its children. Spin box for an exact value, log slider to feel
+        # for one, and two preset buttons for the values that mean something.
+        topo_scale_widget = QWidget()
+        topo_scale_layout = QHBoxLayout(topo_scale_widget)
+        topo_scale_layout.setContentsMargins(0, 0, 0, 0)
+        topo_scale_layout.setSpacing(4)
+        self._insp_topo_scale = QDoubleSpinBox()
+        self._insp_topo_scale.setRange(_TOPO_SCALE_MIN, _TOPO_SCALE_MAX)
+        self._insp_topo_scale.setDecimals(6)
+        self._insp_topo_scale.setStepType(
+            QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
+        self._insp_topo_scale.setKeyboardTracking(False)
+        self._insp_topo_scale.setMaximumWidth(90)
+        self._insp_topo_scale.valueChanged.connect(self._on_insp_topo_scale_changed)
+        self._insp_topo_scale_slider = QSlider(Qt.Orientation.Horizontal)
+        self._insp_topo_scale_slider.setRange(0, _TOPO_SCALE_SLIDER_MAX)
+        self._insp_topo_scale_slider.setTickInterval(_TOPO_SCALE_STEPS_PER_DECADE)
+        self._insp_topo_scale_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._insp_topo_scale_slider.valueChanged.connect(
+            self._on_insp_topo_scale_slider)
+        self._insp_topo_scale_one = QPushButton("1:1")
+        self._insp_topo_scale_one.setMaximumWidth(34)
+        self._insp_topo_scale_one.setToolTip(
+            "Back to 1.0: one translate unit = one world unit.\n"
+            "GlyphViz's original behavior, and what every file that has no\n"
+            "topo_scale column loads as."
+        )
+        self._insp_topo_scale_one.clicked.connect(
+            lambda: self._set_insp_topo_scale(DEFAULT_TOPO_SCALE))
+        self._insp_topo_scale_antz = QPushButton("ANTz")
+        self._insp_topo_scale_antz.setMaximumWidth(44)
+        self._insp_topo_scale_antz.setToolTip(
+            f"ANTz convention ({TOPO_SCALE_ANTZ:.6f} = 1/180): a linear axis\n"
+            "spans this glyph's own extent, so translate 180 reaches the edge\n"
+            "of a cube facet just as 180 degrees of longitude reaches the far\n"
+            "side of a sphere.\n"
+            "This is the setting at which switching between an angular and a\n"
+            "linear topology leaves the children roughly where they were."
+        )
+        self._insp_topo_scale_antz.clicked.connect(
+            lambda: self._set_insp_topo_scale(TOPO_SCALE_ANTZ))
+        topo_scale_layout.addWidget(self._insp_topo_scale)
+        topo_scale_layout.addWidget(self._insp_topo_scale_slider, 1)
+        topo_scale_layout.addWidget(self._insp_topo_scale_one)
+        topo_scale_layout.addWidget(self._insp_topo_scale_antz)
+        for w in (topo_scale_widget, self._insp_topo_scale,
+                  self._insp_topo_scale_slider):
+            w.setToolTip(
+                "How far one unit of a CHILD's translate reaches, for the axes\n"
+                "this node's topology reads as a DISTANCE rather than an angle\n"
+                "(a Cube facet's two axes, Pin/Cylinder height, altitude above\n"
+                "a Sphere, all three axes of a plain Cartesian topology).\n"
+                "\n"
+                "Longitude, latitude, orbital and tube angles are never scaled,\n"
+                "so this can never distort a circular layout — turn it down and\n"
+                "a sphere's children stay exactly on the sphere.\n"
+                "\n"
+                f"1.0 = one translate unit is one world unit (the default).\n"
+                f"{TOPO_SCALE_ANTZ:.6f} = ANTz (360 units across a cube facet).\n"
+                "\n"
+                "Set on the PARENT — it describes that node's coordinate\n"
+                "system, the same way Topology and Ratio do. Turn it down when\n"
+                "children authored in degrees fly off under a linear topology."
+            )
+
         self._insp_subspace = QComboBox()
         for face_id, face_name in enumerate(CUBE_FACE_NAMES):
             self._insp_subspace.addItem(f"{face_id}: {face_name}", face_id)
@@ -1498,6 +1612,7 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("", self._insp_scale_lock)
         insp_layout.addRow("Geometry:", self._insp_geo)
         insp_layout.addRow("Topology:", self._insp_topo)
+        insp_layout.addRow("Topo Scale:", topo_scale_widget)
         insp_layout.addRow("Facet:",    self._insp_subspace)
         insp_layout.addRow("Ratio:",    self._insp_ratio)
         insp_layout.addRow("Texture ID:", self._insp_texture_id)
@@ -2698,6 +2813,10 @@ class MainWindow(QMainWindow):
         else:
             msg = f"Cycled topology {step:+d} on {len(targets)} node(s)."
         self._after_attr_cycle(targets, msg)
+        # Overrides the message above when it applies — a subtree that just
+        # vanished off screen is more urgent news than which topo id we landed
+        # on (which the inspector shows anyway).
+        self._hint_scattered_children(targets)
 
     def _cycle_selected_color_index(self, step: int):
         """= \\ -: step each selected node's color_index within its own
@@ -2944,6 +3063,7 @@ class MainWindow(QMainWindow):
         self._insp_rotation_mode.setCurrentIndex(max(idx, 0))
         self._insp_rotation_mode.blockSignals(False)
 
+        self._refresh_topo_scale_controls(node)
         self._refresh_palette_controls(node)
         self._refresh_color_btn(node)
 
@@ -3022,6 +3142,7 @@ class MainWindow(QMainWindow):
         self._insp_rotation_mode.setCurrentIndex(max(idx, 0))
         self._insp_rotation_mode.blockSignals(False)
 
+        self._refresh_topo_scale_controls(primary)
         self._refresh_palette_controls(primary)
         self._refresh_color_btn(primary)
 
@@ -3185,6 +3306,79 @@ class MainWindow(QMainWindow):
         self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.scene_invalidate()
 
+    def _refresh_topo_scale_controls(self, node: Node):
+        """Sync the Topology Scale spin box and its log slider from a node."""
+        for w in (self._insp_topo_scale, self._insp_topo_scale_slider):
+            w.blockSignals(True)
+        self._insp_topo_scale.setValue(node.topo_scale)
+        self._insp_topo_scale_slider.setValue(_topo_scale_to_slider(node.topo_scale))
+        for w in (self._insp_topo_scale, self._insp_topo_scale_slider):
+            w.blockSignals(False)
+
+    def _on_insp_topo_scale_changed(self, value: float):
+        """Spin-box edit: apply to every selected node (the absolute-value
+        multi-select rule Topology/Ratio/Geometry already use), and re-place
+        their children."""
+        self._insp_topo_scale_slider.blockSignals(True)
+        self._insp_topo_scale_slider.setValue(_topo_scale_to_slider(value))
+        self._insp_topo_scale_slider.blockSignals(False)
+        if not self._selected_nodes:
+            return
+        for node in self._selected_nodes:
+            node.topo_scale = value
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
+        self._viewport.scene_invalidate()
+
+    def _on_insp_topo_scale_slider(self, pos: int):
+        """Slider drag: the spin box is the single point that applies the
+        value, so route through it rather than duplicating the apply."""
+        self._insp_topo_scale.setValue(_slider_to_topo_scale(pos))
+
+    def _set_insp_topo_scale(self, value: float):
+        """The 1:1 / ANTz preset buttons.
+
+        Applies the exact constant to the selection and then syncs the
+        controls, rather than routing through the spin box: the spin box shows
+        6 decimals, which would store the ANTz preset as 0.005556 instead of
+        1/180. The displayed value is a rounded view of the real one — a typed
+        edit still means exactly what it says.
+        """
+        if not self._selected_nodes:
+            return
+        for node in self._selected_nodes:
+            node.topo_scale = value
+        self._refresh_topo_scale_controls(self._selected_nodes[0])
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
+        self._viewport.scene_invalidate()
+
+    def _hint_scattered_children(self, nodes: list[Node]) -> None:
+        """After a topology change, say something if the change just flung the
+        children off into the distance.
+
+        Switching a parent from an angular topology to a linear one reads
+        translate values authored as degrees as world units instead, which can
+        move a child hundreds of times its parent's own radius away — far
+        enough that it is off screen with no hint as to where it went, and the
+        single most confusing thing a new user can do to a scene. The field
+        that fixes it (Topology Scale) is not one they would think to look
+        for, so name it. Only fires on a parent whose children are still at a
+        neutral topo_scale, since a deliberately-tuned value is not a mistake.
+        """
+        candidates = [n for n in nodes if n.topo_scale == DEFAULT_TOPO_SCALE]
+        if not candidates:
+            return
+        ratio, parent_id = self._viewport.scene.worst_child_placement_ratio(
+            n.id for n in candidates)
+        if ratio < _TOPO_SCALE_HINT_RATIO:
+            return
+        suggestion = TOPO_SCALE_ANTZ if ratio > 1.0 else DEFAULT_TOPO_SCALE
+        self.statusBar().showMessage(
+            f"Node {parent_id}: children are now {ratio:.0f}x its own radius "
+            f"away — lower its Topo Scale (try the ANTz preset, "
+            f"{suggestion:.4f}) to bring them back in.",
+            _TOPO_SCALE_HINT_MS,
+        )
+
     def _on_insp_texture_id_changed(self, value: float):
         if not self._selected_nodes:
             return
@@ -3277,6 +3471,7 @@ class MainWindow(QMainWindow):
         self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._update_sel_values()
         self._viewport.scene_invalidate()
+        self._hint_scattered_children(self._selected_nodes)
 
     def _on_insp_subspace_changed(self, _idx: int):
         if not self._selected_nodes:

@@ -12,7 +12,8 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from pathlib import Path
 
 from glyphviz_core.node import (
-    Node, GRID_GLOBE_RADIUS, NON_VISUAL_TYPES, NODE_TYPE_GRID, NODE_TYPE_LINK,
+    Node, DEFAULT_TOPO_SCALE,
+    GRID_GLOBE_RADIUS, NON_VISUAL_TYPES, NODE_TYPE_GRID, NODE_TYPE_LINK,
     RENDER_MODE_NORMAL, RENDER_MODE_ADDITIVE, RENDER_MODE_SUBTRACTIVE,
     RENDER_MODE_DARK, RENDER_MODE_OFF, RENDER_MODE_SCREEN, RENDER_MODE_PREMULTIPLIED,
     WORLD_DEFAULT_BG_RGB, REF_GRID_DEFAULT_RGB,
@@ -23,6 +24,7 @@ from glyphviz_core import gizmo as gz
 from glyphviz_core.scene import DEFAULT_SCALE_FLOOR, NO_SCALE_FLOOR, Scene
 from glyphviz_core.topology import (
     TOPO_NONE, TOPO_PLANE, TOPO_PLOT, TOPO_SURFACE, TOPO_VIDEO,
+    linear_placement_axes,
 )
 from glyphviz_core.mesh_loader import load_mesh_file as _load_mesh_data
 
@@ -494,6 +496,12 @@ class Viewport(QOpenGLWidget):
     def nodes(self) -> list[Node]:
         """The current node list (read-only; use set_nodes to replace)."""
         return self._scene.nodes
+
+    @property
+    def scene(self) -> Scene:
+        """The live Scene, for callers that need its resolved world transforms
+        (read-only; use set_nodes to replace the node list)."""
+        return self._scene
 
     def scene_invalidate(self):
         """Mark scene transforms stale and request a repaint.
@@ -3574,16 +3582,33 @@ class Viewport(QOpenGLWidget):
         parent is scaled. Applied only where translate really is a linear
         length: World Grid parents and Cartesian-mapping topologies —
         angular topologies' translate fields are degrees, left untouched.
+
+        The parent's topo_scale is a second such factor, and needs handling
+        for exactly the same reason on exactly the same grounds: it multiplies
+        the distance-valued translate axes (topology.LINEAR_PLACEMENT_AXES),
+        so without dividing it out a parent retuned to TOPO_SCALE_ANTZ would
+        drag its children at 1/180 speed. It is per-axis and covers every
+        topology with a linear axis, not just the Cartesian ones — a Cube
+        parent's face coordinates are as much a length as a Plane's.
         """
         parent = self._scene.node_by_id(node.parent_id)
-        if (parent is None or parent is node
-                or (parent.type != NODE_TYPE_GRID
-                    and parent.topo not in _CARTESIAN_PARENT_TOPOS)):
+        if parent is None or parent is node:
             return {'x': 1.0, 'y': 1.0, 'z': 1.0}
-        s = self._scene.world_scale(parent.id)
-        if s is None:
-            return {'x': 1.0, 'y': 1.0, 'z': 1.0}
-        return {axis: max(abs(v), 1e-9) for axis, v in zip('xyz', s)}
+        div = {'x': 1.0, 'y': 1.0, 'z': 1.0}
+        if parent.topo_scale != DEFAULT_TOPO_SCALE:
+            # linear_placement_axes returns all-False for a World Grid parent,
+            # whose children are exempt from topo_scale entirely.
+            k = max(abs(parent.topo_scale), 1e-9)
+            for axis, is_linear in zip('xyz', linear_placement_axes(parent)):
+                if is_linear:
+                    div[axis] = k
+        if (parent.type == NODE_TYPE_GRID
+                or parent.topo in _CARTESIAN_PARENT_TOPOS):
+            s = self._scene.world_scale(parent.id)
+            if s is not None:
+                for axis, v in zip('xyz', s):
+                    div[axis] *= max(abs(v), 1e-9)
+        return div
 
     def wheelEvent(self, event):
         delta = event.angleDelta().y()

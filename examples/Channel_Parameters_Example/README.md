@@ -22,6 +22,22 @@ and `geometry` re-place a node's **children**, not just its own appearance, so
 those stations show a whole subtree rearranging from a single track. The other
 five change only what is drawn.
 
+## The topology subtlety
+
+Station 2's 12 children are placed in **degrees** (`translate_x` 0…330), which
+is what Sphere, Torus, Cylinder and Spiral all want. Cube does not: it reads
+`translate_x` as a **distance**, so the same 330 is 330 world units — seven
+stations' worth — and the children vanish the instant the cycle reaches Cube.
+
+The fix is that parent's **Topology Scale** (`topo_scale`), set here to ANTz's
+1/180. A linear axis then spans the parent's own extent — translate 180 reaches
+the edge of a cube facet exactly as 180° of longitude reaches the far side of a
+sphere — and all five topologies keep their children on the station. Select the
+station and press the **ANTz** / **1:1** buttons next to Topo Scale in the
+Properties panel to watch the difference live.
+
+`topo_scale` is itself bindable, so a scene can animate it alongside `topo`.
+
 Station 4 is the one that changes how you author data: a single track carrying
 a palette index replaces the three-track `color_r`/`color_g`/`color_b` pattern
 whenever a built-in ramp is close enough, cutting the tracks file to a third

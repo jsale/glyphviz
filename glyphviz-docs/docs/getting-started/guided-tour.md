@@ -184,6 +184,20 @@ Select a parent that has several children and press **J** (like O, but for topol
 
 Same children, same stored numbers, radically different structure — topology is *the* mechanism behind glyph design, and it nests: a sphere parent can have torus children with their own children on each ring.
 
+!!! warning "If the children vanish when you press J"
+    You have found the one rough edge here. Some topologies read `translate_x`
+    as an **angle** (Sphere's longitude), others as a **distance** (a position
+    across a Cube's facet). A value of 200 is an ordinary angle but an enormous
+    distance, so children laid out around a sphere can shoot off into empty
+    space when the parent becomes a Cube or a Plane.
+
+    The fix is one control: select the parent and drop its **Topo Scale**
+    (Properties panel, right under Topology) — the **ANTz** preset button next
+    to it is the value at which a layout authored in degrees survives the
+    switch intact. It only ever scales the distance-style axes, so it can't
+    distort a sphere or torus arrangement. Details:
+    [Topologies → Topology Scale](../reference/topologies.md#topology-scale-when-children-fly-off-after-a-topology-change).
+
 Two examples make this concrete; both ship in the examples set:
 
 - **`Topology_Example`** — a labeled scene laying the topologies out side by side, each parent showing how its children place. Load its `topology_example_gv_node.csv` and orbit around.
@@ -195,7 +209,51 @@ The full placement math, per topology: [Topologies reference](../reference/topol
 
 ![The Topology_Example scene: labeled stations for Cube, Sphere, Torus, Cylinder, Pin, and Rod topologies, each placing the same children differently](../assets/tour/tour-12b-topology-example.png)
 
-## 13. Where to go next
+## 13. Paint a scene — Draw Mode
+
+Everything so far built the scene one **N** press at a time. **Draw Mode**
+builds it by the hundred: press **D** (or click **Draw Mode** in the
+Properties panel's Create group) and the mouse becomes a brush.
+
+The cursor turns into a crosshair. Now:
+
+- **Click** anywhere on the ground grid — one object appears where you
+  clicked, built from the same New Object Defaults that **N** uses.
+- **Click and drag** — a *trail* of them follows the cursor, one every
+  **Stamp Spacing** pixels (30 by default; set it to 0 for a dense ribbon).
+- **Right-drag still orbits** and the wheel still zooms, so you can circle
+  around and keep drawing from a new angle without leaving the mode.
+
+If the scene has no World Grid, entering Draw Mode creates one — the grid is
+what the brush paints onto, and every stamped object becomes a real child of
+it. That matters more than it sounds: move, rotate or scale the grid
+afterwards and your entire drawing travels with it, and the whole thing saves
+to CSV like anything else you have built.
+
+Then the part worth the price of admission. Open **Tools → Glyph Composer**,
+build a small hierarchy — a trunk with a few branches will do — and press
+**Use as Draw Brush**. Draw Mode switches on with that hyperglyph as the
+brush, and now every click plants the *entire tree*. Drag across the grid and
+you have painted a forest.
+
+Two controls keep a forest from looking like wallpaper, both off by default:
+
+- **Heading Jitter ±°** spins each stamp by a random amount, so no two face
+  the same way.
+- **Scale Jitter ±%** varies each stamp's size, proportions preserved.
+
+Both draw one random value per *stamp*, not per node, so each tree stays
+internally coherent while differing from its neighbours.
+
+**Esc** or **D** exits. Full gesture reference:
+[Viewer Navigation → Draw Mode](../reference/viewer-navigation.md#draw-mode-painting-objects).
+
+!!! tip "Undo doesn't exist yet"
+    A stroke you don't like is easiest to remove with **Shift+drag** (rubber-band
+    select over it) then **Delete**. Draw onto a fresh grid if you want to keep
+    experiments separate from work you're happy with.
+
+## 14. Where to go next
 
 You now have the core loop: create (N / Shift+N), navigate (Tab / arrows), select, shape (O / J / Properties), and compose hierarchies whose parents carry their children. From here:
 

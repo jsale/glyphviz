@@ -48,6 +48,7 @@ _ATTR_TO_FIELD: dict[str, str] = {
     # --- shape ---
     'ratio': 'ratio',
     'topo': 'topo',
+    'topo_scale': 'topo_scale',
     'geometry': 'geometry',
     'mesh_id': 'mesh_id',
     # --- palette color (resolved to color_r/g/b, see _resolve_palettes) ---
@@ -71,6 +72,12 @@ _ATTR_TO_FIELD: dict[str, str] = {
 #               Torus/Ztorus (topology.py's pratio term).
 #   topo      — a parent's topology is the entire child-placement rule; a
 #               node's own topo also picks up Rod's draw-scale factors.
+#   topo_scale — a parent's topo_scale scales how far its children's
+#               distance-valued translate axes reach. Animating it alongside
+#               topo is what lets a scene hold children in frame across a
+#               switch between an angular and a linear topology, instead of
+#               flinging them ~180x further out on the frame the topology
+#               changes.
 #   geometry  — normally cosmetic, but on a World Grid (type=6) sphere vs.
 #               non-sphere geometry is what switches child placement between
 #               globe (KML lon/lat) and flat window (Node.grid_is_globe).
@@ -85,7 +92,7 @@ _TRANSFORM_FIELDS = frozenset({
     'translate_rate_x', 'translate_rate_y', 'translate_rate_z',
     'rotate_rate_x', 'rotate_rate_y', 'rotate_rate_z',
     'scale_rate_x', 'scale_rate_y', 'scale_rate_z',
-    'ratio', 'topo', 'geometry',
+    'ratio', 'topo', 'topo_scale', 'geometry',
 })
 
 # Fields rounded to a whole number before being applied.

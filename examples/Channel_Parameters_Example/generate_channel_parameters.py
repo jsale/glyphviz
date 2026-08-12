@@ -48,9 +48,19 @@ NODE_COLS = [
     'rotate_x', 'rotate_y', 'rotate_z',
     'scale_x', 'scale_y', 'scale_z',
     'color_r', 'color_g', 'color_b', 'color_a',
-    'geometry', 'hide', 'topo', 'ratio',
+    'geometry', 'hide', 'topo', 'ratio', 'topo_scale',
     'palette_id', 'color_index', 'ch_input_id', 'text', 'show_text',
 ]
+
+# Station 2's parent (see below) carries ANTz's topology-coordinate scale,
+# 1/180: a linear topology's translate axis then spans the parent's own
+# extent, exactly as 180 degrees of longitude spans a sphere. Its 12 children
+# are placed in DEGREES (0..330), which every angular topology in TOPO_CYCLE
+# reads correctly but Cube reads as world units — at the default topo_scale
+# of 1.0 that throws them ~3000 units out, off screen and past every other
+# station, which is precisely the confusion this field exists to fix. Left as
+# a literal here rather than imported so the generator stays dependency-free.
+TOPO_SCALE_ANTZ = 1.0 / 180.0
 
 # (channel_id, track_id, attribute) — one station each.
 CH_MAP = [
@@ -73,7 +83,7 @@ def _row(**kw):
     row.update(dict(
         branch_level=0, scale_x=1.0, scale_y=1.0, scale_z=1.0,
         color_r=210, color_g=210, color_b=210, color_a=255,
-        geometry=11, topo=0, ratio=0.1, text='',
+        geometry=11, topo=0, ratio=0.1, topo_scale=1.0, text='',
     ))
     row.update(kw)
     return row
@@ -129,12 +139,16 @@ def build_nodes():
         nid += 1
 
     # -- station 2: topo. Children re-arrange as the parent's topology steps.
+    #    topo_scale (see the constant above) is what keeps them on this
+    #    station through the linear topologies in the cycle instead of
+    #    scattering them across the whole scene on the frame Cube comes up.
     topo_id = nid
     nodes.append(_row(
         id=topo_id, type=5, translate_x=station_x(1),
         scale_x=DEMO_SCALE, scale_y=DEMO_SCALE, scale_z=DEMO_SCALE,
         color_r=120, color_g=120, color_b=140, color_a=70,
         geometry=2, topo=2,                   # sphere wire shell
+        topo_scale=TOPO_SCALE_ANTZ,
         ch_input_id=2,
     ))
     nid += 1

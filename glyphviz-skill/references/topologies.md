@@ -32,6 +32,65 @@ origin and B = 1.
 Nothing auto-distributes: siblings land wherever their coordinates say. The
 generator computes the angles/positions (e.g. `i * 360/n` around a torus).
 
+## Topology Scale — angular axes vs. distance axes
+
+Every topology reads some of a child's translate axes as **angles** and others
+as **distances**. Sphere reads `translate_x` as longitude, so 0…360 wraps the
+parent once whatever its size; Cube reads `translate_x` as a position across a
+facet, so 0…360 is 360 **world units** — hundreds of times a typical glyph.
+Values authored for one reading are wildly wrong under the other, which is why
+switching a parent's topology from Sphere to Cube used to fling its children
+out of sight.
+
+The parent's **`topo_scale`** (default **1.0**) multiplies exactly the
+distance-valued axes, and nothing else:
+
+| Parent topo | scaled by `topo_scale` | never scaled |
+|---|---|---|
+| None, Plane, Video, Plot, Surface | tx, ty, tz | — |
+| Cube, Zcube | tx, ty (face u/v), tz (height off the face) | the base-radius face offset |
+| Sphere, Point, Zsphere | tz (altitude) | tx, ty (lon/lat) |
+| Torus, Ztorus | tz (tube offset) | tx, ty (orbital/tube angles) |
+| Cylinder, Zcylinder | ty (height), tz (radial) | tx (angle) |
+| Rod | tz (radial) | ty (angle), tx (already a fraction of rod length) |
+| Zrod | ty (height), tz (radial) | tx (angle) |
+| Pin | tx (height), ty, tz | the base-radius offset |
+| Spiral | ty (rise offset), tz (radial) | tx (helix angle and its rise) |
+| **World Grid children** | nothing — exempt | all (the grid's footprint is drawn from the same window its children's coordinates are read in) |
+| **Root nodes** | nothing — exempt | all (`translate` IS the world position) |
+
+Because angular axes are never touched, no value of `topo_scale` can distort a
+circular layout: turn it down and a sphere's children stay exactly on the
+sphere.
+
+**Two landmarks:**
+
+- **`1.0`** — one translate unit is one world unit. GlyphViz's behavior since
+  its first commit, and what a file with no `topo_scale` column loads as, so
+  every pre-existing scene renders unchanged.
+- **`1/180` ≈ `0.005556`** — the **ANTz convention**: a linear axis spans the
+  parent's own extent, so a facet is 360 units across and translate 180 lands
+  on its edge, exactly as 180° of longitude reaches the far side of a sphere.
+  This is the setting at which a layout authored in degrees survives a switch
+  between an angular and a linear topology intact.
+
+In the app it is the **Topo Scale** row of the Properties panel, directly under
+Topology, with `1:1` and `ANTz` preset buttons; edits apply to the whole
+selection, so *Edit → Select By → Topology → Cube* then one slider drag retunes
+every cube parent in a scene. It is also bindable as a Channels attribute, so a
+scene animating `topo` can animate `topo_scale` alongside it.
+
+Worked example — 12 children at `translate_x = 0, 30, … 330` under a parent of
+radius 9 (engine output, farthest child):
+
+| Parent topo | at `topo_scale` 1.0 | at 1/180 |
+|---|---|---|
+| Sphere | 9.0 | 9.0 |
+| Torus | 9.0 | 9.0 |
+| Cylinder | 405.1 | 9.3 |
+| Spiral | 413.3 | 13.8 |
+| Cube | **2997.5** | 18.9 |
+
 ## Outward orientation (applied before the child's own rotate_x/y/z)
 
 Children of circular/surface topologies get a base rotation so a child posed

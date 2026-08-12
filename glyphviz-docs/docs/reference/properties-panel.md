@@ -105,7 +105,7 @@ by 10 units). Source: `main_window.py:499-572`.
 Below the defaults sits **Draw Mode** (**D** key) — a checkable button that
 turns the mouse into a brush: left click stamps one object built from the
 New Object Defaults onto the World Grid where the cursor lands, click-drag
-stamps a trail of them. Two controls tune it:
+stamps a trail of them. Five controls tune it:
 
 | Field | Type | Default |
 |---|---|---|
@@ -165,6 +165,7 @@ Topology, Ratio, and Color apply the same absolute value to all of them
 | *(Lock X/Y/Z together)* | — | checkbox | Ties the three Scale spin boxes together |
 | Geometry | `geometry` | combo, all 27 values | See [Geometries](geometries.md) |
 | Topology | `topo` | combo, all 18 values | See [Topologies](topologies.md) |
+| Topo Scale | `topo_scale` | spin box (6 decimals) + log slider, 0.0001–100, plus **1:1** and **ANTz** preset buttons | How far one unit of a **child's** translate reaches, for the axes this node's topology reads as a *distance* rather than an angle. Angular axes (lon/lat, orbital and tube angles) are never scaled, so it cannot distort a circular layout. `1.0` = one translate unit is one world unit (default); `1/180 ≈ 0.005556` = the ANTz convention, where a cube facet is 360 units across. Turn it down when children authored in degrees fly off after a switch to a linear topology — see [Topologies](topologies.md) |
 | Facet | `subspace` | combo, 6 named faces (`0: +X` … `5: -Z`) | Only meaningful when this node's **parent** uses Cube or Zcube topology |
 | Ratio | `ratio` | spin box, 0.01–1.0, 3 decimals | Torus minor/major radius proportion; also doubles as Point sprite size and Link/Plot line width (both `ratio × 20` px) |
 | Texture ID | `texture_id` | spin box, 0–9999, integer | 0 = none, 1 = first image in texture folder (alphanumeric), 2 = second, etc. |
