@@ -22,6 +22,13 @@ hyperglyph_lab/output/
 build/
 dist/
 
+# Linux release artifact (~164 MB), built by the GitHub Actions workflow and
+# downloaded here when testing the browser-GUI container: Dockerfile.linux's
+# `COPY . .` picks it up out of the working tree, so it has to sit at the repo
+# root, but it's a build output like anything in dist/ and must never land in
+# git history.
+GlyphViz.AppImage
+
 # Throwaway venv build_mac.sh creates on macOS
 .venv-build/
 

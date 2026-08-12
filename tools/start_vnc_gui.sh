@@ -15,4 +15,4 @@ sleep 1
 
 websockify -D --web=/usr/share/novnc/ 6080 localhost:5900
 
-exec python3 main.py
+exec /app/GlyphViz.AppImage

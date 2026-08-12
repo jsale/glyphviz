@@ -24,6 +24,7 @@ ENV NVIDIA_DRIVER_CAPABILITIES=all \
 # PID 1; see tools/start_vnc_gui.sh) with the real "xcb" platform plugin.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-venv xvfb x11vnc novnc websockify \
+        libfuse2 \
         libegl1 libgl1 libopengl0 libglu1-mesa libglib2.0-0 \
         libxkbcommon0 libxkbcommon-x11-0 libxcb-xkb1 \
         libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
