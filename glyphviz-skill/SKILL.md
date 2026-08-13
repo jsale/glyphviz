@@ -56,16 +56,26 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 5. `translate_x/y/z` are coordinates **in the parent's topology system**, not
    world units: lon/lat/alt under a Sphere parent, orbital-angle/tube-angle/
    elevation under a Torus parent, Cartesian under None/Plane.
-6. Rotations: if you hand-pose `rotate_x/y/z`, add a `rotation_mode` column
+6. The parent's optional **`topo_scale`** (default **1.0**) says how far one
+   unit of a child's `translate` reaches, on exactly the axes that parent's
+   topology reads as a **distance** rather than an angle. Angular axes
+   (longitude, latitude, orbital/tube angle) are never scaled, so no value of
+   it can distort a circular layout. Leave it at 1.0 for Cartesian-authored
+   scenes; set **1/180 ≈ 0.005556** (the ANTz convention: a linear axis spans
+   the parent's own extent) when you author a layout **in degrees** and want it
+   to survive a switch between an angular and a linear topology — without it,
+   0…360 on a Cube face is 360 *world units* and children fly out of sight.
+   See `references/topologies.md`.
+7. Rotations: if you hand-pose `rotate_x/y/z`, add a `rotation_mode` column
    and write **0** (Euler XYZ — each field spins its own axis). A file
    *without* the column loads in ANTz Heading/Tilt/Roll mode (Z-X-Z). If all
    rotations are 0, omit the column.
-7. Labels: prefer inline `text` (label) and `link` (URL/file for the U key)
+8. Labels: prefer inline `text` (label) and `link` (URL/file for the U key)
    columns — GlyphViz-native and simpler than a tag file. Use a companion
    `gv_tag.csv` only for ANTz/GaiaViz compatibility (`table_id` must be 0
    there). Labels are off by default (T toggles); show-all mode draws at
    most 500 tags per frame. Full rules: `references/tags-and-labels.md`.
-8. Node types: 5 = ordinary glyph; 0 = World (scene settings, never drawn);
+9. Node types: 5 = ordinary glyph; 0 = World (scene settings, never drawn);
    1 = Camera; 6 = World Grid (children attach explicitly via
    `parent_id = grid.id`, place by lon/lat); 7 = Link (edge `parent_id` →
    `child_id`).
@@ -99,6 +109,11 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 Z-variants (9–13) are the same shapes with children pulled to the
 center/axis. Full placement math, coordinate meanings per topology, and
 worked examples: `references/topologies.md`.
+
+Pick the topology to match the **shape of the data**, then set the parent's
+`topo_scale` to match the **units you author children in** (rule 6): degrees
+throughout → 1/180 on the linear-axis topologies, world units → leave 1.0.
+Mixing the two within one scene is fine — `topo_scale` is per-parent.
 
 ## Workflow
 
@@ -138,8 +153,10 @@ worked examples: `references/topologies.md`.
 - **Textures / video / audio**: `texture_id` is a 1-based index into the
   scene's `media/` folder (sorted: images, then videos; animated GIFs and
   videos animate automatically; video audio can be soloed to the selection).
-  See `references/textures-and-media.md` before authoring any textured
-  scene.
+  It applies to every **solid** geometry including the flat markers
+  Circle/Cross/Star (24/25/26) — but is silently ignored by the wireframes,
+  Point (22), Mesh (23), and plain Line links (27). See
+  `references/textures-and-media.md` before authoring any textured scene.
 
 ## Live-updating scenes
 
@@ -177,5 +194,26 @@ scene. Worked exemplar: `examples/RSS_News/`.
   globes, extents windows, the grid scale rule, multi-grid scenes, and
   engine-verified placement examples. **Read it before building any
   map/geographic scene.**
+- `references/troubleshooting.md` — the scene loaded, nothing errored, and it
+  still looks wrong: a symptom index of the eleven silent failure modes
+  (children flung away by a topology change, textures ignored on the wrong
+  geometry, inert palettes, labels that all vanish, …) with the cause and fix
+  for each. **Read it whenever a generated scene doesn't look right — and skim
+  it before generating, since most entries are cheaper to avoid than to
+  diagnose.**
 - `references/OUTLINE.md` — what's planned but not yet written; do not invent
   content for those areas, derive from `glyphviz_core/` source when available.
+
+## Worked examples
+
+`examples/` holds six complete, verified scenes with READMEs that explain the
+**design thinking**, not just the format. Read the closest one before designing
+a scene of your own:
+
+| If you're building… | Study |
+|---|---|
+| a hyperglyph — one repeating composite glyph carrying several variables | `Wind_Rose/`, `Decay_Chain/` |
+| a geographic or multi-grid scene | `SD_Seismicity/`, `Wind_Rose/Monsoon_Year/` |
+| time-series animation over many nodes | `Breathing_Century/`, `Decay_Chain/Secular_Equilibrium/` |
+| a deep multi-branch hierarchy under one clock | `Duel_of_Dynasties/` |
+| a live-data scene that regenerates and reloads | `RSS_News/` |

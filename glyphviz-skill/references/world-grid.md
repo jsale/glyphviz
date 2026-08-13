@@ -112,6 +112,16 @@ exaggeration control for elevation-as-data scenes.
 - With exactly one grid selected, the **World Grid panel** edits Shape
   (flat↔globe, preserving wire/solid — it's just a geometry change, fully
   CSV-native), the lon/lat window, and cell counts.
+- **Draw Mode** (the **D** key, added 2026-08-11) lets the user mouse-paint
+  new nodes straight onto a **flat** grid: each click stamps a child at the
+  cursor's lon/lat (drag paints a trail), either a single object or a whole
+  Glyph Composer hyperglyph, with optional per-stamp jitter. Globe grids
+  refuse stamps, and a scene with no grid at all gets a whole-earth one
+  created automatically on entry. Everything it makes is an ordinary child
+  row, saved by the normal K-key save — so a grid scene you generate doubles
+  as a **canvas the user can annotate by hand**. Worth mentioning in your
+  handoff notes for any map scene: it's the easiest way for someone to add
+  their own markers without touching the CSV.
 
 ## Scene recipes
 

@@ -49,7 +49,7 @@ All 20: `id`, `type`, `parent_id`, `branch_level`, `translate_x/y/z`,
 
 | Column | Default when column absent | Notes |
 |---|---|---|
-| `ratio` | 0.1 | Geometry/topology aspect parameter: a Torus parent's tube (minor) radius as a fraction of major radius — children of Torus/Ztorus parents sit on the tube defined by the **parent's** ratio; also drives Point-geometry marker size. |
+| `ratio` | 0.1 | Geometry/topology aspect parameter: a Torus parent's tube (minor) radius as a fraction of major radius — children of Torus/Ztorus parents sit on the tube defined by the **parent's** ratio. Also the **only** control over a Point glyph's size: `geometry` = 22 draws a `GL_POINTS` sprite `max(2, ratio × 20)` **pixels** wide, which ignores `scale_x/y/z` entirely and does not shrink with distance. Sizing a point cloud therefore means writing `ratio` per node, not `scale_*` — and if you want size to read as depth, use the flat markers (24/25/26) or a solid geometry instead. |
 | `topo_scale` | 1.0 | **GlyphViz-only.** How far one unit of a **child's** `translate` reaches, for the axes this node's topology reads as a **distance** rather than an angle (a Cube facet's two axes, Pin/Cylinder height, altitude above a Sphere, all three axes of the Cartesian family). Angular axes — longitude, latitude, orbital and tube angles — are never scaled, so no value of this can distort a circular layout. 1.0 = one translate unit is one world unit (GlyphViz's original behavior, hence the load default). **1/180 ≈ 0.005556 = the ANTz convention**, where a linear axis spans the parent's own extent: translate 180 reaches the edge of a cube facet exactly as 180° of longitude reaches the far side of a sphere. Set it on the **parent**, like `topo` and `ratio`. Extension column, written only when ≠ 1.0. See `topologies.md`. |
 | `subspace` / `facet` | 0 | Cube-topology face selector. `subspace` (GaiaViz spelling, 0-indexed) wins if present; else `facet` − 1 (legacy ANTz/GlyphViz spelling, 1-indexed: 1=+X, 2=−X, 3=+Y, 4=−Y, 5=+Z, 6=−Z), clipped at 0. `save_node_csv` always writes `facet`. |
 | `texture_id` | 0 | 0 = untextured; otherwise a 1-based index into the alphanumerically sorted files of the scene's `media/` folder (images first, then videos) — see `textures-and-media.md`. |
@@ -211,6 +211,16 @@ center/axis instead of on the rendered surface. Full placement math:
 | 10/11 | Octahedron wire/solid | 24/25/26 | Circle / Cross / Star flat markers (GlyphViz-only) |
 | 12/13 | Tetrahedron wire/solid | 27/28 | Line / Textured Prism (Link nodes only) |
 | 14/15 | Icosahedron wire/solid | | |
+
+Geometry never gates `texture_id` in the format, but only the solid primitives,
+the three flat markers (24/25/26 — textured since 2026-08-06), and the Link
+Prism (28) actually *render* a texture; on wireframes, Point (22), Mesh (23),
+and Line (27) it is read and silently ignored. Full table: `textures-and-media.md`.
+
+Point (22) is the one geometry whose on-screen size does **not** come from
+`scale_x/y/z`: it is a fixed-pixel sprite sized `max(2, ratio × 20)` px that
+never shrinks with distance. Markers 24/25/26 are ordinary world-space plates
+and do scale normally — reach for them when a point cloud needs depth cues.
 
 ## Tag companion file (`gv_tag.csv`)
 
