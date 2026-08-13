@@ -80,16 +80,25 @@ selection, so *Edit → Select By → Topology → Cube* then one slider drag re
 every cube parent in a scene. It is also bindable as a Channels attribute, so a
 scene animating `topo` can animate `topo_scale` alongside it.
 
-Worked example — 12 children at `translate_x = 0, 30, … 330` under a parent of
-radius 9 (engine output, farthest child):
+Worked example — 12 children at `translate_x = 0, 30, … 330`, `translate_y = 45`,
+`translate_z = 0` under a scale-9 parent at the default `ratio` (engine output:
+distance from the parent to its farthest child):
 
 | Parent topo | at `topo_scale` 1.0 | at 1/180 |
 |---|---|---|
 | Sphere | 9.0 | 9.0 |
-| Torus | 9.0 | 9.0 |
+| Torus | 8.8 | 8.8 |
 | Cylinder | 405.1 | 9.3 |
 | Spiral | 413.3 | 13.8 |
 | Cube | **2997.5** | 18.9 |
+
+Read the top two rows as the control: Sphere and Torus take **both** of those
+translate values as angles, so their children stay pinned to the parent's own
+surface and `topo_scale` moves nothing at all. (Torus lands at 8.8 rather than
+9.0 because a tube angle of 45° carries the child slightly inside the ring's
+major radius — geometry, not scaling.) The bottom three read `translate_y` as a
+height or an offset, and at 1.0 that single value throws children hundreds of
+units out; Cube reads `translate_x` that way too, which is why it goes furthest.
 
 ## Outward orientation (applied before the child's own rotate_x/y/z)
 

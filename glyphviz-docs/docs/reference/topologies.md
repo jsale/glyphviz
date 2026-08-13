@@ -62,13 +62,13 @@ sphere's children stay exactly on the sphere.
 | **1.0** (default) | One translate unit is one world unit. GlyphViz's original behavior, and what any file without a `topo_scale` column loads as — no existing scene changes. |
 | **1/180 ≈ 0.005556** (**ANTz** preset) | A linear axis spans the parent's own extent: a cube facet is 360 units across, so translate 180 lands on its edge exactly as 180° of longitude reaches the far side of a sphere. At this setting a layout authored in degrees survives a switch between an angular and a linear topology. |
 
-Twelve children at `translate_x = 0, 30, … 330` under a parent of radius 9,
-farthest child:
+Twelve children at `translate_x = 0, 30, … 330` and `translate_y = 45` under a
+scale-9 parent, farthest child:
 
 | Parent topology | at 1.0 | at 1/180 |
 |---|---|---|
 | Sphere | 9.0 | 9.0 |
-| Torus | 9.0 | 9.0 |
+| Torus | 8.8 | 8.8 |
 | Cylinder | 405.1 | 9.3 |
 | Spiral | 413.3 | 13.8 |
 | Cube | **2997.5** | 18.9 |
