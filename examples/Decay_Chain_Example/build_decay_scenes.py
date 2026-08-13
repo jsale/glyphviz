@@ -241,13 +241,19 @@ def add_chain(sb: SceneBuilder, parent_id: int, base_level: int,
     off_x = -(max(dn) + min(dn)) / 2.0 * CHART_XY
     off_y = -(max(dz) + min(dz)) / 2.0 * CHART_XY
 
+    # Level of this chain's own root hub. GlyphViz roots are branch_level 0
+    # (GaiaViz's convention of 1 does not apply), so a chain attached straight
+    # to the scene root sits at base_level; one hanging off a real parent node
+    # sits one deeper.
+    lvl0 = base_level + 1 if parent_id else base_level
+
     for key in order:
         nuc = nodes[key].nuc
         par = parent[key]
         if par is None:
             step_of[key] = 0
             hub = sb.add(type=5, parent_id=parent_id,
-                         branch_level=base_level + 1, topo=TOPO_NONE,
+                         branch_level=lvl0, topo=TOPO_NONE,
                          hide=1, geometry=GEO_CUBE, **root_kw)
             # shift the whole glyph so its footprint is centred on root_kw
             sb.rows[hub - 1]["translate_x"] += off_x
@@ -257,13 +263,13 @@ def add_chain(sb: SceneBuilder, parent_id: int, base_level: int,
             step_of[key] = step_of[pkey] + 1
             pnuc = nodes[pkey].nuc
             hub = sb.add(type=5, parent_id=hub_of[pkey],
-                         branch_level=base_level + 1 + step_of[key],
+                         branch_level=lvl0 + step_of[key],
                          topo=TOPO_NONE, hide=1, geometry=GEO_CUBE,
                          translate_x=(nuc.n - pnuc.n) * CHART_XY,
                          translate_y=(nuc.z - pnuc.z) * CHART_XY,
                          translate_z=STEP_RISE)
         hub_of[key] = hub
-        lvl = base_level + 1 + step_of[key]
+        lvl = lvl0 + step_of[key]
         stats.members += 1
         stats.max_depth = max(stats.max_depth, step_of[key])
 
@@ -331,19 +337,19 @@ def add_chain(sb: SceneBuilder, parent_id: int, base_level: int,
         pkey, mode, frac = par
         prgb = mode_style(mode)[0]
         sb.add(type=7, parent_id=hub_of[pkey], child_id=hub_of[key],
-               branch_level=base_level + 1, geometry=GEO_LINE,
+               branch_level=lvl0, geometry=GEO_LINE,
                ratio=0.05 + 0.10 * frac,
                color_r=prgb[0], color_g=prgb[1], color_b=prgb[2], color_a=170)
     for pkey, ckey, mode, frac in extra:
         prgb = mode_style(mode)[0]
         sb.add(type=7, parent_id=hub_of[pkey], child_id=hub_of[ckey],
-               branch_level=base_level + 1, geometry=GEO_LINE,
+               branch_level=lvl0, geometry=GEO_LINE,
                ratio=0.05 + 0.10 * frac,
                color_r=prgb[0], color_g=prgb[1], color_b=prgb[2], color_a=170)
 
     if label:
         top = max(step_of.values()) * STEP_RISE + 6.0 + label_lift
-        sb.add(type=5, parent_id=hub_of[root], branch_level=base_level + 2,
+        sb.add(type=5, parent_id=hub_of[root], branch_level=lvl0 + 1,
                translate_x=-off_x, translate_y=-off_y, translate_z=top,
                geometry=GEO_CIRCLE, ratio=0.02,
                scale_x=0.9, scale_y=0.9, scale_z=0.9,
