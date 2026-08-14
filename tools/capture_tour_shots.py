@@ -325,7 +325,9 @@ def shots_build_sequence(only):
         for _ in range(3):
             cap.new_root()
         cap.select(1)
-        cap.camera(70, 18, 32, target=(10.0, 0.0, 1.0))
+        # Roots step by the Placement Step (default 5), so three of them span
+        # x = 0..10 — frame the middle one.
+        cap.camera(70, 18, 24, target=(5.0, 0.0, 1.0))
         if "05" in only:
             cap.viewport_png(OUT_DIR / "tour-05-first-objects.png")
 

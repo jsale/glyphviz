@@ -68,12 +68,12 @@ That shape came from the **New Object Defaults** group in the Properties panel: 
 
 Make one change there now: set **Topology** to **None**. The panel's default, *Point*, is an ANTz convention that arranges a node's children *spherically around it* — translate values become angles. That's a powerful idea we'll meet properly in [section 12](#12-topologies-where-children-live), but for learning the hierarchy it's much clearer to work in plain Cartesian space, where translate values are ordinary X/Y/Z offsets.
 
-Press **N** a few more times: each new object steps 10 units along the X axis from the last, so they line up in a row rather than stacking invisibly on top of each other. These are **root-level** objects — they have no parent and sit directly in world space.
+Press **N** a few more times: each new object steps along the X axis from the last, so they line up in a row rather than stacking invisibly on top of each other. How far is the **Placement Step** at the bottom of the New Object Defaults — 5 units to start with, yours to change. Keep pressing past a full lap of 360 and the row wraps: X restarts at 0 and Y steps up one, so a long run arrays into a grid instead of a runaway line (see [section 12](#12-topologies-where-children-live) for why 360 is the magic number). These are **root-level** objects — they have no parent and sit directly in world space.
 
 !!! note "N is context-sensitive"
     With nothing selected (or a root-level object selected), N creates a new root object. If a *child* object is selected, N creates another child under the same parent — the same thing Shift+N does in section 8. When in doubt: click empty space to deselect, then N always makes a root.
 
-![Three octahedra created with N, spaced 10 units apart along X; the most recent one selected](../assets/tour/tour-05-first-objects.png)
+![Three octahedra created with N, evenly spaced along X; the most recent one selected](../assets/tour/tour-05-first-objects.png)
 
 ## 6. Fly to it and select it
 
@@ -112,7 +112,7 @@ The full catalog with pictures: [Geometries reference](../reference/geometries.m
 
 ## 8. Give it children — Shift+N
 
-With the octahedron selected, press **Shift+N**. A new object appears beside and slightly above it — a **child** of your octahedron. Press Shift+N several more times, and watch the children array themselves in a line: each new child places 5 units further along the parent's local **translate_x** axis, so siblings never stack.
+With the octahedron selected, press **Shift+N**. A new object appears beside and slightly above it — a **child** of your octahedron. ("Slightly above" is the **Placement Z** *child* setting, 5 units by default; it's what keeps the first child from being swallowed by its parent, and on a Sphere or Torus parent it's how far the child floats off the surface.) Press Shift+N several more times, and watch the children array themselves in a line: each new child places one **Placement Step** (5 units by default) further along the parent's local **translate_x** axis, so siblings never stack. Past a full lap of 360 the row wraps onto the next **translate_y** row, which is what keeps children on a *circular* parent from piling back onto the first one — you'll see that pay off in [section 12](#12-topologies-where-children-live).
 
 Notice the parent *stayed selected* the whole time — Shift+N is built for exactly this "pump out a batch of children" gesture.
 

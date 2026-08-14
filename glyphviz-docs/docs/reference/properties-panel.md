@@ -126,10 +126,39 @@ to every node created either way:
 | Scale (X, Y, Z) | 3 spin boxes, 0.001–10,000 | 1.0 / 1.0 / 1.0 |
 | Lock X/Y/Z together | checkbox | checked |
 | Color | color-picker button | RGBA (200, 200, 200, 255) |
+| Placement Step | spin box, 0–10,000 | 5.0 |
+| Placement Z (root, child) | 2 spin boxes, ±100,000 | 0.0 / 5.0 |
 
-Position and rotation for newly-created nodes are not part of these defaults
-— they use the existing auto-placement logic (each **N** press increments X
-by 10 units). Source: `main_window.py:499-572`.
+**Placement Step** is how far apart consecutively created objects sit.
+Each new object steps that far along `translate_x`; when the next step would
+reach a full lap (**360**), `translate_x` restarts at 0 and `translate_y`
+takes the step instead — so a long run of presses arrays into a **grid**
+rather than a runaway line, and under a circular topology (Sphere, Torus,
+Cylinder…) the object that completes a lap starts a *new ring* above the
+first instead of landing on top of it. This is ANTz's rule, whose own step
+was a fixed 15; type 15 here to reproduce its lattice exactly. `translate_y`
+keeps climbing rather than wrapping, so the grid grows taller indefinitely.
+
+**Placement Z** is the `translate_z` a new object is born with — two numbers,
+because the axis means different things at the two levels:
+
+- **root** (default 0.0) is height above the world plane. 0 sits on it.
+- **child** (default 5.0) is offset from the parent, and *how* it offsets is
+  the parent's topology's business: on Sphere, Torus or Cylinder it lifts the
+  child radially off the surface; on a Cartesian parent it's a plain Z offset.
+  0 places a child exactly on the surface — which is why the default isn't 0,
+  since under a topology-None parent that would put the first child *inside*
+  it.
+
+Both accept negative values (below the plane, or inside the surface).
+
+The step and both heights apply to **New Node**, **New Child**, **N**,
+**Shift+N**, paste (Ctrl+V), and a mesh imported with nothing selected. Roots step on from the
+last root *created* (wherever it now sits, so dragging one carries the next
+along); children fill the next free slot under their parent, and links
+attached to that parent don't consume a slot. A step of 0 stacks every new
+object at the origin. Rotation is never part of these defaults. Source:
+`main_window.py:499-572`, `glyphviz_core/placement.py`.
 
 Below the defaults sits **Draw Mode** (**D** key) — a checkable button that
 turns the mouse into a brush: left click stamps one object built from the

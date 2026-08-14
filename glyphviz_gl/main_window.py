@@ -41,6 +41,10 @@ from glyphviz_core.drop_router import (
 from glyphviz_core.draw_mode import place_stamp
 from glyphviz_core.glyph_recipe import generate_nodes, load_recipe
 from glyphviz_core.pdb_loader import load_pdb_file
+from glyphviz_core.placement import (
+    DEFAULT_CHILD_Z, DEFAULT_PLACEMENT_STEP, PLACEMENT_WRAP, columns_per_row,
+    step_from, wrapped_grid_offset,
+)
 from glyphviz_core.scene import DEFAULT_SCALE_FLOOR
 from glyphviz_core.scene_merge import merge_nodes
 from glyphviz_core.geometry_data import (
@@ -1023,8 +1027,9 @@ class MainWindow(QMainWindow):
         self._btn_new_node = QPushButton("New Node")
         self._btn_new_node.setToolTip(
             "Create a new object using the defaults below, at the world origin  [N]\n"
-            "Each press increments X by 10 units.  If a child-level\n"
-            "node is selected, a child is added instead."
+            "Each press steps X by the Placement Step below, wrapping to a\n"
+            "new Y row at 360, at the Placement Z (root) height.  If a\n"
+            "child-level node is selected, a child is added instead."
         )
         self._btn_new_node.clicked.connect(self._on_create_node)
 
@@ -1032,6 +1037,10 @@ class MainWindow(QMainWindow):
         self._btn_new_child.setToolTip(
             "Create a child object using the defaults below, under the\n"
             "selected node  [Shift+N]\n"
+            "Siblings step along X by the Placement Step below and wrap to a\n"
+            "new Y row at 360, so a full lap around a Sphere/Torus parent\n"
+            "starts a new ring instead of overlapping; Placement Z (child)\n"
+            "sets how far each one stands off its parent.\n"
             "Requires exactly one node to be selected."
         )
         self._btn_new_child.clicked.connect(self._create_child_node)
@@ -1054,8 +1063,9 @@ class MainWindow(QMainWindow):
         create_layout.addWidget(self._btn_new_grid)
 
         # --- New Object Defaults: geometry/topology/scale/color applied to
-        # nodes created via New Node, New Child, N, and Shift+N. Position and
-        # rotation for new nodes stay as the existing auto-placed defaults.
+        # nodes created via New Node, New Child, N, and Shift+N, plus the
+        # Placement Step that spaces them (rotation is never part of these
+        # defaults).
         new_defaults_form = QFormLayout()
         new_defaults_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
 
@@ -1098,11 +1108,62 @@ class MainWindow(QMainWindow):
         self._new_color_btn.clicked.connect(self._on_new_color)
         self._set_color_btn(self._new_color_btn, 200, 200, 200, 255)
 
+        # Placement Step: how far apart consecutive new objects sit. ANTz
+        # hardcoded its own step (15); this is the same lattice with the
+        # number exposed. See glyphviz_core/placement.py.
+        self._new_step = QDoubleSpinBox()
+        self._new_step.setRange(0.0, 10_000.0)
+        self._new_step.setDecimals(3)
+        self._new_step.setSingleStep(1.0)
+        self._new_step.setValue(DEFAULT_PLACEMENT_STEP)
+        self._new_step.valueChanged.connect(self._on_new_step_changed)
+        self._update_step_tip()
+
+        # Placement Z: the translate_z every new object gets. Root and child
+        # are separate numbers because the field MEANS different things at the
+        # two levels — world elevation above the reference plane for a root,
+        # offset off the parent (radially outward, on a Sphere/Torus/Cylinder)
+        # for a child, which is why a child at 0 would sit inside a
+        # topology-None parent while a root at 5 would hover off the grid.
+        self._new_root_z = QDoubleSpinBox()
+        self._new_root_z.setRange(-100_000.0, 100_000.0)
+        self._new_root_z.setDecimals(3)
+        self._new_root_z.setValue(0.0)
+        self._new_root_z.setToolTip(
+            "translate_z given to a new ROOT-level object (N with nothing, or\n"
+            "a root, selected; New Node; paste with no selection; an imported\n"
+            "mesh). Its height above the world plane. 0 sits on the plane."
+        )
+
+        self._new_child_z = QDoubleSpinBox()
+        self._new_child_z.setRange(-100_000.0, 100_000.0)
+        self._new_child_z.setDecimals(3)
+        self._new_child_z.setValue(DEFAULT_CHILD_Z)
+        self._new_child_z.setToolTip(
+            "translate_z given to a new CHILD (Shift+N, New Child, paste onto\n"
+            "a selection). What it means is the parent's topology's business:\n"
+            "on Sphere/Torus/Cylinder it lifts the child off the surface\n"
+            "radially, on Cartesian parents it is a plain Z offset. The\n"
+            "default 5 is what keeps the first child from sitting inside a\n"
+            "topology-None parent; 0 places it exactly on the surface."
+        )
+
+        new_z_widget = QWidget()
+        new_z_layout = QHBoxLayout(new_z_widget)
+        new_z_layout.setContentsMargins(0, 0, 0, 0)
+        new_z_layout.setSpacing(4)
+        new_z_layout.addWidget(QLabel("root"))
+        new_z_layout.addWidget(self._new_root_z)
+        new_z_layout.addWidget(QLabel("child"))
+        new_z_layout.addWidget(self._new_child_z)
+
         new_defaults_form.addRow("Geometry:", self._new_geo)
         new_defaults_form.addRow("Topology:", self._new_topo)
         new_defaults_form.addRow("Scale (X,Y,Z):", new_scale_widget)
         new_defaults_form.addRow("", self._new_scale_lock)
         new_defaults_form.addRow("Color:", self._new_color_btn)
+        new_defaults_form.addRow("Placement Step:", self._new_step)
+        new_defaults_form.addRow("Placement Z:", new_z_widget)
 
         create_layout.addWidget(QLabel("New Object Defaults:"))
         create_layout.addLayout(new_defaults_form)
@@ -2324,11 +2385,12 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Assigned mesh '{name}' (id {mesh_id}) to node {node.id}.")
             return True
 
-        next_x = self._next_root_x()
+        next_x, next_y = self._next_root_pos()
         new_id = max((n.id for n in self.nodes), default=0) + 1
         self._add_node_to_scene(Node(
             id=new_id, type=5, parent_id=0, branch_level=0,
-            translate_x=next_x, translate_y=0.0, translate_z=0.0,
+            translate_x=next_x, translate_y=next_y,
+            translate_z=self._placement_z(is_child=False),
             rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
             scale_x=5.0, scale_y=5.0, scale_z=5.0,
             color_r=200, color_g=200, color_b=200, color_a=255,
@@ -3615,6 +3677,37 @@ class MainWindow(QMainWindow):
                 sb.setValue(value)
                 sb.blockSignals(False)
 
+    def _update_step_tip(self):
+        """Keep the Placement Step tooltip showing what the CURRENT step
+        actually buys — the row width is a consequence of the number typed,
+        and 'wraps at 360' means nothing until you know it's 72 objects."""
+        step = self._new_step.value()
+        if step <= 0.0:
+            row = "0 stacks every new object at the same spot."
+        else:
+            row = (f"At {step:g}, a row holds {columns_per_row(step)} object(s) "
+                   f"before wrapping.")
+        self._new_step.setToolTip(
+            "How far apart consecutive auto-placed objects sit (N / Shift+N /\n"
+            "New Node / New Child / paste).\n"
+            f"translate_x steps by this much; when it would reach {PLACEMENT_WRAP:g},\n"
+            "it restarts at 0 and translate_y takes the step instead — so\n"
+            "objects array into a grid on a Cartesian parent, and start a new\n"
+            "ring instead of overlapping on a Sphere/Torus/Cylinder parent.\n"
+            f"{row}\n"
+            "ANTz used a fixed 15."
+        )
+
+    def _on_new_step_changed(self, value: float):
+        self._update_step_tip()
+        if value <= 0.0:
+            self.statusBar().showMessage(
+                "Placement Step 0 — new objects will stack at the parent's origin.")
+        else:
+            self.statusBar().showMessage(
+                f"Placement Step {value:g} — {columns_per_row(value)} object(s) "
+                f"per row, then translate_y steps to the next row.")
+
     def _on_new_color(self):
         color = QColorDialog.getColor(
             self._new_obj_color, self, "New Object Color",
@@ -3914,24 +4007,61 @@ class MainWindow(QMainWindow):
             self._new_obj_color,
         )
 
-    def _next_root_x(self) -> float:
-        """Next translate_x for a new root-level (branch_level 0) node,
-        stepping +10 along X from the last one. Shared by _create_root_node
-        and _paste_clipboard's no-selection case."""
+    def _placement_step(self) -> float:
+        """The Placement Step from the Create panel — how far apart auto-placed
+        new objects sit. See glyphviz_core/placement.py for the lattice it
+        feeds."""
+        return float(self._new_step.value())
+
+    def _placement_z(self, is_child: bool) -> float:
+        """The Placement Z for a new root or a new child — see the two spin
+        boxes' tooltips for why they're separate numbers."""
+        return float((self._new_child_z if is_child else self._new_root_z).value())
+
+    def _next_root_pos(self) -> tuple[float, float]:
+        """(translate_x, translate_y) for a new root-level (branch_level 0)
+        node: one Placement Step on from the LAST root created, wrapping to a
+        new row at 360. Shared by _create_root_node, _paste_clipboard's
+        no-selection case and _load_mesh_path.
+
+        Keyed on the last root created (highest id) rather than the largest
+        translate_x, because after a row wraps the largest x is back in the
+        previous row. World Grids are skipped — a grid is the surface the
+        array sits on, not a member of it."""
         root_glyphs = [
             n for n in self.nodes
-            if n.type not in NON_VISUAL_TYPES and n.branch_level == 0
+            if n.type not in NON_VISUAL_TYPES and n.type != NODE_TYPE_GRID
+            and n.branch_level == 0
         ]
-        return (max(n.translate_x for n in root_glyphs) + 10.0) if root_glyphs else 0.0
+        if not root_glyphs:
+            return (0.0, 0.0)
+        last = max(root_glyphs, key=lambda n: n.id)
+        return step_from(last.translate_x, last.translate_y, self._placement_step())
+
+    def _next_child_pos(self, parent: Node) -> tuple[float, float]:
+        """(translate_x, translate_y) for the next child of *parent*: the next
+        free slot in the wrapped step lattice. Shared by _create_child_node and
+        _paste_clipboard's one-selection case.
+
+        Links (type 7) parented to the node don't count — they render between
+        their two ends and ignore translate, so counting them would leave a
+        hole in the array."""
+        placed = sum(
+            1 for n in self.nodes
+            if n.parent_id == parent.id and n.type != NODE_TYPE_LINK
+        )
+        return wrapped_grid_offset(placed, self._placement_step())
 
     def _create_root_node(self):
-        """Create a new root-level node using the New Object Defaults, stepping +10 along X from the last one."""
-        next_x = self._next_root_x()
+        """Create a new root-level node using the New Object Defaults, one
+        Placement Step on from the last root created."""
+        next_x, next_y = self._next_root_pos()
         new_id = max((n.id for n in self.nodes), default=0) + 1
         geo, mesh_id, topo, sx, sy, sz, color = self._new_object_defaults()
         self._add_node_to_scene(Node(
             id=new_id, type=5, parent_id=0, branch_level=0,
-            translate_x=next_x, translate_y=0.0, translate_z=0.0,
+            translate_x=next_x, translate_y=next_y,
+            translate_z=self._placement_z(is_child=False),
             rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
             scale_x=sx, scale_y=sy, scale_z=sz,
             color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
@@ -3942,20 +4072,22 @@ class MainWindow(QMainWindow):
         """Shift+N / New Child button: create a child node (using the New Object
         Defaults) under the selected node.
 
-        Multiple presses keep the parent selected and distribute children evenly
-        along translate_x so they don't overlap.
+        Multiple presses keep the parent selected and distribute children along
+        translate_x at the Placement Step, wrapping to a new translate_y row
+        every full 360 so they don't overlap — ANTz's rule (_next_child_pos).
         """
         if len(self._selected_nodes) != 1:
             self.statusBar().showMessage("Select exactly one node to add a child.")
             return
         parent = self._selected_nodes[0]
-        sibling_count = sum(1 for n in self.nodes if n.parent_id == parent.id)
+        next_x, next_y = self._next_child_pos(parent)
         new_id = max((n.id for n in self.nodes), default=0) + 1
         geo, mesh_id, topo, sx, sy, sz, color = self._new_object_defaults()
         self._add_node_to_scene(Node(
             id=new_id, type=5, parent_id=parent.id,
             branch_level=parent.branch_level + 1,
-            translate_x=sibling_count * 5.0, translate_y=0.0, translate_z=5.0,
+            translate_x=next_x, translate_y=next_y,
+            translate_z=self._placement_z(is_child=True),
             rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
             scale_x=sx, scale_y=sy, scale_z=sz,
             color_r=color.red(), color_g=color.green(), color_b=color.blue(), color_a=color.alpha(),
@@ -4359,12 +4491,13 @@ class MainWindow(QMainWindow):
         if target is not None:
             new_parent_id = target.id
             new_branch_level = target.branch_level + 1
-            sibling_count = sum(1 for n in self.nodes if n.parent_id == target.id)
-            new_translate = (sibling_count * 5.0, 0.0, 5.0)
+            child_x, child_y = self._next_child_pos(target)
+            new_translate = (child_x, child_y, self._placement_z(is_child=True))
         else:
             new_parent_id = 0
             new_branch_level = 0
-            new_translate = (self._next_root_x(), 0.0, 0.0)
+            root_x, root_y = self._next_root_pos()
+            new_translate = (root_x, root_y, self._placement_z(is_child=False))
         branch_level_delta = new_branch_level - root.branch_level
 
         pasted: list[Node] = []

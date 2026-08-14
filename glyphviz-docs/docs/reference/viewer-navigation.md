@@ -168,8 +168,8 @@ Shortcuts handled directly in the Viewer (`Viewport.keyPressEvent`/`event`,
 | ↓ (Down) | Select the current node's first child | `navChild` → `_nav_child` — `viewport.py:1359-1361`, `main_window.py:1854-1865` |
 | Tab | Select next sibling (wraps; at branch level 0 this cycles all root nodes) | `navNextSibling` → `_nav_next_sibling` — `viewport.py:1345-1348`, `main_window.py:1867-1891` |
 | Shift+Tab | Select previous sibling (wraps) | `navPrevSibling` → `_nav_prev_sibling` — `viewport.py:1349-1352`, `main_window.py:1893-1906` |
-| N | New node (child of selection if a non-root node is selected, else a new root) | `createNode` → `_on_create_node` — `viewport.py:1362-1366`, `main_window.py:1910-1913` |
-| Shift+N | New child node under the current (single) selection | `createChildNode` → `_create_child_node` — `viewport.py:1363-1364` |
+| N | New node (child of selection if a non-root node is selected, else a new root); steps by the [Placement Step](properties-panel.md#create), wrapping to a new `translate_y` row at 360 | `createNode` → `_on_create_node` — `viewport.py:1362-1366`, `main_window.py:1910-1913` |
+| Shift+N | New child node under the current (single) selection, in the next free slot of the same wrapped step lattice | `createChildNode` → `_create_child_node` — `viewport.py:1363-1364` |
 | \ (backslash) | Halve the draw limit (progressively hides nodes — perf aid for huge scenes) | `_adjust_draw_limit(0.5)` — `viewport.py:1368-1374, 1392-1408` |
 | Shift+\ or \| | Double the draw limit (restores toward showing everything) | `_adjust_draw_limit(2.0)` — `viewport.py:1368-1374` |
 | T | Toggle tag-label display | `viewport.py:1375-1379` |
