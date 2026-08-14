@@ -61,6 +61,35 @@ rectangle has to stay aligned with where its children land. Mirrors the
 Mirrors the **View → Stereo 3D (Cross-Eye)** menu toggle. Source:
 `main_window.py:391-415`.
 
+## Camera
+
+Optional ANTz-style smoothing ("inertia") on camera navigation. Off by
+default — the camera tracks the mouse exactly.
+
+| Field | Type | Range / Default |
+|---|---|---|
+| Smoothing | slider | 0.00–0.60 s time constant, default **0** (off) |
+| Off / ANTz | buttons | Presets: 0 s, and ANTz's own feel (0.33 s) |
+| Applies to | combo | **Left+Right drag only** (default) or All camera navigation |
+
+The slider sets how far the camera lags where you drag: higher values glide
+more. **Applies to** chooses the scope — *Left+Right drag only* matches ANTz,
+where smoothing engaged on that combined orbit+zoom gesture; *All camera
+navigation* extends it to single-button orbit, pan and wheel zoom, which is
+the setting to use if you want the tremor-buffering effect. Camera Mode (free
+flight) is never smoothed.
+
+Unlike ANTz, aim and position ease together, so the object you're orbiting
+stays framed for the whole glide. Camera *jumps* — reference-view presets,
+double-click focus, Reset Camera, scene load, Follow Selected Node — stay
+instant whatever the setting.
+
+The setting is per session and resets to Off on restart. Sets
+`Viewport.camera_smoothing_tau` / `camera_smoothing_scope`; math in
+`glyphviz_core/camera_smoothing.py`. See
+[Viewer Navigation](viewer-navigation.md#camera-smoothing-optional-inertia)
+for the full rationale.
+
 ## Scene Settings
 
 World-node-only settings — read from/written to the scene's `type=0` World

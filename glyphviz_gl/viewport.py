@@ -19,6 +19,7 @@ from glyphviz_core.node import (
     WORLD_DEFAULT_BG_RGB, REF_GRID_DEFAULT_RGB,
     TAG_COLOR_MODE_NODE, TAG_DEFAULT_TEXT_RGB, TAG_TEXT_ALPHA, TAG_SHADOW_RGBA,
 )
+from glyphviz_core import camera_smoothing as cs
 from glyphviz_core import draw_mode as dm
 from glyphviz_core import gizmo as gz
 from glyphviz_core.scene import DEFAULT_SCALE_FLOOR, NO_SCALE_FLOOR, Scene
@@ -328,6 +329,22 @@ class Viewport(QOpenGLWidget):
         self._cam_azimuth = 45.0
         self._cam_elevation = 25.0
         self._cam_target = [0.0, 0.0, 0.0]
+
+        # Optional ANTz-style camera smoothing (see camera_smoothing.py). The
+        # _cam_* values above are the ACTUAL, rendered camera — every reader
+        # (matrices, picking, distance-scaled drag speeds) keeps using them
+        # unchanged. These are the GOAL the navigation gestures write, which
+        # the actual chases once per repaint tick in _apply_camera_smoothing.
+        #
+        # With tau = 0 (the default) _settle_camera collapses goal onto actual
+        # inside the same gesture call, so the whole feature is inert and the
+        # camera behaves exactly as it did before it existed.
+        self.camera_smoothing_tau: float = cs.TAU_OFF
+        self.camera_smoothing_scope: str = cs.SCOPE_COMBO
+        self._cam_goal_azimuth = self._cam_azimuth
+        self._cam_goal_elevation = self._cam_elevation
+        self._cam_goal_distance = self._cam_distance
+        self._cam_goal_target = list(self._cam_target)
 
         # Multiple cameras (ANTz-style): index 0 is always the free orbit
         # camera above ("Main"); 1-3 are fixed +X/+Y/+Z reference views onto
@@ -664,6 +681,7 @@ class Viewport(QOpenGLWidget):
             axis_distance = max(origin_radius * 1.5, 50.0)
         else:
             axis_distance = 500.0
+        self._snap_camera_goal()   # auto-framing is a jump, not a glide
         self._cameras = self._make_default_cameras(axis_distance)
         self._active_camera = 0
         self.cameraChanged.emit(0)
@@ -708,6 +726,7 @@ class Viewport(QOpenGLWidget):
             self._cam_distance = distance
         if target is not None:
             self._cam_target = list(target)
+        self._snap_camera_goal()
 
     def _make_default_cameras(self, axis_distance: float = 500.0) -> list['_CameraView']:
         """The 4 default cameras. Eye position for (azimuth, elevation) is
@@ -736,6 +755,9 @@ class Viewport(QOpenGLWidget):
 
     def _sync_active_camera(self):
         """Write the live _cam_* state back into the active camera's saved slot."""
+        # Save where the user aimed, not where a half-finished glide happens
+        # to be: switching cameras or snapshotting the viewpoint ends the glide.
+        self._reconcile_camera_goal()
         cam = self._cameras[self._active_camera]
         cam.azimuth, cam.elevation = self._cam_azimuth, self._cam_elevation
         cam.distance = self._cam_distance
@@ -753,6 +775,7 @@ class Viewport(QOpenGLWidget):
         self._cam_azimuth, self._cam_elevation = cam.azimuth, cam.elevation
         self._cam_distance = cam.distance
         self._cam_target = list(cam.target)
+        self._snap_camera_goal()   # a preset is a jump, not a glide
         if cam.locked and self.fly_mode:
             # Fixed reference views don't fly — picking one leaves Camera Mode.
             self.set_fly_mode(False)
@@ -778,6 +801,9 @@ class Viewport(QOpenGLWidget):
             return
         self.fly_mode = on
         if on:
+            # Flight is excluded from smoothing and re-derives the rig from
+            # the current eye, so land any in-progress glide before it starts.
+            self._reconcile_camera_goal()
             # Following pins the target to a node every frame, which would
             # undo flight's translation on the spot.
             self.follow_selected = False
@@ -863,6 +889,7 @@ class Viewport(QOpenGLWidget):
         self._cam_elevation = state['elevation']
         self._cam_distance = state['distance']
         self._cam_target = list(state['target'])
+        self._snap_camera_goal()
         self.cameraChanged.emit(self._active_camera)
         self.set_fly_mode(state.get('fly', False))
         self.update()
@@ -944,6 +971,7 @@ class Viewport(QOpenGLWidget):
         distance — including starting inside the object."""
         self._cam_target = list(world_pos)
         self._cam_distance = max(self._fit_distance(radius), 1.0)
+        self._snap_camera_goal()
         self.update()
 
     def focus_on_node(self, node: Node):
@@ -970,7 +998,11 @@ class Viewport(QOpenGLWidget):
             return
         pos = self._scene.world_pos(node.id)
         if pos is not None:
+            # Follow re-centers every frame from the node's own animation, so
+            # smoothing it would fight the source rather than a hand tremor —
+            # and would leave the camera permanently trailing a moving node.
             self._cam_target = list(pos)
+            self._snap_camera_goal()
 
     # --- texture management ---
 
@@ -1070,11 +1102,14 @@ class Viewport(QOpenGLWidget):
     def _update_render_timer_state(self):
         """Start/stop the ~30fps continuous-repaint timer based on whether
         anything needs per-frame ticking: video/GIF playback, rate-driven
-        node animation, or a flight drag in progress (rate flight integrates
+        node animation, a flight drag in progress (rate flight integrates
         the held cursor offset once per tick, so it must keep repainting even
-        while the mouse sits still). Call after any scene or texture change
-        that could flip any of those."""
+        while the mouse sits still), or a camera still gliding toward its
+        smoothing goal (same reason — the glide continues after the mouse
+        stops moving, and mouse events alone would freeze it mid-swing).
+        Call after any scene or texture change that could flip any of those."""
         needs = (self._needs_video_tick or self._fly_anchor is not None
+                 or not self._camera_settled()
                  or self._has_active_rates())
         if needs and not self._render_timer.isActive():
             self._render_timer.start(33)   # ~30 fps continuous repaint
@@ -1213,6 +1248,10 @@ class Viewport(QOpenGLWidget):
         self._apply_fly_drag(dt_ms)
         if self.follow_selected:
             self._apply_follow_target()
+        # After every source that could have moved the goal (drags land via
+        # mouseMoveEvent, flight and follow just above), and before the view
+        # matrices below read _cam_*.
+        self._apply_camera_smoothing(dt_ms)
         # QPainter's GL paint engine (used by _draw_tags_qpainter) can leave
         # all of this state changed after painter.end() -- restore it every
         # frame rather than relying on the one-time initializeGL()/resizeGL()
@@ -3084,11 +3123,143 @@ class Viewport(QOpenGLWidget):
             up_y = -math.sin(az) * math.sin(el)
             up_z =  math.cos(el)
             speed = self._cam_distance * 0.0015
-            self._cam_target[0] -= (dx * right_x - dy * up_x) * speed
-            self._cam_target[1] -= (dx * right_y - dy * up_y) * speed
-            self._cam_target[2] += dy * up_z * speed
+            self._adopt_direct_camera_writes()
+            self._cam_goal_target[0] -= (dx * right_x - dy * up_x) * speed
+            self._cam_goal_target[1] -= (dx * right_y - dy * up_y) * speed
+            self._cam_goal_target[2] += dy * up_z * speed
+            self._settle_camera()
 
         self._last_pos = event.pos()
+        self.update()
+
+    # --- Camera smoothing (optional ANTz-style glide) ---
+    #
+    # Navigation gestures write _cam_goal_*; the rendered _cam_* chases it.
+    # Two rules keep that from leaking into the rest of the viewport:
+    #
+    #   * Every gesture that writes a goal ends with _settle_camera(), which
+    #     collapses goal onto actual unless smoothing is on AND covers that
+    #     gesture. Smoothing off therefore costs one comparison and behaves
+    #     bit-identically to no smoothing.
+    #   * Every PROGRAMMATIC camera move (presets, framing, focus, follow,
+    #     restore, flight) writes _cam_* as it always did and then calls
+    #     _snap_camera_goal(). Jumps stay jumps; only drags glide.
+
+    def _snap_camera_goal(self):
+        """Point the goal at wherever the rendered camera now is.
+
+        Called after any direct write to _cam_* so the smoothing filter has
+        nothing left to chase — without this, a camera preset or a focus jump
+        would be dragged straight back toward the pre-jump goal."""
+        self._cam_goal_azimuth = self._cam_azimuth
+        self._cam_goal_elevation = self._cam_elevation
+        self._cam_goal_distance = self._cam_distance
+        self._cam_goal_target = list(self._cam_target)
+
+    def _camera_smoothing_active(self, combo: bool) -> bool:
+        """Whether the glide applies to the gesture now being applied.
+
+        Camera Mode is excluded outright: rate flight already integrates a
+        held cursor offset once per tick, so it has no per-event jitter to
+        filter, and its gestures re-derive the rig from the CURRENT eye —
+        a lagging eye would feed back into the next frame's derivation."""
+        if self.camera_smoothing_tau <= 0.0 or self.fly_mode:
+            return False
+        return combo or self.camera_smoothing_scope == cs.SCOPE_ALL
+
+    def _adopt_direct_camera_writes(self):
+        """Let a direct assignment to _cam_* take effect, if nothing is gliding.
+
+        Plenty of code outside the navigation path just sets _cam_azimuth /
+        _cam_distance / _cam_target and expects the camera to be there — the
+        Glyph Composer's preview does, several tests do, and it has always
+        worked. Settled (which INCLUDES smoothing being switched off) means
+        the goal has nothing left to chase, so in that state the actual is the
+        truth and the goal should adopt it. Mid-glide the goal is where the
+        user aimed and must not be clobbered by the lagging actual.
+
+        Every gesture calls this before extending the goal, which is what
+        makes "smoothing off" indistinguishable from the original code no
+        matter who wrote to the rig last."""
+        if self._camera_settled():
+            self._snap_camera_goal()
+
+    def _reconcile_camera_goal(self):
+        """Bring goal and actual together before something outside the
+        navigation path takes over the rig: a direct write wins if nothing was
+        gliding, otherwise the glide lands on its goal."""
+        self._adopt_direct_camera_writes()
+        self._finish_camera_glide()
+
+    def _finish_camera_glide(self):
+        """Collapse the rendered camera onto its goal outright, whatever the
+        smoothing setting. The end of a glide, not a policy decision."""
+        self._cam_azimuth = self._cam_goal_azimuth
+        self._cam_elevation = self._cam_goal_elevation
+        self._cam_distance = self._cam_goal_distance
+        self._cam_target = list(self._cam_goal_target)
+
+    def _settle_camera(self, combo: bool = False):
+        """End a goal-writing gesture: either leave the goal for the filter to
+        chase (smoothing on), or collapse it onto the rendered camera now."""
+        if self._camera_smoothing_active(combo):
+            self._update_render_timer_state()   # keep ticking while it glides
+        else:
+            self._finish_camera_glide()
+
+    def _camera_settled(self) -> bool:
+        """True when the rendered camera has caught up with its goal (or there
+        is no smoothing). Drives the continuous-repaint timer: an exponential
+        never exactly arrives, so without this the timer would never stop."""
+        if self.camera_smoothing_tau <= 0.0:
+            return True
+        return cs.is_settled(self._cam_azimuth, self._cam_goal_azimuth,
+                             self._cam_elevation, self._cam_goal_elevation,
+                             self._cam_distance, self._cam_goal_distance,
+                             self._cam_target, self._cam_goal_target)
+
+    def _apply_camera_smoothing(self, dt_ms: float):
+        """Advance the rendered camera one filter step toward its goal (called
+        once per repaint from paintGL, before the view matrices are built).
+
+        All four rig quantities move together under one time constant — that
+        coherence is the whole design. ANTz smoothed only the eye's POSITION
+        while the orbit angle and zoom jumped the same frame, so the object
+        being orbited swung out of frame and crawled back; easing aim and eye
+        as one keeps the framing put while still gliding.
+
+        dt is clamped because paintGL's delta is time since the last paint,
+        which after an idle period can be seconds — one such step would blow
+        alpha to 1 and snap the glide away on the first frame of a drag."""
+        if self.camera_smoothing_tau <= 0.0:
+            return
+        dt = min(max(dt_ms, 0.0), 100.0) / 1000.0
+        alpha = cs.alpha_for(dt, self.camera_smoothing_tau)
+        self._cam_azimuth = cs.ease_angle(self._cam_azimuth,
+                                          self._cam_goal_azimuth, alpha)
+        self._cam_elevation = cs.ease_scalar(self._cam_elevation,
+                                             self._cam_goal_elevation, alpha)
+        self._cam_distance = cs.ease_log(self._cam_distance,
+                                         self._cam_goal_distance, alpha)
+        self._cam_target = cs.ease_point(self._cam_target,
+                                         self._cam_goal_target, alpha)
+        if self._camera_settled():
+            # Land exactly on the goal rather than leaving a sub-tolerance
+            # residual that keeps the rig a hair off its saved viewpoint, and
+            # release the repaint timer this glide was holding open.
+            self._finish_camera_glide()
+            self._update_render_timer_state()
+
+    def set_camera_smoothing(self, tau: float, scope: str | None = None):
+        """Set the smoothing time constant in seconds (0 = off) and, optionally,
+        which gestures it covers. Turning it off snaps any in-progress glide
+        to its goal so the camera never strands mid-flight."""
+        self.camera_smoothing_tau = max(0.0, min(float(tau), cs.TAU_MAX))
+        if scope in cs.SCOPES:
+            self.camera_smoothing_scope = scope
+        if self.camera_smoothing_tau <= 0.0:
+            self._finish_camera_glide()
+        self._update_render_timer_state()
         self.update()
 
     def _orbit_camera(self, dx: float, dy: float):
@@ -3099,8 +3270,10 @@ class Viewport(QOpenGLWidget):
         # near surface: drag right and the left side rotates toward the
         # viewer; drag down and the top rotates toward the viewer. Jeff
         # found the un-inverted mapping backwards on both axes.
-        self._cam_azimuth -= dx * 0.4
-        self._cam_elevation = max(-89.0, min(89.0, self._cam_elevation + dy * 0.4))
+        self._adopt_direct_camera_writes()
+        self._cam_goal_azimuth -= dx * 0.4
+        self._cam_goal_elevation = max(-89.0, min(89.0, self._cam_goal_elevation + dy * 0.4))
+        self._settle_camera()
 
     def _orbit_zoom_camera(self, dx: float, dy: float):
         """Both mouse buttons held together: horizontal drag orbits azimuth
@@ -3109,10 +3282,14 @@ class Viewport(QOpenGLWidget):
         orbit+zoom gesture. Locked (axis) cameras still zoom, but ignore the
         orbit component to stay fixed reference views. Azimuth sign matches
         _orbit_camera's inverted (grab-the-object) convention."""
+        self._adopt_direct_camera_writes()
         if not self.active_camera_locked():
-            self._cam_azimuth -= dx * 0.4
+            self._cam_goal_azimuth -= dx * 0.4
         factor = 1.0 + dy * 0.005
-        self._cam_distance = max(1.0, self._cam_distance * factor)
+        self._cam_goal_distance = max(1.0, self._cam_goal_distance * factor)
+        # combo=True: this is the gesture ANTz's own smoothing applied to, so
+        # it glides even at the narrower default scope.
+        self._settle_camera(combo=True)
 
     # --- Camera Mode navigation ---
     #
@@ -3132,6 +3309,7 @@ class Viewport(QOpenGLWidget):
         from the target, so translating the target translates both)."""
         for i in range(3):
             self._cam_target[i] += vec[i] * amount
+        self._snap_camera_goal()
 
     def _reaim_about_eye(self, d_azimuth: float, d_elevation: float = 0.0):
         """Swing the *aim* by these angle deltas while the eye stays planted.
@@ -3155,6 +3333,10 @@ class Viewport(QOpenGLWidget):
             eye[1] - d * math.cos(el) * math.sin(az),
             eye[2] - d * math.sin(el),
         ]
+        # Camera Mode derives the rig from the CURRENT eye each call, so the
+        # goal must track it exactly — a lagging actual would feed back into
+        # the next frame's derivation and curve the flight path.
+        self._snap_camera_goal()
 
     def _apply_fly_drag(self, dt_ms: float):
         """LeftButton held in Camera Mode: ANTz-style rate flight, integrated
@@ -3228,7 +3410,14 @@ class Viewport(QOpenGLWidget):
             return
         pos = self.world_position(node.id)
         if pos is not None:
-            self._cam_target = list(pos)
+            # Goal, not actual: with smoothing on, re-centering the pivot on
+            # the selected object GLIDES. This is precisely where ANTz put its
+            # low-pass (npSetCamTarget -> "targeting"), and easing the pivot
+            # together with the aim is the version that doesn't throw the
+            # object out of frame on the way.
+            self._adopt_direct_camera_writes()
+            self._cam_goal_target = list(pos)
+            self._settle_camera(combo=True)
 
     def _apply_axis_deltas(self, raw_deltas: dict, field_deltas: dict | None = None):
         """Apply one drag-step of Move/Rotate/Size to every selected node.
@@ -3622,5 +3811,7 @@ class Viewport(QOpenGLWidget):
             self._translate_rig(forward, step if delta > 0 else -step)
         else:
             factor = 0.88 if delta > 0 else 1.14
-            self._cam_distance = max(1.0, self._cam_distance * factor)
+            self._adopt_direct_camera_writes()
+            self._cam_goal_distance = max(1.0, self._cam_goal_distance * factor)
+            self._settle_camera()
         self.update()

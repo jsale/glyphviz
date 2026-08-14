@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 from glyphviz_core.csv_reader import (
     load_node_csv, save_node_csv, save_tag_csv, stamp_node_and_tag_paths,
 )
+from glyphviz_core import camera_smoothing as cs
 from glyphviz_core.drop_router import (
     ACTION_MERGE_CSV, ACTION_MESH, ACTION_OPEN_CSV, ACTION_PDB, ACTION_TEXTURES,
     DropPlan, can_accept, resolve_drop,
@@ -869,6 +870,69 @@ class MainWindow(QMainWindow):
         stereo_layout.addWidget(self._cb_stereo)
         stereo_layout.addWidget(self._stereo_sep_label)
         stereo_layout.addWidget(self._stereo_sep_slider)
+
+        # --- Camera group: optional ANTz-style navigation smoothing ---
+        #
+        # ANTz always eased its camera and never let you turn it off; former
+        # ANTz users miss the glide, and it measurably buffers hand tremor
+        # (Dr. Warner's patients). Off by default because ANTz's own version
+        # also swung the target out of frame — see camera_smoothing.py for why
+        # GlyphViz's doesn't. The slider is the amount; ANTz's own feel is one
+        # preset on it, following the Topo Scale row's 1:1/ANTz idiom.
+        camera_grp = QGroupBox("Camera")
+        camera_layout = QVBoxLayout(camera_grp)
+        self._cam_smooth_label = QLabel("Smoothing: Off")
+        self._cam_smooth_slider = QSlider(Qt.Orientation.Horizontal)
+        # Slider units are hundredths of a second of time constant, so the
+        # scale is linear in the quantity the user actually perceives.
+        self._cam_smooth_slider.setRange(0, int(round(cs.TAU_MAX * 100)))
+        self._cam_smooth_slider.setValue(int(round(cs.TAU_OFF * 100)))
+        self._cam_smooth_slider.setTickInterval(10)
+        self._cam_smooth_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._cam_smooth_slider.setToolTip(
+            "Camera glide (ANTz-style inertia). 0 = off: the view tracks the\n"
+            "mouse exactly. Higher = the camera eases toward where you drag,\n"
+            "which looks smoother in demos and buffers hand tremor.\n"
+            "Unlike ANTz, aim and position ease together, so what you are\n"
+            "orbiting never swings out of frame."
+        )
+        self._cam_smooth_slider.valueChanged.connect(self._update_camera_smoothing)
+
+        cam_preset_row = QWidget()
+        cam_preset_layout = QHBoxLayout(cam_preset_row)
+        cam_preset_layout.setContentsMargins(0, 0, 0, 0)
+        cam_preset_layout.setSpacing(4)
+        btn_smooth_off = QPushButton("Off")
+        btn_smooth_off.setToolTip("No smoothing — the default.")
+        btn_smooth_off.clicked.connect(lambda: self._set_camera_smoothing_tau(cs.TAU_OFF))
+        btn_smooth_antz = QPushButton("ANTz")
+        btn_smooth_antz.setToolTip(
+            "ANTz's own feel (%.2f s), without its swing-out-of-frame artifact."
+            % cs.TAU_ANTZ
+        )
+        btn_smooth_antz.clicked.connect(lambda: self._set_camera_smoothing_tau(cs.TAU_ANTZ))
+        cam_preset_layout.addWidget(btn_smooth_off)
+        cam_preset_layout.addWidget(btn_smooth_antz)
+        cam_preset_layout.addStretch(1)
+
+        self._cam_smooth_scope = QComboBox()
+        self._cam_smooth_scope.addItem("Left+Right drag only", cs.SCOPE_COMBO)
+        self._cam_smooth_scope.addItem("All camera navigation", cs.SCOPE_ALL)
+        self._cam_smooth_scope.setToolTip(
+            "Which gestures glide. Left+Right drag only matches ANTz, where\n"
+            "smoothing engaged on that combined orbit+zoom gesture.\n"
+            "All camera navigation also covers single-button orbit, pan and\n"
+            "wheel zoom — the setting to use for tremor buffering.\n"
+            "Camera Mode (free flight) is never smoothed: it is already\n"
+            "rate-based, so it has no jitter to filter."
+        )
+        self._cam_smooth_scope.setEnabled(False)   # nothing to scope while off
+        self._cam_smooth_scope.currentIndexChanged.connect(self._update_camera_smoothing)
+        camera_layout.addWidget(self._cam_smooth_label)
+        camera_layout.addWidget(self._cam_smooth_slider)
+        camera_layout.addWidget(cam_preset_row)
+        camera_layout.addWidget(QLabel("Applies to:"))
+        camera_layout.addWidget(self._cam_smooth_scope)
 
         # --- Scene Settings group: world-level (not per-node) background
         # color, render/blend mode, and fog — read from/written to the World
@@ -1752,6 +1816,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(disp)
         layout.addWidget(scale_grp)
         layout.addWidget(stereo_grp)
+        layout.addWidget(camera_grp)
         layout.addWidget(scene_grp)
         layout.addWidget(stats_grp)
         layout.addWidget(create_grp)
@@ -2559,6 +2624,28 @@ class MainWindow(QMainWindow):
         self._stereo_sep_label.setText(f"Eye Separation: {pct:.1f}%")
         self._viewport.stereo_separation_pct = pct
         self._viewport.update()
+
+    # --- Camera smoothing ---
+
+    def _set_camera_smoothing_tau(self, tau: float):
+        """Apply a preset (Off / ANTz) by moving the slider — the slider's own
+        signal does the work, so there is exactly one path to the viewport."""
+        self._cam_smooth_slider.setValue(int(round(tau * 100)))
+        # setValue is a no-op when the slider is already there (e.g. pressing
+        # Off twice), so make the preset idempotent rather than silent.
+        self._update_camera_smoothing()
+
+    def _update_camera_smoothing(self, _value: int = 0):
+        """Push the slider + scope combo into the viewport and relabel."""
+        tau = self._cam_smooth_slider.value() / 100.0
+        scope = self._cam_smooth_scope.currentData()
+        if tau <= 0.0:
+            self._cam_smooth_label.setText("Smoothing: Off")
+        else:
+            suffix = "  (ANTz)" if abs(tau - cs.TAU_ANTZ) < 0.005 else ""
+            self._cam_smooth_label.setText(f"Smoothing: {tau:.2f} s{suffix}")
+        self._cam_smooth_scope.setEnabled(tau > 0.0)
+        self._viewport.set_camera_smoothing(tau, scope)
 
     # --- Select By ---
 

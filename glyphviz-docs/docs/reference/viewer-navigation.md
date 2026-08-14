@@ -18,6 +18,7 @@ Camera Mode is off; **C** swaps them all for free flight (see
 | Action | Binding | Source |
 |---|---|---|
 | Orbit | Left-click + drag (or Right-click + drag) | `mouseMoveEvent`, `_orbit_camera` — `viewport.py:1502-1515, 1533-1535` |
+| Orbit + zoom together, around the selected object | Left + Right together + drag | `_orbit_zoom_camera`, `_maybe_snap_orbit_target` |
 | Pan | Middle-click + drag | `mouseMoveEvent` — `viewport.py:1517-1528` |
 | Zoom | Scroll wheel (×0.88 per notch in, ×1.14 per notch out) | `wheelEvent` — `viewport.py:1569-1573` |
 | Reset / reframe view | **View → Reset Camera** menu item | `_reset_camera` — `main_window.py:1802-1803` |
@@ -25,6 +26,58 @@ Camera Mode is off; **C** swaps them all for free flight (see
 Orbit sensitivity is `0.4°` of azimuth/elevation per pixel of drag; elevation
 is clamped to ±89° (`_orbit_camera`, `viewport.py:1533-1535`). Pan speed scales
 with the current camera distance (`viewport.py:1525-1528`).
+
+The **Left + Right** combined gesture is ANTz's: horizontal drag orbits,
+vertical drag zooms. Pressing both buttons also re-centers the orbit pivot on
+the selected node, so it orbits *that object* rather than whatever the camera
+happened to be aimed at.
+
+### Camera smoothing (optional inertia)
+
+By default the camera tracks the mouse exactly. The **Camera** group in the
+Properties panel adds an optional *glide*: the view eases toward where you
+drag instead of arriving instantly.
+
+| Control | What it does |
+|---|---|
+| **Smoothing** slider | The amount, as a time constant in seconds. `0` (the default) is off. |
+| **Off** / **ANTz** buttons | Presets: no smoothing, and ANTz's own feel (0.33 s). |
+| **Applies to** | *Left+Right drag only* (the default, matching ANTz) or *All camera navigation* (also single-button orbit, pan and wheel zoom). |
+
+This exists because ANTz always smoothed its camera and never let you turn it
+off. Two groups asked for it back:
+
+- Former ANTz users, who found the glide made live demonstrations look
+  noticeably smoother.
+- Users with tremor. Dr. Dave Warner reported that patients with movement
+  disorders such as Parkinson's found ANTz's smoothing genuinely helpful,
+  because it buffers tremor out of the camera. **All camera navigation** is
+  the setting to use for that — a tremor doesn't confine itself to one
+  gesture.
+
+**GlyphViz's version does not swing the target out of frame.** That was the
+part of ANTz's implementation people disliked, and it wasn't the smoothing
+itself: ANTz eased the camera's *position* while applying the orbit angle and
+the zoom instantly on the same frame, so the eye crawled toward a solution the
+aim had already left. GlyphViz eases azimuth, elevation, distance and target
+together under one time constant, so what you're orbiting stays framed for the
+whole glide. The filter is also frame-rate correct, so a given setting feels
+the same at 30 fps and at 144 — ANTz's approximation did not, which is why its
+smoothing felt so much heavier in its early, slower years.
+
+Two further notes:
+
+- It's a *lag*, not momentum. Releasing the mouse stops the camera easing to a
+  halt; nothing overshoots or keeps spinning.
+- **Camera Mode (free flight) is never smoothed.** Rate flight already
+  integrates a held cursor offset once per frame, so it has no per-event
+  jitter to filter.
+
+Camera jumps stay instant whatever the setting: reference-view presets,
+double-click focus, **Reset Camera**, scene loading, and Follow Selected Node.
+Only drags glide.
+
+The setting is per session — it resets to Off when GlyphViz restarts.
 
 **Reset Camera** re-fits the camera's *target* and *distance* to the bounding
 box of all loaded nodes (the same auto-framing `Viewport.set_nodes()` does on
