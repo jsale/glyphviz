@@ -194,12 +194,20 @@ Example: `child (90, 0.5, 0) → world (0, 1, 0.5)`.
 
 | Field | Meaning |
 |---|---|
-| `translate_x` | height above the pin top: child sits at local Z = B + tx |
+| `translate_x` | height along the pin: child sits at local Z = B + tx |
 | `translate_y` | sideways offset, local X |
 | `translate_z` | sideways offset, local Y |
 
 `offset = (ty, tz, B + tx)`. Identity orientation. Stack sequential items by
 increasing `translate_x`.
+
+The Pin *glyph* is the one shape not centred on its own origin: it stands with
+its tip at local Z = 0 and its head centred at Z = B (the shaft is 10× as long
+as it is wide, and the head adds a further 10% above that). So `tx = 0` places
+a child at the centre of the head, and `tx = -B` places it at the tip — the
+range `-B ≤ tx ≤ 0` walks the child down the shaft. Positive `tx` rises off the
+end of the pin, which is fine when the pin is a stalk for a stack rather than a
+marker.
 
 Example: `child (0.5, 0, 0) → world (0, 0, 1.5)`.
 

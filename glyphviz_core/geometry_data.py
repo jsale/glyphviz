@@ -138,6 +138,23 @@ CYLINDER_HEIGHT_RATIO = 2.0
 ROD_RADIUS_FACTOR = 0.25
 ROD_HEIGHT_FACTOR = 5.0
 
+# Pushpin glyph — a cone ten times as tall as its base is wide, apex at the
+# local ORIGIN and shaft rising along +Z, closed at the top by a dome of the
+# cone's own base radius (so the dome adds a further 10% and the total height
+# is 110% of the shaft). Both numbers are ANTz's, from DrawPinDL
+# (npgeometry.c:493, `npGLSolidCone(kNPoffsetPin * 0.1f, kNPoffsetPin, ...)`
+# with `kNPoffsetPin = 5.0` documented as "cone point to center of dome"),
+# rescaled by 1/5 to this module's "fits within radius ~1" convention.
+#
+# Apex-at-the-origin is the load-bearing part, not a stylistic choice:
+# TOPO_PIN places children at `base_radius + translate_x` along +Z
+# (topology._pin_offset), so they only ride the shaft if the shaft is the +Z
+# half of the glyph. PIN_HEIGHT = 1.0 = the default base_scale then puts a
+# child with translate_x = 0 exactly at the dome's center, which is where
+# ANTz's own pin children sit.
+PIN_HEIGHT = 1.0
+PIN_RADIUS = 0.1 * PIN_HEIGHT
+
 # Flat square ("Grid"/"Square") glyph — lies in the local XY plane, normal
 # along +Z, matching ANTz's Grid node (topo=plane, geometry=Square) and the
 # viewport's own XY-at-Z=0 world grid orientation. Half-extent chosen so the

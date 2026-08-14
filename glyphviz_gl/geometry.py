@@ -20,7 +20,7 @@ from glyphviz_core.geometry_data import (
     GEO_STAR, GEO_COUNT, GEO_NAMES,
     WIRE_TO_SOLID, TORUS_DEFAULT_RATIO, torus_radii, CYLINDER_RADIUS_RATIO,
     CYLINDER_HEIGHT_RATIO, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR,
-    GRID_HALF_EXTENT,
+    GRID_HALF_EXTENT, PIN_HEIGHT, PIN_RADIUS,
 )
 from glyphviz_core.mesh_loader import MeshData
 
@@ -388,26 +388,112 @@ def _draw_sphere(solid: bool, r=1.0, slices=16, stacks=12, textured: bool = Fals
     gluDeleteQuadric(q)
 
 
-def _draw_pin(solid: bool, textured: bool = False):
-    """Pushpin shape: ball "head" at the top, tapering "needle" pointing
-    down — both built along local +Z/-Z so an unrotated pin stands upright
-    in the (now Z-up, ANTz-aligned) world, matching GEO_CYLINDER/GEO_CONE's
-    own local-Z-axis convention."""
-    q = _new_quadric(not solid, textured=textured and solid)
+def _pin_bands(dome_stacks=4):
+    """The pin's meridian, as (lower, upper) ring pairs bottom to top; each
+    ring is (radius, z, normal_radial, normal_z).
+
+    The rim appears in two consecutive bands carrying two different normals —
+    the cone's and the dome's — because the surface genuinely creases there
+    and a single averaged normal would smear the join. The two rings sit at
+    the same (radius, z), so the crease costs no extra geometry.
+    """
+    h, r = PIN_HEIGHT, PIN_RADIUS
+    # Outward normal of a cone whose apex is at the origin: the surface widens
+    # as it rises, so it faces out AND DOWN — (h, -r) normalised, in
+    # (radial, z). Constant over the whole lateral surface, apex included.
+    n = math.hypot(h, r)
+    cone_nr, cone_nz = h / n, -r / n
+    yield (0.0, 0.0, cone_nr, cone_nz), (r, h, cone_nr, cone_nz)
+    lower = (r, h, 1.0, 0.0)                  # the rim again, dome-side normal
+    for j in range(1, dome_stacks + 1):
+        ph = (math.pi / 2.0) * j / dome_stacks
+        cp, sp = math.cos(ph), math.sin(ph)
+        upper = (r * cp, h + r * sp, cp, sp)
+        yield lower, upper
+        lower = upper
+
+
+def _pin_outline(dome_stacks=4):
+    """(radius, z) profile points, apex to pole — the meridian the wire pin
+    traces. Read off the same bands the solid is built from, so the two are
+    the same shape by construction rather than by matched edits."""
+    points = [(0.0, 0.0)]
+    for _lower, upper in _pin_bands(dome_stacks):
+        if upper[:2] != points[-1]:
+            points.append(upper[:2])
+    return points
+
+
+def _pin_uv(u: float, z: float) -> tuple[float, float]:
+    """Pin texture mapping: u wraps once around the axis, v runs 0 at the tip
+    to 1 at the top of the dome — continuous across the cone/dome junction,
+    unlike two separately-textured quadrics would be."""
+    return u, z / (PIN_HEIGHT + PIN_RADIUS)
+
+
+def _draw_pin(solid: bool, textured: bool = False, slices=12, dome_stacks=4):
+    """Pushpin: a 10:1 cone standing on its apex at the local origin, shaft
+    rising along +Z, capped by a dome — ANTz's "ice-cream cone" shape
+    (DrawPinDL, npgeometry.c:493) in both proportion and placement, and
+    matching GEO_CYLINDER/GEO_CONE's own local-Z-axis convention so an
+    unrotated pin stands upright in the Z-up world.
+
+    Built by hand rather than from GLU quadrics, which is what closes the two
+    holes the previous version had: gluCylinder draws a *lateral surface only*
+    — no end caps, ever — so a pin made from one is open at both ends unless
+    the caller adds gluDisks (as _draw_cone and _draw_cylinder do, and this
+    shape did not). Here the cone tapers to a genuine apex, so the bottom
+    needs no cap at all.
+
+    Only the UPPER half of the ball is built. Its rim is *exactly* the cone's
+    base circle — same radius, same z — so the dome IS the cone's cap: the
+    junction is watertight with no base disk, and the lower hemisphere would
+    be sealed inside the cone where nothing could ever see it. That halves the
+    ball's facets and drops two disks, for a glyph that is strictly more
+    closed than the one it replaces.
+    """
+    tau = math.pi * 2.0
+
     if not solid:
         glDisable(GL_LIGHTING)
-    glPushMatrix()
-    glTranslatef(0.0, 0.0, 0.22)
-    gluSphere(q, 0.12, 12, 8)
-    glPopMatrix()
-    glPushMatrix()
-    glTranslatef(0.0, 0.0, 0.1)
-    glRotatef(180.0, 1.0, 0.0, 0.0)
-    gluCylinder(q, 0.12, 0.03, 1.1, 8, 1)
-    glPopMatrix()
-    if not solid:
+        outline = _pin_outline(dome_stacks)
+        # Meridians: one unbroken line from the apex, out to the rim, then up
+        # over the dome to the pole — so the wire pin reads as one silhouette
+        # rather than a cone and a ball that happen to touch.
+        for i in range(slices):
+            th = tau * i / slices
+            ct, st = math.cos(th), math.sin(th)
+            glBegin(GL_LINE_STRIP)
+            for rad, z in outline:
+                glVertex3f(rad * ct, rad * st, z)
+            glEnd()
+        # Latitudes: the shared rim, then each dome band. The apex and the
+        # pole are points, not rings, so both ends are skipped.
+        for rad, z in outline[1:-1]:
+            glBegin(GL_LINE_LOOP)
+            for i in range(slices):
+                th = tau * i / slices
+                glVertex3f(rad * math.cos(th), rad * math.sin(th), z)
+            glEnd()
         glEnable(GL_LIGHTING)
-    gluDeleteQuadric(q)
+        return
+
+    # Solid: one quad strip per band, walking the meridian bottom to top. The
+    # first band degenerates to triangles at the apex, which is what a cone
+    # tip is. Upper-then-lower vertex order per step gives outward-CCW
+    # winding, so the shape survives paintGL's GL_CULL_FACE(GL_BACK).
+    for lower, upper in _pin_bands(dome_stacks):
+        glBegin(GL_QUAD_STRIP)
+        for i in range(slices + 1):
+            u = i / slices
+            th = tau * u
+            ct, st = math.cos(th), math.sin(th)
+            for rad, z, nr, nz in (upper, lower):
+                if textured:
+                    glTexCoord2f(*_pin_uv(u, z))
+                glNormal3f(nr * ct, nr * st, nz)
+                glVertex3f(rad * ct, rad * st, z)
+        glEnd()
 
 
 def _draw_grid_wire(segments=8):

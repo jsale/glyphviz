@@ -37,7 +37,7 @@ extensions with no ANTz/GaiaViz equivalent.
 | 13 | Tetrahedron | `GEO_TETRA` | |
 | 14 | Icosahedron Wire | `GEO_ICOSA_WIRE` | Wireframe; solid pair is `GEO_ICOSA` |
 | 15 | Icosahedron | `GEO_ICOSA` | |
-| 16 | Pin | `GEO_PIN` | |
+| 16 | Pin | `GEO_PIN` | ANTz's "ice-cream cone": a 10:1 cone standing on its **apex at the node's own origin**, shaft rising along +Z, domed at the top. Unlike the other glyphs it is not centred on its origin — that placement is what lets Pin-topology children ride the shaft (see [Topologies](topologies.md)) |
 | 17 | Pin Wire | `GEO_PIN_WIRE` | Wireframe pair — note the reversed solid/wire ID order vs. every other pair above |
 | 18 | Cylinder Wire | `GEO_CYLINDER_WIRE` | Wireframe; solid pair is `GEO_CYLINDER` |
 | 19 | Cylinder | `GEO_CYLINDER` | |
