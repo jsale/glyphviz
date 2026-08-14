@@ -32,7 +32,7 @@ Both panels are standard dock widgets: drag their title bars to float or re-dock
 
 A quick orientation pass — details for each item live in the [Menus reference](../reference/menus.md):
 
-- **File** — `Open Node CSV…` (**Ctrl+O**) loads a scene; `Merge Node CSV…` (**Ctrl+M**) loads a second file *into* the current scene; `Watch and Reload` (**Ctrl+R**) hot-reloads the open CSV whenever it changes on disk (great when a script is regenerating it); `Import PDB File…` brings in a protein structure; `Save` / `Save As…` write timestamped node+tag CSVs; `Save Scene as PNG…` (**F12**) captures the Viewer.
+- **File** — `Open Node CSV…` (**Ctrl+O**) loads a scene; `Merge Node CSV…` (**Ctrl+M**) loads a second file *into* the current scene; `Watch and Reload` (**Ctrl+R**) hot-reloads the open CSV whenever it changes on disk (great when a script is regenerating it); `Import PDB File…` brings in a protein structure; `Save` / `Save As…` write timestamped node+tag CSVs; `Save Selection As…` (**Ctrl+Alt+S**) writes just the selected nodes to a file of their own; `Save Scene as PNG…` (**F12**) captures the Viewer.
 - **Edit** — `Copy` / `Paste` (**Ctrl+C/V**) duplicate a node *with its whole subtree*; `Invert Selection` (**Ctrl+I**). **Ctrl+A** selects all visible glyphs.
 - **Textures** and **Meshes** — point GlyphViz at an image folder for textures; import OBJ/mesh files usable as node geometry.
 - **Tools** — the `Glyph Composer…` (**Ctrl+G**) and `Hyperglyph Generator…` (**Ctrl+H**) builders; both are their own topic.
@@ -144,7 +144,7 @@ Building trees needs a way to move around them without hunting with the mouse. F
 
 Try it: select a grandchild, walk **↑** up to the root, **Tab** across the roots you made in section 5, **↓** back down a branch. The yellow box hops from node to node as you go.
 
-Now prune. Navigate to a mid-level node that has children under it and press **Delete** (or Backspace). The node disappears **and so does its entire subtree** — every descendant goes with it. Its parent and the rest of the tree are untouched. That's the deletion contract everywhere in GlyphViz: a node always brings its descendants, whether you're deleting, copying (Ctrl+C), or pasting (Ctrl+V).
+Now prune. Navigate to a mid-level node that has children under it and press **Delete** (or Backspace). The node disappears **and so does its entire subtree** — every descendant goes with it. Its parent and the rest of the tree are untouched. That's the deletion contract everywhere in GlyphViz: a node always brings its descendants, whether you're deleting, copying (Ctrl+C), pasting (Ctrl+V), or saving a selection to its own file (**File → Save Selection As…**, Ctrl+Alt+S — see [Save Selection](../reference/save-selection.md), which also keeps a lifted-out subtree looking exactly as it does here).
 
 ![Before and after pressing Delete on a mid-level node: the node and its whole subtree are gone, its parent and the rest of the tree untouched](../assets/tour/tour-10-delete-subtree.png)
 

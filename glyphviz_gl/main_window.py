@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QColorDialog,
     QComboBox,
+    QDialog,
     QDockWidget,
     QDoubleSpinBox,
     QFileDialog,
@@ -31,7 +32,8 @@ from PySide6.QtWidgets import (
 )
 
 from glyphviz_core.csv_reader import (
-    load_node_csv, save_node_csv, save_tag_csv, stamp_node_and_tag_paths,
+    companion_tag_path, load_node_csv, save_node_csv, save_tag_csv,
+    stamp_node_and_tag_paths, unstamped_stem,
 )
 from glyphviz_core import camera_smoothing as cs
 from glyphviz_core.drop_router import (
@@ -47,6 +49,7 @@ from glyphviz_core.placement import (
 )
 from glyphviz_core.scene import DEFAULT_SCALE_FLOOR
 from glyphviz_core.scene_merge import merge_nodes
+from glyphviz_core.selection_export import build_selection
 from glyphviz_core.geometry_data import (
     GEO_NAMES, GEO_COUNT, GEO_GRID, GEO_GRID_WIRE, GEO_MESH, GEO_OCTA,
     GEO_SPHERE, GEO_SPHERE_WIRE, GEO_LINE, GEO_LINE_PRISM, _WIRE_IDS,
@@ -346,6 +349,17 @@ class MainWindow(QMainWindow):
         save_as_act = file_menu.addAction("Save &As…")
         save_as_act.setShortcut("Ctrl+Shift+S")
         save_as_act.triggered.connect(self._save_csv_as)
+
+        self._save_sel_act = file_menu.addAction("Save Se&lection As…")
+        self._save_sel_act.setShortcut("Ctrl+Alt+S")
+        self._save_sel_act.setEnabled(False)
+        self._save_sel_act.setToolTip(
+            "Write the selected nodes (and, by default, their descendants) to\n"
+            "a node CSV of their own. A node whose parent is left behind keeps\n"
+            "its world placement, so the saved fragment reopens looking exactly\n"
+            "as it does here.  [Ctrl+Alt+S]"
+        )
+        self._save_sel_act.triggered.connect(self._save_selection_as)
 
         file_menu.addSeparator()
         png_act = file_menu.addAction("Save &Scene as PNG…")
@@ -2511,6 +2525,115 @@ class MainWindow(QMainWindow):
         self._write_node_and_tag(self._current_path, self._current_tag_path)
         self._save_act.setEnabled(True)
 
+    def _selection_default_name(self) -> str:
+        """Suggested filename for a selection export, keeping the node/tag
+        stem convention intact: 'Cyclone_gv_node.csv' suggests
+        'Cyclone_gv_selection_node.csv', whose tag companion is
+        'Cyclone_gv_selection_tag.csv'."""
+        if self._current_path:
+            p = Path(self._current_path)
+            stem = unstamped_stem(p)
+            base = stem[:-4] if stem.endswith('node') else stem + '_'
+            return str(p.parent / f"{base}selection_node{p.suffix or '.csv'}")
+        return str(Path.home() / "gv_selection_node.csv")
+
+    def _save_selection_as(self):
+        """Ctrl+Alt+S — write the selected nodes to a node CSV of their own.
+
+        The options dialog decides membership and how to treat a node whose
+        parent stays behind; glyphviz_core.selection_export does the work
+        (and explains why a naive subset save is wrong). The tag companion is
+        written whenever the chosen filename allows it, regardless of the
+        Save Tag File checkbox — that checkbox is about scene saves, and an
+        exported fragment silently losing its labels would be data loss.
+        """
+        ids = {n.id for n in self._selected_nodes}
+        if not ids:
+            self.statusBar().showMessage("Select one or more nodes first.")
+            return
+
+        from glyphviz_core.channel_loader import find_channel_files
+        from .save_selection_dialog import SaveSelectionDialog
+
+        scene = self._viewport.scene
+        ch_paths = (find_channel_files(self._current_path)
+                    if self._current_path else (None, None))
+        dlg = SaveSelectionDialog(scene, ids, self,
+                                  has_channels=all(p is not None for p in ch_paths))
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        export = build_selection(scene, ids, dlg.options)
+        if not export.nodes:
+            self.statusBar().showMessage("Nothing to save — the selection holds no exportable nodes.")
+            return
+
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Selection",
+            self._selection_default_name(),
+            "CSV Files (*.csv);;All Files (*)",
+        )
+        if not path:
+            return
+
+        try:
+            save_node_csv(export.nodes, path)
+            msg = f"Saved {export.count} node(s) to {Path(path).name}"
+            tag_path = companion_tag_path(path)
+            if any(n.text or n.link for n in export.nodes):
+                if tag_path:
+                    save_tag_csv(export.nodes, str(tag_path))
+                    msg += f" (+ tags to {tag_path.name})"
+                else:
+                    msg += " (tags skipped: name doesn't end in 'node')"
+            if dlg.include_channels:
+                msg += self._write_selection_channels(export.nodes, path, ch_paths)
+            self.statusBar().showMessage(msg + self._selection_save_notes(export))
+        except Exception as exc:
+            self.statusBar().showMessage(f"Save Selection error: {exc}")
+
+    def _write_selection_channels(self, nodes, node_path: str, ch_paths) -> str:
+        """Companion ch-map/ch-tracks for an exported selection, holding only
+        the channels those nodes are bound to. Returns a status fragment.
+
+        The names are derived from the node file's stem the same way the tag
+        file's are, so the pair is discoverable by find_channel_files — which
+        wants EXACTLY ONE ch-map in the folder, the reason exporting into a
+        folder that already holds another scene's companions is a bad idea.
+        """
+        from glyphviz_core.channel_engine import channel_ids_for_nodes
+        from glyphviz_core.channel_loader import export_channel_subset
+
+        ch_ids = channel_ids_for_nodes(nodes)
+        if not ch_ids:
+            return ""
+        p = Path(node_path)
+        stem = unstamped_stem(p)
+        base = stem[:-4] if stem.endswith('node') else stem + '_'
+        out_map = p.parent / f"{base}ch-map{p.suffix or '.csv'}"
+        out_tracks = p.parent / f"{base}ch-tracks{p.suffix or '.csv'}"
+        channels, tracks = export_channel_subset(
+            ch_paths[0], ch_paths[1], ch_ids, out_map, out_tracks)
+        if not channels:
+            return ""
+        return f" (+ {channels} channel(s), {tracks} track(s))"
+
+    def _selection_save_notes(self, export) -> str:
+        """Everything the export had to decide on the user's behalf, in one
+        trailing clause — re-rooting, dropped links, and the two cases the
+        bake can't carry across faithfully (see selection_export)."""
+        notes = []
+        if export.detached_ids:
+            notes.append(f"{len(export.detached_ids)} re-rooted")
+        if export.dropped_links:
+            notes.append(f"{export.dropped_links} link(s) dropped")
+        if export.approximated_ids:
+            notes.append(f"{len(export.approximated_ids)} approximated "
+                         "(stretched parent — shape can't be carried exactly)")
+        if export.animated_detached:
+            notes.append(f"{len(export.animated_detached)} with motion rates "
+                         "now moving in world space")
+        return f" — {', '.join(notes)}." if notes else "."
+
     def _restamp_current_path(self):
         """Generate a fresh timestamp for self._current_path (and its tag
         companion), updating both current-path fields and the file label."""
@@ -3087,6 +3210,7 @@ class MainWindow(QMainWindow):
         for btn in self._mode_buttons.values():
             btn.setEnabled(has_selection)
         self._btn_delete.setEnabled(has_selection)
+        self._save_sel_act.setEnabled(has_selection)
         for btn in (self._btn_hide_sel, self._btn_show_sel, self._btn_isolate):
             btn.setEnabled(has_selection)
         if not has_selection and self._gizmo_mode is not None:

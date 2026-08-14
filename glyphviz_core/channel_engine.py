@@ -136,6 +136,30 @@ _PALETTE_OUTPUT_FIELDS = ('color_r', 'color_g', 'color_b')
 _CH_INPUT_KEYS = ('ch_input_id', 'np_ch_in_id', 'ch_input_id ')
 
 
+def channel_id_of(node: Node) -> int:
+    """The ch-map channel this node is bound to, or 0 for none.
+
+    The first of _CH_INPUT_KEYS the node carries wins, whatever its value —
+    an explicitly-present column is the node's answer even when unparseable,
+    rather than a reason to keep looking under a different spelling.
+    """
+    for key in _CH_INPUT_KEYS:
+        raw = node.extras.get(key)
+        if raw is None:
+            continue
+        try:
+            return int(float(raw))
+        except (ValueError, TypeError):
+            return 0
+    return 0
+
+
+def channel_ids_for_nodes(nodes) -> set[int]:
+    """Every channel id referenced by `nodes` — what a partial scene export
+    has to carry along to keep its animation (see selection_export)."""
+    return {cid for cid in (channel_id_of(n) for n in nodes) if cid}
+
+
 class ChannelEngine:
     """Applies time-series channel data to node attributes each animation frame."""
 
@@ -183,15 +207,7 @@ class ChannelEngine:
         # Build channel_id → nodes mapping via node.extras ch_input_id
         nodes_by_ch: dict[int, list[Node]] = {}
         for node in nodes:
-            ch_id = 0
-            for key in _CH_INPUT_KEYS:
-                raw = node.extras.get(key)
-                if raw is not None:
-                    try:
-                        ch_id = int(float(raw))
-                    except (ValueError, TypeError):
-                        pass
-                    break
+            ch_id = channel_id_of(node)
             if ch_id:
                 nodes_by_ch.setdefault(ch_id, []).append(node)
 

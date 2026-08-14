@@ -66,13 +66,17 @@ def _clear_channel_binding(node: Node) -> bool:
     return changed
 
 
-def _recompute_branch_levels(nodes: list[Node], own_ids: set[int]) -> None:
+def recompute_branch_levels(nodes: list[Node], own_ids: set[int]) -> None:
     """Set branch_level to true depth for the merged nodes.
 
-    Only ids inside `own_ids` count as parents — a merged node parented onto
+    Only ids inside `own_ids` count as parents — a node parented onto
     something outside the set is treated as a root here.  Re-rooting (below)
     already makes that impossible for the GUI's plain merge, but recomputing
     keeps branch_level honest if a caller reparents the result afterwards.
+
+    Public because selection_export needs exactly this: branch_level is a
+    stored column, not a derived one, so any operation that lifts nodes out
+    of one hierarchy into another has to restate it.
     """
     children: dict[int, list[Node]] = {}
     roots: list[Node] = []
@@ -168,6 +172,6 @@ def merge_nodes(existing: list[Node], incoming: list[Node]) -> MergeResult:
             result.cleared_channels += 1
         merged.append(node)
 
-    _recompute_branch_levels(merged, {n.id for n in merged})
+    recompute_branch_levels(merged, {n.id for n in merged})
     result.nodes = merged
     return result

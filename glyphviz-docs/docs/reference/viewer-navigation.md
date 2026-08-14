@@ -193,7 +193,9 @@ the Viewer has focus, since Qt shortcuts aren't widget-scoped here):
 | Ctrl+B | Show/hide the yellow selection bounding box **without** changing the selection — for clean screengrabs of a selected state. (ANTz uses the spacebar for this; in GlyphViz the spacebar drives Channels playback.) | *View → Show Selection Box* → `_set_selection_box` |
 
 File/Edit/View menu actions carry their own accelerators (Ctrl+O, Ctrl+S,
-Ctrl+Shift+S, F12, Ctrl+C, Ctrl+V, Ctrl+G, Ctrl+B) — see [Menus](menus.md).
+Ctrl+Shift+S, Ctrl+Alt+S, F12, Ctrl+C, Ctrl+V, Ctrl+G, Ctrl+B) — see
+[Menus](menus.md). Ctrl+Alt+S writes the current selection to a file of its
+own; see [Save Selection](save-selection.md).
 
 ## Node manipulation
 

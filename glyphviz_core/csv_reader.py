@@ -169,6 +169,26 @@ def _swap_node_tag_stem(stem: str, target: str) -> str | None:
     return None
 
 
+def unstamped_stem(path: str | Path) -> str:
+    """A file's stem with any trailing YYYYMMDDHHMMSS save stamp removed, so
+    a name derived from an already-saved file doesn't carry the old stamp
+    into the middle of the new one."""
+    return _TIMESTAMP_RE.sub('', Path(path).stem)
+
+
+def companion_tag_path(node_csv_path: str | Path) -> Path | None:
+    """The tag-file path a node CSV pairs with, whether or not it exists yet.
+
+    Convention (ANTz): a stem ending in 'node' → 'tag'. None when the stem
+    doesn't end in 'node', i.e. there is no sensible companion name to
+    derive. For WRITING a companion (Save Selection As…); readers want
+    _tag_file_path below, which additionally requires the file to be there.
+    """
+    p = Path(node_csv_path)
+    tag_stem = _swap_node_tag_stem(p.stem, 'tag')
+    return None if tag_stem is None else p.parent / (tag_stem + p.suffix)
+
+
 def _tag_file_path(node_csv_path: str) -> Path | None:
     """Return the companion tag-file path for a node CSV, or None if not applicable.
 
@@ -177,11 +197,9 @@ def _tag_file_path(node_csv_path: str) -> Path | None:
     np_node.csv → np_tag.csv.
     Returns None if the candidate file does not exist.
     """
-    p = Path(node_csv_path)
-    tag_stem = _swap_node_tag_stem(p.stem, 'tag')
-    if tag_stem is None:
+    candidate = companion_tag_path(node_csv_path)
+    if candidate is None:
         return None
-    candidate = p.parent / (tag_stem + p.suffix)
     return candidate if candidate.exists() else None
 
 
@@ -195,7 +213,7 @@ def stamp_node_and_tag_paths(node_path: str | Path) -> tuple[Path, Path | None]:
     end in 'node' — there's no sensible 'tag' counterpart name to derive.
     """
     p = Path(node_path)
-    base_stem = _TIMESTAMP_RE.sub('', p.stem)
+    base_stem = unstamped_stem(p)
     stamp = datetime.now().strftime(_TIMESTAMP_FORMAT)
     node_out = p.parent / f'{base_stem}{stamp}{p.suffix}'
     tag_stem = _swap_node_tag_stem(base_stem, 'tag')

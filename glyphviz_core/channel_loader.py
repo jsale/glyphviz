@@ -56,6 +56,45 @@ def load_ch_map(path: Path) -> dict[int, list[tuple[int, str]]]:
     return ch_map
 
 
+def export_channel_subset(map_path: Path, tracks_path: Path,
+                          channel_ids: set[int],
+                          out_map: Path, out_tracks: Path) -> tuple[int, int]:
+    """Write the ch-map/ch-tracks pair covering `channel_ids` only.
+
+    For Save Selection As… (see selection_export): a fragment of an animated
+    scene keeps its animation only if the channel files travel with it, and
+    copying them whole would drag along tracks for thousands of nodes that
+    didn't come.
+
+    Filtering happens at the FILE level rather than through load_ch_map/
+    load_ch_tracks, so any column those parsers ignore still round-trips.
+    Channel and track ids keep their original values, matching the node
+    export's preserved node ids — nothing is renumbered, so a `chN` column
+    still means track N.
+
+    Returns (channels_written, tracks_written); (0, 0) writes nothing at all,
+    since a ch-map with no rows would still be found by find_channel_files
+    and would shadow the real one if both sat in a folder together.
+    """
+    ch_map = pd.read_csv(map_path)
+    kept_map = ch_map[ch_map['channel_id'].isin(channel_ids)]
+    track_ids = {int(t) for t in kept_map['track_id']}
+    if kept_map.empty or not track_ids:
+        return (0, 0)
+
+    tracks = pd.read_csv(tracks_path)
+    # Everything that isn't a chN track column (cyclecount, timestamps, …)
+    # is scene-level and stays.
+    keep_cols = [
+        col for col in tracks.columns
+        if not (col.startswith('ch') and col[2:].isdigit())
+        or int(col[2:]) in track_ids
+    ]
+    kept_map.to_csv(out_map, index=False)
+    tracks[keep_cols].to_csv(out_tracks, index=False)
+    return (int(kept_map['channel_id'].nunique()), len(track_ids))
+
+
 def load_ch_tracks(path: Path) -> tuple[np.ndarray, dict[int, int]]:
     """Parse a ch-tracks.csv (gv_ch-tracks.csv or np_ch-tracks.csv).
 

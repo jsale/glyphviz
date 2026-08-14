@@ -136,6 +136,7 @@ nav:
       - Viewer Navigation: reference/viewer-navigation.md
       - Menus: reference/menus.md
       - Drag and Drop: reference/drag-and-drop.md
+      - Save Selection: reference/save-selection.md
       - Fetch Basemap: reference/basemaps.md
       - Properties Panel: reference/properties-panel.md
       - Node Panel: reference/node-panel.md

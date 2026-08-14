@@ -16,6 +16,7 @@ File, Edit, Textures, Meshes, Tools, View. There is no Node or Help menu.
 | Merge Node CSV… | Ctrl+M | Loads a second node CSV (and its companion tag file) **into** the current scene instead of replacing it. The merged nodes get fresh ids above the existing ones and keep their own coordinates, so the two scenes overlay in the same world space; the camera, the loaded texture set, and any running Channels playback all survive (`_merge_csv`) |
 | Save | Ctrl+S | Overwrites the currently-open file; if it was opened un-stamped, silently stamps it first rather than clobbering the original (`_save_csv` — `main_window.py:1055-1065`) |
 | Save As… | Ctrl+Shift+S | Saves under a fresh `YYYYMMDDHHMMSS`-stamped name (`_save_csv_as` — `main_window.py:1067-1078`) |
+| Save Selection As… | Ctrl+Alt+S | Writes just the selected nodes (and, by default, their descendants) to a node CSV of their own, with their tag, scene-settings and Channels companions. A node whose parent is left behind keeps its world placement, so the fragment reopens looking exactly as it does here. Greyed out with nothing selected. See [Save Selection](save-selection.md) (`_save_selection_as`) |
 | *(separator)* | | |
 | Save Scene as PNG… | F12 | Saves the current viewport exactly as displayed (`_save_scene_png` — `main_window.py:1108-1123`) |
 | *(separator)* | | |
