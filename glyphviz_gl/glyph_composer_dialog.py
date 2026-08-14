@@ -19,10 +19,11 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QCheckBox, QColorDialog, QComboBox, QDialog, QDoubleSpinBox,
-    QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
+    QAbstractSpinBox, QCheckBox, QColorDialog, QComboBox, QDialog,
+    QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
     QLineEdit, QListWidget, QListWidgetItem, QPushButton,
-    QScrollArea, QSizePolicy, QSpinBox, QSplitter, QVBoxLayout, QWidget,
+    QScrollArea, QSizePolicy, QSlider, QSpinBox, QSplitter, QVBoxLayout,
+    QWidget,
 )
 
 from glyphviz_core.geometry_data import GEO_NAMES, GEO_SPHERE
@@ -30,11 +31,18 @@ from glyphviz_core.glyph_recipe import (
     DIST_ANGULAR, DIST_CIRCULAR, DIST_GRID, DIST_LINEAR, DIST_RANDOM,
     DIST_LABELS, ROOT_DIST_MODES, NONROOT_DIST_MODES,
     GlyphRecipe, LevelSpec,
-    default_recipe, generate_nodes, load_recipe, save_recipe,
-    recipe_from_dict, recipe_to_dict,
+    default_recipe, effective_topo_scale, generate_nodes, load_recipe,
+    save_recipe, recipe_from_dict, recipe_to_dict, suggested_topo_scale,
+)
+from glyphviz_core.node import (
+    DEFAULT_TOPO_SCALE, NON_VISUAL_TYPES, TOPO_SCALE_ANTZ,
 )
 from glyphviz_core.topology import TOPO_NAMES, TOPO_SPHERE, TOPO_NONE
 
+from .topo_scale_ui import (
+    TOPO_SCALE_MIN, TOPO_SCALE_MAX, TOPO_SCALE_STEPS_PER_DECADE,
+    TOPO_SCALE_SLIDER_MAX, topo_scale_to_slider, slider_to_topo_scale,
+)
 from .viewport import Viewport
 
 
@@ -80,6 +88,10 @@ class GlyphComposerDialog(QDialog):
         self._w_geo    = None
         self._w_topo   = None
         self._w_ratio  = None
+        self._w_topo_scale        = None
+        self._w_topo_scale_slider = None
+        self._w_topo_scale_auto   = None
+        self._w_topo_scale_note   = None
         self._w_dist_mode = None
         self._w_sx = self._w_sy = self._w_sz = None
         self._w_rx = self._w_ry = self._w_rz = None
@@ -92,6 +104,10 @@ class GlyphComposerDialog(QDialog):
         self._color_end   = [80,  200, 180, 255]
 
         self._dist_panels: dict[str, QWidget] = {}
+
+        # False until the preview has framed a glyph once; after that the
+        # camera is the user's and survives every rebuild (see _do_preview).
+        self._camera_framed = False
 
         self._preview_timer = QTimer(self)
         self._preview_timer.setSingleShot(True)
@@ -144,7 +160,19 @@ class GlyphComposerDialog(QDialog):
         root.addWidget(splitter, stretch=3)
 
         # Mini viewport
-        root.addWidget(QLabel("<b>Preview</b>"))
+        prev_hdr = QHBoxLayout()
+        prev_hdr.addWidget(QLabel("<b>Preview</b>"))
+        prev_hdr.addStretch()
+        reset_view_btn = QPushButton("Reset View")
+        reset_view_btn.setToolTip(
+            "Re-frame the preview camera on the whole glyph.\n"
+            "Otherwise the camera stays exactly where you left it, so you can\n"
+            "zoom in on a detail and keep editing without being pulled back."
+        )
+        reset_view_btn.clicked.connect(self._reset_preview_camera)
+        prev_hdr.addWidget(reset_view_btn)
+        root.addLayout(prev_hdr)
+
         self._mini_vp = Viewport()
         self._mini_vp.show_grid = False
         self._mini_vp.setMinimumHeight(240)
@@ -175,7 +203,9 @@ class GlyphComposerDialog(QDialog):
         footer.addWidget(self._auto_preview_cb)
 
         preview_btn = QPushButton("Preview Now")
-        preview_btn.clicked.connect(self._do_preview)
+        # Bare connect would hand clicked(bool=False) to reset_camera — same
+        # result today, but a lambda keeps the two arguments from ever aliasing.
+        preview_btn.clicked.connect(lambda: self._do_preview())
         footer.addWidget(preview_btn)
 
         insert_btn = QPushButton("Insert into Scene")
@@ -314,6 +344,8 @@ class GlyphComposerDialog(QDialog):
         self._w_ratio.setToolTip("Torus tube ratio / other topology-specific size.")
         basic.addRow("Ratio:", self._w_ratio)
 
+        self._build_topo_scale_rows(basic, spec)
+
         vbox.addLayout(basic)
 
         # ── Placement ─────────────────────────────────────────────────
@@ -439,8 +471,11 @@ class GlyphComposerDialog(QDialog):
         # ── Connect signals ────────────────────────────────────────────
         self._w_dist_mode.currentIndexChanged.connect(self._on_dist_mode_changed)
 
-        # Basic params
-        for w in [self._w_count, self._w_geo, self._w_topo, self._w_ratio]:
+        # Basic params. Topology is routed separately: it moves the Topo Scale
+        # suggestion, which has to be recomputed before the debounced preview
+        # rather than 350 ms later.
+        self._w_topo.currentIndexChanged.connect(self._on_topo_changed)
+        for w in [self._w_count, self._w_geo, self._w_ratio]:
             if isinstance(w, QComboBox):
                 w.currentIndexChanged.connect(self._on_any_change)
             else:
@@ -473,6 +508,215 @@ class GlyphComposerDialog(QDialog):
 
         self._param_scroll.setWidget(container)
         self._loading = False
+
+    # ------------------------------------------------------------------ #
+    # Topology Scale row                                                   #
+    # ------------------------------------------------------------------ #
+
+    def _build_topo_scale_rows(self, form: QFormLayout, spec: LevelSpec):
+        """The "Topo Scale" row (spin + log slider + 1:1 / ANTz presets) and
+        its Auto checkbox, sitting directly under Topology because they are
+        the same subject: Topology says how this node lays its children out,
+        Topo Scale says how big that layout's coordinate system is.
+
+        Sharing topo_scale_ui's range and slider mapping with the Properties
+        panel is deliberate — the same drag has to mean the same thing in both
+        places, since a glyph composed here is edited there afterwards.
+        """
+        row = QWidget()
+        hb = QHBoxLayout(row)
+        hb.setContentsMargins(0, 0, 0, 0)
+        hb.setSpacing(4)
+
+        self._w_topo_scale = QDoubleSpinBox()
+        self._w_topo_scale.setRange(TOPO_SCALE_MIN, TOPO_SCALE_MAX)
+        self._w_topo_scale.setDecimals(6)
+        self._w_topo_scale.setStepType(
+            QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
+        self._w_topo_scale.setKeyboardTracking(False)
+        # Wide enough for all 6 decimals plus the step arrows: at 90px the
+        # ANTz preset renders as a clipped "0.005", which reads as a different
+        # number rather than as a truncation.
+        self._w_topo_scale.setMinimumWidth(110)
+        self._w_topo_scale.setMaximumWidth(110)
+
+        self._w_topo_scale_slider = QSlider(Qt.Orientation.Horizontal)
+        self._w_topo_scale_slider.setRange(0, TOPO_SCALE_SLIDER_MAX)
+        self._w_topo_scale_slider.setTickInterval(TOPO_SCALE_STEPS_PER_DECADE)
+        self._w_topo_scale_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+
+        one_btn = QPushButton("1:1")
+        one_btn.setMaximumWidth(34)
+        one_btn.setToolTip(
+            "1.0 — one translate unit is one world unit.\n"
+            "GlyphViz's own convention, and what a node with no\n"
+            "topo_scale column loads as."
+        )
+        antz_btn = QPushButton("ANTz")
+        antz_btn.setMaximumWidth(44)
+        antz_btn.setToolTip(
+            f"ANTz convention ({TOPO_SCALE_ANTZ:.6f} = 1/180): a linear axis\n"
+            "spans the parent's own extent, so 360 units reaches across a\n"
+            "cube facet. Use this when children authored in degrees are\n"
+            "being read as world units and have flown off into the distance."
+        )
+        one_btn.clicked.connect(lambda: self._set_topo_scale(DEFAULT_TOPO_SCALE))
+        antz_btn.clicked.connect(lambda: self._set_topo_scale(TOPO_SCALE_ANTZ))
+
+        hb.addWidget(self._w_topo_scale)
+        hb.addWidget(self._w_topo_scale_slider, 1)
+        hb.addWidget(one_btn)
+        hb.addWidget(antz_btn)
+
+        tip = (
+            "Size of the coordinate system this node places its children in.\n"
+            "Multiplies only the translate axes its Topology reads as a\n"
+            "DISTANCE — angular axes (longitude/latitude, orbit angle) are\n"
+            "never touched, so no value can distort a circular layout.\n"
+            f"\n1.0 = a translate unit is a world unit.\n"
+            f"{TOPO_SCALE_ANTZ:.6f} = ANTz (360 units across a cube facet)."
+        )
+        for w in (row, self._w_topo_scale, self._w_topo_scale_slider):
+            w.setToolTip(tip)
+        form.addRow("Topo Scale:", row)
+
+        self._w_topo_scale_auto = QCheckBox("Auto")
+        self._w_topo_scale_auto.setChecked(spec.topo_scale_auto)
+        self._w_topo_scale_auto.setToolTip(
+            "Pick the scale that keeps this node's children in frame, from the\n"
+            "way the next level asks to be distributed: an Angular ring hands\n"
+            "them 0..360, which a Sphere or Torus reads as a full revolution\n"
+            "but a Cube, Pin, Plane or None reads as 360 WORLD UNITS — far off\n"
+            "screen. Touching the value or a preset above turns Auto off and\n"
+            "the number becomes yours."
+        )
+        self._w_topo_scale_note = QLabel()
+        self._w_topo_scale_note.setStyleSheet("color: #999; font-size: 11px;")
+        # Kept to one line, and allowed to be clipped rather than to widen the
+        # form: it is a reminder of what the row is currently doing, and the
+        # checkbox's tooltip carries the full explanation.
+        self._w_topo_scale_note.setMinimumWidth(1)
+
+        auto_row = QWidget()
+        ab = QHBoxLayout(auto_row)
+        ab.setContentsMargins(0, 0, 0, 0)
+        ab.setSpacing(6)
+        ab.addWidget(self._w_topo_scale_auto)
+        ab.addWidget(self._w_topo_scale_note, 1)
+        form.addRow("", auto_row)
+
+        self._refresh_topo_scale_row()
+
+        self._w_topo_scale.valueChanged.connect(self._on_topo_scale_changed)
+        self._w_topo_scale_slider.valueChanged.connect(self._on_topo_scale_slider)
+        self._w_topo_scale_auto.toggled.connect(self._on_topo_scale_auto_toggled)
+
+    def _refresh_topo_scale_row(self):
+        """Push the level's effective scale into the spin box / slider and
+        refresh the explanatory note. Called on form build, whenever Auto is
+        toggled, and after any edit that could change the suggestion (the
+        Topology combo, and a sibling level's distribution mode)."""
+        if self._w_topo_scale is None or self._current_level is None:
+            return
+        spec = self._recipe.levels[self._current_level]
+        value = effective_topo_scale(self._recipe, self._current_level)
+        auto = spec.topo_scale_auto
+        for w in (self._w_topo_scale, self._w_topo_scale_slider):
+            w.blockSignals(True)
+        self._w_topo_scale.setValue(value)
+        self._w_topo_scale_slider.setValue(topo_scale_to_slider(value))
+        for w in (self._w_topo_scale, self._w_topo_scale_slider):
+            w.blockSignals(False)
+
+        if not auto:
+            note = "Manual — re-check Auto to re-fit it."
+        elif value == DEFAULT_TOPO_SCALE:
+            note = "1:1 — this topology reads the child sweep as angles."
+        else:
+            note = "Fitted to ANTz — child sweep would read as a distance."
+        self._w_topo_scale_note.setText(note)
+
+    def _reapply_auto_topo_scale(self):
+        """A level on Auto has no stored value of its own, so its displayed
+        number has to be recomputed after any edit that moves the suggestion."""
+        if (self._w_topo_scale_auto is not None
+                and self._w_topo_scale_auto.isChecked()):
+            self._refresh_topo_scale_row()
+
+    def _on_topo_scale_changed(self, value: float):
+        """A typed/spun value is the user taking the level off Auto — the
+        control they reached for IS the decision, so don't make them find the
+        checkbox first.
+
+        Every control here writes straight into the LevelSpec instead of
+        leaving it for _save_params to read back off the spin box: the box
+        shows 6 decimals, and a read-back would quietly round the ANTz preset
+        from 1/180 to 0.005556 on the next preview tick.
+        """
+        if self._loading or self._current_level is None:
+            return
+        self._w_topo_scale_slider.blockSignals(True)
+        self._w_topo_scale_slider.setValue(topo_scale_to_slider(value))
+        self._w_topo_scale_slider.blockSignals(False)
+        self._claim_topo_scale()
+        self._recipe.levels[self._current_level].topo_scale = value
+        self._refresh_topo_scale_row()
+        self._on_any_change()
+
+    def _on_topo_scale_slider(self, pos: int):
+        """The spin box is the single point that applies a value, so route
+        through it rather than duplicating the apply."""
+        self._w_topo_scale.setValue(slider_to_topo_scale(pos))
+
+    def _set_topo_scale(self, value: float):
+        """The 1:1 / ANTz preset buttons. Writes the exact constant rather than
+        routing through the spin box, which shows 6 decimals and would store
+        the ANTz preset as 0.005556 instead of 1/180."""
+        self._claim_topo_scale()
+        if self._current_level is not None:
+            self._recipe.levels[self._current_level].topo_scale = value
+        for w in (self._w_topo_scale, self._w_topo_scale_slider):
+            w.blockSignals(True)
+        self._w_topo_scale.setValue(value)
+        self._w_topo_scale_slider.setValue(topo_scale_to_slider(value))
+        for w in (self._w_topo_scale, self._w_topo_scale_slider):
+            w.blockSignals(False)
+        self._refresh_topo_scale_row()
+        self._on_any_change()
+
+    def _claim_topo_scale(self):
+        """Take the current level off Auto without re-entering the toggle
+        handler (which would overwrite the value being set)."""
+        if self._loading or self._w_topo_scale_auto is None:
+            return
+        if self._w_topo_scale_auto.isChecked():
+            self._w_topo_scale_auto.blockSignals(True)
+            self._w_topo_scale_auto.setChecked(False)
+            self._w_topo_scale_auto.blockSignals(False)
+        if self._current_level is not None:
+            self._recipe.levels[self._current_level].topo_scale_auto = False
+
+    def _on_topo_scale_auto_toggled(self, checked: bool):
+        if self._loading or self._current_level is None:
+            return
+        spec = self._recipe.levels[self._current_level]
+        if not checked:
+            # Leaving Auto keeps what was on screen, so the value doesn't jump
+            # the instant the user takes the wheel.
+            spec.topo_scale = self._w_topo_scale.value()
+        spec.topo_scale_auto = checked
+        self._refresh_topo_scale_row()
+        self._on_any_change()
+
+    def _on_topo_changed(self, _idx):
+        """Changing the topology changes what this node's children's translate
+        values MEAN — degrees under Sphere, world units under Cube — so a level
+        still on Auto has to re-fit before the preview redraws, not after."""
+        if self._loading:
+            return
+        self._save_params()
+        self._reapply_auto_topo_scale()
+        self._on_any_change()
 
     def _update_dist_panel(self, mode: str):
         for m, p in self._dist_panels.items():
@@ -525,6 +769,10 @@ class GlyphComposerDialog(QDialog):
 
         spec.color_start = tuple(self._color_start)
         spec.color_end   = tuple(self._color_end) if self._w_gradient_cb.isChecked() else None
+
+        # topo_scale / topo_scale_auto are deliberately NOT read back here —
+        # their handlers write straight into the spec. See
+        # _on_topo_scale_changed for why a read-back would corrupt a preset.
 
         item = self._level_list.item(idx)
         if item:
@@ -590,14 +838,68 @@ class GlyphComposerDialog(QDialog):
         if self._auto_preview_cb.isChecked():
             self._preview_timer.start(350)
 
-    def _do_preview(self):
+    def _do_preview(self, reset_camera: bool = False):
+        """Regenerate and redraw, holding the preview camera where the user
+        put it.
+
+        Viewport.set_nodes() auto-frames the whole scene, which is right when
+        a scene is opened and wrong on every keystroke here: composing is an
+        edit-and-look loop, and zooming in on the detail you're tuning only to
+        be yanked back to a distant overview on the next change makes close-up
+        work impossible. So the camera is snapshotted across the rebuild and
+        restored, and re-framing becomes an explicit act — the Reset View
+        button, a freshly-loaded template, and the first preview of all.
+        """
         try:
             self._save_params()
         except Exception:
             pass   # never let a save error kill the preview loop
         nodes = generate_nodes(self._recipe, start_id=1)
         self._mini_vp.base_scale = self._main_win._viewport.base_scale
+        keep = self._camera_framed and not reset_camera
+        state = self._mini_vp.camera_state() if keep else None
         self._mini_vp.set_nodes(nodes)
+        if state is not None:
+            self._mini_vp.restore_camera_state(state)
+        else:
+            self._frame_preview()
+            self._camera_framed = True
+
+    def _frame_preview(self):
+        """Pull the camera in to the glyph's own size.
+
+        Viewport.set_nodes() floors its framing distance at 50 world units,
+        which is right for opening a scene but leaves a composed glyph — a
+        couple of units across, and *especially* so once the Topo Scale fit has
+        reeled its children in — as a speck in the middle of the preview. That
+        floor is half of what "resets to a distant view" meant. Framed off the
+        actual extent instead, with the glyphs' own rendered radii included so
+        a single fat root still fits.
+        """
+        vp = self._mini_vp
+        visible = [n for n in vp.scene.nodes if n.type not in NON_VISUAL_TYPES]
+        if not visible:
+            return
+        pts = []
+        for n in visible:
+            p = vp.world_position(n.id)
+            if p is None:
+                continue
+            r = max(vp._radius_of(n))
+            pts.append((p, r))
+        if not pts:
+            return
+        lo = [min(p[i] - r for p, r in pts) for i in range(3)]
+        hi = [max(p[i] + r for p, r in pts) for i in range(3)]
+        vp.set_camera(
+            target=tuple((lo[i] + hi[i]) / 2.0 for i in range(3)),
+            distance=max(max(hi[i] - lo[i] for i in range(3)) * 1.6, 1.0),
+        )
+        vp.update()
+
+    def _reset_preview_camera(self):
+        self._camera_framed = False
+        self._do_preview(reset_camera=True)
 
     # ------------------------------------------------------------------ #
     # Template I/O                                                         #
@@ -629,7 +931,9 @@ class GlyphComposerDialog(QDialog):
         self._name_edit.setText(recipe.name)
         self._refresh_level_list()
         self._level_list.setCurrentRow(0)
-        self._do_preview()
+        # A different glyph entirely — frame it rather than keeping a camera
+        # aimed at the one it replaced.
+        self._reset_preview_camera()
 
     # ------------------------------------------------------------------ #
     # Insert into scene                                                    #

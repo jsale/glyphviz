@@ -80,6 +80,30 @@ ANGULAR_SAFE_TOPOS = [
     TOPO_SPIRAL,
 ]
 
+# TOPO_PIN was, until 2026-08-13, the one entry here that was not actually
+# angular-safe: it reads a child's translate_x as HEIGHT
+# (topology.LINEAR_PLACEMENT_AXES), so the 0..360 sweep an angular level hands
+# it became a 360-unit vertical smear rather than a ring — the same mismatch
+# Node.topo_scale exists to reconcile. The LevelSpecs below now leave
+# topo_scale_auto at its default (True), so glyph_recipe fits each level's
+# Topology Scale to the distribution its children ask for.
+#
+# Be precise about what that buys: Pin places children along ONE axis whatever
+# the scale, so the fit shortens the line, it does not turn it into a ring.
+# What it does is keep the subtree inside the parent's own extent, which is the
+# difference between a legible creature and dust scattered across 400 units.
+# The dramatic wins are where Pin sits at a DEEP level — those hold the most
+# nodes — e.g. seed 5 at depth 4 (Torus/Spiral/Pin/Pin) goes from a few
+# unreadable specks to a dense torus.
+#
+# This DID change previously-generated art. On a 200-design sample it moved 62
+# of them (31%), and Pin is the ONLY cause: all 67 re-fitted levels across those
+# 62 designs were Pin levels, at every depth, not just trunks. Affected designs
+# pull in by 7.5x to 117x (median 23x). Jeff asked for it knowing that
+# (2026-08-13). Note the consequence for the design lineage — a pre-2026-08-13
+# recipe JSON has no topo_scale keys, so it reloads onto the fit and
+# regenerates as the corrected design rather than the smeared one.
+
 # Geometry "families" — picking one family per design (rather than a fully
 # free-for-all mix of all 24 usable shapes) is what keeps a 5-level, 2000-node
 # hyperglyph reading as one coherent creature instead of visual noise.

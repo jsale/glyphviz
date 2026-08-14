@@ -65,20 +65,25 @@ from glyphviz_core.color_palette import (
 
 from .audio_player import AudioPlayer
 from .node_table import NodeTableView
+from .topo_scale_ui import (
+    TOPO_SCALE_MIN, TOPO_SCALE_MAX, TOPO_SCALE_STEPS_PER_DECADE,
+    TOPO_SCALE_SLIDER_MAX, topo_scale_to_slider, slider_to_topo_scale,
+)
 from .texture_manager import _IMAGE_EXTS as _TEX_IMAGE_EXTS
 from .viewport import Viewport
 
 _AUDIO_TICK_MS = 33   # redraw rate while Channels playback is audio-driven (~30 Hz)
 
 # --- Topology Scale inspector control (Node.topo_scale) ----------------------
-# The useful range spans several orders of magnitude — 1.0 ("a translate unit
-# is a world unit") down past TOPO_SCALE_ANTZ (1/180, "360 units spans a cube
-# facet") and up for deliberately exploded layouts — so the slider is
-# logarithmic: a fixed number of steps per decade, which makes a drag feel the
-# same at 0.005 as at 5. The spin box beside it takes exact values.
-_TOPO_SCALE_MIN = 1e-4
-_TOPO_SCALE_MAX = 1e2
-_TOPO_SCALE_STEPS_PER_DECADE = 100
+# Range and slider mapping are shared with the Glyph Composer's per-level
+# Topo Scale row — see topo_scale_ui for why they have to agree. Re-exported
+# under the module-private names this file has always used.
+_TOPO_SCALE_MIN = TOPO_SCALE_MIN
+_TOPO_SCALE_MAX = TOPO_SCALE_MAX
+_TOPO_SCALE_STEPS_PER_DECADE = TOPO_SCALE_STEPS_PER_DECADE
+_TOPO_SCALE_SLIDER_MAX = TOPO_SCALE_SLIDER_MAX
+_topo_scale_to_slider = topo_scale_to_slider
+_slider_to_topo_scale = slider_to_topo_scale
 
 # A topology change that leaves some child this many times its parent's own
 # rendered radius away gets a status-bar hint pointing at Topology Scale (see
@@ -88,31 +93,6 @@ _TOPO_SCALE_STEPS_PER_DECADE = 100
 # lands in the hundreds.
 _TOPO_SCALE_HINT_RATIO = 20.0
 _TOPO_SCALE_HINT_MS = 12000
-
-_TOPO_SCALE_SLIDER_MAX = int(
-    round((math.log10(_TOPO_SCALE_MAX) - math.log10(_TOPO_SCALE_MIN))
-          * _TOPO_SCALE_STEPS_PER_DECADE))
-
-
-def _topo_scale_to_slider(value: float) -> int:
-    """Node.topo_scale -> log slider position, clamped to the slider's range."""
-    if value <= _TOPO_SCALE_MIN:
-        return 0
-    pos = ((math.log10(value) - math.log10(_TOPO_SCALE_MIN))
-           * _TOPO_SCALE_STEPS_PER_DECADE)
-    return max(0, min(_TOPO_SCALE_SLIDER_MAX, int(round(pos))))
-
-
-def _slider_to_topo_scale(pos: int) -> float:
-    """Log slider position -> Node.topo_scale. Snaps the exact-decade
-    positions (…, 0.01, 0.1, 1.0, 10.0) to clean values rather than the
-    10**-15.999999 the float math would otherwise land on, so a user who
-    drags to the 1.0 tick gets exactly 1.0 back — the value that omits the
-    CSV column entirely."""
-    exp = math.log10(_TOPO_SCALE_MIN) + pos / _TOPO_SCALE_STEPS_PER_DECADE
-    if pos % _TOPO_SCALE_STEPS_PER_DECADE == 0:
-        return float(10.0 ** round(exp))
-    return 10.0 ** exp
 
 # Shared by the Camera toolbar's Fly button and the View menu item.
 _FLY_MODE_TIP = (

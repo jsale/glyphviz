@@ -87,6 +87,13 @@ Notes:
   [Channels](channels-animation.md) and the Channel Parameters example.
 - If a topology change does scatter a subtree, the status bar says so and
   names this field.
+- The **Glyph Composer** sets it for you. Its per-level *Topo Scale* row has
+  the same spin box, log slider and 1:1 / ANTz presets, plus an **Auto**
+  checkbox (on by default). While Auto is on, a level whose children ask for
+  the *Angular (ring around parent)* distribution — which hands them
+  `translate_x = 0…360` — gets ANTz whenever its topology would read that
+  sweep as a distance, and 1.0 otherwise. Touching the value or a preset
+  turns Auto off and the number is yours; re-check it to go back to fitting.
 
 ## Orientation ("facing outward")
 

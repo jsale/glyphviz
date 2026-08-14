@@ -78,7 +78,9 @@ In the app it is the **Topo Scale** row of the Properties panel, directly under
 Topology, with `1:1` and `ANTz` preset buttons; edits apply to the whole
 selection, so *Edit → Select By → Topology → Cube* then one slider drag retunes
 every cube parent in a scene. It is also bindable as a Channels attribute, so a
-scene animating `topo` can animate `topo_scale` alongside it.
+scene animating `topo` can animate `topo_scale` alongside it. The Glyph
+Composer carries the same row per level, with an **Auto** checkbox that fits
+the value to the child layout the level asks for.
 
 Worked example — 12 children at `translate_x = 0, 30, … 330`, `translate_y = 45`,
 `translate_z = 0` under a scale-9 parent at the default `ratio` (engine output:

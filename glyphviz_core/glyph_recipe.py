@@ -10,9 +10,11 @@ import random
 from dataclasses import dataclass, field, asdict
 
 from .geometry_data import GEO_SPHERE
-from .node import Node, ROTATION_MODE_EULER_XYZ
+from .node import (
+    DEFAULT_TOPO_SCALE, TOPO_SCALE_ANTZ, Node, ROTATION_MODE_EULER_XYZ,
+)
 from .topology import (
-    TOPO_SPHERE, TOPO_NONE, TOPO_NAMES,
+    LINEAR_PLACEMENT_AXES, TOPO_SPHERE, TOPO_NONE, TOPO_NAMES,
 )
 
 # Distribution modes -----------------------------------------------------------
@@ -40,6 +42,13 @@ class LevelSpec:
     geometry: int          = GEO_SPHERE
     topo: int              = TOPO_SPHERE
     ratio: float           = 0.3
+
+    # Topology Scale of THIS level's nodes — the size of the coordinate system
+    # their children are placed in (Node.topo_scale). While topo_scale_auto is
+    # set the stored number is ignored and suggested_topo_scale() supplies the
+    # value instead; see effective_topo_scale below for why that is the default.
+    topo_scale: float      = DEFAULT_TOPO_SCALE
+    topo_scale_auto: bool  = True
 
     # Which distribution to use (see DIST_* constants)
     dist_mode: str         = DIST_ANGULAR
@@ -95,6 +104,51 @@ class GlyphRecipe:
 
 
 # ------------------------------------------------------------------------------
+# Topology Scale auto-fit
+# ------------------------------------------------------------------------------
+#
+# A recipe describes its child placement in ONE vocabulary — DIST_ANGULAR hands
+# the next level translate_x = 0..360 — but the parent's topology decides
+# whether translate_x means degrees or world units (topology.
+# LINEAR_PLACEMENT_AXES). Under Sphere/Torus/Cylinder that 0..360 is a full
+# revolution; under Cube/Pin/Plane/None it is 360 WORLD UNITS, which throws the
+# children hundreds of parent-radii away — off screen, with no clue where they
+# went. That mismatch is exactly what Node.topo_scale exists to reconcile, so
+# rather than make every Composer user discover the field the hard way, a level
+# whose scale the user has not touched picks the value that keeps its own
+# children in frame.
+
+def suggested_topo_scale(recipe: GlyphRecipe, level_idx: int) -> float:
+    """The Topology Scale that keeps level_idx's children next to it, given how
+    the NEXT level asks to be distributed.
+
+    TOPO_SCALE_ANTZ (1/180) is the answer whenever a 0..360 angular sweep is
+    about to be read as a distance: it is the convention under which a linear
+    axis spans the parent's own extent, so the same degree-authored numbers
+    land on the parent's surface instead of far past it. Everything else —
+    including any level with no children to place — stays at 1.0, so a scene
+    that was already correct is left alone.
+    """
+    if level_idx + 1 >= len(recipe.levels):
+        return DEFAULT_TOPO_SCALE          # leaf: no children to place
+    if recipe.levels[level_idx + 1].dist_mode != DIST_ANGULAR:
+        return DEFAULT_TOPO_SCALE          # not authored in degrees
+    topo = recipe.levels[level_idx].topo
+    linear_x = LINEAR_PLACEMENT_AXES.get(topo, (True, True, True))[0]
+    return TOPO_SCALE_ANTZ if linear_x else DEFAULT_TOPO_SCALE
+
+
+def effective_topo_scale(recipe: GlyphRecipe, level_idx: int) -> float:
+    """The Topology Scale generate_nodes() will actually stamp on level_idx —
+    the user's number once they have taken the level off auto, the suggestion
+    until then."""
+    spec = recipe.levels[level_idx]
+    if spec.topo_scale_auto:
+        return suggested_topo_scale(recipe, level_idx)
+    return spec.topo_scale
+
+
+# ------------------------------------------------------------------------------
 # Node generation
 # ------------------------------------------------------------------------------
 
@@ -117,6 +171,7 @@ def _gen_level(recipe, level_idx, parent_id, parent_topo,
     spec = recipe.levels[level_idx]
     is_root = (level_idx == 0)
     positions = _distribute(spec, parent_topo, is_root)
+    topo_scale = effective_topo_scale(recipe, level_idx)
 
     for i, (tx, ty, tz) in enumerate(positions):
         node_id = start_id + len(nodes)
@@ -136,6 +191,7 @@ def _gen_level(recipe, level_idx, parent_id, parent_topo,
             hide=0,
             topo=spec.topo,
             ratio=spec.ratio,
+            topo_scale=topo_scale,
             rotation_mode=ROTATION_MODE_EULER_XYZ,
         )
         nodes.append(node)
@@ -233,6 +289,12 @@ def recipe_from_dict(d: dict) -> GlyphRecipe:
             geometry         = sd.get("geometry", GEO_SPHERE),
             topo             = sd.get("topo", TOPO_SPHERE),
             ratio            = sd.get("ratio", 0.3),
+            # Templates written before Topology Scale existed carry neither
+            # key. They load onto auto, which is what fixes the ones whose
+            # children were flying off; the stored 1.0 is what auto falls back
+            # to anyway, so nothing else moves.
+            topo_scale       = sd.get("topo_scale", DEFAULT_TOPO_SCALE),
+            topo_scale_auto  = sd.get("topo_scale_auto", True),
             dist_mode        = sd.get("dist_mode", DIST_ANGULAR),
             dist_step        = sd.get("dist_step", 2.0),
             dist_axis        = sd.get("dist_axis", 0),
