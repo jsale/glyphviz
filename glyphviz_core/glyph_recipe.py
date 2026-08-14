@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import math
 import random
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, replace
 
 from .geometry_data import GEO_SPHERE
 from .node import (
@@ -261,6 +261,90 @@ def _lerp_color(start, end, t):
     if end is None:
         return tuple(int(v) for v in start)
     return tuple(int(round(s + t * (e - s))) for s, e in zip(start, end))
+
+
+# ------------------------------------------------------------------------------
+# Recipe measurement
+# ------------------------------------------------------------------------------
+
+def recipe_node_count(recipe: GlyphRecipe) -> int:
+    """How many nodes generate_nodes() will produce, without producing them.
+
+    Each level contributes the running product of every count down to it, so
+    the answer is exact for the full tree (generate_nodes expands every level
+    under every parent)."""
+    total = 0
+    running = 1
+    for spec in recipe.levels:
+        running *= max(spec.count, 1)
+        total += running
+    return total
+
+
+# Above this, a recipe is still perfectly valid — the JSON is a few hundred
+# bytes whatever the tree expands to — but it stops being comfortable to EDIT
+# in the Glyph Composer, whose Auto Preview regenerates and re-bakes the whole
+# tree 350 ms after every keystroke (see glyph_composer_dialog._do_preview).
+# That cost is what a caller offering to hand a recipe to the Composer should
+# warn about; it is an editing-ergonomics threshold, not a correctness limit.
+COMPOSER_EDIT_NODE_WARN = 2000
+
+
+# ------------------------------------------------------------------------------
+# Live-orientation capture
+# ------------------------------------------------------------------------------
+
+def _composer_safe_angle(deg: float) -> float:
+    """Fold `deg` into the Composer's rotation spin-box range (-360..360).
+
+    Rate animation integrates rotate_x/y/z without wraparound (see
+    viewport._apply_rate_animation), so a glyph left spinning reaches
+    thousands of degrees — the same orientation, but a number the spin box
+    would silently CLAMP to 360 the moment the level is selected, quietly
+    losing exactly the state we set out to capture. Values already in range
+    are returned untouched rather than folded to 0..360, so a static recipe
+    round-trips byte-identically instead of having every authored -20.0
+    rewritten as 340.0."""
+    return deg if -360.0 <= deg <= 360.0 else deg % 360.0
+
+
+def snapshot_level_rotations(recipe: GlyphRecipe,
+                             nodes: list[Node]) -> GlyphRecipe:
+    """Return a copy of `recipe` whose per-level rotate_x/y/z are taken from
+    the CURRENT orientation of `nodes` — the live, animated node objects a
+    viewport has been integrating rate fields into — rather than from the
+    values the recipe was authored with.
+
+    `nodes` must be a generate_nodes() result for this recipe (the level a
+    node belongs to is read off its branch_level, relative to the first
+    node's, so any base_branch_level offset works).
+
+    **A recipe stores one rotation per LEVEL, and idle motion gives every
+    NODE its own axis and speed** (hyperglyph_generator.apply_idle_motion), so
+    siblings drift apart and no single value can describe them all. The
+    capture is therefore exact for a level holding one node — always true of
+    level 0, the trunk — and takes the first node encountered at each deeper
+    level as its representative. First-node is deliberate over an average of
+    the siblings: it is an orientation that genuinely occurred on screen, and
+    it stays stable as the spread grows, where a circular mean of nodes
+    scattered right around the circle is both meaningless and liable to flip.
+
+    Only rotation is captured, because only rotation drifts: apply_idle_motion
+    sets rotate_rate_* alone, and translate/scale have no LevelSpec field that
+    could hold a per-node result anyway (position comes from the dist_* params).
+    """
+    levels = [replace(spec) for spec in recipe.levels]
+    if levels and nodes:
+        base = nodes[0].branch_level
+        seen: set[int] = set()
+        for n in nodes:
+            idx = n.branch_level - base
+            if 0 <= idx < len(levels) and idx not in seen:
+                seen.add(idx)
+                levels[idx].rotate_x = _composer_safe_angle(n.rotate_x)
+                levels[idx].rotate_y = _composer_safe_angle(n.rotate_y)
+                levels[idx].rotate_z = _composer_safe_angle(n.rotate_z)
+    return GlyphRecipe(name=recipe.name, levels=levels)
 
 
 # ------------------------------------------------------------------------------

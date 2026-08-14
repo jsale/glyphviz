@@ -10,6 +10,7 @@
 - What Glyph Composer is and how it relates to GlyphViz
 - Interface reference (if it has its own GUI)
 - Workflow for composing/authoring glyphs for use in GlyphViz scenes
+- Templates: saving and loading recipe `.json` files, including ones exported by the [Hyperglyph Generator](hyperglyph-generator.md)
 
 ## Next step
 
