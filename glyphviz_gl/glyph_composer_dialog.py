@@ -26,7 +26,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from glyphviz_core.geometry_data import GEO_NAMES, GEO_SPHERE
+from glyphviz_core.geometry_data import (
+    GEO_CYLINDER, GEO_MESH, GEO_NAMES, GEO_POINT, GEO_SPHERE,
+)
 from glyphviz_core.glyph_recipe import (
     DIST_ANGULAR, DIST_CIRCULAR, DIST_GRID, DIST_LINEAR, DIST_RANDOM,
     DIST_LABELS, ROOT_DIST_MODES, NONROOT_DIST_MODES,
@@ -48,6 +50,13 @@ from .viewport import Viewport
 
 _GEO_ITEMS  = [(gid, name) for gid, name in sorted(GEO_NAMES.items()) if gid != 23]
 _TOPO_ITEMS = sorted(TOPO_NAMES.items())
+
+# Geometry choices for a level's parent-link. Any id is legal on a type-7
+# node, but Mesh needs a mesh_id the recipe can't carry and Point is a
+# fixed-pixel sprite with nothing to stretch (the same two ids the viewer's
+# O-key cycling skips on links), so neither is offered.
+_LINK_GEO_ITEMS = [(gid, name) for gid, name in sorted(GEO_NAMES.items())
+                   if gid not in (GEO_MESH, GEO_POINT)]
 
 
 def _color_btn_style(r, g, b, a=255):
@@ -100,8 +109,20 @@ class GlyphComposerDialog(QDialog):
         self._w_color_end_btn   = None
         self._w_gradient_cb     = None
 
+        # Link-to-parent widgets — only exist for non-root levels, so they
+        # follow the same None-reset discipline as the dist-mode widgets.
+        self._w_link_box       = None
+        self._w_link_geo       = None
+        self._w_link_ratio     = None
+        self._w_link_inherit   = None
+        self._w_link_color_btn = None
+        self._w_link_grad_cb   = None
+        self._w_link_color_end_btn = None
+
         self._color_start = [180, 100, 200, 255]
         self._color_end   = [80,  200, 180, 255]
+        self._link_color_start = [150, 110, 70, 255]
+        self._link_color_end   = [110, 150, 90, 255]
 
         self._dist_panels: dict[str, QWidget] = {}
 
@@ -238,7 +259,8 @@ class GlyphComposerDialog(QDialog):
         spec = self._recipe.levels[idx]
         geo  = GEO_NAMES.get(spec.geometry, str(spec.geometry))
         prefix = "Root" if idx == 0 else f"Level {idx}"
-        return f"{prefix}  ×{spec.count}  {geo}"
+        link = "  ⌁" if (idx > 0 and spec.link_geo is not None) else ""
+        return f"{prefix}  ×{spec.count}  {geo}{link}"
 
     def _refresh_level_list(self):
         self._level_list.blockSignals(True)
@@ -300,6 +322,9 @@ class GlyphComposerDialog(QDialog):
         self._w_radius = None
         self._w_gcols = self._w_gsx = self._w_gsy = None
         self._w_bounds = None
+        self._w_link_box = self._w_link_geo = self._w_link_ratio = None
+        self._w_link_inherit = self._w_link_color_btn = None
+        self._w_link_grad_cb = self._w_link_color_end_btn = None
         self._dist_panels = {}
 
         self._current_level = level_idx
@@ -466,6 +491,11 @@ class GlyphComposerDialog(QDialog):
         cf.addRow("Gradient to:", self._w_color_end_btn)
 
         vbox.addWidget(color_box)
+
+        # ── Link to parent (non-root levels) ──────────────────────────
+        if not is_root:
+            self._build_link_group(vbox, spec)
+
         vbox.addStretch()
 
         # ── Connect signals ────────────────────────────────────────────
@@ -770,6 +800,23 @@ class GlyphComposerDialog(QDialog):
         spec.color_start = tuple(self._color_start)
         spec.color_end   = tuple(self._color_end) if self._w_gradient_cb.isChecked() else None
 
+        # Link to parent — widgets only exist for non-root levels (same
+        # None-reset discipline as the dist widgets above).
+        if self._w_link_box is not None:
+            if self._w_link_box.isChecked():
+                spec.link_geo   = self._w_link_geo.currentData()
+                spec.link_ratio = self._w_link_ratio.value()
+                if self._w_link_inherit.isChecked():
+                    spec.link_color_start = None
+                    spec.link_color_end   = None
+                else:
+                    spec.link_color_start = tuple(self._link_color_start)
+                    spec.link_color_end = (tuple(self._link_color_end)
+                                           if self._w_link_grad_cb.isChecked()
+                                           else None)
+            else:
+                spec.link_geo = None
+
         # topo_scale / topo_scale_auto are deliberately NOT read back here —
         # their handlers write straight into the spec. See
         # _on_topo_scale_changed for why a read-back would corrupt a preset.
@@ -815,6 +862,126 @@ class GlyphComposerDialog(QDialog):
         if c.isValid():
             self._color_end = [c.red(), c.green(), c.blue(), c.alpha()]
             self._w_color_end_btn.setStyleSheet(_color_btn_style(*self._color_end))
+            self._on_any_change()
+
+    # ------------------------------------------------------------------ #
+    # Link to parent                                                       #
+    # ------------------------------------------------------------------ #
+
+    def _build_link_group(self, vbox, spec: LevelSpec):
+        """Checkable "Link to Parent" group: each node at this level gets a
+        companion type-7 Link edge back to its parent, drawn as any geometry
+        stretched between the two (the 2026-08-15 link-geometries feature).
+        Separate the level from its parent (Altitude Offset Z) and the link
+        becomes the visible limb — parent and child as joints, the link as
+        the branch."""
+        box = QGroupBox("Link to Parent")
+        box.setCheckable(True)
+        box.setChecked(spec.link_geo is not None)
+        box.setToolTip(
+            "Add a Link (type=7) edge from each node at this level back to\n"
+            "its parent, drawn as the chosen geometry stretched between the\n"
+            "two. Give the level some Altitude Offset Z so there is a gap\n"
+            "for the link to span — that gap is the branch."
+        )
+        self._w_link_box = box
+        f = QFormLayout(box)
+
+        self._w_link_geo = QComboBox()
+        for gid, gname in _LINK_GEO_ITEMS:
+            self._w_link_geo.addItem(gname, gid)
+        initial_geo = spec.link_geo if spec.link_geo is not None else GEO_CYLINDER
+        idx = self._w_link_geo.findData(initial_geo)
+        self._w_link_geo.setCurrentIndex(idx if idx >= 0 else 0)
+        f.addRow("Geometry:", self._w_link_geo)
+
+        self._w_link_ratio = QDoubleSpinBox()
+        self._w_link_ratio.setRange(0.01, 10.0)
+        self._w_link_ratio.setSingleStep(0.05)
+        self._w_link_ratio.setDecimals(3)
+        self._w_link_ratio.setValue(spec.link_ratio)
+        self._w_link_ratio.setToolTip(
+            "Thickness of the stretched glyph on both cross-axes, in world\n"
+            "units (a type-7 node's `ratio` — not multiplied by scale).")
+        f.addRow("Thickness:", self._w_link_ratio)
+
+        inherit = spec.link_color_start is None
+        if not inherit:
+            self._link_color_start = list(spec.link_color_start)
+            if spec.link_color_end is not None:
+                self._link_color_end = list(spec.link_color_end)
+
+        self._w_link_inherit = QCheckBox("Use node color")
+        self._w_link_inherit.setChecked(inherit)
+        self._w_link_inherit.setToolTip(
+            "Each link takes its child node's own (gradient-resolved) color.\n"
+            "Uncheck to give links their own color — e.g. wood-brown limbs\n"
+            "under brightly colored fruit.")
+        f.addRow("", self._w_link_inherit)
+
+        self._w_link_color_btn = QPushButton()
+        self._w_link_color_btn.setStyleSheet(
+            _color_btn_style(*self._link_color_start))
+        self._w_link_color_btn.setEnabled(not inherit)
+        self._w_link_color_btn.clicked.connect(self._pick_link_color)
+        f.addRow("Link color:", self._w_link_color_btn)
+
+        has_grad = spec.link_color_end is not None and not inherit
+        self._w_link_grad_cb = QCheckBox("Enable gradient")
+        self._w_link_grad_cb.setChecked(has_grad)
+        self._w_link_grad_cb.setEnabled(not inherit)
+        f.addRow("", self._w_link_grad_cb)
+
+        self._w_link_color_end_btn = QPushButton()
+        self._w_link_color_end_btn.setStyleSheet(
+            _color_btn_style(*self._link_color_end))
+        self._w_link_color_end_btn.setEnabled(has_grad)
+        self._w_link_color_end_btn.clicked.connect(self._pick_link_end_color)
+        f.addRow("Gradient to:", self._w_link_color_end_btn)
+
+        vbox.addWidget(box)
+
+        box.toggled.connect(self._on_any_change)
+        self._w_link_geo.currentIndexChanged.connect(self._on_any_change)
+        self._w_link_ratio.valueChanged.connect(self._on_any_change)
+        self._w_link_inherit.toggled.connect(self._on_link_inherit_toggled)
+        self._w_link_grad_cb.toggled.connect(self._on_link_gradient_toggled)
+
+    def _on_link_inherit_toggled(self, checked: bool):
+        if self._w_link_color_btn is not None:
+            self._w_link_color_btn.setEnabled(not checked)
+        if self._w_link_grad_cb is not None:
+            self._w_link_grad_cb.setEnabled(not checked)
+        if self._w_link_color_end_btn is not None:
+            self._w_link_color_end_btn.setEnabled(
+                not checked and self._w_link_grad_cb is not None
+                and self._w_link_grad_cb.isChecked())
+        self._on_any_change()
+
+    def _on_link_gradient_toggled(self, checked: bool):
+        if self._w_link_color_end_btn is not None:
+            self._w_link_color_end_btn.setEnabled(checked)
+        self._on_any_change()
+
+    def _pick_link_color(self):
+        r, g, b, a = self._link_color_start
+        c = QColorDialog.getColor(QColor(r, g, b, a), self, "Link Color",
+                                  QColorDialog.ShowAlphaChannel)
+        if c.isValid():
+            self._link_color_start = [c.red(), c.green(), c.blue(), c.alpha()]
+            self._w_link_color_btn.setStyleSheet(
+                _color_btn_style(*self._link_color_start))
+            self._on_any_change()
+
+    def _pick_link_end_color(self):
+        r, g, b, a = self._link_color_end
+        c = QColorDialog.getColor(QColor(r, g, b, a), self,
+                                  "Link Gradient End Color",
+                                  QColorDialog.ShowAlphaChannel)
+        if c.isValid():
+            self._link_color_end = [c.red(), c.green(), c.blue(), c.alpha()]
+            self._w_link_color_end_btn.setStyleSheet(
+                _color_btn_style(*self._link_color_end))
             self._on_any_change()
 
     def _on_gradient_toggled(self, checked: bool):

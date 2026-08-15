@@ -11,7 +11,8 @@ from dataclasses import dataclass, field, asdict, replace
 
 from .geometry_data import GEO_SPHERE
 from .node import (
-    DEFAULT_TOPO_SCALE, TOPO_SCALE_ANTZ, Node, ROTATION_MODE_EULER_XYZ,
+    DEFAULT_TOPO_SCALE, NODE_TYPE_LINK, TOPO_SCALE_ANTZ, Node,
+    ROTATION_MODE_EULER_XYZ,
 )
 from .topology import (
     LINEAR_PLACEMENT_AXES, TOPO_SPHERE, TOPO_NONE, TOPO_NAMES,
@@ -83,6 +84,28 @@ class LevelSpec:
     # Color (RGBA 0-255 tuples)
     color_start: tuple     = (180, 100, 200, 255)
     color_end: tuple|None  = None       # None = solid colour, no gradient
+
+    # Link to parent (non-root levels): when link_geo is not None, every node
+    # at this level ALSO gets a companion Link (type=7) node whose A-end is
+    # its parent and whose B-end is itself, rendered as link_geo stretched
+    # between the two (glyphviz_core/link_geometry.py — any geometry id works;
+    # GEO_LINE/GEO_LINE_PRISM stay line-drawn). This is what turns a glyph
+    # from touching shells into a jointed structure: separate the child from
+    # its parent (dist_tz) and the link becomes the visible limb between them.
+    # link_ratio is the thickness on both cross-axes, in world units (the
+    # type-7 convention, NOT multiplied by the parent's scale).
+    #
+    # None — the default, and what every template written before links
+    # existed loads as — emits no link nodes, so old recipes are unchanged.
+    # Ignored on level 0: a root's parent is whatever the glyph is inserted
+    # under (a World Grid, the scene origin), not part of the glyph.
+    link_geo: int|None          = None
+    link_ratio: float           = 0.15
+    # None = each link inherits its child node's own (gradient-resolved)
+    # color; otherwise link_color_start/link_color_end gradient across
+    # siblings exactly like color_start/color_end.
+    link_color_start: tuple|None = None
+    link_color_end: tuple|None   = None
 
 
 def default_recipe() -> GlyphRecipe:
@@ -196,6 +219,33 @@ def _gen_level(recipe, level_idx, parent_id, parent_topo,
         )
         nodes.append(node)
 
+        if not is_root and spec.link_geo is not None:
+            # Companion edge parent→this node. Emitted right after its B-end
+            # so ids stay sequential and the pair reads together in the table.
+            # A link's own translate/rotate/scale are inert (it IS the edge —
+            # see link_geometry.py), so they stay at Node defaults.
+            if spec.link_color_start is None:
+                lr, lg, lb, la = r, g, b, a
+            else:
+                lr, lg, lb, la = _lerp_color(
+                    spec.link_color_start, spec.link_color_end, t)
+            nodes.append(Node(
+                id=start_id + len(nodes),
+                type=NODE_TYPE_LINK,
+                parent_id=parent_id,
+                branch_level=branch_level,
+                translate_x=0.0, translate_y=0.0, translate_z=0.0,
+                rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
+                scale_x=1.0, scale_y=1.0, scale_z=1.0,
+                color_r=lr, color_g=lg, color_b=lb, color_a=la,
+                geometry=spec.link_geo,
+                hide=0,
+                topo=0,
+                ratio=spec.link_ratio,
+                rotation_mode=ROTATION_MODE_EULER_XYZ,
+                extras={'child_id': node_id},
+            ))
+
         _gen_level(recipe, level_idx + 1, node_id, spec.topo,
                    start_id, branch_level + 1, nodes)
 
@@ -272,12 +322,15 @@ def recipe_node_count(recipe: GlyphRecipe) -> int:
 
     Each level contributes the running product of every count down to it, so
     the answer is exact for the full tree (generate_nodes expands every level
-    under every parent)."""
+    under every parent). A non-root level with links doubles its own
+    contribution — one type-7 edge per node."""
     total = 0
     running = 1
-    for spec in recipe.levels:
+    for i, spec in enumerate(recipe.levels):
         running *= max(spec.count, 1)
         total += running
+        if i > 0 and spec.link_geo is not None:
+            total += running
     return total
 
 
@@ -338,6 +391,10 @@ def snapshot_level_rotations(recipe: GlyphRecipe,
         base = nodes[0].branch_level
         seen: set[int] = set()
         for n in nodes:
+            if n.type == NODE_TYPE_LINK:
+                # A link's own rotate is inert and always 0 — letting one
+                # stand in for its level would erase the authored rotation.
+                continue
             idx = n.branch_level - base
             if 0 <= idx < len(levels) and idx not in seen:
                 seen.add(idx)
@@ -358,6 +415,10 @@ def recipe_to_dict(r: GlyphRecipe) -> dict:
         d["color_start"] = list(d["color_start"])
         if d["color_end"] is not None:
             d["color_end"] = list(d["color_end"])
+        if d["link_color_start"] is not None:
+            d["link_color_start"] = list(d["link_color_start"])
+        if d["link_color_end"] is not None:
+            d["link_color_end"] = list(d["link_color_end"])
         levels.append(d)
     return {"name": r.name, "levels": levels}
 
@@ -368,6 +429,9 @@ def recipe_from_dict(d: dict) -> GlyphRecipe:
         cs = tuple(sd.get("color_start", [180, 100, 200, 255]))
         ce_raw = sd.get("color_end")
         ce = tuple(ce_raw) if ce_raw is not None else None
+        lcs_raw = sd.get("link_color_start")
+        lce_raw = sd.get("link_color_end")
+        link_geo_raw = sd.get("link_geo")
         spec = LevelSpec(
             count            = sd.get("count", 5),
             geometry         = sd.get("geometry", GEO_SPHERE),
@@ -397,6 +461,12 @@ def recipe_from_dict(d: dict) -> GlyphRecipe:
             rotate_z         = sd.get("rotate_z", 0.0),
             color_start      = cs,
             color_end        = ce,
+            # Templates predating links carry none of these keys and load as
+            # link_geo=None — no links, byte-identical output to before.
+            link_geo         = int(link_geo_raw) if link_geo_raw is not None else None,
+            link_ratio       = sd.get("link_ratio", 0.15),
+            link_color_start = tuple(lcs_raw) if lcs_raw is not None else None,
+            link_color_end   = tuple(lce_raw) if lce_raw is not None else None,
         )
         levels.append(spec)
     return GlyphRecipe(name=d.get("name", "My Glyph"), levels=levels)
