@@ -38,6 +38,14 @@ GlyphViz is primarily a visual, interactive tool — most users will spend their
 
     [:octicons-arrow-right-24: Reference](node-panel.md)
 
+- **Immersive VR**
+
+    ---
+
+    Walking into a scene with a headset, in the browser — controls, the wrist panel, and what stands aside during a session.
+
+    [:octicons-arrow-right-24: Reference](immersive-vr.md)
+
 </div>
 
 ## Visual model
@@ -99,19 +107,29 @@ GlyphViz is primarily a visual, interactive tool — most users will spend their
 
     [:octicons-arrow-right-24: Download](../getting-started/installation.md#claude-skill)
 
-- **Glyph Composer Reference**
+</div>
+
+## Glyph authoring tools
+
+Three tools for building *hyperglyphs* — designed node hierarchies read as a
+single visual object. They all speak the same template `.json`, so a design can
+move between them.
+
+<div class="grid cards" markdown>
+
+- **Glyph Composer**
 
     ---
 
-    Reference for the Glyph Composer tool. Coming once Glyph Composer development is further along.
+    Build a glyph by hand, one level at a time, with a live preview. **Ctrl+G**
 
     [:octicons-arrow-right-24: Reference](glyph-composer.md)
 
-- **Hyperglyph Generator Reference**
+- **Hyperglyph Generator**
 
     ---
 
-    Reference for the Hyperglyph Generator tool. Coming once Hyperglyph Generator development is further along.
+    Roll whole designs procedurally, then insert or save them for editing. **Ctrl+H**
 
     [:octicons-arrow-right-24: Reference](hyperglyph-generator.md)
 
@@ -128,4 +146,4 @@ GlyphViz is primarily a visual, interactive tool — most users will spend their
 ---
 
 !!! warning "This section is being built out"
-    Most Interface and Visual model pages are placeholders pending a verification pass with Claude Code against the actual GlyphViz source and GUI — including annotated screenshots generated through the `--export-frame`-style pipeline. Content here should not yet be treated as final.
+    Some Interface and Visual model pages are still placeholders pending a verification pass with Claude Code against the actual GlyphViz source and GUI — including annotated screenshots generated through the `--export-frame`-style pipeline. Content there should not yet be treated as final.

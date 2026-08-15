@@ -20,7 +20,12 @@ GlyphViz is not a charting library. It treats *data structure as scene structure
 
 **[GlyphViz Web](https://www.iluvdata.org/glyphvizweb/)** is a full browser implementation: open the link, drag in a node CSV, and you're in a live scene — nothing to download, nothing to install. It's a from-scratch WebGL rewrite (Three.js), not a stripped-down port, reading the same native `gv_` scene format as desktop, and it has closed most of the gap with the desktop app — node creation and editing, selection, tags, Channels animation, color palettes, even cross-eye stereo 3D all work in-browser today.
 
+### …including in VR
+
+Open that same link in a headset's browser and press **Enter VR**, and you are standing *inside* the scene — fly through it, grab and resize it with both hands, point at a glyph to select it, all from a wrist-mounted control panel. It's [WebXR](reference/immersive-vr.md): no app to sideload, no PC-VR link, no cable. Confirmed on a Meta Quest 3; any WebXR-capable headset browser, Apple Vision Pro included, should work the same way.
+
 [:material-open-in-new: Launch GlyphViz Web](https://www.iluvdata.org/glyphvizweb/){ .md-button .md-button--primary target=_blank rel=noopener }
+[:octicons-arrow-right-24: VR controls](reference/immersive-vr.md){ .md-button }
 [:octicons-arrow-right-24: Prefer the desktop app?](getting-started/installation.md){ .md-button }
 
 ---
@@ -31,7 +36,7 @@ GlyphViz is not a charting library. It treats *data structure as scene structure
 - **Validated, not just tested** — every release is checked against a golden-master oracle: the original ANTz C renderer, instrumented to dump its exact transformation matrices, compared frame-for-frame against GlyphViz's output.
 - **Built for real scientific data** — spatiotemporal EEG, RNA-seq expression networks, longitudinal health records, and chaotic dynamical systems are first-class use cases, not afterthoughts.
 - **Hyperdimensional-aware** — when your data has more than three dimensions, GlyphViz doesn't just drop the rest. Projective geometry and phase-space embedding techniques (Takens delay embedding, strange attractor reconstruction) bring higher-dimensional structure into a space you can actually navigate.
-- **Everywhere you want it** — the desktop renderer (`glyphviz_gl`) and immersive XR (`glyphviz_xr`) share one core engine (`glyphviz_core`); GlyphViz Web is a separate, browser-native implementation of that same scene format, so the same CSV opens with no install, in the full desktop app, or in VR.
+- **Everywhere you want it** — the desktop renderer (`glyphviz_gl`) and the OpenXR spike (`glyphviz_xr`) share one core engine (`glyphviz_core`); GlyphViz Web is a separate, browser-native implementation of that same scene format, with its own [WebXR immersive mode](reference/immersive-vr.md). So the same CSV opens in the full desktop app, in a browser tab with no install, or in a headset — from one link.
 
 ---
 

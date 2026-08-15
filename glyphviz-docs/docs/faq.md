@@ -34,7 +34,14 @@ Questions that have come up repeatedly while building GlyphViz and its documenta
     Yes — **[GlyphViz Web](https://www.iluvdata.org/glyphvizweb/)** is a full browser implementation (a from-scratch WebGL/Three.js rewrite, not a stripped port) that opens a scene from a URL with nothing to download. It reads the same native `gv_` CSV format as desktop and has closed most of the feature gap. See the [home page](index.md) for details.
 
 ??? question "Does GlyphViz work in VR?"
-    There's a working internal spike on a Meta Quest 3 over OpenXR/PC-VR — stereo rendering, flight and grab-drag navigation, controller-ray picking, tag billboards, and full Channels playback all run on-headset today, built on the exact same core engine as desktop. It isn't a polished, installer-packaged feature yet (no in-headset transport controls). See the [Roadmap](roadmap.md) for where this heads next (WebXR is the near-term target).
+    Yes, and the easiest route needs no install at all: open **[GlyphViz Web](https://www.iluvdata.org/glyphvizweb/)** in a headset's browser and press **Enter VR**. Flight, two-handed grab-and-resize, controller-ray picking, in-scene labels, a wrist control panel and Channels playback all run on-headset. See [Immersive VR](reference/immersive-vr.md) for the full control reference.
+
+    There is also an older internal OpenXR spike (`glyphviz_xr`) that drives the *desktop* app on a tethered PC-VR headset. It's where the interaction vocabulary was worked out, but it stays a spike — a headset can open a URL, which is a much lower barrier than a sideload.
+
+??? question "Which headsets does the VR mode support?"
+    Any headset whose browser supports [WebXR](https://www.w3.org/TR/webxr/). It has been **confirmed on hardware on a Meta Quest 3**. Apple Vision Pro (Safari on visionOS) provides WebXR and is expected to work, but hasn't been verified here. If the browser reports no WebXR support, the Enter VR button simply doesn't appear.
+
+    Practical limit: expect comfortable framerates for scenes in the low thousands of nodes. Past that, the in-headset draw limit control is the lever.
 
 ## Data & compatibility
 
@@ -58,7 +65,7 @@ Questions that have come up repeatedly while building GlyphViz and its documenta
 ## Project direction
 
 ??? question "Is there a public roadmap?"
-    Yes — see [Roadmap](roadmap.md). Near-term: WebXR and an AI-to-topology suggestion bridge. Longer-term and more speculative: data-to-sound mapping, collaborative multi-user scenes, and richer non-Euclidean topologies. None of it is a committed schedule.
+    Yes — see [Roadmap](roadmap.md). Near-term: an AI-to-topology suggestion bridge, and deepening the [WebXR immersive mode](reference/immersive-vr.md) that shipped in 2026-08 (passthrough AR, hand tracking, authoring gestures). Longer-term and more speculative: data-to-sound mapping, collaborative multi-user scenes, and richer non-Euclidean topologies. None of it is a committed schedule.
 
 ??? question "Is there a public API?"
     Not yet, and it's deliberately low on the priority list — see the [Roadmap](roadmap.md#near-term) for why. Most people generating scenes today are better served by the Claude Skill or by editing CSVs directly than by a Python API GlyphViz isn't ready to make stability promises about.

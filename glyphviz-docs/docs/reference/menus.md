@@ -58,7 +58,8 @@ scene folder, or a zip onto the window opens it, and Shift+drop merges. See
 
 | Item | Shortcut | Action |
 |---|---|---|
-| Glyph Composer… | Ctrl+G | Opens the hierarchical glyph-template builder dialog (`_on_glyph_composer` — `main_window.py:984-987`) |
+| Glyph Composer… | Ctrl+G | Opens the hierarchical glyph-template builder dialog — see [Glyph Composer](glyph-composer.md) (`_on_glyph_composer` — `main_window.py:984-987`) |
+| Hyperglyph Generator… | Ctrl+H | Procedurally generates one randomized multi-level hyperglyph from a branch-level count and a node budget — see [Hyperglyph Generator](hyperglyph-generator.md) (`_on_hyperglyph_generator`) |
 
 ## View
 
