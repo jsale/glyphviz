@@ -147,6 +147,7 @@ nav:
       - CLI Reference: reference/cli.md
       - Glyph Composer Reference: reference/glyph-composer.md
       - Hyperglyph Generator Reference: reference/hyperglyph-generator.md
+      - Hyperglyph Tree Designer: reference/tree-designer.md
   - Architecture:
       - Overview: architecture/index.md
       - Package Boundary: architecture/package-boundary.md

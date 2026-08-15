@@ -115,6 +115,14 @@ GlyphViz is primarily a visual, interactive tool — most users will spend their
 
     [:octicons-arrow-right-24: Reference](hyperglyph-generator.md)
 
+- **Hyperglyph Tree Designer**
+
+    ---
+
+    A browser tool for designing branching, tree-like hyperglyphs and exporting them as Glyph Composer templates.
+
+    [:octicons-arrow-right-24: Reference](tree-designer.md)
+
 </div>
 
 ---
