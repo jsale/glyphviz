@@ -270,3 +270,73 @@ def test_line_link_gets_no_selection_box(monkeypatch):
     """Long-standing behavior — there is no box to speak of around a line."""
     rec = _outline_run(monkeypatch, GEO_LINE)
     assert 'glMultMatrixf' not in rec.names()
+
+
+# --- picking: a link must not steal its A-end node's clicks ----------------
+#
+# A Link's own world position IS its A-end's position (translate 0,0,0,
+# parent_id = the A-end). The pick pass used to draw a unit sphere there so a
+# link with a missing B-end stayed clickable, which put a link-colored sphere
+# exactly on top of a real node at that node's own scale, drawn after it.
+# Measured on a two-node scene through the real pick FBO: an Octahedron or Cube
+# A-end had ZERO pickable pixels and could not be clicked from any angle.
+# These pin the invariant that fixed it — this pass draws what the visible
+# pass draws, and nothing at the link's own position.
+
+def _pick_run(monkeypatch, nodes):
+    rec = _GLRecorder()
+    rec.install(monkeypatch)
+    view = vp.Viewport.__new__(vp.Viewport)
+    view._scene = vp.Scene(nodes)
+    view.show_hidden = False
+    view._geo = _GeoSpy()
+    view._draw_link_pick_targets()
+    return rec, view._geo
+
+
+def test_link_pick_target_is_only_the_edge(monkeypatch):
+    """One line, and (for a glyph link) one solid on the edge matrix. No
+    third draw at the link's own position."""
+    rec, geo = _pick_run(monkeypatch, _linked_scene(link_geo=GEO_CYLINDER))
+    assert geo.drawn == [GEO_CYLINDER]
+    assert rec.names().count('glMultMatrixf') == 1
+    assert rec.names().count('glBegin') == 1
+
+
+def test_line_link_pick_target_is_only_the_line(monkeypatch):
+    rec, geo = _pick_run(monkeypatch, _linked_scene(link_geo=GEO_LINE))
+    assert geo.drawn == []
+    assert 'glMultMatrixf' not in rec.names()
+
+
+def _link_own_position_equals_its_a_end():
+    nodes = _linked_scene()
+    scene = vp.Scene(nodes)
+    return scene.world_pos(1) == scene.world_pos(3)
+
+
+def test_a_links_own_position_is_its_a_end(qapp):
+    """The fact the whole bug rested on. If this ever stops holding, the
+    reasoning in _draw_link_pick_targets needs revisiting."""
+    assert _link_own_position_equals_its_a_end()
+
+
+def test_dangling_link_draws_no_pick_target(monkeypatch):
+    """A link whose B-end doesn't resolve renders nothing on screen, so it
+    must render nothing here — otherwise an invisible link outranks the
+    visible node it happens to sit on."""
+    a = _node(id=1)
+    link = _node(id=3, type=NODE_TYPE_LINK, parent_id=1, branch_level=1,
+                 geometry=GEO_CYLINDER, ratio=0.2,
+                 extras={'child_id': 999})       # nonexistent B-end
+    rec, geo = _pick_run(monkeypatch, [a, link])
+    assert geo.drawn == []
+    assert rec.calls == []
+
+
+def test_hidden_link_draws_no_pick_target(monkeypatch):
+    nodes = _linked_scene(link_geo=GEO_CYLINDER)
+    nodes[-1].hide = 1
+    rec, geo = _pick_run(monkeypatch, nodes)
+    assert geo.drawn == []
+    assert rec.calls == []

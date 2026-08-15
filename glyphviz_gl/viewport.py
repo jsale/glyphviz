@@ -2049,10 +2049,12 @@ class Viewport(QOpenGLWidget):
 
     def _link_label_anchor(self, link: Node) -> tuple[float, float, float] | None:
         """World position for a Link's tag label: the midpoint of the edge it
-        draws. When the B-end is missing or unresolvable — the link draws no
-        line but is still selectable — fall back to the link's own position,
-        which is exactly where _begin_pick_scene puts its fallback pick
-        sphere, so the label sits on what a click would hit."""
+        draws. When the B-end is missing or unresolvable the link draws no
+        edge at all, so the label falls back to the link's own position —
+        which is its A-end's position (see _draw_link_pick_targets), i.e. the
+        label sits on the node the broken edge starts from. That node is what
+        a click there selects; a link drawing nothing is not itself pickable,
+        by design."""
         a_id = link.parent_id
         b_id = int(float(link.extras.get('child_id', 0)))
         a_pos = self._scene.world_pos(a_id) if a_id else None
@@ -2680,59 +2682,72 @@ class Viewport(QOpenGLWidget):
             self._geo.draw(pick_geo, 1.0, 1.0, 1.0, ratio=node.ratio, mesh_id=node.mesh_id)
             glPopMatrix()
 
-        # Draw link nodes as pick targets.  Each link gets:
-        #   1. A thick line between its endpoints (when both endpoints resolve).
-        #   2. For a glyph-geometry link, the same stretched solid the viewport
-        #      draws, so a fat link is clickable across its whole body and not
-        #      just along its center line.
-        #   3. A small sphere at its own world position so it's always clickable
-        #      even when the B-end (child_id) is missing or 0.
+        self._draw_link_pick_targets()
+
+        return qt_fbo, fb_w, fb_h, dpr, w, h
+
+    def _draw_link_pick_targets(self):
+        """Render every type=7 Link into the pick FBO in its color-ID.
+
+        **This pass draws what the visible pass draws, and nothing else** —
+        the invariant that the link picking bug came down to. Each link with
+        two resolvable ends gets a thick line along the edge, plus (for a
+        glyph-geometry link) the same stretched solid `_draw_link_glyph`
+        renders, so a fat link is clickable across its body rather than only
+        along its center line. A link whose ends do not both resolve draws
+        nothing here, because it draws nothing on screen either.
+
+        There used to be a third item: a unit "fallback sphere" at
+        `world_pos(link.id)`, so a link with a missing B-end stayed clickable.
+        It was the bug. A link's own position IS its A-end's position — its
+        translate is 0,0,0 and its parent_id is the A-end — so that sphere
+        landed exactly on top of a real node, at that node's own scale, and
+        was drawn after it. Cube and Octahedron are both inscribed in the unit
+        sphere, so it swallowed them whole: measured on a two-node scene, the
+        A-end node had **zero** pickable pixels and could not be clicked from
+        any angle. A Sphere node tied it on depth and survived by luck, which
+        is exactly why the symptom looked angle-dependent (Jeff's 2026-08-15
+        report; he had hit it in earlier sessions and worked around it). And
+        it bought nothing: when an end is unresolvable the visible pass draws
+        no line, no prism and no glyph, so the sphere let an INVISIBLE link
+        outrank a visible node. Such a link is still reachable through the
+        node table, Select By, and the Link tool.
+        """
         for node in self._scene.nodes:
             if node.type != NODE_TYPE_LINK:
                 continue
             if not self.show_hidden and node.hide:
                 continue
-            r = node.id & 0xFF
-            g = (node.id >> 8) & 0xFF
-            b_enc = (node.id >> 16) & 0xFF
-            glColor4ub(r, g, b_enc, 255)
-
             a_id = node.parent_id
             b_id = int(float(node.extras.get('child_id', 0)))
             a_pos = self._scene.world_pos(a_id) if a_id else None
             b_pos = self._scene.world_pos(b_id) if b_id else None
-            if a_pos is not None and b_pos is not None:
-                glLineWidth(max(node.ratio * 20.0, 5.0))
-                glBegin(GL_LINES)
-                glVertex3f(a_pos[0], a_pos[1], a_pos[2])
-                glVertex3f(b_pos[0], b_pos[1], b_pos[2])
-                glEnd()
-                glLineWidth(1.0)
-                if is_glyph_link(node.geometry):
-                    # Same matrix the visible pass uses, so picking matches
-                    # what's drawn; wire ids swap to their solid equivalent for
-                    # the usual whole-silhouette reason.
-                    gl_matrix = link_gl_matrix(a_pos, b_pos,
-                                               max(node.ratio, 1e-4),
-                                               node.geometry)
-                    if gl_matrix is not None:
-                        glPushMatrix()
-                        glMultMatrixf(gl_matrix)
-                        pick_geo = WIRE_TO_SOLID.get(node.geometry, node.geometry)
-                        self._geo.draw(pick_geo, 1.0, 1.0, 1.0,
-                                       ratio=node.ratio, mesh_id=node.mesh_id)
-                        glPopMatrix()
+            if a_pos is None or b_pos is None:
+                continue
 
-            # Fallback sphere at the link node's own position.
-            own_pos = self._scene.world_pos(node.id)
-            if own_pos is not None:
-                _, gl_matrix, _ = self._scene.node_draw_data(node)
-                glPushMatrix()
-                glMultMatrixf(gl_matrix)
-                self._geo.draw(3, 1.0, 1.0, 1.0)   # GEO_SPHERE = 3
-                glPopMatrix()
-
-        return qt_fbo, fb_w, fb_h, dpr, w, h
+            glColor4ub(node.id & 0xFF, (node.id >> 8) & 0xFF,
+                       (node.id >> 16) & 0xFF, 255)
+            glLineWidth(max(node.ratio * 20.0, 5.0))
+            glBegin(GL_LINES)
+            glVertex3f(a_pos[0], a_pos[1], a_pos[2])
+            glVertex3f(b_pos[0], b_pos[1], b_pos[2])
+            glEnd()
+            glLineWidth(1.0)
+            if not is_glyph_link(node.geometry):
+                continue
+            # Same matrix the visible pass uses, so picking matches what's
+            # drawn; wire ids swap to their solid equivalent for the usual
+            # whole-silhouette reason.
+            gl_matrix = link_gl_matrix(a_pos, b_pos, max(node.ratio, 1e-4),
+                                       node.geometry)
+            if gl_matrix is None:
+                continue
+            glPushMatrix()
+            glMultMatrixf(gl_matrix)
+            pick_geo = WIRE_TO_SOLID.get(node.geometry, node.geometry)
+            self._geo.draw(pick_geo, 1.0, 1.0, 1.0,
+                           ratio=node.ratio, mesh_id=node.mesh_id)
+            glPopMatrix()
 
     def _finish_pick_scene(self, qt_fbo: int, fb_w: int, fb_h: int):
         """Restore GL state after reading from the pick FBO."""
