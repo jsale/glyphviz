@@ -52,7 +52,8 @@ from glyphviz_core.scene_merge import merge_nodes
 from glyphviz_core.selection_export import build_selection
 from glyphviz_core.geometry_data import (
     GEO_NAMES, GEO_COUNT, GEO_GRID, GEO_GRID_WIRE, GEO_MESH, GEO_OCTA,
-    GEO_SPHERE, GEO_SPHERE_WIRE, GEO_LINE, GEO_LINE_PRISM, _WIRE_IDS,
+    GEO_SPHERE, GEO_SPHERE_WIRE, GEO_LINE, GEO_LINE_PRISM, GEO_POINT,
+    _WIRE_IDS,
 )
 from glyphviz_core.node import (
     Node, NON_VISUAL_TYPES, ROTATION_MODE_EULER_XYZ, ROTATION_MODE_HEADING_TILT_ROLL,
@@ -1556,7 +1557,11 @@ class MainWindow(QMainWindow):
             scale_rate_layout.addWidget(sb)
 
         self._insp_ratio = QDoubleSpinBox()
-        self._insp_ratio.setRange(0.01, 1.0)
+        # Above 1.0 only means anything as a Link/Prism thickness — a torus
+        # ratio is a proportion of its own radius, so >1 is degenerate there —
+        # but a link spanning tens of world units needs a thickness to match,
+        # and the CSV column was never capped. You have to type past 1.0.
+        self._insp_ratio.setRange(0.01, 10.0)
         self._insp_ratio.setDecimals(3)
         self._insp_ratio.setSingleStep(0.01)
         self._insp_ratio.setToolTip(
@@ -1564,10 +1569,13 @@ class MainWindow(QMainWindow):
             "radius as a fraction of the torus's overall radius. Also used to "
             "place children riding on a Torus-topology parent's surface.\n"
             "On other glyphs this field doubles up: Point geometry uses it as "
-            "an on-screen sprite size, and Link/Plot-parent nodes use it as "
-            "line width (both as ratio * 20, in pixels) — except a Link set to "
-            "Prism (Textured) geometry, where ratio is instead the tube's "
-            "world-space half-width."
+            "an on-screen sprite size, and Plot-parent nodes use it as line "
+            "width (ratio * 20, in pixels).\n"
+            "On a Link it is the connector's THICKNESS, whatever geometry the "
+            "link carries: line width in pixels for Line geometry, and the "
+            "world-space half-width on both cross-axes for Prism (Textured) "
+            "or any glyph geometry stretched between the link's two ends "
+            "(the link's own scale fields play no part)."
         )
         self._insp_ratio.valueChanged.connect(self._on_insp_ratio_changed)
 
@@ -3023,25 +3031,31 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
 
     _LINK_ONLY_GEOS = frozenset({GEO_LINE, GEO_LINE_PRISM})
+    # Ids a Link node's O-cycle steps over. GEO_MESH for the same reason every
+    # other node type skips it (a bare Mesh id means nothing without a
+    # mesh_id); GEO_POINT because a Link renders it as a plain line — a
+    # duplicate of the Line mode two stops away, not a distinct look.
+    _LINK_SKIP_GEOS = frozenset({GEO_MESH, GEO_POINT})
 
     def _cycle_selected_geometry(self, step: int):
         """O / Shift+O: step each selected node's geometry forward/back one id.
         GEO_MESH is skipped over — like the Geometry dropdowns, a bare Mesh id
         is meaningless without a mesh_id (imported meshes get their own combo
         entries); a node already ON a mesh still cycles out of it normally.
-        GEO_LINE/GEO_LINE_PRISM are Link-only render modes (geometry_data.py):
-        a Link node toggles between just those two (direction-agnostic, since
-        there are only two states); any other node type skips over them like
-        GEO_MESH, since a bare line/prism is meaningless on a regular glyph."""
+
+        A **Link** (type=7) node cycles the same full range, since every
+        geometry is meaningful on a link: GEO_LINE/GEO_LINE_PRISM are its two
+        line modes and everything else renders as that glyph stretched between
+        the link's two ends (link_geometry.py). Ordinary nodes still skip the
+        two line ids, where a bare line/prism means nothing."""
         targets = self._cycle_targets()
         if not targets:
             return
         for node in targets:
-            if node.type == NODE_TYPE_LINK:
-                node.geometry = GEO_LINE if node.geometry == GEO_LINE_PRISM else GEO_LINE_PRISM
-                continue
+            skip = (self._LINK_SKIP_GEOS if node.type == NODE_TYPE_LINK
+                    else self._LINK_ONLY_GEOS | {GEO_MESH})
             geo = (node.geometry + step) % GEO_COUNT
-            while geo == GEO_MESH or geo in self._LINK_ONLY_GEOS:
+            while geo in skip:
                 geo = (geo + step) % GEO_COUNT
             node.geometry = geo
         if len(targets) == 1:

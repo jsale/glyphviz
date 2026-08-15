@@ -48,8 +48,51 @@ extensions with no ANTz/GaiaViz equivalent.
 | 24 | Circle | `GEO_CIRCLE` | **GlyphViz extension** — flat 2-D marker, world-space plate (like Grid), compiled to display lists for scatter-plot-scale performance |
 | 25 | Cross | `GEO_CROSS` | **GlyphViz extension** — same idea as Circle |
 | 26 | Star | `GEO_STAR` | **GlyphViz extension** — same idea as Circle |
+| 27 | Line | `GEO_LINE` | **GlyphViz extension, Link nodes only** — the classic thin connector, and a Link's default. Width is `ratio × 20` px |
+| 28 | Prism (Textured) | `GEO_LINE_PRISM` | **GlyphViz extension, Link nodes only** — a textured 4-sided tube between the two ends, scrollable via `rotate_rate_z` to show directed flow. `ratio` is its world-space half-width |
 
-`GEO_COUNT = 27` (`geometry_data.py:46`).
+`GEO_COUNT = 29` (`geometry_data.py`).
+
+## Geometry on a Link node
+
+A **Link** (type=7) is an edge between two other nodes — its `parent_id` is
+the A-end and its `child_id` the B-end — and its `geometry` picks how that
+edge is drawn. **All of the following are selected by the `geometry` field
+alone**, with no extra column, so a link's look travels with the CSV:
+
+- **27 Line** and **28 Prism (Textured)** are the two line modes above.
+- **22 Point** also draws as a plain line: a fixed-pixel sprite has no extent
+  to stretch along an axis, so there is no glyph reading of it.
+- **Every other ID renders that glyph stretched between the link's two ends.**
+  This is ANTz's own link behavior, and it is what lets an edge become a
+  cylinder rod, a tapering cone (whose apex points at the B-end — a natural
+  arrowhead for directed graphs), a wireframe cage, an imported mesh, or an
+  arbitrarily distorted version of any other shape.
+
+Three rules govern a glyph link's transform:
+
+| Property | How it is set |
+|---|---|
+| **Length** | The distance between the two endpoints. The glyph's own local Z extent is mapped onto the A→B segment, so it starts on A and ends on B exactly — including Pin, whose apex sits at its local origin rather than being centred |
+| **Thickness** | `ratio`, applied to **both** cross-axes. One field controls thickness whatever geometry the link carries — the same field the Line and Prism modes already use for their width |
+| **Orientation** | Derived entirely from the two endpoints. A link has no independent pose, so its own `translate`, `rotate`, and `scale` fields play no part. Roll is gravity-referenced, so a link does not spin about its own axis as it swings around |
+
+Press **O** / **Shift+O** with a link selected to cycle it through every
+geometry (Mesh and Point are skipped, as they are for ordinary nodes). A
+selected glyph link draws the usual yellow selection box; a Line or Prism link
+does not.
+
+Two things worth knowing:
+
+- On a **Torus** link, `ratio` does double duty — it is both the thickness and
+  the torus's own minor-radius proportion. Values above 1.0 make a degenerate
+  torus. The result at sane ratios is a hollow tube running along the edge.
+- The **flat** geometries (Grid, Circle, Cross, Star) have no Z extent to
+  stretch, so they render as a plate at the midpoint of the edge rather than
+  spanning it.
+
+Performance is left to you: a scene with thousands of solid glyph links draws
+thousands of glyphs. Drop back to **Line** where the edge is not the point.
 
 ## Texture support
 

@@ -43,14 +43,20 @@ GEO_MESH           = 23
 GEO_CIRCLE         = 24
 GEO_CROSS          = 25
 GEO_STAR           = 26
-# GlyphViz extensions (no ANTz/GaiaViz equivalent): render modes for Link
-# (type=7) nodes specifically -- meaningless on any other node type. GEO_LINE
-# is the classic thin GL_LINES connector (the only mode Links have ever had,
-# and still the fallback for every legacy value including the default 0);
-# GEO_LINE_PRISM instead builds a small textured 4-sided tube between the
-# link's A-end and B-end, so a texture (optionally scrolled via
-# rotate_rate_z, see viewport._draw_topology_overlays) can indicate directed
-# flow -- e.g. for directed-graph edges. See _draw_topology_overlays() in
+# GlyphViz extensions (no ANTz/GaiaViz equivalent): the two LINE render modes
+# for Link (type=7) nodes specifically -- meaningless on any other node type.
+# GEO_LINE is the classic thin GL_LINES connector (the only mode Links had for
+# a long time, and still the default); GEO_LINE_PRISM instead builds a small
+# textured 4-sided tube between the link's A-end and B-end, so a texture
+# (optionally scrolled via rotate_rate_z, see viewport._draw_topology_overlays)
+# can indicate directed flow -- e.g. for directed-graph edges.
+#
+# EVERY OTHER geometry id above is also valid on a Link node, and renders that
+# glyph stretched between the link's two ends (ANTz's own behavior --
+# npDrawLink, npgldraw.c:961): `ratio` is the thickness on both cross-axes and
+# the endpoint distance is the length. The mode is chosen by `geometry` alone;
+# glyphviz_core/link_geometry.py owns the transform and the LINK_LINE_GEOMETRIES
+# set that decides which ids stay line-drawn. See _draw_topology_overlays() in
 # glyphviz_gl/viewport.py.
 GEO_LINE           = 27
 GEO_LINE_PRISM     = 28

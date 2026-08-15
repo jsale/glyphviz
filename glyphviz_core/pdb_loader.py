@@ -1,9 +1,11 @@
 """
 Importer for .pdb protein-structure files (see examples/Protein_Import_Example/).
 Converts ATOM/HETATM records into ordinary GEO_SPHERE/TOPO_NONE atom nodes and
-distance-inferred bonds into ordinary NODE_TYPE_LINK (type=7) nodes -- both
-node shapes are already fully supported by topology.py and viewport.py, so no
-new geometry/topology/rendering code is needed. Pure data/numpy (plus
+distance-inferred bonds into ordinary NODE_TYPE_LINK (type=7) nodes carrying
+GEO_CYLINDER, which a Link renders as a rod spanning the two atoms -- so the
+result is a true ball-and-stick scene. Both node shapes are already fully
+supported by topology.py and viewport.py, so no new geometry/topology/rendering
+code is needed. Pure data/numpy (plus
 Bio.PDB/scipy) -- no OpenGL/Qt dependency, so this module is safe to import
 from anything, including a future non-GL presentation layer.
 
@@ -20,7 +22,7 @@ import numpy as np
 from Bio.PDB import PDBParser
 from scipy.spatial import cKDTree
 
-from .geometry_data import GEO_POINT, GEO_SPHERE
+from .geometry_data import GEO_CYLINDER, GEO_POINT, GEO_SPHERE
 from .node import Node, NODE_TYPE_LINK
 from .topology import TOPO_NONE
 
@@ -128,7 +130,14 @@ def load_pdb_file(path: str) -> PdbImportResult:
             rotate_x=0.0, rotate_y=0.0, rotate_z=0.0,
             scale_x=1.0, scale_y=1.0, scale_z=1.0,
             color_r=220, color_g=220, color_b=220, color_a=255,
-            geometry=GEO_SPHERE, hide=0, topo=TOPO_NONE, ratio=0.05,
+            # True ball-and-stick: a Link renders its geometry stretched
+            # between its two ends (link_geometry.py), so a Cylinder bond is a
+            # real 3-D rod running atom to atom, with `ratio` as its radius on
+            # both cross-axes. This said GEO_SPHERE until 2026-08-15, which
+            # meant nothing back when every non-Line id fell through to the
+            # line renderer -- bonds drew as 1px lines. Set GEO_LINE here to go
+            # back to those.
+            geometry=GEO_CYLINDER, hide=0, topo=TOPO_NONE, ratio=0.05,
             extras={'child_id': atom_id_of[j]},
         ))
         bond_count += 1

@@ -38,6 +38,9 @@ you spend media slots on it:
 - **Circle 24, Cross 25, Star 26** — the flat markers (added 2026-08-06; they
   rendered untextured before that).
 - Prism 28 on a Link node — the scrollable directed-flow tube.
+- A **Link** carrying any of the solid ids above: it renders that glyph
+  stretched between its two ends, and takes a texture exactly as the same
+  glyph would on an ordinary node (`node-csv-format.md`).
 
 **Untextured — the id is read and then ignored**
 

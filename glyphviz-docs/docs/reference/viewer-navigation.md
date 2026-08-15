@@ -179,7 +179,7 @@ Shortcuts handled directly in the Viewer (`Viewport.keyPressEvent`/`event`,
 | C | Toggle **Camera Mode** (free flight) on/off — see [above](#camera-mode-free-flight) | `toggle_fly_mode` |
 | D | Toggle **Draw Mode** (paint objects onto a World Grid) — see [below](#draw-mode-painting-objects); Esc also exits | `toggle_draw_mode` |
 | Shift+C | Step to the next camera (Main → +X → +Y → +Z → Main) | `cycle_camera` |
-| O / Shift+O | Cycle each selected node's **geometry** forward/back one entry (ANTz-style; the step is per node, so a mixed-geometry selection stays mixed) | `geoCycleRequested` → `_cycle_selected_geometry` |
+| O / Shift+O | Cycle each selected node's **geometry** forward/back one entry (ANTz-style; the step is per node, so a mixed-geometry selection stays mixed). Works on **Link** nodes too — a link renders whatever geometry it carries, stretched between its two ends ([Geometries](geometries.md#geometry-on-a-link-node)) | `geoCycleRequested` → `_cycle_selected_geometry` |
 | J / Shift+J | Cycle each selected node's **topology** forward/back one entry (same per-node rule) | `topoCycleRequested` → `_cycle_selected_topology` |
 
 Shortcuts registered at the main-window level (`QShortcut`, still fire while

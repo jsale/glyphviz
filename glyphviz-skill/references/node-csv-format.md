@@ -184,7 +184,7 @@ prefix is for genuine GaiaViz files.
 | 1 | **Camera** — stored view definitions (C key cycles). Never drawn or picked. |
 | 5 | **Glyph** — the ordinary renderable node; use 5 for normal data (other unlisted values also draw as plain glyphs). |
 | 6 | **World Grid** — a real, movable/scalable node rendering a flat lon/lat plate or (with Sphere/Sphere-Wire geometry) a globe. Children attach **explicitly** via `parent_id` = the grid's id and place by `translate_x` = longitude, `translate_y` = latitude, `translate_z` = elevation within the grid's extents window (`trigger_lo/hi_x/y`). No implicit/default grid exists. Grid scale re-spaces child positions, never child sizes. Full rules: `world-grid.md`. |
-| 7 | **Link** — a graph edge from node `parent_id` (A-end) to node `child_id` (B-end). Geometry 27 (Line) = classic thin line; 28 (Prism) = textured 4-sided tube, texture scrollable via `rotate_rate_z` for directed flow. Links take `text`/`link` and `show_text` like any other node — an edge label draws at the middle of the edge (`tags-and-labels.md`). |
+| 7 | **Link** — a graph edge from node `parent_id` (A-end) to node `child_id` (B-end). `geometry` chooses how the edge draws: 27 (Line) = classic thin line, and the default; 28 (Prism) = textured 4-sided tube, texture scrollable via `rotate_rate_z` for directed flow; 22 (Point) also draws as a plain line. **Any other geometry id renders that glyph stretched between the two ends** — see "Geometry on a Link" below. Links take `text`/`link` and `show_text` like any other node — an edge label draws at the middle of the edge (`tags-and-labels.md`). |
 
 ## Topology ids (`topo` — how children of this node are placed)
 
@@ -211,6 +211,28 @@ center/axis instead of on the rendered surface. Full placement math:
 | 10/11 | Octahedron wire/solid | 24/25/26 | Circle / Cross / Star flat markers (GlyphViz-only) |
 | 12/13 | Tetrahedron wire/solid | 27/28 | Line / Textured Prism (Link nodes only) |
 | 14/15 | Icosahedron wire/solid | | |
+
+### Geometry on a Link (type 7)
+
+Every id above is valid on a Link. 27, 28, and 22 draw the edge as a line or
+tube (see the Node types table); **every other id renders that glyph stretched
+between the link's two ends**:
+
+- **Length** = the endpoint distance. The glyph's local Z extent maps onto the
+  A→B segment, so it starts on A and ends on B exactly.
+- **Thickness** = `ratio`, on **both** cross-axes — the same field the Line and
+  Prism modes use for their width. Not `scale_x`/`scale_y`.
+- **Orientation** comes entirely from the two endpoints; a link's own
+  `translate`, `rotate`, and `scale` are ignored, as they always were.
+
+So an edge can be a cylinder rod, a cone (apex at the B-end — an arrowhead for
+directed graphs), a wire cage, or an imported mesh. Two quirks: on a **Torus**
+link `ratio` also sets the torus's own minor-radius proportion (above 1.0 is
+degenerate), and the flat shapes (20/21, 24/25/26) have no Z extent to stretch
+so they land as a plate at the edge's midpoint.
+
+Authoring guidance: a solid glyph link costs what a glyph costs. On a graph
+with thousands of edges, use 27 (Line) unless the edge itself carries meaning.
 
 Geometry never gates `texture_id` in the format, but only the solid primitives,
 the three flat markers (24/25/26 — textured since 2026-08-06), and the Link

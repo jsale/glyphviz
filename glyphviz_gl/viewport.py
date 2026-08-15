@@ -30,6 +30,9 @@ from glyphviz_core.topology import (
 from glyphviz_core.mesh_loader import load_mesh_file as _load_mesh_data
 
 from glyphviz_core.geometry_data import GEO_TORUS, GEO_TORUS_WIRE, GEO_LINE_PRISM
+from glyphviz_core.link_geometry import (
+    is_glyph_link, link_gl_matrix, local_z_span,
+)
 
 from .geometry import GeoRenderer, WIRE_TO_SOLID
 from .texture_manager import TextureManager
@@ -1582,6 +1585,69 @@ class Viewport(QOpenGLWidget):
         glEndList()
         self._scene_dl_key = key
 
+    def _draw_selection_box(self, gl_matrix, z_lo: float = -1.05,
+                            z_hi: float = 1.05):
+        """Yellow wire box in the unit local space of `gl_matrix` (whose scale
+        makes it track the thing's actual rendered size). z_lo/z_hi are
+        separate because a glyph link's local z span is the geometry's, mapped
+        onto the edge, and isn't always symmetric (a Pin's runs 0..1.1)."""
+        glPushMatrix()
+        glMultMatrixf(gl_matrix)
+        glDisable(GL_LIGHTING)
+        glLineWidth(1.5)
+        glColor4f(1.0, 0.95, 0.1, 1.0)
+        b = 1.05
+        glBegin(GL_LINES)
+        for sx in (-b, b):
+            for sy in (-b, b):
+                glVertex3f(sx, sy, z_lo); glVertex3f(sx, sy, z_hi)
+        for sx in (-b, b):
+            for sz in (z_lo, z_hi):
+                glVertex3f(sx, -b, sz); glVertex3f(sx, b, sz)
+        for sy in (-b, b):
+            for sz in (z_lo, z_hi):
+                glVertex3f(-b, sy, sz); glVertex3f(b, sy, sz)
+        glEnd()
+        glLineWidth(1.0)
+        glEnable(GL_LIGHTING)
+        glPopMatrix()
+
+    def _draw_selected_link_outlines(self):
+        """Selection halo for glyph-geometry Links. Line/prism links get none
+        (there is no box to speak of, and that is the long-standing behavior),
+        but a link carrying a real glyph is now indistinguishable from an
+        ordinary node on screen — and cycling geometry with O is exactly the
+        workflow that needs to show which link is selected. ANTz does the same
+        thing (a scaled kNPgeoCubeWire around a selected link, npgldraw.c:1051).
+
+        Its own pass rather than a branch inside _draw_selected_outlines: links
+        aren't in that loop's decimation bookkeeping (they're drawn by
+        _draw_topology_overlays, which has no draw limit) and their matrix
+        comes from their two endpoints, not node_draw_data."""
+        for nid in self.selected_node_ids:
+            node = self._scene.node_by_id(nid)
+            if node is None or node.type != NODE_TYPE_LINK:
+                continue
+            if not self.show_hidden and node.hide:
+                continue
+            if not is_glyph_link(node.geometry):
+                continue
+            a_id = node.parent_id
+            b_id = int(float(node.extras.get('child_id', 0)))
+            if not a_id or not b_id:
+                continue
+            a_pos = self._scene.world_pos(a_id)
+            b_pos = self._scene.world_pos(b_id)
+            if a_pos is None or b_pos is None:
+                continue
+            gl_matrix = link_gl_matrix(a_pos, b_pos, max(node.ratio, 1e-4),
+                                       node.geometry)
+            if gl_matrix is None:
+                continue
+            z_min, z_max = local_z_span(node.geometry)
+            pad = (z_max - z_min) * 0.025
+            self._draw_selection_box(gl_matrix, z_min - pad, z_max + pad)
+
     def _draw_selected_outlines(self):
         """Yellow bounding-box halo around each selected node. Drawn as its
         own pass (not inside _draw_node) so the baked scene display list is
@@ -1589,6 +1655,7 @@ class Viewport(QOpenGLWidget):
         the whole pass without forcing a rebake."""
         if not self.show_selection_box or not self.selected_node_ids:
             return
+        self._draw_selected_link_outlines()
         visible_count = 0
         limit_ids: set[int] | None = None
         if self._draw_limit is not None:
@@ -1613,28 +1680,7 @@ class Viewport(QOpenGLWidget):
             if limit_ids is not None and nid not in limit_ids:
                 continue
             _, gl_matrix, _ = self._scene.node_draw_data(node)
-            glPushMatrix()
-            glMultMatrixf(gl_matrix)
-            glDisable(GL_LIGHTING)
-            glLineWidth(1.5)
-            glColor4f(1.0, 0.95, 0.1, 1.0)
-            # Bounding box at ±1.05 in unit local space (the matrix's scale
-            # makes it track the node's actual rendered size).
-            b = 1.05
-            glBegin(GL_LINES)
-            for sx in (-b, b):
-                for sy in (-b, b):
-                    glVertex3f(sx, sy, -b); glVertex3f(sx, sy, b)
-            for sx in (-b, b):
-                for sz in (-b, b):
-                    glVertex3f(sx, -b, sz); glVertex3f(sx, b, sz)
-            for sy in (-b, b):
-                for sz in (-b, b):
-                    glVertex3f(-b, sy, sz); glVertex3f(b, sy, sz)
-            glEnd()
-            glLineWidth(1.0)
-            glEnable(GL_LIGHTING)
-            glPopMatrix()
+            self._draw_selection_box(gl_matrix)
 
     def _frustum_planes(self, mv: np.ndarray | None = None, pr: np.ndarray | None = None
                          ) -> list[tuple[float, float, float, float]] | None:
@@ -1769,8 +1815,45 @@ class Viewport(QOpenGLWidget):
             glMatrixMode(GL_MODELVIEW)
             glDisable(GL_TEXTURE_2D)
 
+    def _draw_link_glyph(self, link: Node, a_pos, b_pos):
+        """Render a type=7 link as its own `geometry`, stretched between the
+        A-end and the B-end — ANTz's link behavior (npDrawLink,
+        npgldraw.c:961), and what lets a link distort a glyph arbitrarily along
+        its connection axis.
+
+        `ratio` is the thickness on BOTH cross-axes (not scale_x/scale_y): a
+        link has no independent pose, so its own translate/rotate/scale play no
+        part in this matrix — one field controls thickness whatever geometry is
+        chosen, which is also the field the classic line and the prism already
+        use for their width. The transform itself is Qt/GL-free in
+        glyphviz_core.link_geometry.
+
+        Lighting is turned on for the duration so a solid link shades in 3-D
+        like any other glyph — _draw_topology_overlays runs with it off (flat
+        line colors), and the caller restores that afterward. Wire display
+        lists re-enable lighting internally as a side effect of how they're
+        compiled, which is the other reason the restore can't be skipped."""
+        gl_matrix = link_gl_matrix(a_pos, b_pos, max(link.ratio, 1e-4),
+                                   link.geometry)
+        if gl_matrix is None:
+            return   # zero-length edge: no axis to orient along
+        gl_tex = 0
+        if link.texture_id:
+            gl_tex = self._tex_mgr.get_gl_name(link.texture_id)
+            if not gl_tex:
+                gl_tex = self._video_mgr.get_gl_name(link.texture_id)
+        glPushMatrix()
+        glMultMatrixf(gl_matrix)
+        glColor4f(link.color_r / 255.0, link.color_g / 255.0,
+                  link.color_b / 255.0, link.color_a / 255.0)
+        self._geo.draw(link.geometry, 1.0, 1.0, 1.0, ratio=link.ratio,
+                       gl_tex_name=gl_tex, mesh_id=link.mesh_id)
+        glPopMatrix()
+
     def _draw_topology_overlays(self):
-        """Draw type=7 link lines, TOPO_PLOT polylines, and TOPO_SURFACE quad meshes."""
+        """Draw type=7 links (line, prism, or any glyph geometry stretched
+        between the two ends), TOPO_PLOT polylines, and TOPO_SURFACE quad
+        meshes."""
         # Membership comes from the per-revision scene scan — most scenes
         # (no links/plots/surfaces) return here without touching the node
         # list, and the parent→children map is built once per revision, not
@@ -1806,7 +1889,12 @@ class Viewport(QOpenGLWidget):
 
         glDisable(GL_LIGHTING)
 
-        # ---- Type-7 link lines ----
+        # ---- Type-7 links ----
+        # Three render modes, chosen by `geometry` alone (see
+        # link_geometry.LINK_LINE_GEOMETRIES): the classic thin line, the
+        # textured scrolling prism, or any other geometry id stretched along
+        # the edge as a full 3-D glyph.
+        lit = False
         for link in link_nodes:
             if not self.show_hidden and link.hide:
                 continue
@@ -1821,6 +1909,17 @@ class Viewport(QOpenGLWidget):
             if link.geometry == GEO_LINE_PRISM:
                 self._draw_link_prism(link, a_pos, b_pos)
                 continue
+            if is_glyph_link(link.geometry):
+                if not lit:
+                    glEnable(GL_LIGHTING)
+                    lit = True
+                self._draw_link_glyph(link, a_pos, b_pos)
+                continue
+            if lit:
+                # A wire glyph's display list leaves lighting on; the flat
+                # line colors below need it off again.
+                glDisable(GL_LIGHTING)
+                lit = False
             width = max(link.ratio * 20.0, 1.0)
             glLineWidth(width)
             glColor4f(link.color_r / 255.0, link.color_g / 255.0,
@@ -1837,6 +1936,9 @@ class Viewport(QOpenGLWidget):
             glVertex3f(a_pos[0], a_pos[1], a_pos[2])
             glVertex3f(b_pos[0], b_pos[1], b_pos[2])
             glEnd()
+
+        if lit:
+            glDisable(GL_LIGHTING)   # back to this method's unlit baseline
 
         # ---- TOPO_PLOT polylines ----
         if plot_nodes:
@@ -2580,7 +2682,10 @@ class Viewport(QOpenGLWidget):
 
         # Draw link nodes as pick targets.  Each link gets:
         #   1. A thick line between its endpoints (when both endpoints resolve).
-        #   2. A small sphere at its own world position so it's always clickable
+        #   2. For a glyph-geometry link, the same stretched solid the viewport
+        #      draws, so a fat link is clickable across its whole body and not
+        #      just along its center line.
+        #   3. A small sphere at its own world position so it's always clickable
         #      even when the B-end (child_id) is missing or 0.
         for node in self._scene.nodes:
             if node.type != NODE_TYPE_LINK:
@@ -2603,6 +2708,20 @@ class Viewport(QOpenGLWidget):
                 glVertex3f(b_pos[0], b_pos[1], b_pos[2])
                 glEnd()
                 glLineWidth(1.0)
+                if is_glyph_link(node.geometry):
+                    # Same matrix the visible pass uses, so picking matches
+                    # what's drawn; wire ids swap to their solid equivalent for
+                    # the usual whole-silhouette reason.
+                    gl_matrix = link_gl_matrix(a_pos, b_pos,
+                                               max(node.ratio, 1e-4),
+                                               node.geometry)
+                    if gl_matrix is not None:
+                        glPushMatrix()
+                        glMultMatrixf(gl_matrix)
+                        pick_geo = WIRE_TO_SOLID.get(node.geometry, node.geometry)
+                        self._geo.draw(pick_geo, 1.0, 1.0, 1.0,
+                                       ratio=node.ratio, mesh_id=node.mesh_id)
+                        glPopMatrix()
 
             # Fallback sphere at the link node's own position.
             own_pos = self._scene.world_pos(node.id)
