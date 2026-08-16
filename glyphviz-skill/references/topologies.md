@@ -233,6 +233,58 @@ useful for "spokes" radiating from a hub.
 
 Example: `child (0, 0, 2) → world (2, 0, 0)`.
 
+### Direction-relative branching — trees, ferns, dendrites
+
+Point is also the topology for **branching structures**, because of one
+property: a child is aimed **down its own offset direction** (the outward
+orientation), so its own children are then placed relative to *its* heading.
+That makes the recursion turtle-style — each branch continues the direction its
+parent was heading, deviated by a fixed angle — which is the mechanism that
+makes an output read as a tree rather than as a starburst.
+
+The convention that falls out of it:
+
+| Field on the child | Meaning in a tree |
+|---|---|
+| `translate_y` = **90 − A** | the branch turns **A degrees** off the parent's heading |
+| `translate_x` | azimuth around the parent's heading — the **fork twist**. Siblings at `t`, `t + 180` fork flat; add a per-level offset to spiral the forks |
+| `translate_z` | the **branch length** (the reach from parent joint to child joint) |
+
+`translate_y = 90` therefore means "straight on", and the trunk of a tree is
+just a child at `(0, 90, trunk_length)` under the root.
+
+Engine-verified (branch angle A = 35°, fork twist 60°, lengths 4 / 3 / 2, all
+joints at scale 1):
+
+| Node | Authored `(tx, ty, tz)` | World position | Angle off parent's heading |
+|---|---|---|---|
+| trunk | `(0, 90, 4)` | `(0, 0, 4)` | 0.0000° |
+| fork A | `(60, 55, 3)` | `(0.8604, 1.4902, 6.4575)` | 35.0000° |
+| fork B | `(240, 55, 3)` | `(−0.8604, −1.4902, 6.4575)` | 35.0000° |
+| next gen | `(60, 55, 2)` | `(0.7048, 3.2076, 7.4705)` | 35.0000° |
+
+Each child's own heading points exactly down its own branch (measured
+deviation: 0), which is what lets the same three numbers be reused at every
+depth.
+
+Two rules that bite:
+
+- **A joint's scale multiplies its children's reach**, because a node's
+  rendered size and the frame its children are placed in are the same quantity
+  in GlyphViz. Measured on the case above: a joint at scale 0.5 pulls its
+  child's reach from 2.0 to 1.0, and scale 2.0 pushes it to 4.0. So either keep
+  joints at scale 1 and taper the branches with `translate_z`, or divide the
+  compensating factor back out of each child's `translate_z` (this is what the
+  Hyperglyph Tree Designer's "telescoping" does, which is why resizing joints
+  there doesn't reshape the tree).
+- **Scale joints uniformly.** Uniform scale preserves the branch angle exactly
+  (35.000° at scale 0.5, 1.0 and 2.0 above); a non-uniform scale shears the
+  frame and bends it — `scale_z = 0.5` on the joint above turned a 35° branch
+  into 54.47°.
+
+Draw the limbs as **Link nodes** between each joint and its parent
+(`links-and-edges.md`); the joints alone read as a cloud of beads.
+
 ## Cube (1) — six faces
 
 Children attach to one of six faces chosen by the node CSV's `facet` column

@@ -49,7 +49,7 @@ All 20: `id`, `type`, `parent_id`, `branch_level`, `translate_x/y/z`,
 
 | Column | Default when column absent | Notes |
 |---|---|---|
-| `ratio` | 0.1 | Geometry/topology aspect parameter: a Torus parent's tube (minor) radius as a fraction of major radius — children of Torus/Ztorus parents sit on the tube defined by the **parent's** ratio. Also the **only** control over a Point glyph's size: `geometry` = 22 draws a `GL_POINTS` sprite `max(2, ratio × 20)` **pixels** wide, which ignores `scale_x/y/z` entirely and does not shrink with distance. Sizing a point cloud therefore means writing `ratio` per node, not `scale_*` — and if you want size to read as depth, use the flat markers (24/25/26) or a solid geometry instead. |
+| `ratio` | 0.1 | Geometry/topology aspect parameter: a Torus parent's tube (minor) radius as a fraction of major radius — children of Torus/Ztorus parents sit on the tube defined by the **parent's** ratio. Also the **only** control over a Point glyph's size: `geometry` = 22 draws a `GL_POINTS` sprite `max(2, ratio × 20)` **pixels** wide, which ignores `scale_x/y/z` entirely and does not shrink with distance. Sizing a point cloud therefore means writing `ratio` per node, not `scale_*` — and if you want size to read as depth, use the flat markers (24/25/26) or a solid geometry instead. On a **Link** (type 7) it is the edge's thickness in every drawing mode: `max(ratio × 20, 1)` pixels for a Line, and the radius in world units for a stretched glyph (`scale_*` is inert there). See `links-and-edges.md`. |
 | `topo_scale` | 1.0 | **GlyphViz-only.** How far one unit of a **child's** `translate` reaches, for the axes this node's topology reads as a **distance** rather than an angle (a Cube facet's two axes, Pin/Cylinder height, altitude above a Sphere, all three axes of the Cartesian family). Angular axes — longitude, latitude, orbital and tube angles — are never scaled, so no value of this can distort a circular layout. 1.0 = one translate unit is one world unit (GlyphViz's original behavior, hence the load default). **1/180 ≈ 0.005556 = the ANTz convention**, where a linear axis spans the parent's own extent: translate 180 reaches the edge of a cube facet exactly as 180° of longitude reaches the far side of a sphere. Set it on the **parent**, like `topo` and `ratio`. Extension column, written only when ≠ 1.0. See `topologies.md`. |
 | `subspace` / `facet` | 0 | Cube-topology face selector. `subspace` (GaiaViz spelling, 0-indexed) wins if present; else `facet` − 1 (legacy ANTz/GlyphViz spelling, 1-indexed: 1=+X, 2=−X, 3=+Y, 4=−Y, 5=+Z, 6=−Z), clipped at 0. `save_node_csv` always writes `facet`. |
 | `texture_id` | 0 | 0 = untextured; otherwise a 1-based index into the alphanumerically sorted files of the scene's `media/` folder (images first, then videos) — see `textures-and-media.md`. |
@@ -184,7 +184,7 @@ prefix is for genuine GaiaViz files.
 | 1 | **Camera** — stored view definitions (C key cycles). Never drawn or picked. |
 | 5 | **Glyph** — the ordinary renderable node; use 5 for normal data (other unlisted values also draw as plain glyphs). |
 | 6 | **World Grid** — a real, movable/scalable node rendering a flat lon/lat plate or (with Sphere/Sphere-Wire geometry) a globe. Children attach **explicitly** via `parent_id` = the grid's id and place by `translate_x` = longitude, `translate_y` = latitude, `translate_z` = elevation within the grid's extents window (`trigger_lo/hi_x/y`). No implicit/default grid exists. Grid scale re-spaces child positions, never child sizes. Full rules: `world-grid.md`. |
-| 7 | **Link** — a graph edge from node `parent_id` (A-end) to node `child_id` (B-end). `geometry` chooses how the edge draws: 27 (Line) = classic thin line, and the default; 28 (Prism) = textured 4-sided tube, texture scrollable via `rotate_rate_z` for directed flow; 22 (Point) also draws as a plain line. **Any other geometry id renders that glyph stretched between the two ends** — see "Geometry on a Link" below. Links take `text`/`link` and `show_text` like any other node — an edge label draws at the middle of the edge (`tags-and-labels.md`). |
+| 7 | **Link** — a graph edge from node `parent_id` (A-end) to node `child_id` (B-end). `geometry` chooses how the edge draws: 27 (Line) = classic thin line, and the default; 28 (Prism) = textured 4-sided tube, texture scrollable via `rotate_rate_z` for directed flow; 22 (Point) also draws as a plain line. **Any other geometry id renders that glyph stretched between the two ends** — see "Geometry on a Link" below. Links take `text`/`link` and `show_text` like any other node — an edge label draws at the middle of the edge (`tags-and-labels.md`). Full row shape, drawing modes, and edge recipes: `links-and-edges.md`. |
 
 ## Topology ids (`topo` — how children of this node are placed)
 
@@ -226,18 +226,28 @@ between the link's two ends**:
   `translate`, `rotate`, and `scale` are ignored, as they always were.
 
 So an edge can be a cylinder rod, a cone (apex at the B-end — an arrowhead for
-directed graphs), a wire cage, or an imported mesh. Two quirks: on a **Torus**
+directed graphs), a wire cage, or an imported mesh. Three quirks: on a **Torus**
 link `ratio` also sets the torus's own minor-radius proportion (above 1.0 is
-degenerate), and the flat shapes (20/21, 24/25/26) have no Z extent to stretch
-so they land as a plate at the edge's midpoint.
+degenerate); the flat shapes (20/21, 24/25/26) have no Z extent to stretch so
+they land as a plate at the edge's midpoint; and **Pin** (16/17) stands on its
+apex, so a pin link puts its tip on A and its dome on B.
 
 Authoring guidance: a solid glyph link costs what a glyph costs. On a graph
 with thousands of edges, use 27 (Line) unless the edge itself carries meaning.
+Recipes (arrowheads, weighted edges, bonds, tree limbs) and the full validation
+rules: `links-and-edges.md`.
 
 Geometry never gates `texture_id` in the format, but only the solid primitives,
 the three flat markers (24/25/26 — textured since 2026-08-06), and the Link
 Prism (28) actually *render* a texture; on wireframes, Point (22), Mesh (23),
 and Line (27) it is read and silently ignored. Full table: `textures-and-media.md`.
+
+Pin (16/17) is the one geometry that is **not centred on its own origin**: it
+stands with its tip at the origin and its shaft along +Z, so a pin marks the
+point it sits on rather than straddling it. (Rebuilt to ANTz's shape
+2026-08-14; before that it hung below the origin, so pins in pre-2026-08-14
+files sit about one glyph height lower than they do now.) Placement of a Pin
+parent's own children follows from the same convention — see `topologies.md`.
 
 Point (22) is the one geometry whose on-screen size does **not** come from
 `scale_x/y/z`: it is a fixed-pixel sprite sized `max(2, ratio × 20)` px that

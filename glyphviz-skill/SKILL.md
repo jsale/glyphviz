@@ -1,6 +1,6 @@
 ---
 name: glyphviz
-description: Generate and validate CSV scene files for GlyphViz, a 3D hierarchical data visualization app. Creates gv_node.csv (and optional gv_tag.csv / Channels animation files) with correct columns, topologies, hierarchy, colors, and labels. Use when users want to visualize data in GlyphViz, build glyph hierarchies, convert data to GlyphViz format, or debug why a GlyphViz CSV doesn't load or render as expected.
+description: Generate and validate CSV scene files for GlyphViz, a 3D hierarchical data visualization app. Creates gv_node.csv (and optional gv_tag.csv / Channels animation files) with correct columns, topologies, hierarchy, links, colors, and labels. Use when users want to visualize data in GlyphViz, build glyph hierarchies, graphs/networks or branching structures, convert data to GlyphViz format, or debug why a GlyphViz CSV doesn't load or render as expected.
 ---
 
 # GlyphViz CSV Generation Skill
@@ -79,6 +79,12 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
    1 = Camera; 6 = World Grid (children attach explicitly via
    `parent_id = grid.id`, place by lon/lat); 7 = Link (edge `parent_id` →
    `child_id`).
+10. A **Link** has no pose — its `translate`/`rotate`/`scale` are ignored and
+    both endpoints must resolve or it draws nothing. Its `geometry` picks how
+    the edge looks: 27 (Line) for bulk graphs, 28 (Prism) for animated flow,
+    or **any solid/wire glyph id, which renders that shape stretched from A to
+    B** (a Cone points its apex at the B-end — an arrowhead). Thickness is
+    `ratio`, never `scale_*`. See `references/links-and-edges.md`.
 
 ## GaiaViz myths that do NOT apply to GlyphViz
 
@@ -103,6 +109,7 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 | Helical / ranked spiral | Spiral (14) |
 | Line plot, GPS track, time series path | Plot (16) |
 | Heightfield, terrain, FFT | Surface (17) |
+| Branching structure (tree, fern, dendrite) | Point (7) + Link limbs |
 | Free manual placement | None (0) |
 | Geo-registered map/globe scene | World Grid node (type 6) as the parent |
 
@@ -138,6 +145,30 @@ Mixing the two within one scene is fine — `topo_scale` is per-parent.
    file loads automatically. Suggest small first (dozens of nodes) before
    scaling to thousands.
 
+### When the app can build it faster than a script
+
+Generating CSV is the right tool for *data*. For a **repeating composite
+glyph** with no data behind it — the shape itself is the deliverable — the app
+has interactive builders that write the same format, and pointing the user at
+one beats scripting it blind:
+
+- **Tools > Glyph Composer** (Ctrl+G) — describe a glyph one level at a time
+  (count, geometry, topology, distribution, color ramp, Topology Scale with an
+  Auto fit), preview it live, then insert it into the scene, save it as a JSON
+  template, or use it as a Draw Mode brush. A level can also emit a **Link back
+  to each object's parent**, which is what turns a stack of nested shells into a
+  jointed, branching structure.
+- **Hyperglyph Tree Designer** — a browser tool (no install) that designs
+  branching, tree-like hyperglyphs with a live 3-D preview and exports them as
+  Glyph Composer templates. Reach for it for trees, ferns, and dendrites.
+- **Hyperglyph Lab** — batch/random generation of composite glyph designs.
+
+These are GUI tools, not something this skill drives. Use them as a
+recommendation; generate CSV yourself whenever real data is involved. The
+placement math they rest on is documented either way — see "Direction-relative
+branching" in `references/topologies.md` if you'd rather generate a tree
+directly.
+
 ## Animation options (quick pointers)
 
 - **Rate fields**: `translate_rate_*` / `rotate_rate_*` / `scale_rate_*` are
@@ -149,7 +180,9 @@ Mixing the two within one scene is fine — `topo_scale` is per-parent.
   flip-books, optionally synced to an audio file. See
   `references/channels-animation.md`.
 - **Link flow**: Link nodes (type 7) with geometry 28 (Prism) scroll their
-  texture via `rotate_rate_z` — directed-graph flow animation.
+  texture via `rotate_rate_z` — directed-graph flow animation. Edges follow
+  their endpoints every frame, so any animation that moves a node drags its
+  edges with it.
 - **Textures / video / audio**: `texture_id` is a 1-based index into the
   scene's `media/` folder (sorted: images, then videos; animated GIFs and
   videos animate automatically; video audio can be soloed to the selection).
@@ -187,6 +220,10 @@ scene. Worked exemplar: `examples/RSS_News/`.
 - `references/channels-animation.md` — the ch-map/ch-tracks formats, the
   complete bindable-attribute list, playback/audio-sync behavior, and
   animation recipes. **Read it before generating any Channels files.**
+- `references/links-and-edges.md` — Link (type 7) rows: the drawing modes
+  (line / flow prism / any glyph stretched between the ends), `ratio` as
+  thickness, and recipes for directed graphs, weighted edges, bonds, and tree
+  limbs. **Read it before generating a graph, network, or branching scene.**
 - `references/tags-and-labels.md` — inline `text`/`link` vs the companion
   tag file, title encodings, display behavior (incl. the 500-per-frame
   cap), and the U-key link/app-launch rules.
@@ -195,12 +232,12 @@ scene. Worked exemplar: `examples/RSS_News/`.
   engine-verified placement examples. **Read it before building any
   map/geographic scene.**
 - `references/troubleshooting.md` — the scene loaded, nothing errored, and it
-  still looks wrong: a symptom index of the eleven silent failure modes
+  still looks wrong: a symptom index of the fourteen silent failure modes
   (children flung away by a topology change, textures ignored on the wrong
-  geometry, inert palettes, labels that all vanish, …) with the cause and fix
-  for each. **Read it whenever a generated scene doesn't look right — and skim
-  it before generating, since most entries are cheaper to avoid than to
-  diagnose.**
+  geometry, inert palettes, labels that all vanish, edges that never draw, …)
+  with the cause and fix for each. **Read it whenever a generated scene doesn't
+  look right — and skim it before generating, since most entries are cheaper to
+  avoid than to diagnose.**
 - `references/OUTLINE.md` — what's planned but not yet written; do not invent
   content for those areas, derive from `glyphviz_core/` source when available.
 
@@ -217,3 +254,4 @@ a scene of your own:
 | time-series animation over many nodes | `Breathing_Century/`, `Decay_Chain/Secular_Equilibrium/` |
 | a deep multi-branch hierarchy under one clock | `Duel_of_Dynasties/` |
 | a live-data scene that regenerates and reloads | `RSS_News/` |
+| a graph or network where the edges carry meaning | `Decay_Chain/` (110 links), `SD_Seismicity/` |

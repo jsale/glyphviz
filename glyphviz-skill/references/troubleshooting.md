@@ -1,6 +1,7 @@
 # Troubleshooting — when a scene loads but looks wrong
 
-Verified against `glyphviz_core/` and `glyphviz_gl/` (2026-08-13).
+Verified against `glyphviz_core/` and `glyphviz_gl/` (2026-08-13, extended
+2026-08-15).
 
 Every entry here is a case where **the CSV is valid, the file loads, nothing
 errors** — and the scene still isn't what you intended. That's what makes them
@@ -23,6 +24,9 @@ reference named at the end of the entry for the full rules.
 | Colors ignore `palette_id` / `color_index` on load | [9](#9-palette-colors-do-nothing-on-load) |
 | The background changed when you recolored everything | [10](#10-a-bulk-edit-changed-the-background) |
 | Level-based selection is off by one | [11](#11-select-by-level-is-off-by-one) |
+| Some graph edges never appear | [12](#12-some-edges-never-appear) |
+| A link went hairline or bloated after a geometry change | [13](#13-a-link-changed-thickness-when-you-changed-its-geometry) |
+| Pin glyphs look offset upward from their coordinates | [14](#14-a-pin-sits-above-the-point-it-marks) |
 
 ---
 
@@ -223,6 +227,62 @@ drive select-by-level and sibling navigation.
 One exception worth knowing: a **Link** node's `parent_id` is its A-end, not a
 hierarchy parent, so a link has no tree depth to match. Give it the level of the
 structure it belongs to.
+
+---
+
+## 12. Some edges never appear
+
+**Symptom.** A graph draws, but edges are missing — and the node count is higher
+than the number of things you can see. No warning, no error.
+
+**Cause.** A Link (`type` = 7) draws **only when both ends resolve**. If
+`child_id` is 0, absent, or names an id that isn't in the file — and likewise
+for `parent_id` — the renderer skips the row silently. Generators produce these
+easily: an edge written before its target node existed, an edge to a node that
+was later filtered out, or ids rebased without rewriting `child_id`.
+
+**Fix.** Validate `child_id` exactly as you validate `parent_id`: every link's
+**both** endpoints must be real ids in the same file. Drop edges whose target
+was filtered out rather than leaving them dangling. Full rules:
+`links-and-edges.md`.
+
+---
+
+## 13. A link changed thickness when you changed its geometry
+
+**Symptom.** A Line link at `ratio` = 0.1 looked right; the same link as a
+Cylinder is a near-invisible thread across a wide gap — or a `ratio` tuned for a
+chunky line turns into a bloated sausage.
+
+**Cause.** `ratio` means two different things in the two modes. On a **Line**
+(27) it is a **screen** measurement: `max(ratio × 20, 1)` pixels, which never
+changes with distance or with how far apart the endpoints are. On any **stretched
+glyph** link it is a **world** measurement: the edge's radius in world units. So
+`ratio` = 0.1 is a comfortable 2-pixel line and, at the same time, a 0.2-unit-thick
+rod — which is hairline across a 30-unit span and chunky across a 1-unit one.
+
+**Fix.** Re-tune `ratio` whenever you switch a link between line and glyph
+modes, and scale it to the **typical edge length** in the scene, not to a fixed
+number. `scale_x/y/z` cannot help — they are inert on a link.
+
+---
+
+## 14. A pin sits above the point it marks
+
+**Symptom.** Pin glyphs (`geometry` 16/17) look offset upward from their
+coordinates, where every other geometry sits centred on its position.
+
+**Cause.** Pin is the one glyph **not centred on its own origin**. It stands
+with its tip at the origin and its shaft along +Z — ANTz's convention, which is
+what lets a pin *point at* something. (This changed 2026-08-14; before that the
+pin hung below its origin, so pins in older files render about one glyph height
+lower than they do now.)
+
+**Fix.** Nothing, if a marker is what you wanted — the tip is on the data point,
+which is the useful reading. If you want the pin's *head* on the point, offset
+the node by the pin's height along its own +Z. For children of a Pin **parent**,
+`translate_x` = 0 is the head's centre and −B is the tip, so the range −B…0
+walks the shaft: `topologies.md`.
 
 ---
 
