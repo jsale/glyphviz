@@ -1004,8 +1004,18 @@ class Viewport(QOpenGLWidget):
             # Follow re-centers every frame from the node's own animation, so
             # smoothing it would fight the source rather than a hand tremor —
             # and would leave the camera permanently trailing a moving node.
+            # Hence the pivot is written to actual AND goal together: no glide
+            # to chase, and nothing left for the filter to drag it back to.
+            #
+            # It owns the PIVOT ONLY. _snap_camera_goal() here would also
+            # re-point the azimuth/elevation/distance goals at the lagging
+            # actual — i.e. erase an in-progress orbit or zoom glide on the
+            # very next repaint — which locked the camera solid whenever
+            # smoothing and Follow Selected were on together (Jeff's
+            # 2026-08-17 report). Orbit and zoom stay live while following;
+            # that is the feature's documented contract.
             self._cam_target = list(pos)
-            self._snap_camera_goal()
+            self._cam_goal_target = list(pos)
 
     # --- texture management ---
 

@@ -74,8 +74,12 @@ Two further notes:
   jitter to filter.
 
 Camera jumps stay instant whatever the setting: reference-view presets,
-double-click focus, **Reset Camera**, scene loading, and Follow Selected Node.
-Only drags glide.
+double-click focus, **Reset Camera**, and scene loading. Only drags glide.
+
+**Follow Selected Node** re-pins the camera's *target* on the followed node
+every frame without smoothing — following a moving node is a source to track,
+not a hand tremor to filter, and easing it would leave the camera permanently
+trailing. Orbiting and zooming *around* a followed node still glide normally.
 
 The setting is per session — it resets to Off when GlyphViz restarts.
 

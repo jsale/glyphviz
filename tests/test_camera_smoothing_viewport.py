@@ -349,14 +349,59 @@ def test_camera_state_captures_the_goal_not_a_half_finished_glide(vp):
     assert state['azimuth'] == pytest.approx(aimed)
 
 
-def test_follow_selected_snaps_every_frame(vp):
+def test_follow_selected_snaps_the_pivot_every_frame(vp):
     """Follow re-centers from the node's own animation, so smoothing it would
     leave the camera permanently trailing a moving node."""
     vp.set_camera_smoothing(cs.TAU_ANTZ, cs.SCOPE_ALL)
     vp.selected_node_ids = {2}
     vp.follow_selected = True
     vp._apply_follow_target()
-    assert _rig(vp) == _goal(vp)
+    assert vp._cam_target == [100.0, 50.0, 20.0]
+    assert vp._cam_goal_target == vp._cam_target   # nothing left to chase
+
+
+def test_follow_selected_leaves_an_orbit_glide_alone(vp):
+    """Follow owns the PIVOT only. Snapping the whole goal here re-pointed the
+    azimuth/elevation/distance goals at the LAGGING actual, erasing the glide
+    on the next repaint — the camera locked solid whenever smoothing and
+    Follow Selected were both on (Jeff's 2026-08-17 report)."""
+    vp.set_camera_smoothing(cs.TAU_ANTZ, cs.SCOPE_ALL)
+    vp.selected_node_ids = {2}
+    vp.follow_selected = True
+    vp._orbit_camera(60.0, 10.0)
+    aimed = (vp._cam_goal_azimuth, vp._cam_goal_elevation, vp._cam_goal_distance)
+    vp._apply_follow_target()
+    assert (vp._cam_goal_azimuth, vp._cam_goal_elevation,
+            vp._cam_goal_distance) == aimed
+
+
+@pytest.mark.parametrize('gesture', [
+    lambda v: v._orbit_camera(6.0, 2.0),
+    lambda v: v._orbit_zoom_camera(6.0, 2.0),
+    lambda v: v.wheelEvent(_wheel(120)),
+])
+def test_following_navigates_exactly_as_not_following(vp, qapp, gesture):
+    """A held drag under smoothing must move the camera the same amount whether
+    or not the scene is being followed — following pins the pivot, it does not
+    veto navigation (the View menu's own promise: "orbit and zoom stay live")."""
+    def run(v, follow):
+        v.set_camera_smoothing(cs.TAU_ANTZ, cs.SCOPE_ALL)
+        v.selected_node_ids = {2}
+        v.follow_selected = follow
+        for _ in range(30):          # 30 frames of a held drag
+            gesture(v)
+            if v.follow_selected:
+                v._apply_follow_target()
+            v._apply_camera_smoothing(16.0)
+        return (v._cam_azimuth, v._cam_elevation, v._cam_distance)
+
+    control = Viewport()
+    control.set_nodes([_node(1, 0, 0, 0), _node(2, 100, 50, 20)])
+    control._cam_azimuth, control._cam_elevation, control._cam_distance = 37.0, 22.0, 400.0
+    control._cam_target = [10.0, -5.0, 3.0]
+    control._snap_camera_goal()
+
+    assert run(vp, True) == pytest.approx(run(control, False))
 
 
 def test_entering_camera_mode_lands_any_glide(vp):
