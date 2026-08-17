@@ -232,7 +232,12 @@ def _load_tag_file(tag_path: Path) -> dict[int, tuple[str, str]]:
       - Anything else → link='', text=value
     """
     try:
-        df = pd.read_csv(tag_path)
+        # dtype=str on the title, for the same reason load_node_csv reads
+        # text/link as str: inference rewrites numeric titles (years, ids,
+        # ranks) — "2024" comes back as "2024.0" once any title cell is blank.
+        # Harmless when the column is absent; pandas ignores dtype keys it
+        # doesn't find.
+        df = pd.read_csv(tag_path, dtype={'title': str})
     except Exception:
         return {}
     if 'record_id' not in df.columns:
@@ -287,7 +292,20 @@ def load_node_csv(path: str) -> list[Node]:
     # Whole columns are converted up front (astype/tolist run in C) and the
     # per-node loop indexes plain Python lists — iterating pandas rows instead
     # spends ~98% of load time on Series construction/indexing at 100k rows.
-    df = pd.read_csv(path)
+    #
+    # text/link are read as str explicitly, so the label is the characters in
+    # the file rather than pandas' idea of them. Left to inference, a numeric
+    # label column (hours, years, ranks, station ids) is rewritten: with any
+    # blank cell it becomes float64 and "12" loads as "12.0"; without one it
+    # becomes int64 and "007" loads as "7"; decimals lose trailing zeros. The
+    # blank is what makes it bite in practice — every real scene has unlabelled
+    # rows (a World row, hub frames), so a scene labelled 1..12 hits the
+    # float64 case every time. And since save_node_csv writes Node.text back
+    # out verbatim, one open+save persists the rewrite into the user's file.
+    # dtype keys for columns the file lacks are ignored, so this is safe for
+    # the many scenes with no labels at all. Blank cells still arrive as NaN
+    # and are still emptied by the isna() guard below.
+    df = pd.read_csv(path, dtype={'text': str, 'link': str})
     if len(df.columns) and df.columns[0] == 'np_node_id':
         df = df.rename(columns=_GAIAVIZ_NODE_COL_ALIASES)
     n = len(df)
