@@ -127,6 +127,11 @@ node, then opens its link). Either way:
 
 - Prefer inline `text`/`link`; keep labels short and shared when possible.
 - UTF-8 explicitly; control characters stripped; no literal "None" titles.
+- **Numeric labels are safe to write as-is** — hours, years, ranks, station
+  ids. GlyphViz reads label text literally, so `007` stays `007` and `1.50`
+  keeps its trailing zero. (Before 2026-08-17 the label column was type-inferred
+  and a numeric column alongside any unlabelled row rendered as `12.0`; if you
+  are targeting an older build, put one non-numeric value in the column.)
 - Tag-file route: `table_id` = 0 on every row; `record_id` = the node's
   `id` (or its `record_id` if you set one); name the file by the
   `node`→`tag` stem swap.

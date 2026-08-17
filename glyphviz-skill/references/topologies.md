@@ -118,6 +118,83 @@ to face outward *keeps* facing outward as its placement angle changes:
 The child's own `rotate_x/y/z` (per its `rotation_mode`) applies on top of
 this scaffold.
 
+**Note the two traps in that table.** `Zsphere` is *not* in row one — it is the
+one Z-variant that drops the outward aim (Ztorus keeps it), so a child of a
+Zsphere parent is placed on a sphere but left unrotated. And the axis family
+(Cylinder, Zcylinder, Spiral, Zrod, Rod) only *spins* the child about the
+parent's axis: its local **+X** ends up radial while **+Z** stays parallel to
+the axis. Measured, unrotated child, engine output:
+
+| Parent topo | child's local +X | child's local +Z |
+|---|---|---|
+| Sphere / Point / Torus / Ztorus | tangent | **outward (radial)** |
+| Cube (any `facet`) | in-face | **outward (face normal)** |
+| Cylinder / Zcylinder / Spiral / Zrod / Rod | **radial (horizontal)** — swept by `translate_x`, but by `translate_y` on Rod | axial (parent's +Z) |
+| Zsphere, Pin, None, Plane, Video, Plot, Surface | +X | +Z (unrotated) |
+
+## Pointing a glyph: use placement, not rotation
+
+**+Z is the pointing axis of every directional geometry**, which is what makes
+the table above actionable:
+
+| Geometry | What +Z means for it |
+|---|---|
+| Cylinder 18/19, Cone 4/5 | the long axis (a rod/spike lying along ±Z, length 2 at scale 1; the cone's apex is at +Z) |
+| Pin 16/17 | the shaft — tip at the origin, shaft rising along +Z |
+| Grid 20/21, Circle 24, Cross 25, Star 26 | the facing normal (the plate lies in the XY plane) |
+| Torus 6/7 | the ring's axis (the ring itself lies in the XY plane) |
+| Cube, Sphere, and the polyhedra | nothing — isotropic, no aim to get wrong |
+
+So **a directional glyph placed by an aiming topology needs no rotation at
+all**: put `rotate_x/y/z = 0` and let placement do the work. The angle you want
+is a `translate_x`, not a `rotate_z`.
+
+This is the single most common authoring mistake in GlyphViz, and it fails
+*silently*: hand-posed rotations do not replace the base rotation, they compose
+on top of it, so the child ends up placed correctly and aimed wrong. The
+symptom is an intended starburst that renders as a flat stacked fan — positions
+right, bodies pointing the wrong way. See `troubleshooting.md` entry 15.
+
+### Recipe: radial spokes (clock face, starburst, wind rose, rays)
+
+n rods radiating from a hub, in the horizontal plane:
+
+```text
+hub    topo = 2 (Sphere), scale 1                 # or topo = 7 (Point)
+rod i  parent_id = hub
+       translate_x = i * 360/n     # the bearing -- THIS is the "rotation"
+       translate_y = 0             # latitude 0 keeps every rod in the XY plane
+       translate_z = <reach>       # Sphere: height above the surface
+                                   # Point:  full distance from the center
+       rotate_x/y/z = 0            # <-- the topology aims it; do not touch
+       geometry = 19 (Cylinder)
+       scale = (thickness, thickness, half_length)
+```
+
+Under a **Sphere** hub the rod's center lands at radius `B + translate_z`
+(B = Global Scale, default 1), so `translate_z = half_length` puts the rod's
+inner end exactly on the hub's surface. Under a **Point** hub there is no base
+radius: `translate_z` *is* the center distance.
+
+Verified through the real engine (Sphere hub, `scale_z` 2, `translate_z` 2,
+twelve rods): every rod center at z = 0 and radius 3.0, bearings exactly 30°
+apart, each rod's inner end at radius 1.000 (flush with the hub) and its axis
+matching its own outward radial to 1.7e-16.
+
+**Which way is clockwise.** Longitude runs **counter-clockwise seen from +Z**
+(0 → +X, 90 → +Y), so a clock face — clockwise — needs *decreasing* longitude:
+
+```text
+translate_x = (lon12 - 30 * hour) mod 360
+```
+
+where `lon12` is the longitude you want 12 o'clock to face. Pick it from how
+the scene will be viewed, because "up" is a camera property, not a world one.
+For GlyphViz's overhead **+Z View** (azimuth 0, elevation 89) screen-up is
+**−X** and screen-right is **+Y**, so `lon12 = 180` puts 12 at the top, 3 at
+the right, 6 at the bottom, 9 at the left — measured off a real render, not
+assumed.
+
 ## Cartesian family — None (0), Plane (8), Video (15), Plot (16), Surface (17)
 
 `offset = (tx, ty, tz)` — plain local-frame Cartesian. Identity orientation.

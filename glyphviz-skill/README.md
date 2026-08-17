@@ -24,7 +24,7 @@ now-optional 0.2 minimum-glyph-size clamp, textured flat markers, and Draw Mode.
 | `references/channels-animation.md` | **Done** — ch-map/ch-tracks formats, bindable attributes, playback + audio sync; 12 behavior checks through the real ChannelEngine |
 | `references/tags-and-labels.md` | **Done** — inline text/link vs tag file, title encodings, U-key rules, 500-per-frame draw cap; 18 checks through the real loader/saver |
 | `references/world-grid.md` | **Done** — flat/globe placement, extents windows, the grid scale rule, multi-grid recipes; 18 checks incl. 7 engine-verified examples |
-| `references/troubleshooting.md` | **Done** (2026-08-13, extended 2026-08-15) — fourteen silent failure modes (valid CSV, no error, wrong scene) with cause and fix, symptom-indexed; 33 checks against the real source |
+| `references/troubleshooting.md` | **Done** (2026-08-13, extended 2026-08-15/17) — fifteen silent failure modes (valid CSV, no error, wrong scene) with cause and fix, symptom-indexed; 33 checks against the real source |
 | `code/` (generator + validator helpers) | Planned — optional tooling, not a coverage gap; see `references/OUTLINE.md` |
 | `examples/` | **Six curated exemplars, eight scenes** (Breathing_Century, Duel_of_Dynasties, SD_Seismicity, RSS_News, Wind_Rose ×2, Decay_Chain ×2) — verified through the real loader/engine/renderer; see `examples/README.md` |
 

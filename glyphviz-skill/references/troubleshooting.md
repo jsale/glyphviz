@@ -15,7 +15,7 @@ reference named at the end of the entry for the full rules.
 | Children flung far away after changing a parent's `topo` | [1](#1-children-fly-away-when-the-parent-topology-changes) |
 | A parent's children sit in a tiny knot at its center | [1](#1-children-fly-away-when-the-parent-topology-changes) |
 | Small glyphs all look the same size | [2](#2-every-tiny-glyph-renders-at-the-same-size) |
-| Point glyphs ignore `scale_*`, don't shrink with distance | [3](#3-point-glyphs-ignore-scale) |
+| Point glyphs ignore `scale_*`, don't shrink with distance | [3](#3-point-glyphs-ignore-scale_) |
 | A texture is set but the glyph renders flat-colored | [4](#4-a-texture_id-is-set-but-nothing-is-textured) |
 | `geometry` 23 nodes all render as spheres | [5](#5-mesh-glyphs-render-as-spheres) |
 | No labels at all, on any node | [6](#6-every-label-vanished) |
@@ -27,6 +27,8 @@ reference named at the end of the entry for the full rules.
 | Some graph edges never appear | [12](#12-some-edges-never-appear) |
 | A link went hairline or bloated after a geometry change | [13](#13-a-link-changed-thickness-when-you-changed-its-geometry) |
 | Pin glyphs look offset upward from their coordinates | [14](#14-a-pin-sits-above-the-point-it-marks) |
+| Spokes/needles/arrows are placed right but point wrong | [15](#15-glyphs-that-should-radiate-came-out-laid-flat-or-fanned-the-wrong-way) |
+| A starburst renders as a flat stacked fan | [15](#15-glyphs-that-should-radiate-came-out-laid-flat-or-fanned-the-wrong-way) |
 
 ---
 
@@ -283,6 +285,52 @@ which is the useful reading. If you want the pin's *head* on the point, offset
 the node by the pin's height along its own +Z. For children of a Pin **parent**,
 `translate_x` = 0 is the head's centre and −B is the tip, so the range −B…0
 walks the shaft: `topologies.md`.
+
+---
+
+## 15. Glyphs that should radiate came out laid flat, or fanned the wrong way
+
+**Symptom.** You built spokes, needles, arrows, rays or tree limbs. The glyphs
+are in the **right places** — a validation pass over the positions confirms it,
+which is what makes this one so expensive — but their **bodies point the wrong
+way**: a starburst renders as a shallow stacked fan, rods lie flat instead of
+radiating, cones aim at nothing in particular.
+
+**Cause.** You hand-posed `rotate_x/y/z` to aim glyphs that the parent's
+topology *already aims*. Under a Sphere, Point, Torus, Ztorus or Cube parent
+the engine applies a base rotation putting the child's local **+Z** along the
+outward direction at that child's own coordinates — and +Z is the long axis of
+Cylinder/Cone/Pin and the facing normal of the flat markers. A child's own
+rotations do **not** replace that base rotation, they **compose on top of it**,
+so every degree you write is a deviation from an aim that was already correct.
+Two ways this compounds:
+
+- The frame you rotate in is not the world. After the base rotation your
+  `rotate_z` spins about the child's *outward* axis, not the world Z, so the
+  angle lands somewhere you didn't intend.
+- Multi-axis Euler poses then interact: with `rotation_mode` = 0 each field
+  turns about its own axis **in sequence**, so a `rotate_x` = 90 tilt changes
+  what the following `rotate_z` does (entry 8 covers the related
+  `rotation_mode` trap).
+
+**Fix.** Delete the rotations and let placement do the aiming: set
+`rotate_x/y/z` = 0, and express the direction as the child's **`translate_x`**
+(longitude/bearing) under a Sphere or Point parent. That is the actual insight —
+*the "rotation" you want is a translation.* Reach for `rotate_*` only to pose a
+glyph relative to that frame.
+
+Two traps in the same area: **Zsphere places children like a sphere but does
+NOT aim them** (Ztorus does), and the axis family (Cylinder, Zcylinder, Spiral,
+Zrod, Rod) only spins children about the parent's axis — there the child's **+X**
+goes radial and +Z stays axial, so a Cylinder-geometry child of a Cylinder
+parent does *not* point outward. Per-topology aim table, the geometry pointing
+axes, and a worked spokes recipe: `topologies.md`.
+
+**Catching it before the user does.** Position checks pass on this failure.
+Verify **direction** separately: for every glyph whose meaning depends on where
+it points, re-derive its aimed axis and compare it against the direction the
+design calls for. And when handing off a scene you cannot see rendered, say so
+and name what to eyeball.
 
 ---
 
