@@ -80,7 +80,8 @@ NA-token parsing can eat them.
   any specific subset in full.
 - Eligibility: hidden nodes (unless Show Hidden) and World/Camera rows
   never draw tags — pinning does not override either, nor the `\` draw
-  limit. Label text length itself is not limited.
+  limit. Label text length itself is not limited — see "How long can a
+  label be?" below for what that means in practice.
 - **Link (type=7) nodes carry labels too**, under exactly the same
   settings — global toggle, selected-only, `show_text` pinning, and both
   color modes (a link's label takes the *link's* own `color_r/g/b` under
@@ -99,6 +100,48 @@ NA-token parsing can eat them.
 - Perf note: text layout is cached **per unique string** — 10,000 nodes
   sharing 200 distinct labels paint far cheaper than 10,000 unique
   strings. Prefer short, shared labels where the data allows.
+
+## How long can a label be?
+
+There is **no limit in the format** and **no limit in the loader**. Verified by
+round-tripping real strings through the loader and saver: labels of 10 through
+**10,000,000** characters load exactly and survive a save-and-reload unchanged,
+inline `text` and companion-file `title` alike (a 10M-character label is a 10 MB
+file that loads in ~0.12 s). Neither reader has a field-size cap — both use
+pandas, not Python's `csv` reader, which is the one with a 131,072-byte default.
+Commas, quotes, newlines and non-ASCII inside a label all survive both
+directions exactly; CSV quoting handles them.
+
+**The real limit is the screen, and it is measured in pixels, not characters.**
+A label is drawn as a **single-line** run at Segoe UI 9pt, starting just right
+of the node's screen position. Nothing truncates, elides, or wraps it — a long
+label simply runs off the right edge of the window with no indication that more
+text is there.
+
+| Window width | Label characters that fit |
+|---|---|
+| 1280 px | ~237 |
+| 1920 px | ~356 |
+| 2560 px | ~475 |
+
+(~5.4 px per character of ordinary mixed-case text, 16 px line height.)
+
+Layout cost is linear and cached per unique string, so length is paid once per
+distinct label: 10,000 characters costs ~3 ms to lay out and ~0.8 ms/frame to
+paint; 100,000 characters costs ~28 ms the first frame it appears — a visible
+hitch. That cache clears past 100,000 distinct strings.
+
+**Newlines are silently swallowed.** A CSV field can legally contain a line
+break, it round-trips through GlyphViz perfectly, and it renders as one line
+with the break simply gone — `"a\nb"` lays out byte-identically to `"ab"`.
+**There is no multi-line label.** Don't design one; use several pinned labels on
+separate nodes if you need stacked text. (A tab does the opposite of nothing —
+one expands to ~87 px of gap.)
+
+**Authoring guidance:** keep labels to roughly **40–80 characters** to stay
+readable beside a glyph; a few hundred is where it is running off-screen for
+most users. When the text is genuinely long, put it in the **`link`** column
+instead and let the U key open it — that is what `link` is for.
 
 ## Links: the U key and Alt+click
 
@@ -125,7 +168,10 @@ node, then opens its link). Either way:
 
 ## Authoring checklist
 
-- Prefer inline `text`/`link`; keep labels short and shared when possible.
+- Prefer inline `text`/`link`; keep labels short (**~40–80 characters**; a
+  label never wraps and never truncates, it just runs off screen) and shared
+  between nodes where the data allows, since layout is cached per unique
+  string. Long text belongs in `link`, not `text`.
 - UTF-8 explicitly; control characters stripped; no literal "None" titles.
 - **Numeric labels are safe to write as-is** — hours, years, ranks, station
   ids. GlyphViz reads label text literally, so `007` stays `007` and `1.50`
