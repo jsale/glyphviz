@@ -358,6 +358,54 @@ def test_forceatlas2_accepts_a_seed_layout():
     assert np.isfinite(res.positions).all()
 
 
+def test_solver_state_is_resumable():
+    # An incremental caller runs the solver in short bursts.  Restarting the
+    # speed controller cold each burst makes the layout twitch once per
+    # burst, so the state has to be carryable.
+    g, _ = planted_partition()
+    once = forceatlas2_3d(g, iterations=200, seed=4, repulsion_falloff=2.0)
+    assert once.speed > 0 and once.speed_efficiency > 0
+
+    resumed = forceatlas2_3d(g, iterations=100, seed=4,
+                             repulsion_falloff=2.0,
+                             positions=once.positions,
+                             speed=once.speed,
+                             speed_efficiency=once.speed_efficiency)
+    cold = forceatlas2_3d(g, iterations=100, seed=4, repulsion_falloff=2.0,
+                          positions=once.positions)
+    # A warm continuation of a settled layout moves less than a cold restart
+    # of the same one, which is the whole reason the parameter exists.
+    warm_step = np.linalg.norm(resumed.positions - once.positions,
+                               axis=1).mean()
+    cold_step = np.linalg.norm(cold.positions - once.positions,
+                               axis=1).mean()
+    assert warm_step < cold_step
+
+
+def test_solver_state_defaults_match_a_cold_start():
+    g, _ = planted_partition(groups=2, per_group=20)
+    a = forceatlas2_3d(g, iterations=60, seed=2)
+    b = forceatlas2_3d(g, iterations=60, seed=2, speed=None,
+                       speed_efficiency=None)
+    assert np.allclose(a.positions, b.positions)
+
+
+def test_incremental_growth_converges_like_one_shot():
+    # Feed a graph in two halves, relaxing as it grows, and check the result
+    # is a real layout rather than a tangle: communities still separate.
+    g, truth = planted_partition()
+    half = g.m // 2
+    first = Graph(g.n, g.edges[:half], g.weights[:half])
+    step = forceatlas2_3d(first, iterations=150, seed=5,
+                          repulsion_falloff=2.0, gravity=15.0)
+    full = forceatlas2_3d(g, iterations=150, seed=5, repulsion_falloff=2.0,
+                          gravity=15.0, positions=step.positions,
+                          speed=step.speed,
+                          speed_efficiency=step.speed_efficiency)
+    same, diff = _mean_pair_distances(full.positions, truth)
+    assert same < diff * 0.8
+
+
 # --- Fruchterman-Reingold --------------------------------------------------
 
 def test_fruchterman_reingold_separates_communities():

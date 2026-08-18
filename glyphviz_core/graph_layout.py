@@ -80,11 +80,17 @@ class LayoutResult:
     converging, which is a thing GlyphViz can show and Gephi cannot.
     """
 
-    def __init__(self, positions, iterations, snapshots=None, converged=False):
+    def __init__(self, positions, iterations, snapshots=None, converged=False,
+                 speed=1.0, speed_efficiency=1.0):
         self.positions = positions
         self.iterations = iterations
         self.snapshots = snapshots or []
         self.converged = converged
+        # The adaptive controller's state at the end of the run.  Feed these
+        # back into the next call to continue a layout instead of restarting
+        # it -- see `forceatlas2_3d`'s `speed` argument.
+        self.speed = speed
+        self.speed_efficiency = speed_efficiency
 
     def __repr__(self):
         return "LayoutResult(n=%d, iterations=%d, converged=%s)" % (
@@ -217,7 +223,7 @@ def forceatlas2_3d(graph, iterations=800, scaling=2.0, gravity=1.0,
                    edge_weight_influence=1.0, jitter_tolerance=1.0,
                    repulsion_falloff=1.0, max_step=0.10, positions=None,
                    seed=0, snapshot_every=None, tolerance=1e-4,
-                   progress=None):
+                   speed=None, speed_efficiency=None, progress=None):
     """
     ForceAtlas2 in three dimensions.
 
@@ -315,8 +321,14 @@ def forceatlas2_3d(graph, iterations=800, scaling=2.0, gravity=1.0,
 
     force = np.zeros((n, 3), dtype=np.float64)
     old_force = np.zeros((n, 3), dtype=np.float64)
-    speed = 1.0
-    speed_efficiency = 1.0
+    # A fresh run starts the controller cold.  An INCREMENTAL one should not:
+    # restarting at 1.0 every call lets the speed ramp from scratch each
+    # time, which on a streamed graph shows up as the whole layout twitching
+    # once per batch instead of settling.  Pass the previous
+    # LayoutResult's `speed` / `speed_efficiency` back in to continue.
+    speed = 1.0 if speed is None else float(speed)
+    speed_efficiency = (1.0 if speed_efficiency is None
+                        else float(speed_efficiency))
     snapshots = []
     converged = False
     done = 0
@@ -359,7 +371,8 @@ def forceatlas2_3d(graph, iterations=800, scaling=2.0, gravity=1.0,
                 snapshots.append((it, pos.copy()))
             break
 
-    return LayoutResult(pos, done, snapshots, converged)
+    return LayoutResult(pos, done, snapshots, converged, speed,
+                        speed_efficiency)
 
 
 def _limited_step(pos, displacement, fraction):
