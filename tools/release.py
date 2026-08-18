@@ -27,8 +27,10 @@ Run it with the glyphviz conda env's python (see CLAUDE.md):
     <glyphviz-env>\\python.exe tools\\release.py --skip-build    # re-zip dist/ as is
 
 The examples archive is deliberately NOT rebuilt: the example scenes don't
-change from one app build to the next, so its date stamp should stay where it
-is until they actually do change. Pass --examples on the release where they do.
+change from one app build to the next, and re-cutting 200+ MB on every app
+build buys nothing. Pass --examples on the release where they do change. It is
+published under the fixed name GlyphViz_Examples.zip — see ARTIFACTS for why
+it carries no date where the app zip does.
 """
 
 import argparse
@@ -59,11 +61,25 @@ ARTIFACTS = {
     },
     'examples': {
         'source': REPO / 'examples',
-        'prefix': 'GlyphVizExamples',
+        'prefix': 'GlyphViz_Examples',
         'subdir': 'examples',
         'label': 'example scenes',
+        # Undated, deliberately. The app zip earns its date — users keep
+        # several builds side by side and the build date is meaningful — but
+        # the examples set does not: it changes rarely, the enclosed files
+        # carry their own dates, and a stable URL removes a whole drift
+        # surface from the re-stamping logic this script exists to protect.
+        # (The docs and the live file went undated first; this caught up on
+        # 2026-08-18, until which --examples aborted on a pattern that
+        # matched nothing.)
+        'dated': False,
     },
 }
+
+
+def archive_name(spec: dict, stamp: str) -> str:
+    return f"{spec['prefix']}{stamp}.zip" if spec.get('dated', True) \
+        else f"{spec['prefix']}.zip"
 
 # Never worth shipping, in either archive.
 EXCLUDE_DIRS = {'__pycache__', '.ipynb_checkpoints', '.git', '_notes'}
@@ -79,11 +95,11 @@ DOC_FILES = [
     REPO / 'glyphviz-docs' / 'docs' / 'examples' / 'index.md',
 ]
 
-# "GlyphViz20260729" but never "GlyphVizExamples20260729" — the two artifacts
-# carry independent stamps, so an app-only release must not touch the
-# examples one.
+# "GlyphViz20260729", and only that: the examples archive is
+# GlyphViz_Examples.zip, with no digits after the name, so it cannot be hit
+# here. The lookahead is kept against the old GlyphVizExamples<date> spelling
+# in case an archived page or a stale local mirror still carries it.
 APP_STAMP_RE = re.compile(r'GlyphViz(?!Examples)(\d{8})')
-EXAMPLES_STAMP_RE = re.compile(r'GlyphVizExamples(\d{8})')
 
 # "*Windows 10/11, 64-bit · ~116 MB download, ~300 MB extracted · build 2026-07-29*"
 #
@@ -339,9 +355,13 @@ def main() -> int:
             log(f"ERROR: {source} does not exist — nothing to archive.")
             return 1
         dest_dir = out_root / spec['subdir']
-        dest = dest_dir / f"{spec['prefix']}{args.date}.zip"
+        dest = dest_dir / archive_name(spec, args.date)
         log(f"[2] Archiving the {spec['label']}: {source.name}/ -> {dest.name}")
-        if dest.exists() and not args.force and not args.dry_run:
+        # Only a DATED archive is guarded: its name identifies one published
+        # release, so overwriting it is a mistake worth blocking. An undated
+        # one has a single stable URL and overwriting in place is the point.
+        if (spec.get('dated', True) and dest.exists()
+                and not args.force and not args.dry_run):
             log(f"ERROR: {dest} already exists. Re-run with --force to overwrite,")
             log("       or pass a different --date.")
             return 1
@@ -372,8 +392,8 @@ def main() -> int:
                     rf'\g<1>{mib(zip_bytes)}\g<2>{mib(raw_bytes)}'
                     rf'\g<3>{stamp_date.isoformat()}'))
         if 'examples' in wanted:
-            edits.append(('examples archive name/URL', EXAMPLES_STAMP_RE,
-                          f'GlyphVizExamples{args.date}'))
+            # No name/URL edit: GlyphViz_Examples.zip is a fixed name, so the
+            # links never move and only the size line needs restating.
             if not args.dry_run:
                 zip_bytes, raw_bytes = sizes['examples']
                 edits.append((
@@ -436,7 +456,7 @@ def main() -> int:
         log(" Done. To publish:")
         for key in wanted:
             spec = ARTIFACTS[key]
-            log(f"   upload {out_root / spec['subdir'] / (spec['prefix'] + args.date + '.zip')}")
+            log(f"   upload {out_root / spec['subdir'] / archive_name(spec, args.date)}")
             log(f"       -> https://iluvdata.org/glyphviz/{spec['subdir']}/")
         if not args.no_docs:
             log("   commit the docs change, rebuild the site, upload it")
