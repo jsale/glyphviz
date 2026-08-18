@@ -29,6 +29,9 @@ Viewer (`_on_insp_*` handlers, e.g. `_on_insp_pos_changed` at
 | Show Hidden Nodes | checkbox | unchecked | `Viewport.show_hidden` |
 | Show Tag Labels | checkbox | unchecked | `Viewport.show_tags` (also toggled by the **T** key) |
 | Show Tag Labels of Selected | checkbox | unchecked | `Viewport.show_tags_selected_only` — when checked, only selected nodes' tags draw |
+| Tag Color | color button | pastel yellow (255, 255, 200) | The color of every tag label. **Scene data**, stored on the World node (`tag_color_r/g/b`) and saved with the file. Disabled while the checkbox below is on. |
+| Tag Text Matches Node Color | checkbox | unchecked | Draws each label in its own node's color instead of the single Tag Color, so a label reads as belonging to the glyph it names (`tag_color_mode`). |
+| Tag Text Size | slider, 6–36 pt | 11 pt | Point size of every tag label. Scene data too (`tag_font_size` on the World node). Labels are a fixed size on screen, so they do **not** shrink with distance — to declutter a dense scene, label fewer nodes rather than shrinking the type. |
 | *(texture status label + "…" button)* | — | "No textures loaded" | Opens **Textures → Set Texture Folder…** |
 | Audio track dropdown | combo | "All Audio Tracks" | Solos one video's audio track when multiple textured videos are loaded; disabled unless 2+ tracks exist |
 

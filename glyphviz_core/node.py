@@ -109,6 +109,18 @@ TAG_DEFAULT_TEXT_RGB = (255, 255, 200)
 TAG_TEXT_ALPHA = 230              # face pass alpha, fixed
 TAG_SHADOW_RGBA = (0, 0, 0, 200)  # drop shadow / glow, fixed (see above)
 
+# Point size of tag label text, also read from the World node. Labels were
+# painted at a hardcoded 9 pt until 2026-08-18, which read a little small at a
+# normal working camera distance; 11 pt is that same look two points up, and a
+# file with no tag_font_size column loads as this value, so every existing
+# scene simply gets the larger default. The range is what the Properties panel
+# slider offers and what a Channels track bound to this attribute clamps to:
+# below ~6 pt antialiased text stops resolving, and past ~36 pt a handful of
+# labels cover the scene they annotate.
+TAG_DEFAULT_FONT_SIZE = 11
+TAG_FONT_SIZE_MIN = 6
+TAG_FONT_SIZE_MAX = 36
+
 RENDER_MODE_COUNT = 7
 RENDER_MODE_NAMES = {
     RENDER_MODE_NORMAL: "Normal",
@@ -204,7 +216,8 @@ class Node:
     show_text: int = 0
     # World-node-only scene settings (see Scene.world_node()): background
     # color reuses color_r/g/b/a above; fog fades to that same color; the
-    # tag_* fields style every tag label in the scene (see TAG_COLOR_MODE_*);
+    # tag_* fields style every tag label in the scene (see TAG_COLOR_MODE_*
+    # and TAG_DEFAULT_FONT_SIZE);
     # ref_grid_color_* paints the procedural backdrop grid (see
     # REF_GRID_DEFAULT_RGB — not the World Grid node type, which colors itself).
     render_mode: int = RENDER_MODE_NORMAL
@@ -215,6 +228,7 @@ class Node:
     tag_color_r: int = TAG_DEFAULT_TEXT_RGB[0]
     tag_color_g: int = TAG_DEFAULT_TEXT_RGB[1]
     tag_color_b: int = TAG_DEFAULT_TEXT_RGB[2]
+    tag_font_size: int = TAG_DEFAULT_FONT_SIZE
     ref_grid_color_r: int = REF_GRID_DEFAULT_RGB[0]
     ref_grid_color_g: int = REF_GRID_DEFAULT_RGB[1]
     ref_grid_color_b: int = REF_GRID_DEFAULT_RGB[2]

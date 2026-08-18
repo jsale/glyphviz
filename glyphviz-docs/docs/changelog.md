@@ -2,6 +2,11 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-08-18
+
+- **Tag label text size is now adjustable** (Properties panel → Display → **Tag Text Size**): a slider from 6 to 36 points covering every label in the scene. Like Tag Color, it is scene data — it saves with the file, so a scene's labels are the size its author chose — and it is bindable as a Channels attribute on the World row.
+- **Labels are two points bigger by default** (9 pt → 11 pt). Tag text was previously painted at a fixed size that read a little small at a normal working distance; every existing scene picks up the larger default on open, with no file change needed.
+
 ## 2026-08-15
 
 - **GlyphViz Web now runs in VR**, and the docs now cover it: [Immersive VR](reference/immersive-vr.md) is a new reference page for the browser app's WebXR mode. Open the site in a headset's browser and press **Enter VR** to stand inside the scene — thumbstick flight, one-handed grab-drag and two-handed resize, controller-ray picking, in-scene labels, a wrist-mounted control panel with the Channels transport and the draw-limit lever, and Channels playback on-headset. No app to sideload and no PC-VR link; it's a URL someone can send you. Confirmed on hardware on a Meta Quest 3; any WebXR-capable headset browser, Apple Vision Pro included, should work the same way. The [Roadmap](roadmap.md) and [FAQ](faq.md) are updated to match — WebXR was listed there as the near-term target, and it has landed.

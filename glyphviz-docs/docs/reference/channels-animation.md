@@ -89,7 +89,8 @@ label regardless of the scene-wide tag settings.
 
 ### Scene settings (World row only)
 
-`render_mode` (clamped 0–6), `fog_enabled`, `fog_start`, `fog_end` — read only
+`render_mode` (clamped 0–6), `fog_enabled`, `fog_start`, `fog_end`,
+`tag_font_size` (clamped 6–36) — read only
 off the **World row (type=0)**. Give that row a `ch_input_id` like any other
 node. They are inert on any other node type.
 

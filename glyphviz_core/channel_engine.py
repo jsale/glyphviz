@@ -2,7 +2,9 @@ import numpy as np
 
 from .color_palette import PALETTE_COUNT, resolve_palette_color
 from .geometry_data import GEO_COUNT
-from .node import Node, RENDER_MODE_COUNT
+from .node import (
+    Node, RENDER_MODE_COUNT, TAG_FONT_SIZE_MIN, TAG_FONT_SIZE_MAX,
+)
 from .topology import TOPO_COUNT
 
 # Maps attribute names from the ch-map to Node dataclass fields.
@@ -16,8 +18,8 @@ from .topology import TOPO_COUNT
 # the integrated position/rotation/scale — those stay wherever the animation
 # left them, matching how hand-authored ANTz rate fields behave on load.
 #
-# render_mode/fog_* are scene-wide settings read only off the World node
-# (type=0) — see Scene.world_node(). Binding them means giving that World row
+# render_mode/fog_*/tag_font_size are scene-wide settings read only off the
+# World node (type=0) — see Scene.world_node(). Binding them means giving that World row
 # a ch_input_id like any other node; on any other node type they are inert.
 # The World node's own color_r/g/b is the scene background, so it animates
 # through the ordinary color binding.
@@ -62,6 +64,7 @@ _ATTR_TO_FIELD: dict[str, str] = {
     'fog_enabled': 'fog_enabled',
     'fog_start': 'fog_start',
     'fog_end': 'fog_end',
+    'tag_font_size': 'tag_font_size',
 }
 
 # Fields whose animation moves or reshapes geometry, so the viewport's
@@ -101,7 +104,7 @@ _INT_FIELDS = frozenset({
     'texture_id', 'mesh_id',
     'topo', 'geometry', 'palette_id', 'color_index',
     'hide', 'show_text',
-    'render_mode', 'fog_enabled',
+    'render_mode', 'fog_enabled', 'tag_font_size',
 })
 
 # Value clamps applied after rounding. Every int field gets one; any int field
@@ -118,6 +121,7 @@ _FIELD_RANGE: dict[str, tuple[float, float]] = {
     'geometry': (0, GEO_COUNT - 1),
     'palette_id': (0, PALETTE_COUNT - 1),
     'render_mode': (0, RENDER_MODE_COUNT - 1),
+    'tag_font_size': (TAG_FONT_SIZE_MIN, TAG_FONT_SIZE_MAX),
     # Flags: any positive track value reads as "on".
     'hide': (0, 1),
     'show_text': (0, 1),

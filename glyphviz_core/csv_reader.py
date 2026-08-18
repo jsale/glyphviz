@@ -8,7 +8,8 @@ import pandas as pd
 from .node import (
     Node, DEFAULT_TOPO_SCALE, ROTATION_MODE_HEADING_TILT_ROLL,
     RENDER_MODE_NORMAL,
-    TAG_COLOR_MODE_UNIFORM, TAG_DEFAULT_TEXT_RGB, REF_GRID_DEFAULT_RGB,
+    TAG_COLOR_MODE_UNIFORM, TAG_DEFAULT_TEXT_RGB, TAG_DEFAULT_FONT_SIZE,
+    REF_GRID_DEFAULT_RGB,
 )
 
 # Columns that GlyphViz reads into explicit Node fields.
@@ -24,6 +25,7 @@ _TRACKED_COLS = frozenset({
     'mesh_id', 'text', 'link', 'rotation_mode', 'show_text',
     'render_mode', 'fog_enabled', 'fog_start', 'fog_end',
     'tag_color_mode', 'tag_color_r', 'tag_color_g', 'tag_color_b',
+    'tag_font_size',
     'ref_grid_color_r', 'ref_grid_color_g', 'ref_grid_color_b',
     'translate_rate_x', 'translate_rate_y', 'translate_rate_z',
     'rotate_rate_x', 'rotate_rate_y', 'rotate_rate_z',
@@ -377,6 +379,10 @@ def load_node_csv(path: str) -> list[Node]:
     tag_color_rs    = _int_col(df, 'tag_color_r', n, TAG_DEFAULT_TEXT_RGB[0])
     tag_color_gs    = _int_col(df, 'tag_color_g', n, TAG_DEFAULT_TEXT_RGB[1])
     tag_color_bs    = _int_col(df, 'tag_color_b', n, TAG_DEFAULT_TEXT_RGB[2])
+    # A file with no tag_font_size column predates the setting, so it loads at
+    # the current default rather than the 9 pt labels were hardcoded to — the
+    # point of raising the default is that old scenes get the bigger type too.
+    tag_font_sizes  = _int_col(df, 'tag_font_size', n, TAG_DEFAULT_FONT_SIZE)
     grid_color_rs   = _int_col(df, 'ref_grid_color_r', n, REF_GRID_DEFAULT_RGB[0])
     grid_color_gs   = _int_col(df, 'ref_grid_color_g', n, REF_GRID_DEFAULT_RGB[1])
     grid_color_bs   = _int_col(df, 'ref_grid_color_b', n, REF_GRID_DEFAULT_RGB[2])
@@ -427,6 +433,7 @@ def load_node_csv(path: str) -> list[Node]:
             tag_color_r=tag_color_rs[i],
             tag_color_g=tag_color_gs[i],
             tag_color_b=tag_color_bs[i],
+            tag_font_size=tag_font_sizes[i],
             ref_grid_color_r=grid_color_rs[i],
             ref_grid_color_g=grid_color_gs[i],
             ref_grid_color_b=grid_color_bs[i],
@@ -497,6 +504,7 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
         (n.tag_color_r, n.tag_color_g, n.tag_color_b) != TAG_DEFAULT_TEXT_RGB
         for n in nodes
     )
+    has_tag_font_size = any(n.tag_font_size != TAG_DEFAULT_FONT_SIZE for n in nodes)
     # Reference-grid color: three channels, same all-or-nothing reasoning.
     has_ref_grid_color = any(
         (n.ref_grid_color_r, n.ref_grid_color_g, n.ref_grid_color_b) != REF_GRID_DEFAULT_RGB
@@ -537,6 +545,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
         col_order.append('tag_color_mode')
     if has_tag_color:
         col_order.extend(('tag_color_r', 'tag_color_g', 'tag_color_b'))
+    if has_tag_font_size:
+        col_order.append('tag_font_size')
     if has_ref_grid_color:
         col_order.extend(('ref_grid_color_r', 'ref_grid_color_g', 'ref_grid_color_b'))
 
@@ -613,6 +623,8 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
                 row['tag_color_r'] = node.tag_color_r
                 row['tag_color_g'] = node.tag_color_g
                 row['tag_color_b'] = node.tag_color_b
+            if has_tag_font_size:
+                row['tag_font_size'] = node.tag_font_size
             if has_ref_grid_color:
                 row['ref_grid_color_r'] = node.ref_grid_color_r
                 row['ref_grid_color_g'] = node.ref_grid_color_g

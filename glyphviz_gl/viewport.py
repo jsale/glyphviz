@@ -18,6 +18,7 @@ from glyphviz_core.node import (
     RENDER_MODE_DARK, RENDER_MODE_OFF, RENDER_MODE_SCREEN, RENDER_MODE_PREMULTIPLIED,
     WORLD_DEFAULT_BG_RGB, REF_GRID_DEFAULT_RGB,
     TAG_COLOR_MODE_NODE, TAG_DEFAULT_TEXT_RGB, TAG_TEXT_ALPHA, TAG_SHADOW_RGBA,
+    TAG_DEFAULT_FONT_SIZE, TAG_FONT_SIZE_MIN, TAG_FONT_SIZE_MAX,
 )
 from glyphviz_core import camera_smoothing as cs
 from glyphviz_core import draw_mode as dm
@@ -2193,7 +2194,10 @@ class Viewport(QOpenGLWidget):
                     tagged: list[tuple[str, int, int, tuple | None]]):
         # Single-pen passes (shadow, then face) over cached QStaticText:
         # per-tag setPen switching plus per-call text layout is what made
-        # thousands of tags cost seconds per frame. drawStaticText anchors at
+        # thousands of tags cost seconds per frame. The cache survives a tag
+        # font size change: QPainter::drawStaticText re-lays out any entry
+        # whose cached font differs from the painter's, so entries re-measure
+        # themselves once at the new size. drawStaticText anchors at
         # the TOP-left, drawText at the baseline — subtract the ascent to
         # keep the exact placement the old drawText calls had.
         cache = self._tag_text_cache
@@ -2232,6 +2236,27 @@ class Viewport(QOpenGLWidget):
         for st, sx, sy, _rgb in statics:
             painter.drawStaticText(sx + 5, sy - top_offset, st)
 
+    def _tag_font_size(self) -> int:
+        """Point size for tag label text, read off the World node (type=0)
+        like the tag colors are, so it travels with the scene file. A scene
+        with no World node — or one saved before the setting existed — draws
+        at TAG_DEFAULT_FONT_SIZE. Clamped to the range the Properties panel
+        offers, since a Channels track bound to tag_font_size or a
+        hand-edited CSV can put any number in the field."""
+        world = self._scene.world_node()
+        if world is None:
+            return TAG_DEFAULT_FONT_SIZE
+        return max(TAG_FONT_SIZE_MIN, min(TAG_FONT_SIZE_MAX, int(world.tag_font_size)))
+
+    def _tag_painter(self) -> QPainter:
+        """QPainter over this widget, set up for the tag overlay passes."""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        font = painter.font()
+        font.setPointSize(self._tag_font_size())
+        painter.setFont(font)
+        return painter
+
     def _draw_tags_qpainter(self):
         """Project tagged nodes to screen space and draw text with QPainter overlay."""
         w, h = self.width(), self.height()
@@ -2241,11 +2266,7 @@ class Viewport(QOpenGLWidget):
         if not tagged:
             return
 
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        font = painter.font()
-        font.setPointSize(9)
-        painter.setFont(font)
+        painter = self._tag_painter()
         self._paint_tags(painter, tagged)
         painter.end()
 
@@ -2256,11 +2277,7 @@ class Viewport(QOpenGLWidget):
         h = self.height()
         if h <= 0:
             return
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        font = painter.font()
-        font.setPointSize(9)
-        painter.setFont(font)
+        painter = self._tag_painter()
         for screen_x, seg_w, mv, pr in batches:
             tagged = self._project_tagged_nodes(mv, pr, screen_x, 0, seg_w, h)
             self._paint_tags(painter, tagged)

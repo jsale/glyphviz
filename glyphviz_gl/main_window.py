@@ -63,6 +63,7 @@ from glyphviz_core.node import (
     RENDER_MODE_COUNT, RENDER_MODE_NAMES, RENDER_MODE_NORMAL,
     WORLD_DEFAULT_BG_RGB, REF_GRID_DEFAULT_RGB,
     TAG_COLOR_MODE_UNIFORM, TAG_COLOR_MODE_NODE, TAG_DEFAULT_TEXT_RGB,
+    TAG_DEFAULT_FONT_SIZE, TAG_FONT_SIZE_MIN, TAG_FONT_SIZE_MAX,
 )
 from glyphviz_core.topology import (
     TOPO_NAMES, TOPO_COUNT, TOPO_NONE, TOPO_PLANE, TOPO_POINT, CUBE_FACE_NAMES,
@@ -792,6 +793,23 @@ class MainWindow(QMainWindow):
         )
         self._cb_tag_color_node.toggled.connect(self._on_tag_color_mode_toggled)
 
+        # Tag text size — World-node scene data too, so a scene's labels are
+        # the size its author chose. A slider rather than a dropdown of point
+        # sizes: what reads well depends on the scene, the label lengths and
+        # the distance you work at, and a slider lets you find that against
+        # the live labels instead of committing to a number blind.
+        self._tag_font_label = QLabel(f"Tag Text Size: {TAG_DEFAULT_FONT_SIZE} pt")
+        self._tag_font_slider = QSlider(Qt.Orientation.Horizontal)
+        self._tag_font_slider.setRange(TAG_FONT_SIZE_MIN, TAG_FONT_SIZE_MAX)
+        self._tag_font_slider.setValue(TAG_DEFAULT_FONT_SIZE)
+        self._tag_font_slider.setTickInterval(6)
+        self._tag_font_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._tag_font_slider.setToolTip(
+            "Point size of every tag label in the scene.\n"
+            f"Default {TAG_DEFAULT_FONT_SIZE} pt; saved with the file, like Tag Color."
+        )
+        self._tag_font_slider.valueChanged.connect(self._on_tag_font_size_changed)
+
         disp_layout.addWidget(self._cb_axes)
         disp_layout.addWidget(self._cb_grid)
         disp_layout.addWidget(grid_color_row)
@@ -800,6 +818,8 @@ class MainWindow(QMainWindow):
         disp_layout.addWidget(self._cb_tags_selected)
         disp_layout.addWidget(tag_color_row)
         disp_layout.addWidget(self._cb_tag_color_node)
+        disp_layout.addWidget(self._tag_font_label)
+        disp_layout.addWidget(self._tag_font_slider)
 
         tex_row = QWidget()
         tex_row_layout = QHBoxLayout(tex_row)
@@ -3901,6 +3921,8 @@ class MainWindow(QMainWindow):
         tag_rgb = ((world.tag_color_r, world.tag_color_g, world.tag_color_b)
                    if world else TAG_DEFAULT_TEXT_RGB)
         tag_by_node = bool(world and world.tag_color_mode == TAG_COLOR_MODE_NODE)
+        tag_pt = world.tag_font_size if world else TAG_DEFAULT_FONT_SIZE
+        tag_pt = max(TAG_FONT_SIZE_MIN, min(TAG_FONT_SIZE_MAX, int(tag_pt)))
         grid_rgb = ((world.ref_grid_color_r, world.ref_grid_color_g, world.ref_grid_color_b)
                     if world else REF_GRID_DEFAULT_RGB)
 
@@ -3911,6 +3933,12 @@ class MainWindow(QMainWindow):
         self._cb_tag_color_node.setChecked(tag_by_node)
         self._cb_tag_color_node.blockSignals(False)
         self._tag_color_btn.setEnabled(not tag_by_node)
+        # Signals blocked: the handler calls _ensure_world_node(), which would
+        # synthesize a World row into every file merely by opening it.
+        self._tag_font_slider.blockSignals(True)
+        self._tag_font_slider.setValue(tag_pt)
+        self._tag_font_slider.blockSignals(False)
+        self._tag_font_label.setText(f"Tag Text Size: {tag_pt} pt")
         idx = self._scene_render_mode.findData(mode)
         self._scene_render_mode.blockSignals(True)
         self._scene_render_mode.setCurrentIndex(max(idx, 0))
@@ -3969,6 +3997,14 @@ class MainWindow(QMainWindow):
         world.ref_grid_color_g = color.green()
         world.ref_grid_color_b = color.blue()
         self._set_color_btn(self._grid_color_btn, color.red(), color.green(), color.blue(), 255)
+        self._table.refresh_node(world.id)
+        self._viewport.update()
+
+    def _on_tag_font_size_changed(self, value: int):
+        value = int(value)
+        self._tag_font_label.setText(f"Tag Text Size: {value} pt")
+        world = self._ensure_world_node()
+        world.tag_font_size = value
         self._table.refresh_node(world.id)
         self._viewport.update()
 

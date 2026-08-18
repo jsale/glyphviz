@@ -1,7 +1,8 @@
 # Tags and labels — inline `text`/`link` and `gv_tag.csv`
 
 Verified against `glyphviz_core/csv_reader.py` and `glyphviz_gl/viewport.py`
-/ `main_window.py` (2026-07-18; pinning and tag color 2026-07-26).
+/ `main_window.py` (2026-07-18; pinning and tag color 2026-07-26; font
+size 2026-08-18).
 Behaviors are machine-checked through the
 real loader/saver.
 
@@ -97,6 +98,17 @@ NA-token parsing can eat them.
   category. Both are in the Display panel ("Tag Color", "Tag Text Matches
   Node Color"). The drop shadow is deliberately not configurable: it is
   what keeps text legible on both bright glyphs and bright backgrounds.
+- **Size**: labels draw at 11 pt unless the World node's `tag_font_size`
+  says otherwise (6-36; out-of-range values clamp on render). Like the
+  colors this is scene data, so a scene's labels are the size its author
+  chose — set it from the Display panel's "Tag Text Size" slider, or write
+  the column directly. Generated data rarely needs to: 11 pt is the
+  default precisely because it reads at a normal working camera distance.
+  Reach for a bigger size when a scene is meant to be read from across a
+  room (a demo on a projector) and a smaller one when many labels crowd
+  each other. Point size is fixed on screen, so labels do NOT shrink with
+  distance — a dense scene gets more legible by labelling fewer nodes
+  (`show_text` on the ones that matter), not by shrinking the type.
 - Perf note: text layout is cached **per unique string** — 10,000 nodes
   sharing 200 distinct labels paint far cheaper than 10,000 unique
   strings. Prefer short, shared labels where the data allows.

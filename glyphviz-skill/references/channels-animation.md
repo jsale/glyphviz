@@ -46,7 +46,7 @@ are restored to their CSV values.
 | Shape | `ratio`, `topo`, `topo_scale`, `geometry`, `mesh_id` | morph a glyph's *form*, not just its size. `topo` clamps 0–17, `geometry` 0–28, `mesh_id` floors at 0; `topo_scale` is a plain float multiplier, unclamped. All of `ratio`/`topo`/`topo_scale`/`geometry` re-place a node's **children** as well (see below) |
 | Texture | `texture_id` | flip-book texture switching by `media/` index (see `textures-and-media.md`) |
 | Visibility | `hide`, `show_text` | flags — any positive track value reads as on, `0` as off. `hide` blanks the glyph without disturbing anything else; `show_text` pins/unpins its tag label |
-| Scene settings (World node only) | `render_mode`, `fog_enabled`, `fog_start`, `fog_end` | read only off the **World row (type=0)** — give that row a `ch_input_id` like any other node. `render_mode` clamps 0–6, `fog_enabled` is a flag, the two fog distances are plain floats. Inert on any other node type. The World row's own `color_r/g/b` is the scene **background color**, animated through the ordinary Color binding above |
+| Scene settings (World node only) | `render_mode`, `fog_enabled`, `fog_start`, `fog_end`, `tag_font_size` | read only off the **World row (type=0)** — give that row a `ch_input_id` like any other node. `render_mode` clamps 0–6, `fog_enabled` is a flag, the two fog distances are plain floats, `tag_font_size` clamps 6–36. Inert on any other node type. The World row's own `color_r/g/b` is the scene **background color**, animated through the ordinary Color binding above |
 
 Any other attribute name in the map is **silently skipped** — as is a
 `track_id` with no matching `ch<id>` column, and a `ch_input_id` with no
