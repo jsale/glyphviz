@@ -4,7 +4,7 @@ Every scene below ships in the GlyphViz examples set — download it once and ev
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~218 MB download, ~388 MB extracted*
+*~245 MB download, ~426 MB extracted*
 
 You can also take just one. Every page below has its own download button, and the examples that hold several scenes offer one zip per scene — most are a few megabytes. Each single-example zip contains that scene's files at its top level: extract it and you have one self-contained folder, or drag the zip onto the GlyphViz window and it extracts beside itself and loads.
 
@@ -64,6 +64,11 @@ Install notes and good first scenes: [Installation → Example scenes](../gettin
 - **[The Breathing Century](breathing-century.md)** — a century of hockey growing season by season
 - **[The Century Swarm](century-swarm.md)** — 29,140 player-seasons in scoring phase space
 - **[Duel of Dynasties](duel-of-dynasties.md)** — three careers as animated orreries
+
+## Networks & graphs
+
+- **[Collaboration Networks](collaboration-networks.md)** — who physics actually works with, force-laid-out in 3D
+- **[Trust and Betrayal](trust-network.md)** — the Bitcoin OTC web of trust, every trader a hyperglyph
 
 ## Science & personal data
 

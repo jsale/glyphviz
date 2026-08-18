@@ -91,6 +91,14 @@ GlyphViz is primarily a visual, interactive tool — most users will spend their
 
     [:octicons-arrow-right-24: Reference](antz-format-spec.md)
 
+- **3D Graph Layout**
+
+    ---
+
+    Turning an edge list into a scene: force-directed layout in three dimensions, communities, and filters.
+
+    [:octicons-arrow-right-24: Reference](graph-layout.md)
+
 - **CLI Reference**
 
     ---
