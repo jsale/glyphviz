@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline Tower Designer — GlyphViz</title>
+<style>
+  :root{
+    --bg:#101318; --panel:#181d25; --panel2:#1e242e; --edge:#2a3240;
+    --text:#d7dde6; --dim:#8a94a3; --accent:#5eb3ff; --accent2:#8ef0c3;
+    --warn:#ffb454; --bad:#ff7b72; --mono:'Consolas','Cascadia Mono',monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); color:var(--text);
+    font:13px/1.45 'Segoe UI',system-ui,sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  header{
+    display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+    padding:10px 16px 8px; border-bottom:1px solid var(--edge);
+    background:var(--panel);
+  }
+  header h1{font-size:17px; font-weight:600; letter-spacing:.3px;}
+  header h1 span{color:var(--accent);}
+  header .sub{color:var(--dim); font-size:12px;}
+  header .privacy{
+    margin-left:auto; color:var(--accent2); font-size:11.5px;
+    border:1px solid #24483c; background:#132821; border-radius:12px;
+    padding:3px 11px;
+  }
+  #layout{flex:1; display:grid; min-height:0; grid-template-columns:314px 1fr 290px;}
+
+  /* ---- left controls ---- */
+  #controls{
+    overflow-y:auto; background:var(--panel); border-right:1px solid var(--edge);
+    padding:10px 12px 40px;
+  }
+  #controls::-webkit-scrollbar,#side::-webkit-scrollbar{width:9px;}
+  #controls::-webkit-scrollbar-thumb,#side::-webkit-scrollbar-thumb{
+    background:#333d4d; border-radius:5px;}
+  details{margin-bottom:8px; background:var(--panel2); border:1px solid var(--edge); border-radius:7px;}
+  details summary{
+    cursor:pointer; padding:7px 10px; font-weight:600; font-size:12.5px;
+    color:var(--accent2); user-select:none; letter-spacing:.4px;
+  }
+  details[open] summary{border-bottom:1px solid var(--edge);}
+  .sec{padding:8px 10px 10px;}
+  .row{display:flex; align-items:center; gap:8px; margin:5px 0;}
+  .row label{flex:0 0 112px; color:var(--dim); font-size:12px;}
+  .row input[type=range]{flex:1; accent-color:var(--accent); min-width:0;}
+  .row .val{flex:0 0 48px; text-align:right; font-family:var(--mono); font-size:11.5px;}
+  .row select,.row input[type=text],.row input[type=number],.row input[type=date]{
+    flex:1; background:#12161d; color:var(--text); border:1px solid var(--edge);
+    border-radius:4px; padding:3px 6px; font-size:12px; min-width:0;
+  }
+  .row input[type=color]{
+    flex:0 0 40px; height:24px; border:1px solid var(--edge); border-radius:4px;
+    background:none; padding:0 2px; cursor:pointer;
+  }
+  .row input[type=checkbox]{accent-color:var(--accent);}
+  .row.chk label{flex:1 1 auto; color:var(--text);}
+  .row.chk input[type=checkbox]{order:-1; flex:0 0 auto;}
+  .swatch{width:11px; height:11px; border-radius:3px; flex:0 0 auto; display:inline-block;}
+  .presets{display:flex; flex-wrap:wrap; gap:5px; padding:8px 10px;}
+  .presets button{
+    background:#232b37; border:1px solid var(--edge); color:var(--text);
+    border-radius:12px; padding:3px 10px; font-size:11.5px; cursor:pointer;
+  }
+  .presets button:hover{border-color:var(--accent); color:var(--accent);}
+  .presets button.active{background:var(--accent); color:#08121e; border-color:var(--accent); font-weight:600;}
+  .btnbar{display:flex; gap:6px; margin:8px 0 2px; flex-wrap:wrap;}
+  .btnbar button,#side button{
+    background:#232b37; border:1px solid var(--edge); color:var(--text);
+    border-radius:5px; padding:5px 10px; font-size:12px; cursor:pointer;
+  }
+  .btnbar button:hover,#side button:hover{border-color:var(--accent);}
+  .btnbar button.primary,#side button.primary{
+    background:var(--accent); border-color:var(--accent); color:#08121e; font-weight:600;}
+  button:disabled{opacity:.4; cursor:default;}
+  .note{color:var(--dim); font-size:11px; padding:0 10px 9px; line-height:1.4;}
+
+  /* ---- center viewport ---- */
+  #vpWrap{position:relative; min-width:0; background:radial-gradient(1200px 700px at 50% 30%,#161c26 0%,#0d1015 70%);}
+  #vp{position:absolute; inset:0; width:100%; height:100%; cursor:grab;}
+  #vp.dragging{cursor:grabbing;}
+  #hud{
+    position:absolute; left:10px; top:8px; font-family:var(--mono); font-size:11.5px;
+    color:var(--dim); pointer-events:none; text-shadow:0 1px 2px #000;
+  }
+  #hud b{color:var(--accent2); font-weight:600;}
+  #vpBtns{position:absolute; right:10px; top:8px; display:flex; gap:6px;}
+  #vpBtns button{
+    background:#1a2029cc; border:1px solid var(--edge); color:var(--dim);
+    border-radius:5px; padding:4px 9px; font-size:11.5px; cursor:pointer;
+  }
+  #vpBtns button.on{color:var(--accent2); border-color:var(--accent2);}
+  #footNote{position:absolute; left:10px; bottom:8px; right:10px; color:#5c6672; font-size:11px; pointer-events:none;}
+
+  /* ---- drop zone ---- */
+  #drop{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:#0d1015ee; z-index:5; padding:30px;
+  }
+  #drop.hide{display:none;}
+  #dropInner{
+    max-width:560px; text-align:center; border:2px dashed var(--edge);
+    border-radius:14px; padding:30px 34px; transition:border-color .15s, background .15s;
+  }
+  #drop.over #dropInner{border-color:var(--accent); background:#131c26;}
+  #dropInner h2{font-size:19px; margin-bottom:10px; color:var(--text);}
+  #dropInner p{color:var(--dim); font-size:12.5px; margin-bottom:9px; line-height:1.55;}
+  #dropInner ol{color:var(--dim); font-size:12.5px; text-align:left; margin:10px 0 14px 20px; line-height:1.7;}
+  #dropInner code{font-family:var(--mono); color:var(--accent2); font-size:12px;}
+  #dropInner .big{
+    display:inline-block; background:var(--accent); color:#08121e; font-weight:600;
+    border:none; border-radius:6px; padding:9px 20px; font-size:13px; cursor:pointer;
+  }
+  #dropErr{color:var(--bad); font-size:12px; margin-top:12px; min-height:16px;}
+
+  /* ---- right side panel ---- */
+  #side{
+    display:flex; flex-direction:column; gap:10px; overflow-y:auto;
+    background:var(--panel); border-left:1px solid var(--edge); padding:10px 12px 20px; min-height:0;
+  }
+  #side h2{font-size:12.5px; color:var(--accent2); letter-spacing:.4px; margin-bottom:6px;}
+  #stats{font-size:12px; color:var(--dim); line-height:1.7;}
+  #stats b{color:var(--text); font-weight:600;}
+  #stats .kind{display:flex; align-items:center; gap:7px;}
+  #legend{font-size:11.5px; line-height:1.6;}
+  #legend .lrow{display:flex; align-items:center; gap:7px; color:var(--dim);}
+  #legend .lrow.off{opacity:.35;}
+  #legend .lrow b{color:var(--text); font-weight:500;}
+  #dlNote{color:var(--dim); font-size:11px; line-height:1.45;}
+  @media (max-width:1180px){
+    #layout{grid-template-columns:290px 1fr;}
+    #side{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Timeline<span>Tower</span> Designer</h1>
+  <span class="sub">your X archive as a hyperglyph, for GlyphViz</span>
+  <span class="privacy">✓ your data never leaves this browser</span>
+</header>
+
+<div id="layout">
+  <!-- ================= LEFT: controls ================= -->
+  <div id="controls"></div>
+
+  <!-- ================= CENTRE: preview ================= -->
+  <div id="vpWrap">
+    <canvas id="vp"></canvas>
+    <div id="hud"></div>
+    <div id="vpBtns">
+      <button id="btnSpin">Spin</button>
+      <button id="btnReset">Reset View</button>
+    </div>
+    <div id="footNote">Drag to orbit · wheel to zoom · right-drag to pan</div>
+
+    <div id="drop">
+      <div id="dropInner">
+        <h2>Drop your X archive here</h2>
+        <p>Everything happens inside this page. Your posts are never uploaded,
+           and nothing is sent anywhere.</p>
+        <ol>
+          <li>On X: <b>Settings → Your account → Download an archive of your data</b></li>
+          <li>X emails you a <code>.zip</code> — this can take a day or two</li>
+          <li>Unpack it and drop the <code>data</code> folder onto this page</li>
+        </ol>
+        <button class="big" id="browseBtn">Choose files…</button>
+        <input type="file" id="fileIn" multiple style="display:none">
+        <input type="file" id="dirIn" webkitdirectory directory multiple style="display:none">
+        <p style="margin-top:12px;font-size:11.5px">
+          Or drop just <code>tweets.js</code> on its own —
+          <code>account.js</code>, <code>profile.js</code> and
+          <code>account-timezone.js</code> are used when they are there.
+        </p>
+        <div id="dropErr"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= RIGHT: stats, legend, download ================= -->
+  <div id="side">
+    <div><h2>ARCHIVE</h2><div id="stats">Nothing loaded yet.</div></div>
+    <div><h2>LEGEND</h2><div id="legend"></div></div>
+    <div>
+      <h2>DOWNLOAD</h2>
+      <button class="primary" id="btnDownload" style="width:100%" disabled>Download scene CSV</button>
+      <div id="dlNote" style="margin-top:8px">
+        One <code>_gv_node.csv</code> holding the whole scene, labels and links
+        included. Drag it onto GlyphViz, or open it in GlyphViz Web.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+ *  Timeline Tower Designer
+ *
+ *  A port of twitter_lab/tut.py, which is the reference implementation:
+ *  the numbers here must match it, so a scene built in this page and one
+ *  built by the script are the same scene.  Read that file (and its
+ *  README) before changing any constant below.
+ * ===================================================================== */
+
+/* ---------- GlyphViz format constants ---------- */
+const TYPE_WORLD = 0, TYPE_GLYPH = 5;
+const TOPO_NONE = 0, TOPO_POINT = 7, TOPO_ZCYLINDER = 12, TOPO_SPIRAL = 14;
+const GEO_CUBE = 1, GEO_SPHERE = 3, GEO_CYLINDER = 19, GEO_POINT = 22, GEO_STAR = 26;
+const ROTATION_EULER_XYZ = 0;
+
+const COLUMNS = [
+  "id","type","parent_id","branch_level",
+  "translate_x","translate_y","translate_z",
+  "rotate_x","rotate_y","rotate_z",
+  "scale_x","scale_y","scale_z",
+  "color_r","color_g","color_b","color_a",
+  "geometry","hide","topo","ratio","rotation_mode","show_text",
+  "text","link",
+  "tag_color_mode","tag_color_r","tag_color_g","tag_color_b","tag_font_size"
+];
+
+/* ---------- geometry, in world units on a scale-1 trunk ---------- *
+ * The trunk of all three layouts is scale 1 and nothing under it is scaled
+ * by a parent.  That is deliberate: a node's rendered size and the frame its
+ * children sit in are the same quantity in GlyphViz, so a trunk scaled to
+ * tower height would stretch every needle and ring by that factor.        */
+const HUB_RADIUS = 2.0;
+const NEEDLE_REACH = 22.0;
+const YEAR_MARK_RADIUS = 25.0;
+const SPIRAL_RISE_PER_TURN = 1.0;   // what a Spiral parent rises per turn at
+                                    // scale 1; translate_y adds the rest
+const HELIX_PITCH_MAX = 34.0;
+const HELIX_PITCH_HEADROOM = 0.45;
+const RING_FLATTEN = 0.5;
+const MIN_RING_SCALE = 0.4;         // = 0.2 / RING_FLATTEN, so even the
+                                    // squashed axis clears the 0.2 the
+                                    // optional minimum-size clamp would
+                                    // otherwise raise it to
+const YEAR_SECONDS = 365.2425 * 86400.0;
+
+/* ---------- the encoding ---------- */
+const KINDS = ["original","reply","retweet","quote"];
+const KIND_LABEL = {original:"original post", reply:"reply",
+                    retweet:"repost", quote:"quote post"};
+// Spelled out rather than label + "s", which makes "replys".
+const KIND_PLURAL = {original:"original posts", reply:"replies",
+                     retweet:"reposts", quote:"quote posts"};
+const KIND_DEFAULT_COLOR = {
+  original:[0,230,0], reply:[255,255,255], retweet:[105,105,105], quote:[190,190,190]
+};
+
+const RINGS = [
+  {key:"hashtags",  radius:5.5,  color:[255,255,0],   label:"hashtags"},
+  {key:"specials",  radius:8.0,  color:[255,0,255],   label:"% special characters"},
+  {key:"urls",      radius:10.5, color:[0,255,255],   label:"links"},
+  {key:"keyword",   radius:13.0, color:[255,0,0],     label:"keyword"},
+  {key:"uppercase", radius:15.5, color:[255,153,0],   label:"uppercase characters"},
+  {key:"likes",     radius:18.0, color:[255,0,102],   label:"likes"},
+  {key:"reposts",   radius:20.5, color:[150,60,255],  label:"reposts"}
+];
+const KEYWORD_COLORS = [[255,0,0],[0,90,255]];
+
+function ringScale(key, v){
+  switch(key){
+    // Counts that span orders of magnitude are logarithmic, so a viral post
+    // enlarges its ring without erasing every ordinary one.
+    case "likes":     return 0.15 + 0.35*Math.log1p(v);
+    case "reposts":   return 0.15 + 0.45*Math.log1p(v);
+    case "hashtags":  return 0.30*v;
+    case "urls":      return 0.35*v;
+    // Nearly every post has some uppercase, so this ring is almost always
+    // lit; it earns its place by how far it swells on a shouted post.
+    case "uppercase": return 0.035*v;
+    case "specials":  return 3.0*v;      // v is a fraction 0..1
+    case "keyword":   return 1.20;       // a hit is a hit; presence is the signal
+  }
+  return 0;
+}
+
+function helixPitchLimit(risePerTurn){
+  // A tilted needle of reach R sweeps R*sin(pitch) vertically while the turn
+  // above is only risePerTurn away, so an unbounded tilt puts one year's
+  // midnight at the next year's noon.  Derive the tilt from the gap instead.
+  const room = HELIX_PITCH_HEADROOM * risePerTurn / NEEDLE_REACH;
+  return Math.asin(Math.min(room, Math.sin(HELIX_PITCH_MAX*Math.PI/180)))*180/Math.PI;
+}
+
+/* =====================================================================
+ *  Parameters
+ * ===================================================================== */
+const DEFAULTS = {
+  layout:"tower",
+  height:220,
+  wall:46,              // immersive: radius of the cylinder you stand inside
+  helixRadius:38,       // helix: radius of the winding
+  helixRise:17,         // helix: vertical gap between one year and the next
+  needle:0.2,           // needle cross-section (>= 0.2, the authoring floor)
+  useLocalTime:true,
+  keyword1:"", keyword2:"",
+  yearMarks:true,
+  bgColor:"#000000", tagSize:12,
+  colOriginal:"#00e600", colReply:"#ffffff",
+  colRetweet:"#696969", colQuote:"#bebebe",
+  // which posts and which rings take part
+  kOriginal:true, kReply:true, kRetweet:true, kQuote:true,
+  rHashtags:true, rSpecials:true, rUrls:true, rKeyword:true,
+  rUppercase:true, rLikes:true, rReposts:true,
+  fromYear:0, toYear:0,      // 0 = the archive's own ends
+  previewCap:2500            // posts drawn in the PREVIEW only
+};
+let P = Object.assign({}, DEFAULTS);
+
+const PRESETS = {
+  "Classic Tower": {layout:"tower", height:220},
+  "Tall Core":     {layout:"tower", height:360, needle:0.2},
+  "Step Inside":   {layout:"immersive", height:220, wall:46},
+  "Wide Room":     {layout:"immersive", height:170, wall:64},
+  "Year Helix":    {layout:"helix", helixRadius:38, helixRise:17},
+  "Loose Coil":    {layout:"helix", helixRadius:46, helixRise:26}
+};
+let activePreset = "Classic Tower";
+
+/* =====================================================================
+ *  Reading an X archive
+ *
+ *  Every file in an archive is JavaScript, not JSON:
+ *  `window.YTD.<name>.partN = [ ... ]`.  Slicing at the first '=' leaves a
+ *  plain JSON array.
+ * ===================================================================== */
+const TZ_ALIASES = {
+  "Pacific Time (US & Canada)":"America/Los_Angeles",
+  "Mountain Time (US & Canada)":"America/Denver",
+  "Central Time (US & Canada)":"America/Chicago",
+  "Eastern Time (US & Canada)":"America/New_York",
+  "Alaska":"America/Anchorage", "Hawaii":"Pacific/Honolulu",
+  "London":"Europe/London", "Dublin":"Europe/Dublin",
+  "Edinburgh":"Europe/London", "Lisbon":"Europe/Lisbon",
+  "Paris":"Europe/Paris", "Berlin":"Europe/Berlin",
+  "Amsterdam":"Europe/Amsterdam", "Madrid":"Europe/Madrid",
+  "Rome":"Europe/Rome", "Athens":"Europe/Athens", "Moscow":"Europe/Moscow",
+  "New Delhi":"Asia/Kolkata", "Tokyo":"Asia/Tokyo", "Seoul":"Asia/Seoul",
+  "Beijing":"Asia/Shanghai", "Singapore":"Asia/Singapore",
+  "Sydney":"Australia/Sydney", "Melbourne":"Australia/Melbourne",
+  "Auckland":"Pacific/Auckland"
+};
+
+function parseYTD(text){
+  const i = text.indexOf('=');
+  if(i < 0) throw new Error("not a window.YTD archive file");
+  return JSON.parse(text.slice(i+1));
+}
+function unwrap(rows, key){
+  return rows.filter(r => r && typeof r === 'object' && key in r).map(r => r[key]);
+}
+
+const STATUS_URL = /^https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[^/]+\/status\//i;
+
+function classify(t){
+  // The archive has no quote-post flag -- it was never exported -- so a quote
+  // is inferred the standard way: not a reply or a repost, but carrying a link
+  // to another post.
+  if((t.full_text||"").startsWith("RT @")) return "retweet";
+  if(t.in_reply_to_status_id || t.in_reply_to_user_id) return "reply";
+  for(const u of (t.entities && t.entities.urls) || []){
+    if(STATUS_URL.test(u.expanded_url||"")) return "quote";
+  }
+  return "original";
+}
+
+/* Local-time components, resolved once per post at load so that redrawing
+   never pays for Intl again. */
+function makeLocalizer(ianaZone){
+  if(!ianaZone) return null;
+  let fmt;
+  try{
+    fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: ianaZone, hour12:false,
+      year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', second:'2-digit'
+    });
+  }catch(e){ return null; }
+  return function(date){
+    const p = {};
+    for(const part of fmt.formatToParts(date)) p[part.type] = part.value;
+    return {
+      y:+p.year, mo:+p.month, d:+p.day,
+      h:(+p.hour)%24, mi:+p.minute, s:+p.second
+    };
+  };
+}
+
+function localParts(date){       // UTC fallback
+  return {y:date.getUTCFullYear(), mo:date.getUTCMonth()+1, d:date.getUTCDate(),
+          h:date.getUTCHours(), mi:date.getUTCMinutes(), s:date.getUTCSeconds()};
+}
+
+let ARCHIVE = null;   // {username, displayName, tzName, posts:[...]}
+
+function buildArchive(files){
+  // files: {name -> text}
+  const tweetKeys = Object.keys(files).filter(n => /^tweets(-part\d+)?\.js$/i.test(n));
+  if(!tweetKeys.length) throw new Error("No tweets.js found. Drop the archive's 'data' folder, or tweets.js itself.");
+
+  let username = "unknown", displayName = "", tzName = "UTC", zone = null;
+
+  const acctFile = Object.keys(files).find(n => /^account\.js$/i.test(n));
+  if(acctFile){
+    try{
+      const a = unwrap(parseYTD(files[acctFile]), "account")[0];
+      if(a){ username = a.username || username; displayName = a.accountDisplayName || ""; }
+    }catch(e){}
+  }
+  const tzFile = Object.keys(files).find(n => /^account-timezone\.js$/i.test(n));
+  if(tzFile){
+    try{
+      const z = unwrap(parseYTD(files[tzFile]), "accountTimezone")[0];
+      if(z && z.timeZone){
+        tzName = z.timeZone;
+        zone = TZ_ALIASES[z.timeZone] || z.timeZone;
+      }
+    }catch(e){}
+  }
+
+  const loc = makeLocalizer(zone);
+  if(!loc) tzName = "UTC";
+
+  const raw = [];
+  tweetKeys.sort();
+  for(const k of tweetKeys) raw.push(...unwrap(parseYTD(files[k]), "tweet"));
+  if(!raw.length) throw new Error("tweets.js parsed, but it holds no posts.");
+
+  const posts = raw.map(t => {
+    const date = new Date(t.created_at);
+    const text = t.full_text || "";
+    const ents = t.entities || {};
+    // Counted by CODE POINT, not by String.length: an emoji is two UTF-16
+    // units and one character, and tut.py -- the reference -- counts
+    // characters.  A post full of emoji would otherwise report a lower
+    // special-character fraction here than in the script.
+    let total = 0, specialCount = 0, upper = 0;
+    for(const ch of text){
+      total++;
+      if(!/[A-Za-z0-9 ]/.test(ch)) specialCount++;
+      if(/\p{Lu}/u.test(ch)) upper++;
+    }
+    return {
+      id: t.id_str || t.id || "",
+      date, t: date.getTime(),
+      kind: classify(t),
+      text,
+      likes: +(t.favorite_count || 0),
+      reposts: +(t.retweet_count || 0),
+      hashtags: (ents.hashtags||[]).length,
+      urls: (ents.urls||[]).length,
+      uppercase: upper,
+      specials: total ? specialCount/total : 0
+    };
+  }).filter(p => Number.isFinite(p.t));
+
+  posts.sort((a,b) => a.t - b.t);
+  const arch = {username, displayName, zoneName:tzName, loc, posts, localMode:null};
+  relocalize(arch);
+  return arch;
+}
+
+/* The clock a tower is read on is a setting, not a property of the archive,
+   so local components are resolved here rather than at parse time and
+   re-resolved when the setting changes.  `off` is what the local wall clock
+   is ahead of UTC at that instant, which is the only way back from a local
+   calendar date (a year boundary) to the instant it happened. */
+function relocalize(arch){
+  const useLocal = P.useLocalTime && !!arch.loc;
+  for(const p of arch.posts){
+    const L = useLocal ? arch.loc(p.date) : localParts(p.date);
+    p.L = L;
+    p.off = Date.UTC(L.y, L.mo-1, L.d, L.h, L.mi, L.s) - p.t;
+  }
+  arch.localMode = useLocal;
+  arch.tzName = useLocal ? arch.zoneName : "UTC";
+}
+
+/* =====================================================================
+ *  Scene building -- the port of tut.py's build()
+ * ===================================================================== */
+function hexRgb(h){
+  const m = /^#?([0-9a-f]{6})$/i.exec(h||"");
+  if(!m) return [200,200,200];
+  const n = parseInt(m[1],16);
+  return [(n>>16)&255, (n>>8)&255, n&255];
+}
+// Written as an escape on purpose: a literal control character here
+// would be invisible in the source and would break the page rather
+// than the label it is meant to clean.
+// Written as an escape on purpose: a literal control character here
+// would be invisible in the source and would break the page rather
+// than the label it is meant to clean.
+const CTRL = /[\u0000-\u001f]/g;
+function clean(s, limit){
+  limit = limit || 90;
+  s = (s||"").normalize("NFC").replace(CTRL,"").replace(/"/g,"'").replace(/\s+/g," ").trim();
+  const cp = [...s];                       // truncate by code point, as tut.py does
+  return cp.length > limit ? cp.slice(0, limit-1).join("") + "…" : s;
+}
+const pad = n => String(n).padStart(2,"0");
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function stampOf(L){
+  let h = L.h % 12; if(h === 0) h = 12;
+  const ap = L.h < 12 ? "AM" : "PM";
+  return `${L.y}-${pad(L.mo)}-${pad(L.d)} ${h}:${pad(L.mi)} ${ap}`;
+}
+function monthYear(L){ return `${MONTHS[L.mo-1]} ${L.y}`; }
+function dayMonthYear(L){ return `${pad(L.d)} ${MONTHS[L.mo-1]} ${L.y}`; }   // tut.py's %d %b %Y
+function dayFraction(L){ return (L.h*3600 + L.mi*60 + L.s)/86400.0; }
+
+/* Python's format(x, '.0f') rounds half to EVEN, JavaScript's Math.round
+   rounds half up, so a post whose text is exactly 12.5% punctuation is
+   labelled 12% by tut.py and would be 13% here.  Nine of Jeff's 1,923 posts
+   land exactly on the half.  Same trap the palette port hit. */
+function roundHalfEven(x){
+  const f = Math.floor(x), d = x - f;
+  if(d > 0.5) return f + 1;
+  if(d < 0.5) return f;
+  return (f % 2 === 0) ? f : f + 1;
+}
+
+function selectedPosts(){
+  if(!ARCHIVE) return [];
+  const kindOn = {original:P.kOriginal, reply:P.kReply,
+                  retweet:P.kRetweet, quote:P.kQuote};
+  return ARCHIVE.posts.filter(p => {
+    if(!kindOn[p.kind]) return false;
+    if(P.fromYear && p.L.y < P.fromYear) return false;
+    if(P.toYear && p.L.y > P.toYear) return false;
+    return true;
+  });
+}
+
+function keywordHit(p){
+  const lower = p.text.toLowerCase();
+  if(P.keyword1 && lower.includes(P.keyword1.toLowerCase())) return 0;
+  if(P.keyword2 && lower.includes(P.keyword2.toLowerCase())) return 1;
+  return -1;
+}
+
+/* Builds the full node list.  `cap` decimates for the PREVIEW only -- the
+   download always builds every selected post. */
+function buildScene(posts, cap){
+  const rows = [];
+  let nextId = 1;
+  function add(o){
+    const r = {
+      id: nextId++, type:TYPE_GLYPH, parent_id:0, branch_level:0,
+      translate_x:0, translate_y:0, translate_z:0,
+      rotate_x:0, rotate_y:0, rotate_z:0,
+      scale_x:1, scale_y:1, scale_z:1,
+      color_r:200, color_g:200, color_b:200, color_a:255,
+      geometry:GEO_CUBE, hide:0, topo:TOPO_NONE, ratio:0.1,
+      rotation_mode:ROTATION_EULER_XYZ, show_text:0, text:"", link:"",
+      tag_color_mode:0, tag_color_r:0, tag_color_g:0, tag_color_b:0, tag_font_size:0
+    };
+    Object.assign(r, o);
+    r.id = nextId - 1;
+    rows.push(r);
+    return r.id;
+  }
+
+  if(!posts.length) return rows;
+
+  const bg = hexRgb(P.bgColor);
+  add({type:TYPE_WORLD, geometry:0,
+       color_r:bg[0], color_g:bg[1], color_b:bg[2], color_a:255,
+       // Each label takes its own node's colour, so a ring's tag text is the
+       // same colour as the ring: the scene explains its own legend.
+       tag_color_mode:1, tag_color_r:255, tag_color_g:255, tag_color_b:200,
+       tag_font_size:P.tagSize,
+       text:`World · Timeline Tower for @${ARCHIVE.username}`});
+
+  const first = posts[0], last = posts[posts.length-1];
+  const span = (last.t - first.t)/1000 || 1;
+  const turns = Math.max(span/YEAR_SECONDS, 1e-9);
+  const layout = P.layout;
+  const height = layout === "helix" ? turns*P.helixRise : P.height;
+  const risePerTurn = height/turns;
+  const pitchLimit = helixPitchLimit(risePerTurn);
+  const inward = layout === "immersive";
+  const lon = inward ? 180.0 : 0.0;
+  const wall = inward ? P.wall : 0.0;
+
+  const zone = ARCHIVE.tzName;
+  const axisBlurb = layout === "tower"
+      ? `height = date, bearing = time of day (${zone})`
+    : layout === "immersive"
+      ? `height = date, bearing = time of day (${zone}) — you are standing at the centre`
+      : `one turn = one year, height = date, needle pitch = time of day (${zone}, ±${roundHalfEven(pitchLimit)}°)`;
+
+  const trunk = add({
+    parent_id:0, topo: layout === "helix" ? TOPO_SPIRAL : TOPO_ZCYLINDER,
+    geometry:GEO_POINT, ratio:0, hide:1,
+    color_r:255, color_g:255, color_b:255, show_text:1,
+    text:`@${ARCHIVE.username} · ${posts.length.toLocaleString()} posts · `
+       + `${monthYear(first.L)} – ${monthYear(last.L)} · ${axisBlurb}`,
+    link:`https://x.com/${ARCHIVE.username}`
+  });
+
+  // A visible pole is a CHILD, never the trunk: the trunk must stay at scale 1
+  // or it would stretch every needle hanging off it.
+  if(layout === "tower"){
+    add({parent_id:trunk, branch_level:1, geometry:GEO_CYLINDER,
+         translate_y:height/2, scale_x:0.35, scale_y:0.35, scale_z:height/2,
+         color_r:225, color_g:225, color_b:235,
+         text:`Time axis · ${dayMonthYear(first.L)} at the base to `
+            + `${dayMonthYear(last.L)} at the top`});
+  } else if(layout === "immersive"){
+    // At the BASE, not mid-height: the axis is where the viewer stands, so a
+    // marker halfway up sits inside their head in VR.
+    add({parent_id:trunk, branch_level:1, geometry:GEO_SPHERE,
+         scale_x:1.2, scale_y:1.2, scale_z:1.2,
+         color_r:255, color_g:210, color_b:90, show_text:1,
+         text:`Start here · @${ARCHIVE.username} · ${monthYear(first.L)} · `
+            + `look outward, then climb: the wall is ${posts.length.toLocaleString()} posts`});
+  }
+
+  const kindColor = {
+    original:hexRgb(P.colOriginal), reply:hexRgb(P.colReply),
+    retweet:hexRgb(P.colRetweet), quote:hexRgb(P.colQuote)
+  };
+  const ringOn = {
+    hashtags:P.rHashtags, specials:P.rSpecials, urls:P.rUrls, keyword:P.rKeyword,
+    uppercase:P.rUppercase, likes:P.rLikes, reposts:P.rReposts
+  };
+  const needleHalf = (NEEDLE_REACH - HUB_RADIUS)/2;
+  const needleCentre = HUB_RADIUS + needleHalf;
+
+  const step = (cap && posts.length > cap) ? Math.ceil(posts.length/cap) : 1;
+
+  for(let i=0; i<posts.length; i+=step){
+    const p = posts[i];
+    const frac = (p.t - first.t)/1000/span;
+    let tx, ty, tz, pitch = 0;
+    if(layout === "helix"){
+      const years = (p.t - first.t)/1000/YEAR_SECONDS;
+      tx = years*360;
+      ty = years*(risePerTurn - SPIRAL_RISE_PER_TURN);
+      tz = P.helixRadius - 1.0;              // a Spiral's radius is 1 + tz
+      pitch = (dayFraction(p.L) - 0.5)*2*pitchLimit;
+    } else {
+      tx = dayFraction(p.L)*360;
+      ty = frac*height;
+      tz = wall;
+    }
+
+    const c = kindColor[p.kind];
+    const stamp = stampOf(p.L);
+    const url = `https://x.com/${ARCHIVE.username}/status/${p.id}`;
+
+    // The anchor carries the post's place in time and nothing else.  It is
+    // topo Point, so everything hanging off it at longitude `lon` reaches
+    // along one radial line, aimed by the topology rather than by a rotation.
+    const anchor = add({
+      parent_id:trunk, branch_level:1, topo:TOPO_POINT,
+      geometry:GEO_POINT, ratio:0, hide:1,
+      translate_x:tx, translate_y:ty, translate_z:tz, rotate_y:pitch,
+      color_r:c[0], color_g:c[1], color_b:c[2],
+      text:`${stamp} · ${KIND_LABEL[p.kind]} · anchor`, link:url
+    });
+
+    // Point topology aims a child's +Z down its own offset direction, and +Z
+    // is a Cylinder glyph's long axis, so the needle lies exactly along the
+    // radial with no rotation at all.
+    add({parent_id:anchor, branch_level:2, geometry:GEO_CYLINDER,
+         translate_x:lon, translate_z:needleCentre,
+         scale_x:P.needle, scale_y:P.needle, scale_z:needleHalf,
+         color_r:c[0], color_g:c[1], color_b:c[2],
+         text:`${stamp} · ${KIND_LABEL[p.kind]} · ${p.likes} likes, `
+            + `${p.reposts} reposts · ${clean(p.text)}`, link:url});
+
+    const hit = keywordHit(p);
+    const values = {
+      hashtags:p.hashtags, specials:p.specials, urls:p.urls,
+      keyword: hit >= 0 ? 1 : 0,
+      uppercase:p.uppercase, likes:p.likes, reposts:p.reposts
+    };
+    const readable = {
+      hashtags:`${p.hashtags} hashtags`,
+      specials:`${roundHalfEven(p.specials*100)}% special characters`,
+      urls:`${p.urls} links`,
+      keyword: hit >= 0 ? `keyword "${hit === 0 ? P.keyword1 : P.keyword2}"` : "",
+      uppercase:`${p.uppercase} uppercase characters`,
+      likes:`${p.likes} likes`,
+      reposts:`${p.reposts} reposts`
+    };
+
+    for(const ring of RINGS){
+      if(!ringOn[ring.key]) continue;
+      const v = values[ring.key];
+      if(!(v > 0)) continue;               // an absent ring reads as a zero
+      const m = Math.max(MIN_RING_SCALE, ringScale(ring.key, v));
+      const rgb = (ring.key === "keyword" && hit >= 0) ? KEYWORD_COLORS[hit] : ring.color;
+      add({parent_id:anchor, branch_level:2, geometry:GEO_CUBE,
+           translate_x:lon, translate_z:ring.radius,
+           // +Z is radial here, so flattening Z squashes the ring against the
+           // needle rather than along it.
+           scale_x:m, scale_y:m, scale_z:RING_FLATTEN*m,
+           color_r:rgb[0], color_g:rgb[1], color_b:rgb[2],
+           text:`${readable[ring.key]} · ring ${ring.radius} (${ring.label}) · ${stamp}`,
+           link:url});
+    }
+  }
+
+  if(P.yearMarks) addYearMarks(add, trunk, posts, layout, height, span, risePerTurn, lon, inward);
+  return rows;
+}
+
+function addYearMarks(add, trunk, posts, layout, height, span, risePerTurn, lon, inward){
+  const first = posts[0], last = posts[posts.length-1];
+  for(let year = first.L.y + 1; year <= last.L.y; year++){
+    // Local midnight on 1 January, converted back to the instant it happened
+    // using the UTC offset in force around then -- taken from the first post
+    // at or after the boundary, since the offset is a property of the date.
+    let off = last.off;
+    for(const p of posts) if(p.L.y >= year){ off = p.off; break; }
+    const rel = (Date.UTC(year, 0, 1) - off - first.t)/1000;
+    if(rel < 0 || rel > span) continue;
+
+    let tx, ty, tz;
+    if(layout === "helix"){
+      const years = rel/YEAR_SECONDS;
+      tx = years*360;
+      ty = years*(risePerTurn - SPIRAL_RISE_PER_TURN);
+      tz = P.helixRadius - 1.0;
+    } else {
+      tx = 0; ty = rel/span*height; tz = inward ? P.wall : 0;
+    }
+    const mark = add({parent_id:trunk, branch_level:1, topo:TOPO_POINT,
+                      geometry:GEO_POINT, ratio:0, hide:1,
+                      translate_x:tx, translate_y:ty, translate_z:tz,
+                      text:`${year} · year mark anchor`});
+    add({parent_id:mark, branch_level:2, geometry:GEO_STAR,
+         translate_x:lon, translate_z:YEAR_MARK_RADIUS,
+         scale_x:1.6, scale_y:1.6, scale_z:1.6,
+         color_r:255, color_g:225, color_b:140, show_text:1,
+         text:String(year)});
+  }
+}
+
+/* =====================================================================
+ *  World transforms -- the three topologies this scene actually uses.
+ *  Mirrors glyphviz_core/topology.py; verified against it via tut.py.
+ * ===================================================================== */
+const D2R = Math.PI/180;
+function mmul(a,b){
+  const o=[[0,0,0],[0,0,0],[0,0,0]];
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++){
+    let s=0; for(let k=0;k<3;k++) s+=a[i][k]*b[k][j]; o[i][j]=s;
+  }
+  return o;
+}
+function mvec(m,v){
+  return [m[0][0]*v[0]+m[0][1]*v[1]+m[0][2]*v[2],
+          m[1][0]*v[0]+m[1][1]*v[1]+m[1][2]*v[2],
+          m[2][0]*v[0]+m[2][1]*v[1]+m[2][2]*v[2]];
+}
+function rotY(d){const a=d*D2R,c=Math.cos(a),s=Math.sin(a);return [[c,0,s],[0,1,0],[-s,0,c]];}
+function rotZ(d){const a=d*D2R,c=Math.cos(a),s=Math.sin(a);return [[c,-s,0],[s,c,0],[0,0,1]];}
+
+function topoOffset(ptopo, tx, ty, tz){
+  if(ptopo === TOPO_ZCYLINDER){                       // angle / height / radius
+    const a = tx*D2R;
+    return [tz*Math.cos(a), tz*Math.sin(a), ty];
+  }
+  if(ptopo === TOPO_SPIRAL){                          // helix angle / rise / radial
+    const a = tx*D2R, r = 1 + tz;
+    return [r*Math.cos(a), r*Math.sin(a), (tx/360)*1 + ty];
+  }
+  if(ptopo === TOPO_POINT){                           // KML, no base radius
+    const lo = tx*D2R, la = ty*D2R;
+    return [tz*Math.cos(la)*Math.cos(lo), tz*Math.cos(la)*Math.sin(lo), tz*Math.sin(la)];
+  }
+  return [tx, ty, tz];                                // None / Plane
+}
+function topoBaseRot(ptopo, tx, ty){
+  if(ptopo === TOPO_POINT) return mmul(rotZ(tx), rotY(90-ty));
+  if(ptopo === TOPO_ZCYLINDER || ptopo === TOPO_SPIRAL) return rotZ(tx);
+  return [[1,0,0],[0,1,0],[0,0,1]];
+}
+
+/* Resolves world position + basis for every row, parents before children
+   (the builder always emits a parent first, so one forward pass suffices). */
+function solveScene(rows){
+  const byId = new Map();
+  const out = new Array(rows.length);
+  for(let i=0;i<rows.length;i++){
+    const n = rows[i];
+    byId.set(n.id, i);
+    if(n.type === TYPE_WORLD){ out[i] = {pos:[0,0,0], basis:null, row:n}; continue; }
+    const pi = n.parent_id ? byId.get(n.parent_id) : undefined;
+    if(pi === undefined){
+      out[i] = {pos:[n.translate_x, n.translate_y, n.translate_z],
+                basis:[[1,0,0],[0,1,0],[0,0,1]], row:n};
+      continue;
+    }
+    const par = out[pi], prow = rows[pi];
+    const off = topoOffset(prow.topo, n.translate_x, n.translate_y, n.translate_z);
+    const pos = [par.pos[0] + mvec(par.basis, off)[0],
+                 par.pos[1] + mvec(par.basis, off)[1],
+                 par.pos[2] + mvec(par.basis, off)[2]];
+    let basis = mmul(par.basis, topoBaseRot(prow.topo, n.translate_x, n.translate_y));
+    if(n.rotate_y) basis = mmul(basis, rotY(n.rotate_y));
+    out[i] = {pos, basis, row:n};
+  }
+  return out;
+}
+
+/* =====================================================================
+ *  Preview renderer -- painter's algorithm over a simple projection
+ * ===================================================================== */
+const canvas = document.getElementById('vp');
+const ctx = canvas.getContext('2d');
+let solved = [], sceneRows = [], sceneBoundsR = 40;
+let cam = {yaw:0.7, pitch:0.22, dist:200, tgt:[0,0,110], fl:1.1};
+let spinning = false, needsDraw = false;
+
+function fitCamera(){
+  const vis = solved.filter(s => s.row.type === TYPE_GLYPH && !s.row.hide);
+  if(!vis.length) return;
+  let mn=[1e9,1e9,1e9], mx=[-1e9,-1e9,-1e9];
+  for(const s of vis) for(let k=0;k<3;k++){
+    if(s.pos[k]<mn[k]) mn[k]=s.pos[k];
+    if(s.pos[k]>mx[k]) mx[k]=s.pos[k];
+  }
+  cam.tgt = [(mn[0]+mx[0])/2, (mn[1]+mx[1])/2, (mn[2]+mx[2])/2];
+  const d = Math.hypot(mx[0]-mn[0], mx[1]-mn[1], mx[2]-mn[2]);
+  sceneBoundsR = Math.max(2, d/2);
+  cam.dist = sceneBoundsR*2.3;
+}
+
+function draw(){
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  if(!solved.length) return;
+  const cy=Math.cos(cam.yaw), sy=Math.sin(cam.yaw);
+  const cp=Math.cos(cam.pitch), sp=Math.sin(cam.pitch);
+  const fl=cam.fl*h, cxp=w/2, cyp=h/2;
+
+  function proj(p){
+    const x=p[0]-cam.tgt[0], y=p[1]-cam.tgt[1], z=p[2]-cam.tgt[2];
+    const x1=x*cy - y*sy, y1=x*sy + y*cy;
+    const yd=y1*cp - z*sp, zu=y1*sp + z*cp;
+    const depth=cam.dist - yd;
+    if(depth < 0.05) return null;
+    const k=fl/depth;
+    return [cxp + x1*k, cyp - zu*k, depth, k];
+  }
+
+  const order=[];
+  for(let i=0;i<solved.length;i++){
+    const s = solved[i];
+    if(s.row.type !== TYPE_GLYPH || s.row.hide) continue;
+    const q = proj(s.pos);
+    if(q) order.push([q[2], i, q]);
+  }
+  order.sort((a,b) => b[0]-a[0]);
+
+  for(const [,i,q] of order){
+    const s = solved[i], n = s.row;
+    const k = q[3];
+    ctx.fillStyle = `rgb(${n.color_r},${n.color_g},${n.color_b})`;
+    ctx.strokeStyle = ctx.fillStyle;
+
+    if(n.geometry === GEO_CYLINDER && n.branch_level === 2){
+      // The needle: draw its true axis, which is its own +Z basis column.
+      const ax = [s.basis[0][2], s.basis[1][2], s.basis[2][2]];
+      const len = n.scale_z;
+      const a = proj([s.pos[0]-ax[0]*len, s.pos[1]-ax[1]*len, s.pos[2]-ax[2]*len]);
+      const b = proj([s.pos[0]+ax[0]*len, s.pos[1]+ax[1]*len, s.pos[2]+ax[2]*len]);
+      if(!a || !b) continue;
+      ctx.lineWidth = Math.max(0.7, n.scale_x*2*k);
+      ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+      continue;
+    }
+    if(n.geometry === GEO_STAR){
+      const r = Math.max(2, n.scale_x*k);
+      ctx.beginPath();
+      for(let t=0;t<10;t++){
+        const rad = t%2 ? r*0.45 : r, a2 = -Math.PI/2 + t*Math.PI/5;
+        const px = q[0]+Math.cos(a2)*rad, py = q[1]+Math.sin(a2)*rad;
+        t ? ctx.lineTo(px,py) : ctx.moveTo(px,py);
+      }
+      ctx.closePath(); ctx.fill();
+      continue;
+    }
+    // rings, the pole, the start marker
+    const rx = Math.max(0.8, n.scale_x*k*0.9);
+    if(n.geometry === GEO_SPHERE){
+      ctx.beginPath(); ctx.arc(q[0],q[1],rx,0,6.2832); ctx.fill();
+    } else if(n.geometry === GEO_CYLINDER){
+      const ax = [s.basis[0][2], s.basis[1][2], s.basis[2][2]];
+      const len = n.scale_z;
+      const a = proj([s.pos[0]-ax[0]*len, s.pos[1]-ax[1]*len, s.pos[2]-ax[2]*len]);
+      const b = proj([s.pos[0]+ax[0]*len, s.pos[1]+ax[1]*len, s.pos[2]+ax[2]*len]);
+      if(a && b){
+        ctx.lineWidth = Math.max(1, n.scale_x*2*k);
+        ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+      }
+    } else {
+      ctx.fillRect(q[0]-rx, q[1]-rx, rx*2, rx*2);
+    }
+  }
+}
+
+function requestDraw(){
+  if(needsDraw) return;
+  needsDraw = true;
+  requestAnimationFrame(() => { needsDraw = false; draw(); });
+}
+function resize(){
+  const r = canvas.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio||1);
+  canvas.width = Math.max(1, Math.round(r.width*dpr));
+  canvas.height = Math.max(1, Math.round(r.height*dpr));
+  requestDraw();
+}
+window.addEventListener('resize', resize);
+
+(function spinLoop(){
+  if(spinning){ cam.yaw += 0.0038; requestDraw(); }
+  requestAnimationFrame(spinLoop);
+})();
+
+let drag = null;
+canvas.addEventListener('pointerdown', e => {
+  drag = {x:e.clientX, y:e.clientY, b:e.button};
+  canvas.setPointerCapture(e.pointerId);
+  canvas.classList.add('dragging');
+});
+canvas.addEventListener('pointermove', e => {
+  if(!drag) return;
+  const dx = e.clientX-drag.x, dy = e.clientY-drag.y;
+  drag.x = e.clientX; drag.y = e.clientY;
+  if(drag.b === 2){
+    const s = cam.dist/600;
+    cam.tgt[0] -= (dx*Math.cos(cam.yaw))*s;
+    cam.tgt[1] -= (dx*Math.sin(cam.yaw))*s;
+    cam.tgt[2] += dy*s;
+  } else {
+    cam.yaw += dx*0.008;
+    cam.pitch = Math.max(-1.5, Math.min(1.5, cam.pitch + dy*0.006));
+  }
+  requestDraw();
+});
+canvas.addEventListener('pointerup', e => {
+  drag = null; canvas.classList.remove('dragging');
+});
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  cam.dist = Math.max(2, Math.min(sceneBoundsR*30, cam.dist*(e.deltaY>0 ? 1.12 : 0.893)));
+  requestDraw();
+}, {passive:false});
+
+/* =====================================================================
+ *  CSV
+ * ===================================================================== */
+function toCsv(rows){
+  const out = [COLUMNS.join(",")];
+  for(const r of rows){
+    const cells = COLUMNS.map(c => {
+      let v = r[c];
+      if(typeof v === "number"){
+        return Number.isInteger(v) && !FLOAT_COLS.has(c) ? String(v) : v.toFixed(6);
+      }
+      v = String(v == null ? "" : v);
+      return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+    });
+    out.push(cells.join(","));
+  }
+  return out.join("\r\n") + "\r\n";
+}
+const FLOAT_COLS = new Set([
+  "translate_x","translate_y","translate_z","rotate_x","rotate_y","rotate_z",
+  "scale_x","scale_y","scale_z","ratio"
+]);
+
+function download(){
+  const posts = selectedPosts();
+  if(!posts.length) return;
+  const rows = buildScene(posts, 0);          // 0 = no preview cap
+  const name = `TUT_${ARCHIVE.username}_${P.layout}_gv_node.csv`;
+  const blob = new Blob([toCsv(rows)], {type:"text/csv"});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  setStatus(`Downloaded ${name} — ${rows.length.toLocaleString()} nodes`);
+}
+
+/* =====================================================================
+ *  Controls
+ * ===================================================================== */
+const controlsEl = document.getElementById('controls');
+const registry = [];
+
+function section(title, open){
+  const d = document.createElement('details');
+  if(open) d.open = true;
+  d.innerHTML = `<summary>${title}</summary>`;
+  const s = document.createElement('div');
+  s.className = 'sec';
+  d.appendChild(s);
+  controlsEl.appendChild(d);
+  return s;
+}
+/* Rows that only mean something for some layouts.  A slider that is visible
+   but inert reads as broken, so they are hidden rather than disabled. */
+const layoutRows = [];
+function onlyFor(row, layouts){ layoutRows.push({row, layouts}); }
+function applyLayoutVisibility(){
+  for(const {row, layouts} of layoutRows)
+    row.style.display = layouts.includes(P.layout) ? '' : 'none';
+}
+
+function slider(sec, key, label, min, max, step, fmt){
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = `<label>${label}</label>`;
+  const inp = document.createElement('input');
+  inp.type='range'; inp.min=min; inp.max=max; inp.step=step; inp.value=P[key];
+  const val = document.createElement('span'); val.className='val';
+  const show = () => val.textContent = fmt ? fmt(P[key]) : P[key];
+  inp.addEventListener('input', () => { P[key] = +inp.value; show(); regen(); });
+  row.appendChild(inp); row.appendChild(val); sec.appendChild(row);
+  registry.push(() => { inp.value = P[key]; show(); });
+  show();
+  return row;
+}
+function select(sec, key, label, options){
+  const row = document.createElement('div'); row.className='row';
+  row.innerHTML = `<label>${label}</label>`;
+  const sel = document.createElement('select');
+  for(const [v,t] of options){
+    const o = document.createElement('option'); o.value=v; o.textContent=t; sel.appendChild(o);
+  }
+  sel.value = P[key];
+  // Applied straight away rather than through the debounced regen, so the form
+  // reshapes on the same tick the layout changes.
+  sel.addEventListener('change', () => {
+    P[key] = sel.value; applyLayoutVisibility(); regen(true);
+  });
+  row.appendChild(sel); sec.appendChild(row);
+  registry.push(() => sel.value = P[key]);
+}
+function textbox(sec, key, label, placeholder){
+  const row = document.createElement('div'); row.className='row';
+  row.innerHTML = `<label>${label}</label>`;
+  const inp = document.createElement('input');
+  inp.type='text'; inp.value=P[key]; inp.placeholder = placeholder||"";
+  inp.addEventListener('input', () => { P[key] = inp.value; regen(); });
+  row.appendChild(inp); sec.appendChild(row);
+  registry.push(() => inp.value = P[key]);
+}
+function colorPick(sec, key, label){
+  const row = document.createElement('div'); row.className='row';
+  row.innerHTML = `<label>${label}</label>`;
+  const inp = document.createElement('input');
+  inp.type='color'; inp.value=P[key];
+  inp.addEventListener('input', () => { P[key] = inp.value; regen(); });
+  row.appendChild(inp); sec.appendChild(row);
+  registry.push(() => inp.value = P[key]);
+}
+function checkbox(sec, key, label, swatch){
+  const row = document.createElement('div'); row.className='row chk';
+  const inp = document.createElement('input');
+  inp.type='checkbox'; inp.checked = !!P[key];
+  const lab = document.createElement('label');
+  if(swatch){
+    const sw = document.createElement('span');
+    sw.className='swatch'; sw.style.background = `rgb(${swatch.join(',')})`;
+    lab.appendChild(sw); lab.appendChild(document.createTextNode(' '));
+  }
+  lab.appendChild(document.createTextNode(label));
+  inp.addEventListener('change', () => { P[key] = inp.checked; regen(); });
+  row.appendChild(inp); row.appendChild(lab); sec.appendChild(row);
+  registry.push(() => inp.checked = !!P[key]);
+}
+function yearRange(sec){
+  const row = document.createElement('div'); row.className='row';
+  row.innerHTML = `<label>Years</label>`;
+  const a = document.createElement('select'), b = document.createElement('select');
+  const fill = () => {
+    a.innerHTML=''; b.innerHTML='';
+    if(!ARCHIVE) return;
+    const ys = ARCHIVE.posts.length
+      ? [ARCHIVE.posts[0].L.y, ARCHIVE.posts[ARCHIVE.posts.length-1].L.y] : [0,0];
+    for(let y=ys[0]; y<=ys[1]; y++){
+      const oa=document.createElement('option'); oa.value=y; oa.textContent=y; a.appendChild(oa);
+      const ob=document.createElement('option'); ob.value=y; ob.textContent=y; b.appendChild(ob);
+    }
+    a.value = P.fromYear || ys[0];
+    b.value = P.toYear   || ys[1];
+  };
+  a.addEventListener('change', () => { P.fromYear = +a.value; if(P.toYear && P.toYear < P.fromYear){P.toYear=P.fromYear; b.value=a.value;} regen(true); });
+  b.addEventListener('change', () => { P.toYear   = +b.value; if(P.fromYear && P.fromYear > P.toYear){P.fromYear=P.toYear; a.value=b.value;} regen(true); });
+  row.appendChild(a); row.appendChild(b); sec.appendChild(row);
+  registry.push(fill);
+  fill();
+}
+
+function buildControls(){
+  controlsEl.innerHTML = '';
+  registry.length = 0;
+  layoutRows.length = 0;      // these point at rows that are about to be discarded
+
+  // presets
+  const pd = document.createElement('details'); pd.open = true;
+  pd.innerHTML = '<summary>PRESETS</summary>';
+  const pw = document.createElement('div'); pw.className='presets';
+  for(const name of Object.keys(PRESETS)){
+    const b = document.createElement('button');
+    b.textContent = name;
+    if(name === activePreset) b.classList.add('active');
+    b.addEventListener('click', () => {
+      Object.assign(P, PRESETS[name]);
+      activePreset = name;
+      for(const btn of pw.children) btn.classList.toggle('active', btn.textContent === name);
+      syncControls(); regen(true);
+    });
+    pw.appendChild(b);
+  }
+  pd.appendChild(pw); controlsEl.appendChild(pd);
+
+  let s = section('SHAPE', true);
+  select(s, 'layout', 'Layout', [
+    ['tower','Tower — read from outside'],
+    ['immersive','Immersive — stand inside'],
+    ['helix','Helix — one turn per year']
+  ]);
+  // The helix takes its height from the rise per year instead, so that a
+  // longer account grows taller rather than winding tighter.
+  onlyFor(slider(s, 'height', 'Height', 60, 600, 10, v => v), ['tower','immersive']);
+  onlyFor(slider(s, 'wall', 'Room radius', 20, 110, 2, v => v), ['immersive']);
+  onlyFor(slider(s, 'helixRadius', 'Helix radius', 14, 80, 2, v => v), ['helix']);
+  onlyFor(slider(s, 'helixRise', 'Rise per year', 8, 45, 1, v => v), ['helix']);
+  slider(s, 'needle', 'Needle', 0.2, 0.8, 0.05, v => v.toFixed(2));
+  checkbox(s, 'yearMarks', 'Year markers');
+
+  s = section('POSTS', true);
+  yearRange(s);
+  checkbox(s, 'kOriginal', 'Original posts', KIND_DEFAULT_COLOR.original);
+  checkbox(s, 'kReply',    'Replies',        KIND_DEFAULT_COLOR.reply);
+  checkbox(s, 'kRetweet',  'Reposts',        KIND_DEFAULT_COLOR.retweet);
+  checkbox(s, 'kQuote',    'Quote posts',    KIND_DEFAULT_COLOR.quote);
+  checkbox(s, 'useLocalTime', 'Clock in the account’s own time zone');
+
+  s = section('RINGS');
+  for(const r of RINGS){
+    const key = 'r' + r.key.charAt(0).toUpperCase() + r.key.slice(1);
+    checkbox(s, key, r.label.charAt(0).toUpperCase()+r.label.slice(1), r.color);
+  }
+  textbox(s, 'keyword1', 'Keyword 1', 'lights the ring red');
+  textbox(s, 'keyword2', 'Keyword 2', 'lights the ring blue');
+
+  s = section('COLOUR');
+  colorPick(s, 'colOriginal', 'Original');
+  colorPick(s, 'colReply',    'Reply');
+  colorPick(s, 'colRetweet',  'Repost');
+  colorPick(s, 'colQuote',    'Quote');
+  colorPick(s, 'bgColor',     'Background');
+  slider(s, 'tagSize', 'Label size', 6, 36, 1, v => v + ' pt');
+
+  s = section('PREVIEW');
+  slider(s, 'previewCap', 'Posts drawn', 250, 20000, 250,
+         v => v >= 20000 ? 'all' : v.toLocaleString());
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.style.padding = '4px 0 0';
+  note.textContent = 'Preview only — the download always contains every '
+                   + 'post the filters above let through.';
+  s.appendChild(note);
+
+  const bar = document.createElement('div'); bar.className = 'btnbar';
+  const reset = document.createElement('button');
+  reset.textContent = 'Reset all';
+  reset.addEventListener('click', () => {
+    P = Object.assign({}, DEFAULTS); activePreset = 'Classic Tower';
+    buildControls(); regen(true);
+  });
+  bar.appendChild(reset);
+  controlsEl.appendChild(bar);
+
+  syncControls();
+}
+function syncControls(){ for(const f of registry) f(); applyLayoutVisibility(); }
+
+/* =====================================================================
+ *  Regenerate
+ * ===================================================================== */
+let regenTimer = null;
+function regen(refit){
+  if(regenTimer) clearTimeout(regenTimer);
+  regenTimer = setTimeout(() => doRegen(refit), 90);
+}
+function doRegen(refit){
+  if(!ARCHIVE) return;
+  // The clock is a setting, so re-resolve every post's local components when
+  // it changes -- one central check rather than a special-case handler on the
+  // one checkbox that needs it.
+  if(ARCHIVE.localMode !== (P.useLocalTime && !!ARCHIVE.loc)){
+    relocalize(ARCHIVE);
+    syncControls();
+  }
+  const posts = selectedPosts();
+  const cap = P.previewCap >= 20000 ? 0 : P.previewCap;
+  sceneRows = buildScene(posts, cap);
+  solved = solveScene(sceneRows);
+  if(refit) fitCamera();
+  updateSide(posts);
+  requestDraw();
+}
+
+function setStatus(msg){
+  document.getElementById('footNote').textContent =
+    msg || 'Drag to orbit · wheel to zoom · right-drag to pan';
+}
+
+function updateSide(posts){
+  const counts = {original:0, reply:0, retweet:0, quote:0};
+  for(const p of ARCHIVE.posts) counts[p.kind]++;
+  const first = ARCHIVE.posts[0], last = ARCHIVE.posts[ARCHIVE.posts.length-1];
+  const colOf = {original:P.colOriginal, reply:P.colReply,
+                 retweet:P.colRetweet, quote:P.colQuote};
+  document.getElementById('stats').innerHTML =
+    `<b>@${ARCHIVE.username}</b>` +
+    (ARCHIVE.displayName ? ` &middot; ${ARCHIVE.displayName}` : '') + `<br>` +
+    `<b>${ARCHIVE.posts.length.toLocaleString()}</b> posts, ` +
+    `${monthYear(first.L)} &ndash; ${monthYear(last.L)}<br>` +
+    `clocked in <b>${ARCHIVE.tzName}</b><br><br>` +
+    KINDS.map(k => `<span class="kind"><span class="swatch" style="background:${colOf[k]}"></span>` +
+                   `<b>${counts[k].toLocaleString()}</b> ${KIND_PLURAL[k]}</span>`).join('') +
+    `<br><b>${posts.length.toLocaleString()}</b> selected by the filters`;
+
+  const ringOn = {hashtags:P.rHashtags, specials:P.rSpecials, urls:P.rUrls,
+                  keyword:P.rKeyword, uppercase:P.rUppercase,
+                  likes:P.rLikes, reposts:P.rReposts};
+  document.getElementById('legend').innerHTML = RINGS.map(r =>
+    `<div class="lrow${ringOn[r.key] ? '' : ' off'}">` +
+    `<span class="swatch" style="background:rgb(${r.color.join(',')})"></span>` +
+    `<b>${r.radius}</b> ${r.label}</div>`).join('');
+
+  const drawn = sceneRows.filter(r => r.type === TYPE_GLYPH && !r.hide).length;
+  const capped = P.previewCap < 20000 && posts.length > P.previewCap;
+  document.getElementById('hud').innerHTML =
+    `<b>${posts.length.toLocaleString()}</b> posts · ` +
+    `<b>${drawn.toLocaleString()}</b> glyphs drawn` +
+    (capped ? ` <span style="color:#ffb454">(preview sampled)</span>` : '');
+  document.getElementById('btnDownload').disabled = !posts.length;
+}
+
+/* =====================================================================
+ *  File intake
+ * ===================================================================== */
+const dropEl = document.getElementById('drop');
+const errEl = document.getElementById('dropErr');
+const WANTED = /^(tweets(-part\d+)?|account|profile|account-timezone)\.js$/i;
+
+function acceptFiles(fileList){
+  errEl.textContent = '';
+  const files = Array.from(fileList).filter(f => WANTED.test(f.name));
+  if(!files.length){
+    errEl.textContent = "Couldn't see a tweets.js in that. Drop the archive's "
+                      + "'data' folder, or tweets.js itself.";
+    return;
+  }
+  setStatus('Reading…');
+  Promise.all(files.map(f => f.text().then(t => [f.name, t])))
+    .then(pairs => {
+      const map = {};
+      for(const [n,t] of pairs) map[n] = t;
+      try{
+        ARCHIVE = buildArchive(map);
+      }catch(e){
+        errEl.textContent = e.message;
+        setStatus('');
+        return;
+      }
+      P.fromYear = 0; P.toYear = 0;
+      dropEl.classList.add('hide');
+      buildControls();
+      doRegen(true);
+      setStatus('');
+    })
+    .catch(e => { errEl.textContent = 'Could not read those files: ' + e.message; });
+}
+
+document.getElementById('browseBtn').addEventListener('click', () => {
+  document.getElementById('dirIn').click();
+});
+document.getElementById('fileIn').addEventListener('change', e => acceptFiles(e.target.files));
+document.getElementById('dirIn').addEventListener('change', e => {
+  if(e.target.files && e.target.files.length) acceptFiles(e.target.files);
+});
+
+['dragenter','dragover'].forEach(ev =>
+  document.addEventListener(ev, e => { e.preventDefault(); dropEl.classList.add('over'); }));
+['dragleave','drop'].forEach(ev =>
+  document.addEventListener(ev, e => {
+    e.preventDefault();
+    if(ev === 'dragleave' && e.relatedTarget) return;
+    dropEl.classList.remove('over');
+  }));
+
+document.addEventListener('drop', async e => {
+  e.preventDefault();
+  const items = e.dataTransfer.items;
+  if(items && items.length && items[0].webkitGetAsEntry){
+    const out = [];
+    const entries = [];
+    for(const it of items){ const en = it.webkitGetAsEntry(); if(en) entries.push(en); }
+    await Promise.all(entries.map(en => collectEntry(en, out)));
+    if(out.length){ acceptFiles(out); return; }
+  }
+  if(e.dataTransfer.files && e.dataTransfer.files.length) acceptFiles(e.dataTransfer.files);
+});
+
+function collectEntry(entry, out){
+  return new Promise(resolve => {
+    if(entry.isFile){
+      if(WANTED.test(entry.name)) entry.file(f => { out.push(f); resolve(); }, () => resolve());
+      else resolve();
+      return;
+    }
+    if(entry.isDirectory){
+      const rd = entry.createReader();
+      const all = [];
+      const readMore = () => rd.readEntries(ents => {
+        if(!ents.length){
+          Promise.all(all.map(en => collectEntry(en, out))).then(resolve);
+          return;
+        }
+        all.push(...ents);
+        readMore();
+      }, () => resolve());
+      readMore();
+      return;
+    }
+    resolve();
+  });
+}
+
+/* ---------- viewport buttons ---------- */
+document.getElementById('btnSpin').addEventListener('click', e => {
+  spinning = !spinning; e.target.classList.toggle('on', spinning);
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  cam.yaw = 0.7; cam.pitch = 0.22; fitCamera(); requestDraw();
+});
+document.getElementById('btnDownload').addEventListener('click', download);
+
+buildControls();
+resize();
+</script>
+</body>
+</html>

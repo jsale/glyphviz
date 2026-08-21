@@ -464,6 +464,23 @@ def helix_pitch_limit(rise_per_turn: float) -> float:
 YEAR_SECONDS = 365.2425 * 86400.0
 
 
+def epoch(dt: datetime) -> float:
+    """Seconds since the Unix epoch -- the only safe way to subtract two of
+    these.
+
+    Not a stylistic choice.  Python's documented rule is that subtracting two
+    aware datetimes that share the SAME `tzinfo` object ignores the zone
+    entirely and subtracts the wall clocks, so `(p.when - t0).total_seconds()`
+    silently returns wall-clock elapsed rather than real elapsed and loses an
+    hour at every DST boundary.  Every post here carries the same ZoneInfo, so
+    that shortcut always applies.  It is invisible on a tower (an hour in
+    eighteen years is 0.0014 world units) but it is wrong, and it made the
+    browser designer -- which works in absolute milliseconds and is therefore
+    correct by construction -- disagree with this file.
+    """
+    return dt.timestamp()
+
+
 def build(archive: Archive, layout: str, keywords: list[str],
           height: float | None = None) -> list[dict]:
     posts = archive.posts
@@ -474,7 +491,7 @@ def build(archive: Archive, layout: str, keywords: list[str],
     sb.world(archive)
 
     t0, t1 = posts[0].when, posts[-1].when
-    span = (t1 - t0).total_seconds() or 1.0
+    span = (epoch(t1) - epoch(t0)) or 1.0
     turns = max(span / YEAR_SECONDS, 1e-9)
 
     # The helix is sized by the gap it needs between one year and the next,
@@ -543,13 +560,13 @@ def build(archive: Archive, layout: str, keywords: list[str],
 
     def place(p: Post) -> tuple[float, float, float, float]:
         """(translate_x, translate_y, translate_z, pitch) for one post's anchor."""
-        frac = (p.when - t0).total_seconds() / span
+        frac = (epoch(p.when) - epoch(t0)) / span
         if layout == "helix":
             # One turn per year, continuous, so seasons stack vertically.  The
             # angle keeps counting past 360 -- that is what a Spiral parent
             # wants.  A Spiral rises SPIRAL_RISE_PER_TURN per turn at scale 1,
             # so translate_y supplies whatever rise is still owed.
-            years = (p.when - t0).total_seconds() / YEAR_SECONDS
+            years = (epoch(p.when) - epoch(t0)) / YEAR_SECONDS
             tx = years * 360.0
             ty = years * (rise_per_turn - SPIRAL_RISE_PER_TURN)
             tz = HELIX_RADIUS - 1.0     # Spiral's radius is 1 + translate_z
@@ -657,13 +674,13 @@ def add_year_marks(sb: SceneBuilder, trunk: int, layout: str,
             continue
 
         if layout == "helix":
-            years = (moment - t0).total_seconds() / YEAR_SECONDS
+            years = (epoch(moment) - epoch(t0)) / YEAR_SECONDS
             tx = years * 360.0
             ty = years * (rise_per_turn - SPIRAL_RISE_PER_TURN)
             tz = HELIX_RADIUS - 1.0
         else:
             tx = 0.0
-            ty = (moment - t0).total_seconds() / span * height
+            ty = (epoch(moment) - epoch(t0)) / span * height
             tz = IMMERSIVE_WALL if inward else 0.0
 
         mark = sb.add(

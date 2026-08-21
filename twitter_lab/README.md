@@ -1,5 +1,15 @@
 # Twitter/X Timeline Tower
 
+Two ways in, building the same scene:
+
+- **`tut_designer.html`** — a self-contained page. Drop an X archive on it,
+  tune the tower with live preview, download the scene. Nothing to install,
+  and nothing is uploaded.
+- **`tut.py`** — the command-line generator, and the **reference
+  implementation**: where the two disagree, the script is right and the page
+  is wrong. `parity_check.mjs` proves they don't disagree.
+
+
 A **Timeline Tower** turns an account's whole posting history into one
 hyperglyph. Every post is a needle radiating from a vertical time axis:
 
@@ -29,9 +39,21 @@ read: it carries a repost count per post, which the API did not, so the tower
 has a reposts ring the 2018 version could not draw. It is also complete —
 the API capped a timeline at the last 3,200 posts.
 
-## Running it
+## The designer page
 
-```
+Open `tut_designer.html` in a browser — double-click it, no server needed —
+and drop your `data` folder onto it. The tower appears immediately; the
+controls down the left reshape it, and **Download scene CSV** writes the file
+GlyphViz opens. It is one self-contained file with no dependencies, the same
+shape as `hyperglyph_lab/hyperglyph_tree_designer.html`.
+
+The preview draws a *sample* of a large archive so the controls stay
+responsive (the PREVIEW section sets how many). The download always contains
+every post the filters let through.
+
+## Running the script
+
+```text
 python tut.py --archive path/to/twitter-2026-08-19/data --out DIR
 python tut.py --archive DIR --out DIR --layout helix --keywords data,art
 ```
@@ -130,10 +152,54 @@ a noon post from the next. `helix_pitch_limit()` takes the tilt from the gap,
 so a taller helix simply gets a more expressive one and a collision is
 impossible by construction.
 
+## Keeping the two in step
+
+A port that quietly drifts is worse than no port: the picture someone
+downloads from the page would stop matching the one the script builds from the
+same archive, and nobody would notice until the two were compared. So:
+
+```text
+node parity_check.mjs --archive <data dir> \
+     --csv <a CSV tut.py wrote from the same archive> \
+     --layout tower --keywords data,Trump
+```
+
+It extracts **the page's own JavaScript** out of the HTML — not a copy of it —
+runs it under a thin fake DOM, and diffs every column of every node against
+the script's CSV. Run it for all three layouts after changing either file.
+
+The comparison is *semantic*, not byte-for-byte: the two writers format
+numbers differently (Python writes an integral field bare where JavaScript may
+write `0.000000`), and GlyphViz reads by column name through pandas, so both
+parse identically. What must match is every value, and it does — the largest
+disagreement across all three layouts is 5e-7, which is the CSV's own
+six-decimal rounding.
+
+Three things it caught that review had not, all worth knowing before editing
+either file:
+
+- **`(a - b).total_seconds()` on two aware datetimes is a trap.** Python
+  documents that when both operands share the *same* `tzinfo` object it
+  ignores the zone and subtracts the wall clocks, so elapsed time was short by
+  an hour at every DST boundary. `tut.py` now goes through `epoch()`; the page
+  works in absolute milliseconds and was right all along.
+- **`format(x, '.0f')` rounds half to even; `Math.round` rounds half up.** Nine
+  of the 1,923 posts in the test archive have a special-character fraction
+  landing exactly on the half, and were labelled 12% by one side and 13% by the
+  other. The page uses `roundHalfEven`.
+- **`String.length` counts UTF-16 units, `len(str)` counts code points.** An
+  emoji is two of the former and one of the latter, so a post full of emoji
+  reported a different special-character fraction in each. The page counts by
+  iterating code points.
+
 ## Privacy
 
-`tut.py` reads local files and writes local files. It makes no network
-requests, and it deliberately ignores the parts of an X archive that a shared
-scene should not carry — direct messages, ad and device data, deleted posts.
-Generated scenes contain post text, so treat one as being as public as the
-account it came from.
+Both tools read local files and write local files. The page makes no network
+requests of any kind — it has no `fetch`, no external script, no font or asset
+from anywhere else — and works with the machine offline; the archive is read
+through the browser's own file API and never leaves it. Both deliberately
+ignore the parts of an X archive that a shared scene should not carry: direct
+messages, ad and device data, deleted posts.
+
+Generated scenes *do* contain post text, so treat one as being as public as
+the account it came from.
