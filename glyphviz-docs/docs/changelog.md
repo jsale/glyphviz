@@ -2,6 +2,13 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-08-21
+
+- **New tool: the [Timeline Tower Designer](reference/timeline-tower.md).** Drop your X (Twitter) archive onto a browser page and it becomes a **Timeline Tower** — a single hyperglyph of everything you have ever posted. Each post is a needle radiating from a vertical time axis: height is when it was posted, bearing is the time of day it was posted, colour is whether it was an original, a reply, a repost or a quote, and concentric rings riding each needle carry likes, reposts, hashtags, links, uppercase, punctuation and your own keyword hits. Because a ring always sits at the same distance from the axis, one ring followed up the tower is one variable followed across a whole life. Every needle links back to the real post, so **U** opens it on X. **Nothing is uploaded** — the page has no network code in it at all and works offline; your archive is read in the browser and stays there.
+- Three layouts share that mapping. **Tower** is the classic form, read from the outside. **Immersive** turns it inside out — the needles hang inward off a cylindrical wall so you stand at the centre of your own history, which is what it was built for in VR. **Helix** winds time as a spiral, one turn per year, so seasons stack vertically and the record never doubles back; it reads like tree rings, and time of day survives as the needle's pitch.
+- The design is not new — it was built for ANTz in 2018 — but the data behind it is better: the X archive is complete where the API capped a timeline at the last 3,200 posts, and it carries a per-post repost count the API never returned, which is why there is a reposts ring now that the original could not draw.
+- The same scenes can be built from a terminal with `twitter_lab/tut.py`, which is the reference implementation the browser tool is checked against.
+
 ## 2026-08-18
 
 - **Tag label text size is now adjustable** (Properties panel → Display → **Tag Text Size**): a slider from 6 to 36 points covering every label in the scene. Like Tag Color, it is scene data — it saves with the file, so a scene's labels are the size its author chose — and it is bindable as a Channels attribute on the World row.
