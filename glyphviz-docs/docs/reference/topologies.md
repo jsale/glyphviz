@@ -16,29 +16,38 @@ chain (`compute_world_positions`, `topology.py:523-574`).
 
 ## The full list
 
-| ID | Name (`TOPO_NAMES`) | Offset function | What it actually does |
-|---|---|---|---|
-| 0 | None | *(fallback)* `_cartesian_offset` | No offset function is registered for `TOPO_NONE`; `_TOPO_OFFSET_FUNCS.get()` falls through to plain Cartesian — children translate rigidly with the parent, `(dx,dy,dz) = (tx,ty,tz)`, no automatic layout (`topology.py:325-332`) |
-| 1 | Cube | `_cube_offset` | Places the child on one of 6 named faces, chosen by the child's own **Facet**/`subspace` field (0–5 = +X,−X,+Y,−Y,+Z,−Z); `tx`/`ty` position the child within that face's plane, `tz` is distance outward from the face surface (`topology.py:403-411`) |
-| 2 | Sphere (KML) | `_sphere_offset` | `tx`/`ty`/`tz` are read as longitude/latitude/altitude and converted to a point on/above the parent's rendered spherical surface, KML-style (`topology.py:335-336, 61-81`) |
-| 3 | Torus | `_torus_offset` | `tx` = orbital angle, `ty` = tube angle around the donut cross-section, `tz` = radial offset from the tube surface; major/minor radius split comes from the parent's `ratio` field (`topology.py:339-350`) |
-| 4 | Cylinder | `_cylinder_offset` | `tx` = angle (degrees) around the cylinder's local-Z axis, `ty` = literal height offset along that axis, `tz` = radial distance from the axis (0 = surface) (`topology.py:364-388`) |
-| 5 | Pin | `_pin_offset` | Offset = `(ty, tz, base_radius + tx)` — `tx` drives height up the pin from its base, `ty`/`tz` are lateral X/Y offset (`topology.py:399-400`). The Pin *glyph* stands with its tip on the node's origin and its shaft along +Z to suit this: at `tx = 0` a child sits at the centre of the pin's head, and sliding `tx` down to `-base_radius` walks it to the tip |
-| 6 | Rod | `_rod_offset` | `ty` = angle around the rod's axis, `tz` = radial distance from the axis; `tx` is remapped from a `[0,180]` range onto the rod's full physical length (`2 × base_radius × ROD_HEIGHT_FACTOR`) (`topology.py:353-361`) |
-| 7 | Point | `_point_offset` | Same KML longitude/latitude/altitude math as Sphere, but with the surface radius forced to `0.0` — children sit out from the exact center point along a ray, not on a shell (`topology.py:391-396`) |
-| 8 | Plane (Grid) | `_cartesian_offset` | Plain Cartesian: `tx`/`ty` position the child within the parent's local XY plane, `tz` is elevation above it |
-| 9 | Zcube | `_zcube_offset` | Identical face-selection math to Cube, but the base-radius term is dropped — `dist = tz` only, so a child at `tz=0` sits at the parent's *center*, not on the cube face (`topology.py:431-441`) |
-| 10 | Zsphere | `_zsphere_offset` | Same KML math as Point — radius forced to `0.0` (`topology.py:444-447`) |
-| 11 | Ztorus | `_ztorus_offset` | Same orbital/tube-angle math as Torus, but with the tube (minor) radius zeroed out — `tz` offsets directly outward from the main ring instead of riding a donut surface (`topology.py:450-464`) |
-| 12 | Zcylinder | `_zcylinder_offset` | Same angle math as Cylinder, but radius forced to `0` — children collapse onto the central axis, and `tz` offsets straight out from that axis (`topology.py:467-477`) |
-| 13 | Zrod | `_zrod_offset` | Delegates to the *exact same* placement function as Zcylinder — the only documented Rod→Zrod difference is a separate rendering rule (scale not affecting child size), not a position difference (`topology.py:480-484`) |
-| 14 | Spiral | `_spiral_offset` | `tx` is the helical angle (also drives height progression, scaled by `base_radius`), `ty` adds a further linear height offset, `tz` is radial offset from the spiral's radius (`topology.py:414-421`) |
-| 15 | Video | `_cartesian_offset` | Plain Cartesian offset — treats the parent as a flat "screen," children placed at literal `tx/ty/tz` |
-| 16 | Plot | `_plot_offset` | Plain Cartesian offset — 1D/2D/3D line plot, GPS, or oscilloscope data; GlyphViz/ANTz-extension topology, not in the original ANTz/GaiaViz set (`topology.py:35, 487-491`) |
-| 17 | Surface | `_surface_offset` | Plain Cartesian offset — `tx`/`ty` form a grid position, `tz` is the height/value at that point (deformable grid, FFT, LIDAR, sound sphere); GlyphViz/ANTz-extension topology (`topology.py:36, 494-499`) |
+The **Animation** column names the folder in the [downloadable animation
+series](#topology-animations-a-downloadable-instructional-series) that shows
+that topology's placement axes sweeping, one at a time.
+
+| ID | Name (`TOPO_NAMES`) | Offset function | What it actually does | Animation |
+|---|---|---|---|---|
+| 0 | None | *(fallback)* `_cartesian_offset` | No offset function is registered for `TOPO_NONE`; `_TOPO_OFFSET_FUNCS.get()` falls through to plain Cartesian — children translate rigidly with the parent, `(dx,dy,dz) = (tx,ty,tz)`, no automatic layout (`topology.py:325-332`) | `topo08_grid_probe` |
+| 1 | Cube | `_cube_offset` | Places the child on one of 6 named faces, chosen by the child's own **Facet**/`subspace` field (0–5 = +X,−X,+Y,−Y,+Z,−Z); `tx`/`ty` position the child within that face's plane, `tz` is distance outward from the face surface (`topology.py:403-411`) | `topo01_cube_probe` |
+| 2 | Sphere (KML) | `_sphere_offset` | `tx`/`ty`/`tz` are read as longitude/latitude/altitude and converted to a point on/above the parent's rendered spherical surface, KML-style (`topology.py:335-336, 61-81`) | `topo02_sphere_probe` |
+| 3 | Torus | `_torus_offset` | `tx` = orbital angle, `ty` = tube angle around the donut cross-section, `tz` = radial offset from the tube surface; major/minor radius split comes from the parent's `ratio` field (`topology.py:339-350`) | `topo03_torus_probe` |
+| 4 | Cylinder | `_cylinder_offset` | `tx` = angle (degrees) around the cylinder's local-Z axis, `ty` = literal height offset along that axis, `tz` = radial distance from the axis (0 = surface) (`topology.py:364-388`) | `topo04_cylinder_probe` |
+| 5 | Pin | `_pin_offset` | Offset = `(ty, tz, base_radius + tx)` — `tx` drives height up the pin from its base, `ty`/`tz` are lateral X/Y offset (`topology.py:399-400`). The Pin *glyph* stands with its tip on the node's origin and its shaft along +Z to suit this: at `tx = 0` a child sits at the centre of the pin's head, and sliding `tx` down to `-base_radius` walks it to the tip | `topo05_pin_probe` |
+| 6 | Rod | `_rod_offset` | `ty` = angle around the rod's axis, `tz` = radial distance from the axis; `tx` is remapped from a `[0,180]` range onto the rod's full physical length (`2 × base_radius × ROD_HEIGHT_FACTOR`) (`topology.py:353-361`) | `topo06_rod_probe` |
+| 7 | Point | `_point_offset` | Same KML longitude/latitude/altitude math as Sphere, but with the surface radius forced to `0.0` — children sit out from the exact center point along a ray, not on a shell (`topology.py:391-396`) | `topo07_point_probe` |
+| 8 | Plane (Grid) | `_cartesian_offset` | Plain Cartesian: `tx`/`ty` position the child within the parent's local XY plane, `tz` is elevation above it | `topo08_grid_probe` |
+| 9 | Zcube | `_zcube_offset` | Identical face-selection math to Cube, but the base-radius term is dropped — `dist = tz` only, so a child at `tz=0` sits at the parent's *center*, not on the cube face (`topology.py:431-441`) | *planned* |
+| 10 | Zsphere | `_zsphere_offset` | Same KML math as Point — radius forced to `0.0` (`topology.py:444-447`) | *planned* |
+| 11 | Ztorus | `_ztorus_offset` | Same orbital/tube-angle math as Torus, but with the tube (minor) radius zeroed out — `tz` offsets directly outward from the main ring instead of riding a donut surface (`topology.py:450-464`) | *planned* |
+| 12 | Zcylinder | `_zcylinder_offset` | Same angle math as Cylinder, but radius forced to `0` — children collapse onto the central axis, and `tz` offsets straight out from that axis (`topology.py:467-477`) | *planned* |
+| 13 | Zrod | `_zrod_offset` | Delegates to the *exact same* placement function as Zcylinder — the only documented Rod→Zrod difference is a separate rendering rule (scale not affecting child size), not a position difference (`topology.py:480-484`) | *planned* |
+| 14 | Spiral | `_spiral_offset` | `tx` is the helical angle (also drives height progression, scaled by `base_radius`), `ty` adds a further linear height offset, `tz` is radial offset from the spiral's radius (`topology.py:414-421`) | *planned* |
+| 15 | Video | `_cartesian_offset` | Plain Cartesian offset — treats the parent as a flat "screen," children placed at literal `tx/ty/tz` | `topo08_grid_probe` |
+| 16 | Plot | `_plot_offset` | Plain Cartesian offset — 1D/2D/3D line plot, GPS, or oscilloscope data; GlyphViz/ANTz-extension topology, not in the original ANTz/GaiaViz set (`topology.py:35, 487-491`) | `topo08_grid_probe` |
+| 17 | Surface | `_surface_offset` | Plain Cartesian offset — `tx`/`ty` form a grid position, `tz` is the height/value at that point (deformable grid, FFT, LIDAR, sound sphere); GlyphViz/ANTz-extension topology (`topology.py:36, 494-499`) | `topo08_grid_probe` |
 
 `TOPO_COUNT = 18` (`topology.py:37`). Default topology for newly-created
 nodes is **Point** (`main_window.py:536`).
+
+Five topologies share one animation because they share one offset function:
+None (0), Plane (8), Video (15), Plot (16) and Surface (17) are all plain
+Cartesian, so `topo08_grid_probe` is the animation for all of them. (A Video
+plate is separately shown *in use* in `06_sphere_probe_with_screen`.)
 
 ## Topology Scale — when children fly off after a topology change
 
@@ -131,39 +140,94 @@ against real ANTz ground truth via the legacy `facet` CSV column (1-indexed,
 
 ## Topology animations — a downloadable instructional series
 
-A companion set of Channels-animated scenes, one small probe glyph per
-topology, built specifically to make the table above *visible* rather than
-read. Each scene parks a cone-shaped probe on a topology's surface and sweeps
-it through the three placement axes one at a time (150 frames per axis, 450
-frames total at 30 fps), with an optional "scribe" effect — a fading comet
-trail plus a chalk-line overlay that draws the probe's actual world-space
-path as it moves — so you can watch a topology's coordinate system become a
-literal line in space instead of inferring it from numbers.
+A companion set of Channels-animated scenes built specifically to make the
+table above *visible* rather than read. Each **probe scene** parks a small
+cone-shaped glyph on one topology's surface and sweeps it through that
+topology's three placement axes one at a time — axis 1 out and home, then
+axis 2, then axis 3 (150 frames per axis, 450 frames total at 30 fps). The
+probe is a cone rather than a sphere because half of what a topology does is
+*orientation*: under Sphere, Point, Torus, Cylinder, Rod and Cube the engine
+pre-rotates children so the child's +Z tracks the outward surface normal, and
+a cone makes that rotation legible. Under the Cartesian topologies it never
+tips at all.
 
-[:material-download: Download the topology animations (topology_animations.zip)](https://www.iluvdata.org/glyphviz/animations/topology_animations.zip){ .md-button .md-button--primary }
+Every scene also carries a "scribe" pair, both derived from the probe's own
+three tracks:
 
-1. Download and extract **[topology_animations.zip](https://www.iluvdata.org/glyphviz/animations/topology_animations.zip)**, keeping each numbered folder intact — GlyphViz only auto-loads Channels when a node CSV's folder holds exactly one `ch-map` and one `ch-tracks` file.
-2. Open a `*_gv_node.csv` in GlyphViz (**File → Open**); its Channels load automatically and the Channels panel appears.
+- a **comet** — eight small glyphs reading the same tracks a few frames
+  delayed, fading out behind the probe. They live in the *parent's topology
+  coordinates*, so the tail bends the way the topology bends: it arcs on a
+  Sphere, wraps the tube on a Torus, stacks on a Pin.
+- a **chalk line** — 150 beads at the probe's actual *world-space* positions,
+  each switching on as the probe reaches it, so the path draws itself and
+  stays drawn.
+
+That pairing is what the series is for: the probe moves in the topology's
+coordinates while the line accumulates in world space, so the mapping between
+the two is on screen at the same time instead of being narrated.
+
+Every scene shares one ruler — a dim wireframe sphere at radius 10 — and every
+linear axis reaches exactly that far, so scenes are directly comparable to one
+another.
+
+[:material-download: Download the topology animations (546 KB)](https://iluvdata.org/glyphviz/zips/Topology_Animation_Examples.zip){ .md-button .md-button--primary }
+
+The set also ships inside the full examples archive, as
+`examples/Topology_Animation_Examples/` — see the
+[Examples Gallery](../examples/index.md).
+
+1. Extract the zip, **keeping each scene folder intact** — GlyphViz only auto-loads Channels when a node CSV's folder holds exactly one `ch-map` and one `ch-tracks` file, so flattening the folders silently disables playback everywhere.
+2. Open a `*_gv_node.csv` in GlyphViz (**File → Open**), or drag the zip straight onto the window; the Channels load automatically and the Channels panel appears.
 3. **Space** plays/pauses, **Shift+Space** stops and resets to frame 0, **T** toggles labels, **C** cycles the scene's stored cameras.
 
-**What's inside:**
+### The probe scenes — one per topology
 
-| Folder | Teaches |
-|---|---|
-| `01_grid_probe` | The Cartesian baseline (None/Plane/Video/Plot/Surface all share this placement math) — no standoff, the origin is a real place. |
-| `02_sphere_probe` | Longitude/latitude/altitude on the Sphere surface; watch the probe tip over as latitude changes so it always faces outward. |
-| `03_grid_axis_triad` | Three probes reading one shared track column — several channels can read the same track. |
-| `04_sphere_meridian_comb` | One channel driving twelve children, overwriting only latitude/altitude/color while each keeps its own CSV longitude. |
-| `05_rosetta_grid_vs_sphere` | The same byte-identical numbers fed to a Cartesian parent and a Sphere parent side by side — ±10 units vs. ±10 degrees. |
-| `06_sphere_probe_with_screen` | The base sphere scene plus a video plate — drop a lesson video into its `media/` folder. |
-| `next_up/` | The rest of the set: Cube, Torus, Cylinder, Pin, Rod, and Point probes. |
+One folder per topology, numbered by topology ID. These are the folders the
+**Animation** column of the table above points at.
 
-The zip also ships the generator itself (`glyphviz_topology_anim.py` and a
-Jupyter notebook), so the whole series — or a single topology, or slower
-sweeps — can be regenerated rather than hand-edited.
+| Folder | Topology | The three axes it sweeps |
+|---|---|---|
+| `topo01_cube_probe` | Cube (1) | `translate_x`/`translate_y` across the chosen face, `translate_z` lifting off it. The face itself comes from the child's own **Facet** column, not from a coordinate — so the probe never changes face. |
+| `topo02_sphere_probe` | Sphere (2) | longitude −180→180 (a full wrap), latitude −90→90, altitude. Watch the cone tip over as latitude changes. |
+| `topo03_torus_probe` | Torus (3) | orbital angle 0→360, tube angle 0→360, offset from the tube surface. The tube radius is the *parent's* `ratio`. |
+| `topo04_cylinder_probe` | Cylinder (4) | angle 0→360, height along the axis, radial distance measured **from the surface**. |
+| `topo05_pin_probe` | Pin (5) | height up the pin, then the two sideways axes. Note the reshuffle: `translate_x` is the vertical axis here. |
+| `topo06_rod_probe` | Rod (6) | position along the rod, angle about it, radial distance from it. The along-axis value is *normalized* — 0–180 spans the rod's full rendered length, the only topology with a normalized axis. |
+| `topo07_point_probe` | Point (7) | longitude, latitude, distance from the centre. Sphere without the base radius: `translate_z` is the whole distance, so 0 collapses the child into the parent. Spokes. |
+| `topo08_grid_probe` | None (0), Plane (8), Video (15), Plot (16), Surface (17) | plain ±10 on x, y and z. Identity orientation and no surface to ride, so the probe starts at a true (0, 0, 0) — the origin is a real place here. One animation for all five Cartesian topologies. |
 
-!!! note "Thumbnails coming"
-    Screenshots of each animation, placed alongside its topology's row in the table above, are planned for a future pass.
+### The concept scenes — what else Channels can do
+
+Four further scenes in the same visual language, teaching the *channel*
+mechanics rather than a topology. Their numbering is a separate series from
+the `topo*` folders.
+
+| Folder | Frames | What it teaches |
+|---|---|---|
+| `03_grid_axis_triad` | 210 | **Several channels can read one track.** Three probes on a Cartesian parent, three channels, and a single track column — channel 1 binds it to `translate_x`, channel 2 to `translate_y`, channel 3 to `translate_z`. One curve, three axes, no duplicated data. |
+| `04_sphere_meridian_comb` | 260 | **One channel can drive many nodes.** Twelve children share a single channel that writes only latitude, altitude and colour — each keeps its own longitude from the CSV, so the shared sweep combs a whole meridian at once. The compression pattern for large animated scenes. |
+| `05_rosetta_grid_vs_sphere` | 450 | **The same numbers mean different things.** A Cartesian parent and a Sphere parent, side by side, fed byte-identical values from one channel: ±10 *units* on the left, ±10 *degrees* on the right. Deliberately no standoff on the sphere probe — the point is that both receive exactly the same track. |
+| `06_sphere_probe_with_screen` | 450 | The sphere probe scene plus an upright video plate (a Video-topology node on `texture_id` 1) standing beside it. Drop a lesson video into the folder's `media/` and it plays in-scene, alongside the topology it explains. |
+
+The zip also ships the generator itself — `glyphviz_topology_anim.py` and the
+`glyphviz_topology_animations.ipynb` notebook that drives it — so the whole
+series, or one topology, or slower sweeps, can be regenerated rather than
+hand-edited:
+
+```text
+python glyphviz_topology_anim.py --out topology_animations
+python glyphviz_topology_anim.py --probe-topo 3        # torus only
+python glyphviz_topology_anim.py --no-scribe           # bare probe scenes
+python glyphviz_topology_anim.py --frames-per-axis 210 # slower sweeps
+```
+
+!!! note "Still to come"
+    Probe scenes for the Z-variants (Zcube, Zsphere, Ztorus, Zcylinder, Zrod)
+    and Spiral, which will fill in the *planned* rows of the table above.
+    Following the ANTz convention, the Z-variants' parents will be drawn in
+    **wireframe** where the base topologies are solid — the visual tell that a
+    child rides the parent's centre rather than its surface. Per-animation
+    thumbnails alongside each topology row are planned as well.
 
 ## Next step
 

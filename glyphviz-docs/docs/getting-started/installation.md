@@ -74,11 +74,11 @@ You'll land in the GlyphViz GUI — the Viewer, the Node Table, and the Properti
 
 ### Example scenes
 
-The example scenes are a separate download — 56 ready-to-open GlyphViz scenes covering World Grids and globes, Channels animation, tags, all 18 topologies, plots and surfaces, color palettes, audio and video textures, and real datasets (seismicity, sleep data, school testing, terrain, terrorism events, vehicle auctions, protein structures, RSS news, hockey history, tropical cyclones, the geomagnetic field, wind climatology, radioactive decay chains, the periodic table, 43,000 galaxies, 57 years of internet standards, scientific collaboration networks, and a signed web of trust). Most ship with the generator script that produced them. Browse them all, with screenshots, in the [Examples Gallery](../examples/index.md).
+The example scenes are a separate download — 68 ready-to-open GlyphViz scenes covering World Grids and globes, Channels animation, tags, all 18 topologies (including a [twelve-scene animated series](../reference/topologies.md#topology-animations-a-downloadable-instructional-series) that teaches them one at a time), plots and surfaces, color palettes, audio and video textures, and real datasets (seismicity, sleep data, school testing, terrain, terrorism events, vehicle auctions, protein structures, RSS news, hockey history, tropical cyclones, the geomagnetic field, wind climatology, radioactive decay chains, the periodic table, 43,000 galaxies, 57 years of internet standards, scientific collaboration networks, and a signed web of trust). Most ship with the generator script that produced them. Browse them all, with screenshots, in the [Examples Gallery](../examples/index.md).
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~245 MB download, ~426 MB extracted*
+*~247 MB download, ~435 MB extracted*
 
 1. Download **[GlyphViz_Examples.zip](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip)**.
 2. Extract it into its own folder — the archive puts each example at its top level, each one self-contained. Keep each example's folder structure intact so its scene finds its own data and media.

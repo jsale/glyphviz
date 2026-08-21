@@ -1,0 +1,6 @@
+channel_id,track_id,attribute
+1,1,translate_y
+1,2,translate_z
+1,3,color_r
+1,4,color_g
+1,5,color_b

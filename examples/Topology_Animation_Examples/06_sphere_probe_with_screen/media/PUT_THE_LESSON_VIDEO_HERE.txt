@@ -1,0 +1,2 @@
+texture_id is a 1-based index into this folder, sorted images first then videos.
+The screen node uses texture_id 1, so the first file here is what plays.

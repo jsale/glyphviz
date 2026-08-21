@@ -4,7 +4,7 @@ Every scene below ships in the GlyphViz examples set — download it once and ev
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~245 MB download, ~426 MB extracted*
+*~247 MB download, ~435 MB extracted*
 
 You can also take just one. Every page below has its own download button, and the examples that hold several scenes offer one zip per scene — most are a few megabytes. Each single-example zip contains that scene's files at its top level: extract it and you have one self-contained folder, or drag the zip onto the GlyphViz window and it extracts beside itself and loads.
 
@@ -13,6 +13,7 @@ Install notes and good first scenes: [Installation → Example scenes](../gettin
 ## Starter demos
 
 - **[Topology Tour](topology.md)** — all 18 topologies side by side
+- **[Topology Animations](../reference/topologies.md#topology-animations-a-downloadable-instructional-series)** — twelve animated scenes that sweep each topology's placement axes one at a time
 - **[Channel Parameters](channel-parameters.md)** — one station per Channels-bindable attribute
 - **[Color Palettes](palette.md)** — the 26 built-in palettes, ready to recolor live
 - **[Sine Wave Channels](sine-wave.md)** — the smallest end-to-end Channels demo

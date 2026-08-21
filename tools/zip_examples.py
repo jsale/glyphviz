@@ -29,6 +29,10 @@ out — they have their own zips. Protein_Import_Example has no node CSV at all
 (it ships a .pdb), so a top-level folder with no scene anywhere under it is
 taken whole.
 
+The one exception is ``WHOLE_FOLDER_UNITS`` below: an example that is a *series*
+rather than a set of independent scenes ships as a single zip even though it
+holds several scene folders.
+
 Zip layout
 ----------
 Contents-first, the same contract release.py states for the app and full
@@ -71,6 +75,16 @@ EXCLUDE_FILES = {'Thumbs.db', '.DS_Store'}
 EXCLUDE_SUFFIXES = {'.pyc', '.pyo', '.zip'}
 
 NODE_CSV_RE = re.compile(r'_gv_node\.csv$', re.IGNORECASE)
+
+# Examples that ship as ONE zip even though they hold several scene folders.
+#
+# Topology_Animation_Examples is an instructional *series*, not a set of
+# independent scenes: each animation is built from the same visual grammar as
+# the last one, the docs link the set as a whole, and the top level carries the
+# README, the notebook and the generator that produced every folder. Splitting
+# it per scene would hand out twelve downloads AND silently drop those three
+# files, since the top level holds no node CSV of its own and so is not a unit.
+WHOLE_FOLDER_UNITS = {'Topology_Animation_Examples'}
 
 
 # ----------------------------------------------------------------- helpers
@@ -232,7 +246,7 @@ def discover_units() -> list[Unit]:
     for top in sorted(p for p in EXAMPLES.iterdir()
                       if p.is_dir() and p.name not in EXCLUDE_DIRS):
         scenes = [d for d in shippable_dirs(top) if is_scene(d)]
-        if not scenes:
+        if not scenes or top.name in WHOLE_FOLDER_UNITS:
             # Whole folder, scene or not (Protein_Import_Example ships a .pdb).
             entries = [(p, arcname(p, top)) for p in walk_files(top)]
             units.append(Unit(unit_name(top), top, entries))
