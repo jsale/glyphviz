@@ -8,6 +8,11 @@ errors** — and the scene still isn't what you intended. That's what makes them
 expensive: there is no message to read. Find the symptom, then go to the
 reference named at the end of the entry for the full rules.
 
+Several of these are visible in a scene report before anyone opens the app —
+rendered glyph size per level, child placement ratios, whether the textures
+loaded. If you are debugging blind, get that first: see "Closing the loop —
+getting a picture" in `SKILL.md`.
+
 ## Symptom index
 
 | What you see | Jump to |

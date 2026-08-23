@@ -192,12 +192,66 @@ Mixing the two within one scene is fine — `topo_scale` is per-parent.
    render, so a scene that "validated" has had its numbers checked and its
    appearance assumed — state that plainly when handing it over, and name the
    specific things the user should eyeball (here: "12 should point up, 3
-   right"). One screenshot back from them diagnoses in seconds what no amount
-   of file validation can catch.
+   right"). One good look at the scene diagnoses in seconds what no amount of
+   file validation can catch — see "Closing the loop" below for how to get one
+   in a single round trip instead of many.
 7. **Hand off**: tell the user to open the node CSV in GlyphViz (File > Open,
    or drag the CSV / scene folder / zip onto the window); a name-paired tag
    file loads automatically. Suggest small first (dozens of nodes) before
    scaling to thousands.
+
+### Closing the loop — getting a picture
+
+You cannot see the render, and a scene that "validated" has had its numbers
+checked and its appearance assumed. The slow way to fix that is to hand the
+scene over and wait for the user to open the app, orbit to a useful angle and
+grab the screen — once per question, for as many questions as it takes. The
+fast way is to ask for the right artifact **once**, or to render it yourself.
+
+**If you have a shell** and the user's checkout with GlyphViz's Python
+environment, render it and look, before handing anything over:
+
+```bash
+python tools/export_frame.py --csv scene_gv_node.csv --out check.png \
+    --angles three-quarter,front,top --report
+```
+
+**If you don't** — the usual case, since this skill normally runs with no
+GlyphViz install — ask the user to run exactly that one command and paste back
+both the image and the report text. One command, one image, one paste.
+
+- **`--angles` writes one labelled contact sheet.** A glyph that reads
+  correctly from one viewpoint is routinely wrong from another (a starburst
+  and a flat fan look identical head-on), so three views in one file is what
+  makes a single paste conclusive. Choices: `three-quarter`, `front`, `back`,
+  `side`, `top`, `bottom`.
+- **`--report` is plain text**, so it costs nothing to paste and often answers
+  the question outright — scene extents, **rendered** glyph size per hierarchy
+  level (authored `scale` is not what you see; it is multiplied by every
+  ancestor's scale and by Global Scale), how far each parent's children sit in
+  multiples of the parent's own radius, whether the textures actually loaded,
+  and how many labels are pinned versus hidden. **Ask for the report first**:
+  most "I thought this was right and it isn't" gaps are visible in it, and it
+  is cheaper for both of you than an image.
+- Its defaults match how the app opens a file — Global Scale 1.0, labels off
+  except `show_text = 1` nodes. Pass `--base-scale` or `--tags` when you need
+  to see it another way, and say which you asked for.
+
+**If the user has only the packaged app**, there is no CLI — `GlyphViz.exe`
+takes no arguments. Ask for a screenshot, but ask well: name the viewpoint you
+want (the Camera toolbar has Top / Front / Side), state what you expect to see
+there, and batch your questions into one shot instead of one shot per
+iteration. **GlyphViz Web** (`iluvdata.org/glyphvizweb/`) opens the same CSV in
+a browser with nothing to install, which is often the quickest way for them to
+look at all.
+
+**Do not build your own previewer.** Rendering these CSVs "yourself" in a
+small three.js or matplotlib scene means reimplementing the placement math —
+and that math is precisely what is under suspicion whenever a scene looks
+wrong, so a disagreement between your previewer and the app proves nothing and
+you will end up debugging the previewer. If you want an independent check, make
+it a *numbers* check: re-derive positions from the formulas in
+`references/topologies.md` and compare them against what the design intended.
 
 ### When the app can build it faster than a script
 

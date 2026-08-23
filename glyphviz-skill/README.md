@@ -15,8 +15,10 @@ now-optional 0.2 minimum-glyph-size clamp, textured flat markers, and Draw Mode
 — then extended on **2026-08-18** with the adjustable tag text size
 (`tag_font_size`, a World-row scene setting, also Channels-bindable) and on
 **2026-08-23** with **Global Scale** (hard rule 3: author against B = 1.0; what
-B does and does not move) and **3-D graph layout** (how to position the nodes of
-a network, not just draw its edges).
+B does and does not move), **3-D graph layout** (how to position the nodes of a
+network, not just draw its edges), and **"Closing the loop"** — how to actually
+see a generated scene in one round trip (`tools/export_frame.py --angles
+… --report`) instead of a screenshot exchange per question.
 
 | Piece | Status |
 |---|---|
