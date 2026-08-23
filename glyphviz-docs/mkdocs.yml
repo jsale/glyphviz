@@ -103,6 +103,10 @@ nav:
           - "Tropical Cyclones": examples/tropical-cyclones.md
           - "Earth's Magnetic Field": examples/geomagnetic-field.md
           - "The Wind Rose as a Hyperglyph": examples/wind-rose.md
+      - Orbital traffic:
+          - "Orbital Traffic — Live Sky": examples/orbital-live-sky.md
+          - "Orbital Traffic — One Orbit": examples/orbital-one-orbit.md
+          - "Orbital Traffic — Orbital Shells": examples/orbital-shells.md
       - Education data:
           - "California STAR Test Scores": examples/calstate-testing.md
           - "SES Achievement Gap Terrain": examples/ses-achievement-gap-terrain.md

@@ -4,7 +4,7 @@ Every scene below ships in the GlyphViz examples set — download it once and ev
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~247 MB download, ~435 MB extracted*
+*~255 MB download, ~453 MB extracted*
 
 You can also take just one. Every page below has its own download button, and the examples that hold several scenes offer one zip per scene — most are a few megabytes. Each single-example zip contains that scene's files at its top level: extract it and you have one self-contained folder, or drag the zip onto the GlyphViz window and it extracts beside itself and loads.
 
@@ -39,6 +39,14 @@ Install notes and good first scenes: [Installation → Example scenes](../gettin
 - **[Tropical Cyclones](tropical-cyclones.md)** — 184 years of storms, wind speed as height
 - **[Earth's Magnetic Field](geomagnetic-field.md)** — four centuries of secular variation
 - **[The Wind Rose as a Hyperglyph](wind-rose.md)** — the standard chart, nested three levels deep
+
+## Orbital traffic
+
+Three scenes built from live CelesTrak element sets, each animating a different way: scene 1 by an external generator loop and Watch and Reload, scene 2 by Channels playback, and scene 3 by nothing at all.
+
+- **[Orbital Traffic — Live Sky](orbital-live-sky.md)** — every tracked satellite where it is right now, once a second
+- **[Orbital Traffic — One Orbit](orbital-one-orbit.md)** — a 93-minute revolution replayed in twenty seconds
+- **[Orbital Traffic — Orbital Shells](orbital-shells.md)** — the orbital planes themselves, turning by themselves
 
 ## Education data
 

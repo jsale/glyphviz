@@ -85,6 +85,11 @@ MANIFEST = [
     ("wind-rose", EX / "Wind_Rose_Example" / "Rose_Anatomy", None),
     ("decay-chains", EX / "Decay_Chain_Example" / "Chain_Forest", None),
     ("periodic-system", EX / "Periodic_System_Example" / "Madelung_Helix", None),
+    # Orbital Traffic ships three scenes and the gallery gives each its own
+    # page, so each gets its own shot rather than one hero for the set.
+    ("orbital-live-sky", EX / "Orbital_Traffic_Example" / "Live_Sky", None),
+    ("orbital-one-orbit", EX / "Orbital_Traffic_Example" / "One_Orbit", None),
+    ("orbital-shells", EX / "Orbital_Traffic_Example" / "Orbital_Shells", None),
 ]
 
 
@@ -109,6 +114,13 @@ CAMERA = {
     "decay-chains": {"zoom": 0.55, "azimuth": 22, "elevation": 12},
     # Down the helix axis: every group becomes a radial spoke (see README).
     "periodic-system": {"origin": True, "zoom": 0.97, "elevation": 89},
+    # Orbital Traffic: all three are Earth-centred, and all three carry a
+    # caption and legend well off to one side, so aim at the origin. Live_Sky
+    # is the extreme case — its bounding box reaches the GEO belt at 321 units
+    # against a 57-unit globe, so the fitted distance leaves Earth a dot.
+    "orbital-live-sky": {"origin": True, "zoom": 0.34, "elevation": 20},
+    "orbital-one-orbit": {"origin": True, "zoom": 0.85, "elevation": 18},
+    "orbital-shells": {"origin": True, "zoom": 0.58, "elevation": 20},
 }
 
 
