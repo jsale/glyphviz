@@ -78,10 +78,12 @@ at scale 3, which spreads the stations far enough apart that the roses can be
 13 world units across and still not collide. Without that, the speed bands
 would not clear the render floor.
 
-**The 0.2 render floor lands on each node's own scale.** `node_world_matrix`
-floors *this node's* `scale × base_scale` at 0.2 per axis and then multiplies
-by the parent basis — so a node authored below 0.2 is drawn bigger than it
-encodes, and the encoding quietly lies. Every hub and arm in these roses is
+**The 0.2 render floor lands on each node's own scale.** It is optional now
+(View → Enforce Minimum Glyph Size, **off by default**), and authoring above
+it is exactly what makes this scene read the same with the setting either way.
+When it is on, `node_world_matrix` floors *this node's* `scale × base_scale` at
+0.2 per axis and then multiplies by the parent basis — so a node authored below
+0.2 is drawn bigger than it encodes, and the encoding quietly lies. Every hub and arm in these roses is
 scale 1, which puts the floor directly on the segment; a cube is inscribed in
 the unit sphere, so the shortest speed band that can be drawn honestly is
 `0.2 × 2/√3 ≈ 0.231` world units. (Shrinking an ancestor would lower that, but

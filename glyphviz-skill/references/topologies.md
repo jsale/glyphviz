@@ -29,6 +29,38 @@ the parent's own `scale_x/y/z` then stretches surface and child positions
 together. All examples below assume an unrotated, scale-1 parent at the
 origin and B = 1.
 
+### What B moves, and what it doesn't
+
+B is a **viewer setting the CSV does not record** — Properties → Global
+Scale, default 1.0. Author against 1.0. It multiplies every glyph's rendered
+size (`scale_x/y/z × B`), and it moves exactly one class of position:
+
+| Node | B = 1 | B = 3 | Moves? |
+|---|---|---|---|
+| Root, any topology | its literal `translate` | same | no |
+| Sphere child, `translate_z = 0` (on the surface) | `(1, 0, 0)` | `(3, 0, 0)` | **yes** |
+| Sphere child, `translate_z = 5` (off the surface) | `(6, 0, 0)` | `(8, 0, 0)` | **yes**, but not proportionally |
+| Torus child on the ring | `(1, 0, 0)` | `(3, 0, 0)` | **yes** |
+| Plane child `(4, 3, 0)` — Cartesian | `(4, 3, 0)` | same | no |
+| None child `(4, 3, 2)` — free placement | `(4, 3, 2)` | same | no |
+| World Grid child, lon 90 / lat 45 / elev 3 | `(90, 45, 3)` | same | no |
+
+(Engine-measured through `compute_world_transforms`, unrotated scale-1
+parents at the origin.)
+
+The row that causes trouble is the third one. A surface-riding child sits at
+`B × parent scale + translate_z`, so a distance expressed as **parent scale**
+tracks B while the same distance expressed as **the child's own
+`translate_z`** does not. Put a given distance in one of the two places, not
+both, or the scene only lines up at the Global Scale you happened to author
+it at. Symptom and fix: `troubleshooting.md` → "the scene's proportions
+change with the Global Scale slider".
+
+If you verify a scene through `glyphviz_core`, note that `Scene()`'s own
+`base_scale` parameter still defaults to **3.0** while the app opens at
+**1.0** — pass it explicitly, or you are checking a scene the viewer does not
+draw.
+
 Nothing auto-distributes: siblings land wherever their coordinates say. The
 generator computes the angles/positions (e.g. `i * 360/n` around a torus).
 

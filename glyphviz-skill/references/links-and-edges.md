@@ -1,7 +1,9 @@
 # Links and edges — `type` = 7
 
 Verified against `glyphviz_core/link_geometry.py`, `glyphviz_core/node.py`,
-`glyphviz_gl/viewport.py`, `glyphviz_gl/main_window.py` (2026-08-15).
+`glyphviz_gl/viewport.py`, `glyphviz_gl/main_window.py` (2026-08-15); the
+layout section against `glyphviz_core/graph.py` and
+`glyphviz_core/graph_layout.py` (2026-08-23).
 
 A **Link** is a node whose job is to connect two other nodes. It is the only
 node type with no pose of its own: its position, rotation and scale are
@@ -82,6 +84,83 @@ travels with the CSV.
 - **Torus (6/7)** is the one shape where `ratio` does double duty: it is also
   the torus's own minor-radius proportion, and above 1.0 that is degenerate.
 - **Mesh (23)** works and still needs its own `mesh_id`.
+
+## Laying out a graph
+
+Link rows say which nodes are related. They say nothing about **where the
+nodes go**, and for a graph — nodes with no hierarchy, related only by edges
+— that is the whole design problem. The node side of a graph scene is the
+simplest shape in the format:
+
+- Every graph node is a **root row**: `parent_id = 0`, `branch_level = 0`,
+  `topo = 0` (None).
+- A root's `translate_x/y/z` **are its world coordinates**, with no topology
+  offset and no Global Scale applied. Whatever a layout algorithm computes
+  goes straight into those three columns.
+- Then one `type = 7` row per edge.
+
+Nothing about hierarchy, placement offsets or `topo_scale` is involved. (Give
+a node a *hyperglyph* — a small composite of its own — and it becomes a
+parent with children; the graph layout still only decides where its root
+sits.)
+
+### The one constant you must change for 3D
+
+Force-directed layout is the standard answer, and the published 2D formulas
+carry into three dimensions **untouched** — they are written in vectors, so
+the physics is dimension-agnostic. One constant inside them is not.
+
+**ForceAtlas2's repulsion falls off as 1/d, which is the Coulomb law of the
+*plane*.** In three dimensions that is far too long-ranged: it collapses the
+layout into a dense core with filaments whipping off it — the cliché that
+gives 3D graph drawing its bad name. The correct 3D law is **1/d²**.
+
+Measured on a 3,931-node co-authorship graph, both fitted to the same radius:
+
+| Repulsion falloff | Median nearest-neighbour spacing | `radius_p50 / radius_p98` |
+|---|---|---|
+| 1/d — the published constant | 2.61 | 0.33 — a core with a halo |
+| **1/d² — the 3D law** | **11.90** | **0.70 — an evenly filled volume** |
+
+If you implement a force layout yourself, this is the single most important
+line in it. Two practical notes that come with the steeper law: **initialize
+from a global embedding** rather than a random cloud (a cheap PivotMDS from
+BFS hop-distances to ~64 pivots is enough) — random starts settle into
+tangled-macrostructure local minima that look like hairballs; and **cap each
+iteration's displacement** at a fraction of the layout's own RMS radius, or
+two nodes that drift together will launch one of them thousands of units out,
+where its force dominates the global speed controller and freezes the layout
+for everyone else.
+
+### Turning positions into a scene
+
+- **Rescale.** A force layout's absolute scale is an artifact of its force
+  constants, not of the data, so it always needs fitting before it becomes
+  `translate_*`. Match a target radius at a **percentile** (98th), not the
+  maximum — a single flung outlier would otherwise shrink the whole structure.
+- **Check spacing against glyph diameter, not against a separation score.** A
+  layout of collapsed unreadable dots scores *excellently* on cluster
+  separation. What decides whether a viewer sees structure is the ratio of
+  median nearest-neighbour distance to how big a glyph is; if glyphs
+  interpenetrate, the layout failed however good its numbers look.
+- **Encode community twice** — as color *and* as `geometry`. Color reads at a
+  glance, and geometry makes Select By > Geometry pull out a whole
+  sub-network in the app.
+- **Label everything, pin almost nothing.** Give every node its name in
+  `text`; set `show_text = 1` on only the few biggest hubs, so the rest appear
+  on selection instead of papering over the view.
+- Use **27 (Line)** links for anything above a few hundred edges.
+
+### If you have the GlyphViz repo
+
+`glyphviz_core/graph.py` and `glyphviz_core/graph_layout.py` implement all of
+this and are Qt-free and generator-side (nothing in the app imports them):
+`from_edge_pairs`, giant component, `louvain_communities`, `k_core`,
+`filter_edges`; then `forceatlas2_3d` (with `repulsion_falloff`),
+`fruchterman_reingold_3d`, `pivot_mds_3d`, `layout_quality` and
+`fit_to_radius`. Exact all-pairs repulsion, comfortable to roughly 20k nodes.
+Without the repo, implement the above directly — it is a few dozen lines of
+numpy.
 
 ## Recipes
 

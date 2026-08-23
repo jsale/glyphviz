@@ -1,7 +1,7 @@
 # Troubleshooting — when a scene loads but looks wrong
 
 Verified against `glyphviz_core/` and `glyphviz_gl/` (2026-08-13, extended
-2026-08-15).
+2026-08-15/17/23).
 
 Every entry here is a case where **the CSV is valid, the file loads, nothing
 errors** — and the scene still isn't what you intended. That's what makes them
@@ -29,6 +29,9 @@ reference named at the end of the entry for the full rules.
 | Pin glyphs look offset upward from their coordinates | [14](#14-a-pin-sits-above-the-point-it-marks) |
 | Spokes/needles/arrows are placed right but point wrong | [15](#15-glyphs-that-should-radiate-came-out-laid-flat-or-fanned-the-wrong-way) |
 | A starburst renders as a flat stacked fan | [15](#15-glyphs-that-should-radiate-came-out-laid-flat-or-fanned-the-wrong-way) |
+| The scene changes shape when Global Scale moves | [16](#16-the-scenes-proportions-change-with-the-global-scale-slider) |
+| Labels, markers or rings drift off the thing they belong to | [16](#16-the-scenes-proportions-change-with-the-global-scale-slider) |
+| Your own verification says the scene is right; the app disagrees | [16](#16-the-scenes-proportions-change-with-the-global-scale-slider) |
 
 ---
 
@@ -331,6 +334,44 @@ Verify **direction** separately: for every glyph whose meaning depends on where
 it points, re-derive its aimed axis and compare it against the direction the
 design calls for. And when handing off a scene you cannot see rendered, say so
 and name what to eyeball.
+
+---
+
+## 16. The scene's proportions change with the Global Scale slider
+
+**Symptom.** The scene reads correctly for you and wrong for the user, or
+changes shape when anyone touches Properties → Global Scale. Typically some
+elements stay put while others move: rings shrink but their captions stay
+out where they were, a marker meant to sit just above a surface floats off
+into a halo, a satellite leaves the orbit it was drawn on.
+
+**Cause.** Global Scale (**B**, default **1.0**) is a viewer setting that
+**nothing in the CSV records**. It multiplies every glyph's rendered size,
+and it moves children of a *surface-riding* topology, which sit at
+`B × parent scale + translate_z`. It does not move Cartesian children, roots,
+or World Grid children. So the same physical distance behaves differently
+depending on which of the two places you expressed it in — the parent's
+`scale` (tracks B) or the child's own `translate_z` (does not) — and a scene
+that mixes them only lines up at the setting it was authored at.
+
+**Fix.** Author against **B = 1.0**, and express any given distance in one of
+the two places consistently across a scene. If you need a child at a distance
+*R* from a surface-riding parent, either scale the parent to `R/B` and leave
+`translate_z = 0`, or keep the parent at scale 1 and put the whole distance
+in `translate_z` — not half in each.
+
+Two related traps:
+
+- **`translate_z` is in the PARENT's local units**, not world units. Asking
+  for "0.6 units above the surface" of a scale-19 parent puts the child
+  11.46 units up. Write `N / parent_scale`.
+- **If you verify with `glyphviz_core`, `Scene()` defaults `base_scale` to
+  3.0 while the app opens at 1.0.** Pass it explicitly — otherwise every
+  number you check is from a scene the viewer never draws. This is exactly
+  how a scene ships looking right in its own verifier and wrong on screen.
+
+Full table of what B moves: `topologies.md` → "What B moves, and what it
+doesn't".
 
 ---
 

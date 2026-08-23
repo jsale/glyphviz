@@ -114,7 +114,9 @@ re-deriving everything from world-space positions produced by the real
 transform engine:
 
 - the glyph nests 16 levels down;
-- every visible node's own scale clears the 0.2 render floor;
+- every visible node's own scale clears the 0.2 render floor (optional since
+  2026-08-11 and off by default, which is why clearing it matters: the scene
+  then reads identically with the setting either way);
 - **the chart round-trip is exact** — each member's world offset from its
   chain root decodes back to its real (N, Z) displacement and step number with
   residual 0.00e+00 across 105 members;
@@ -128,10 +130,11 @@ The size check earned its keep in an unexpected way. A tip is a child of a
 petal, so its *rendered* size is the product of the two scales, and in the
 first build that product was 0.09 world units — effectively invisible, even
 though both scales individually cleared the floor. Worth being precise about
-what the floor actually does: `node_world_matrix` floors each node's own
-`scale × base_scale` at 0.2 and then multiplies by the parent basis, so the
-floor protects against authoring a node too small, but says nothing about how
-small an ancestor's scale can make its descendants look.
+what the floor actually does: when enabled, `node_world_matrix` floors each
+node's own `scale × base_scale` at 0.2 and then multiplies by the parent basis,
+so the floor protects against authoring a node too small, but says nothing
+about how small an ancestor's scale can make its descendants look — and with
+the clamp off, which is the default, nothing protects you at all.
 
 ## Regenerating
 

@@ -49,14 +49,28 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
    Glyph Size, off by default) that lifts rendered scale to 0.2/axis, and a
    sub-0.2 glyph is also hard to click. Staying above 0.2 makes a scene read
    the same either way. Never encode size as huge-parent × tiny-child.
-3. Colors are ints 0–255 (all four of r/g/b/a).
-4. Save with **`encoding="utf-8"`** and CRLF line endings
+3. **Author against Global Scale = 1.0**, and put any given distance in only
+   one place. The viewer applies a base scale **B** that the CSV does *not*
+   record (Properties → Global Scale, default **1.0**). B multiplies two
+   things: every glyph's rendered size (`scale_x/y/z × B`), and the placement
+   radius of a child on a **surface-riding** topology — a Sphere/Torus/
+   Cylinder/Cube parent seats its children at `B × parent scale`, plus the
+   child's own `translate_z` on top. B does **not** move Cartesian children
+   (None, Plane), root nodes, or World Grid children: those are literal
+   coordinates. The trap is mixing the two idioms in one scene — a ring whose
+   radius comes from its parent's `scale` tracks B, while a marker pushed out
+   by its own `translate_z` does not, so the two line up at one setting and
+   drift apart at another. Measured: a Sphere child at `translate_z = 5` sits
+   6.0 units out at B = 1 and 8.0 at B = 3, while its sibling on the surface
+   goes 1.0 → 3.0. See `references/topologies.md`.
+4. Colors are ints 0–255 (all four of r/g/b/a).
+5. Save with **`encoding="utf-8"`** and CRLF line endings
    (`lineterminator='\r\n'`); sanitize control characters out of any label
    text — one bad byte can silently kill all tags.
-5. `translate_x/y/z` are coordinates **in the parent's topology system**, not
+6. `translate_x/y/z` are coordinates **in the parent's topology system**, not
    world units: lon/lat/alt under a Sphere parent, orbital-angle/tube-angle/
    elevation under a Torus parent, Cartesian under None/Plane.
-6. The parent's optional **`topo_scale`** (default **1.0**) says how far one
+7. The parent's optional **`topo_scale`** (default **1.0**) says how far one
    unit of a child's `translate` reaches, on exactly the axes that parent's
    topology reads as a **distance** rather than an angle. Angular axes
    (longitude, latitude, orbital/tube angle) are never scaled, so no value of
@@ -66,7 +80,7 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
    to survive a switch between an angular and a linear topology — without it,
    0…360 on a Cube face is 360 *world units* and children fly out of sight.
    See `references/topologies.md`.
-7. **Aiming a glyph is the topology's job, not `rotate_*`'s.** Under a Sphere
+8. **Aiming a glyph is the topology's job, not `rotate_*`'s.** Under a Sphere
    (2), Point (7), Torus (3), Ztorus (11) or Cube (1) parent the engine already
    orients every child from its own coordinates: it applies a base rotation
    that puts the child's local **+Z** along the outward direction there
@@ -85,16 +99,16 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
    ANTz Heading/Tilt/Roll mode (Z-X-Z). If all rotations are 0, omit the
    column. Per-topology aim table, geometry axes, and the spokes recipe:
    `references/topologies.md`.
-8. Labels: prefer inline `text` (label) and `link` (URL/file for the U key)
+9. Labels: prefer inline `text` (label) and `link` (URL/file for the U key)
    columns — GlyphViz-native and simpler than a tag file. Use a companion
    `gv_tag.csv` only for ANTz/GaiaViz compatibility (`table_id` must be 0
    there). Labels are off by default (T toggles); show-all mode draws at
    most 500 tags per frame. Full rules: `references/tags-and-labels.md`.
-9. Node types: 5 = ordinary glyph; 0 = World (scene settings, never drawn);
-   1 = Camera; 6 = World Grid (children attach explicitly via
-   `parent_id = grid.id`, place by lon/lat); 7 = Link (edge `parent_id` →
-   `child_id`).
-10. A **Link** has no pose — its `translate`/`rotate`/`scale` are ignored and
+10. Node types: 5 = ordinary glyph; 0 = World (scene settings, never drawn);
+    1 = Camera; 6 = World Grid (children attach explicitly via
+    `parent_id = grid.id`, place by lon/lat); 7 = Link (edge `parent_id` →
+    `child_id`).
+11. A **Link** has no pose — its `translate`/`rotate`/`scale` are ignored and
     both endpoints must resolve or it draws nothing. Its `geometry` picks how
     the edge looks: 27 (Line) for bulk graphs, 28 (Prism) for animated flow,
     or **any solid/wire glyph id, which renders that shape stretched from A to
@@ -125,7 +139,8 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 | Line plot, GPS track, time series path | Plot (16) |
 | Heightfield, terrain, FFT | Surface (17) |
 | Branching structure (tree, fern, dendrite) | Point (7) + Link limbs |
-| **Spokes from a hub** — clock face, starburst, wind rose, needles, rays | **Point (7)** (`translate_z` = full reach from the center) or **Sphere (2)** (`translate_z` = height above the surface). Both aim each child outward for you — see rule 7 |
+| **Graph / network** — nodes with no hierarchy, related by edges | **None (0)**, as flat ROOT rows whose `translate_x/y/z` are the world positions a 3-D force layout computed, plus Link rows. See "Laying out a graph" in `references/links-and-edges.md` |
+| **Spokes from a hub** — clock face, starburst, wind rose, needles, rays | **Point (7)** (`translate_z` = full reach from the center) or **Sphere (2)** (`translate_z` = height above the surface). Both aim each child outward for you — see rule 8 |
 | Free manual placement | None (0) |
 | Geo-registered map/globe scene | World Grid node (type 6) as the parent |
 
@@ -134,7 +149,7 @@ center/axis. Full placement math, coordinate meanings per topology, and
 worked examples: `references/topologies.md`.
 
 Pick the topology to match the **shape of the data**, then set the parent's
-`topo_scale` to match the **units you author children in** (rule 6): degrees
+`topo_scale` to match the **units you author children in** (rule 7): degrees
 throughout → 1/180 on the linear-axis topologies, world units → leave 1.0.
 Mixing the two within one scene is fine — `topo_scale` is per-parent.
 
@@ -201,6 +216,13 @@ one beats scripting it blind:
   branching, tree-like hyperglyphs with a live 3-D preview and exports them as
   Glyph Composer templates. Reach for it for trees, ferns, and dendrites.
 - **Hyperglyph Lab** — batch/random generation of composite glyph designs.
+- **Timeline Tower Designer** — a browser tool
+  (`iluvdata.org/glyphviz/twitter_lab/tut_designer.html`) that turns an **X
+  (Twitter) archive** into a finished scene: every post a needle radiating from
+  a vertical time axis, height = when, bearing = time of day, rings on each
+  needle carrying likes, reposts, hashtags and keyword hits. If a user asks for
+  their X archive visualized, send them here rather than writing a generator —
+  it reads the archive in the browser and uploads nothing.
 
 These are GUI tools, not something this skill drives. Use them as a
 recommendation; generate CSV yourself whenever real data is involved. The
@@ -261,8 +283,10 @@ scene. Worked exemplar: `examples/RSS_News/`.
   animation recipes. **Read it before generating any Channels files.**
 - `references/links-and-edges.md` — Link (type 7) rows: the drawing modes
   (line / flow prism / any glyph stretched between the ends), `ratio` as
-  thickness, and recipes for directed graphs, weighted edges, bonds, and tree
-  limbs. **Read it before generating a graph, network, or branching scene.**
+  thickness, recipes for directed graphs, weighted edges, bonds, and tree
+  limbs, **and how to lay a graph out in 3D** — flat root rows carrying world
+  positions, and the inverse-square repulsion law a 2D force layout gets wrong.
+  **Read it before generating a graph, network, or branching scene.**
 - `references/tags-and-labels.md` — inline `text`/`link` vs the companion
   tag file, title encodings, display behavior (incl. the 500-per-frame
   cap), and the U-key link/app-launch rules.
