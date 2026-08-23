@@ -34,6 +34,15 @@ folder inside. Everything the tower needs is `tweets.js`, with
 `account.js`, `profile.js` and `account-timezone.js` used when present to name
 the account and clock it in its own zone.
 
+**Or start with a demo.** X takes a day or two to send an archive, and the one
+it sends is personal. [`demo_archives/`](demo_archives/) holds two public-account
+archives ready to drop on the page — `TUT_demo_CNN.zip` (3,248 posts over five
+weeks: a newsroom firehose with a hard daily rhythm) and `TUT_demo_JLo.zip`
+(3,218 posts over two and a half years, with all four post kinds in quantity).
+They were rebuilt from public v2 API timelines by
+[`v2_to_archive.py`](v2_to_archive.py), which converts any such scrape into
+`tweets.js`; the folder's README states what the v2 API could not supply.
+
 The X archive is **richer than the v2 API timeline** the original notebooks
 read: it carries a repost count per post, which the API did not, so the tower
 has a reposts ring the 2018 version could not draw. It is also complete —

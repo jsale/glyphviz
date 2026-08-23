@@ -75,11 +75,47 @@ The tool needs `tweets.js`. It also uses `account.js`, `profile.js` and
 the tower in the account's own time zone rather than UTC. You can drop
 `tweets.js` on its own if you prefer.
 
+## Try it without waiting
+
+X takes a day or two to send an archive, and the one it sends is yours. These
+two are public-account archives in the same format, ready to drop on the
+designer — unpack either and drop the `data` folder inside it.
+
+[:material-download: Demo archive — @CNN (522 KB)](https://iluvdata.org/glyphviz/zips/TUT_demo_CNN.zip){ .md-button }
+[:material-download: Demo archive — @JLo (482 KB)](https://iluvdata.org/glyphviz/zips/TUT_demo_JLo.zip){ .md-button }
+
+They are a deliberately contrasting pair, and it is worth loading both:
+
+- **@CNN** — 3,248 posts across five weeks of November–December 2021. A
+  newsroom firehose, so the tower is short, extremely dense, and its shape is
+  the *working day*: thinnest around 3am, thickest through the afternoon and
+  evening. Almost every post is an original, which leaves the needle color
+  nearly uniform and puts the whole story in the rings. Try the keywords
+  `covid` and `climate`.
+- **@JLo** — 3,218 posts across two and a half years, April 2019 to December
+  2021. Sparse and long, so the tower's shape is the *calendar* instead, and
+  all four post kinds are present in quantity (1,516 reposts, 1,018 originals,
+  423 quotes, 261 replies) — this is the one that shows what the needle colors
+  are for. Worth rendering as a **helix**, where one turn per year stacks the
+  same week of three different years vertically. Try `love` and `music`.
+
+!!! note "These are rebuilt from the API, not downloaded from X"
+    Both were converted from public v2 API timelines into the archive's own
+    file format. Two things the API could not supply, so the demos cannot
+    either: a **repost's text is truncated** at ~140 characters (so a repost's
+    uppercase and special-character rings measure the truncation — every post
+    either account actually wrote is complete), and **media attachments are
+    absent**. Each zip states this in its own README, and the converter is
+    `twitter_lab/v2_to_archive.py` in the repository.
+
+    Their size is itself a demonstration of the point below: both stop just
+    past 3,200 posts because that is exactly where the API stopped.
+
 !!! note "Why the archive, and not the API"
     The X archive is both complete and richer than what the API returned. The
-    API capped a user timeline at the last 3,200 posts, and did not carry a
-    per-post repost count — which is why the reposts ring exists here and did
-    not in the 2018 original.
+    API capped a user timeline at the last 3,200 posts, and the 2018 original
+    could not read a per-post repost count — which is why the reposts ring
+    exists here and did not then.
 
 ## The three layouts
 

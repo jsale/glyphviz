@@ -87,3 +87,8 @@ examples/Audio_Animation_Example/media/*.wav
 
 # Local zip built for Claude Desktop skill upload; regenerate from the folder
 glyphviz-skill/*.zip
+
+# TUT demo archives: the zips ship (522 KB / 482 KB, and a zip is the form an
+# X archive arrives in anyway); the unpacked 3.4 + 4.2 MB tweets.js stay local.
+# Rebuild either with twitter_lab/v2_to_archive.py — see the folder's README.
+twitter_lab/demo_archives/TUT_demo_*/
