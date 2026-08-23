@@ -38,11 +38,30 @@ with labels hidden and T toggles them; nodes with show_text=1 pin themselves
 on either way), and Global Scale is 1.0 unless you pass --base-scale.
 """
 import argparse
+import os
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
+
+# Force devicePixelRatio 1 for headless rendering, BEFORE Qt is imported —
+# these are read once, when QApplication is constructed.
+#
+# The tag overlay is a QPainter in logical widget coordinates while
+# export_png() grabs a DPR-scaled framebuffer, and on a fractional-DPI display
+# the two disagree: on a 1.25 display a label anchored beside its glyph landed
+# 157 px above it (measured), and long captions went off-screen entirely. The
+# glyphs themselves were always in the right place, which is what made it so
+# misleading — the picture looked authoritative and the labels lied. With DPR
+# pinned to 1 the same label lands 8 px from its glyph, where the app puts it.
+#
+# Safe to do at import: Qt ignores these once a QApplication exists, and
+# nothing in the running application imports this module.
+for _var, _val in (("QT_ENABLE_HIGHDPI_SCALING", "0"),
+                   ("QT_SCALE_FACTOR", "1"),
+                   ("QT_AUTO_SCREEN_SCALE_FACTOR", "0")):
+    os.environ.setdefault(_var, _val)
 
 from PySide6.QtWidgets import QApplication
 
@@ -81,13 +100,16 @@ def _build_viewport(csv_path, base_scale, show_grid, show_axes, show_tags,
     vp.show_grid = show_grid
     vp.show_axes = show_axes
     vp.show_tags = show_tags
-    vp.set_nodes(nodes)   # auto-frames the camera from the scene's bounding box
 
+    # Size first, so set_nodes() auto-frames against the aspect ratio the
+    # image will actually have, then one throwaway grab to create the context.
     vp.resize(max(1, width), max(1, height))
     vp.grabFramebuffer()          # force context creation — see docstring
     media = (Path(media_folder) if media_folder
              else Path(csv_path).resolve().parent / "media")
     textures = vp.load_texture_folder(media) if media.is_dir() else 0
+
+    vp.set_nodes(nodes)   # auto-frames the camera from the scene's bounding box
     return vp, nodes, textures, media
 
 
