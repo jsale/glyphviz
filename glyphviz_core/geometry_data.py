@@ -60,7 +60,31 @@ GEO_STAR           = 26
 # glyphviz_gl/viewport.py.
 GEO_LINE           = 27
 GEO_LINE_PRISM     = 28
-GEO_COUNT          = 29
+# GlyphViz extensions (no ANTz/GaiaViz equivalent): INTERIOR variants of the
+# three shapes that enclose a volume and take a texture. Each renders its
+# INSIDE surface and culls its outside -- the shape is invisible from without
+# and reads correctly from within, which is what a 360deg video sphere, a
+# cylindrical panorama or a video room needs.
+#
+# "Interior" is deliberately NOT "back-face culling turned off". Looking at
+# the inside of an outward-mapped surface is inherently a MIRROR view, so a
+# node that merely stopped culling would play every video backwards (measured:
+# a texture reading "R" comes back as a mirrored glyph). The fix is mirrored
+# geometry/UVs, which live in the compiled display list -- i.e. in the shape,
+# which is why this is a geometry id and not a per-node flag or a node type.
+# Staying single-sided (rather than two-sided) also keeps one fragment per
+# pixel and leaves alpha blending on a translucent node well-defined.
+#
+# The two cylinder ids are one shape with and without its end caps: an open
+# tube for a cylindrical panorama (or a link you fly through), a capped one
+# for a closed room. The Properties panel presents that pair as a "Caps"
+# checkbox which simply swaps the id -- no new column, so the choice travels
+# with the CSV like every other geometry decision.
+GEO_CUBE_INTERIOR          = 29
+GEO_SPHERE_INTERIOR        = 30
+GEO_CYLINDER_INTERIOR      = 31
+GEO_CYLINDER_INTERIOR_OPEN = 32
+GEO_COUNT          = 33
 
 GEO_NAMES = {
     GEO_CUBE_WIRE:     "Cube Wire",
@@ -92,7 +116,38 @@ GEO_NAMES = {
     GEO_STAR:          "Star",
     GEO_LINE:          "Line",
     GEO_LINE_PRISM:    "Prism (Textured)",
+    GEO_CUBE_INTERIOR:          "Cube (Interior)",
+    GEO_SPHERE_INTERIOR:        "Sphere (Interior)",
+    GEO_CYLINDER_INTERIOR:      "Cylinder (Interior)",
+    GEO_CYLINDER_INTERIOR_OPEN: "Cylinder (Interior, Open)",
 }
+
+# Seen from inside, culled from outside — see the block comment above.
+INTERIOR_GEOMETRIES = frozenset({
+    GEO_CUBE_INTERIOR, GEO_SPHERE_INTERIOR,
+    GEO_CYLINDER_INTERIOR, GEO_CYLINDER_INTERIOR_OPEN,
+})
+
+# The interior cylinder's end caps, as a pair of ids rather than a column.
+CYLINDER_INTERIOR_BY_CAPS = {
+    True:  GEO_CYLINDER_INTERIOR,
+    False: GEO_CYLINDER_INTERIOR_OPEN,
+}
+
+
+def has_caps(geometry: int) -> bool:
+    """Whether *geometry* is an interior cylinder that draws its end caps.
+    False for the open variant — and for everything that isn't one, which has
+    no caps to speak of."""
+    return geometry == GEO_CYLINDER_INTERIOR
+
+
+def with_caps(geometry: int, caps: bool) -> int:
+    """*geometry* switched to the capped/open member of its pair. A no-op for
+    any id that isn't an interior cylinder."""
+    if geometry in CYLINDER_INTERIOR_BY_CAPS.values():
+        return CYLINDER_INTERIOR_BY_CAPS[bool(caps)]
+    return geometry
 
 _WIRE_IDS = frozenset({
     GEO_CUBE_WIRE, GEO_SPHERE_WIRE, GEO_CONE_WIRE, GEO_TORUS_WIRE,

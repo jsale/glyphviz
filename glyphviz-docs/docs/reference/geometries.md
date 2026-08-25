@@ -1,9 +1,8 @@
 # Geometries
 
-The complete, exact list, read from `glyphviz_core/geometry_data.py:10-76` —
-the single source shared by the GL renderer (`glyphviz_gl/geometry.py`) and
-the Properties Panel's Geometry dropdown (`GEO_NAMES`, populated at
-`main_window.py:528-531, 767-770`).
+The complete, exact list, read from `glyphviz_core/geometry_data.py` — the
+single source shared by the GL renderer (`glyphviz_gl/geometry.py`) and the
+Properties Panel's Geometry dropdown, which builds itself from `GEO_NAMES`.
 
 ## What geometry controls
 
@@ -50,8 +49,55 @@ extensions with no ANTz/GaiaViz equivalent.
 | 26 | Star | `GEO_STAR` | **GlyphViz extension** — same idea as Circle |
 | 27 | Line | `GEO_LINE` | **GlyphViz extension, Link nodes only** — the classic thin connector, and a Link's default. Width is `ratio × 20` px |
 | 28 | Prism (Textured) | `GEO_LINE_PRISM` | **GlyphViz extension, Link nodes only** — a textured 4-sided tube between the two ends, scrollable via `rotate_rate_z` to show directed flow. `ratio` is its world-space half-width |
+| 29 | Cube (Interior) | `GEO_CUBE_INTERIOR` | **GlyphViz extension** — see [Interior geometries](#interior-geometries-seen-from-within) below |
+| 30 | Sphere (Interior) | `GEO_SPHERE_INTERIOR` | **GlyphViz extension** — a 360° / equirectangular image or video sphere |
+| 31 | Cylinder (Interior) | `GEO_CYLINDER_INTERIOR` | **GlyphViz extension** — closed at both ends |
+| 32 | Cylinder (Interior, Open) | `GEO_CYLINDER_INTERIOR_OPEN` | **GlyphViz extension** — an open tube; the same shape as 31 without its end caps |
 
-`GEO_COUNT = 29` (`geometry_data.py`).
+`GEO_COUNT = 33` (`geometry_data.py`).
+
+## Interior geometries (seen from within)
+
+Ids 29–32 are the three shapes that enclose a volume, turned outside in: each
+draws its **inside** surface, so you can fly the camera into it and see the
+texture — a 360° video sphere, a cylindrical panorama, a video room. Set one
+the way you set any other shape: the Geometry dropdown, the `O` key, the
+`geometry` column of the CSV, or a Channels track.
+
+An interior shape is **not** "back-face culling turned off", and the
+difference is visible. Looking at the inside of an ordinary outward-mapped
+surface is inherently a *mirror* view — a video would play backwards, text
+and faces reversed. These shapes are built mirrored so that the image reads
+**forwards** from within. They also stay single-sided: one fragment per
+pixel, and alpha blending on a translucent node behaves exactly as it does
+everywhere else.
+
+Practical notes:
+
+- **From outside** you see the *far* inner wall, like looking into a bowl —
+  the near surface is culled away. The node stays visible in the scene and
+  stays clickable; it just reads as a hollow shell until you go in.
+- **They draw unlit**, so the image comes through at full brightness with no
+  shading over it — exactly what the World Grid's globe does with a map, and
+  what you want from a video. The node's own colour still tints an untextured
+  interior shape; it simply isn't shaded.
+- **End caps** are a property of the interior cylinder, and the two states are
+  the two ids above. The Properties panel shows an **End caps** checkbox
+  whenever a node is on one of them, and ticking it swaps the id — there is no
+  separate field, so the choice travels with the CSV like any other geometry.
+  Off gives an open tube (a panorama you look along, or a
+  [link](#geometry-on-a-link-node) you fly through); on closes both ends and
+  maps the texture over them too.
+- **The interior cube's six faces** each carry the whole texture, upright and
+  unmirrored for a viewer at the centre facing +Y. It is built face by face
+  rather than by reflecting the ordinary cube, because a single reflection
+  would leave the two faces perpendicular to the mirror axis reading
+  backwards.
+- **Scale** works as usual, so an interior sphere at `scale 57.3` with Global
+  Scale 1.0 has a radius of 57.3 world units — fly inside and look around.
+- These are ordinary geometries, so a **Link** carrying one renders it
+  stretched between the two ends: an interior open cylinder on a link is a
+  tube you can fly down.
 
 ## Geometry on a Link node
 

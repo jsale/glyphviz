@@ -53,6 +53,7 @@ from glyphviz_core.selection_export import build_selection
 from glyphviz_core.geometry_data import (
     GEO_NAMES, GEO_COUNT, GEO_GRID, GEO_GRID_WIRE, GEO_MESH, GEO_OCTA,
     GEO_SPHERE, GEO_SPHERE_WIRE, GEO_LINE, GEO_LINE_PRISM, GEO_POINT,
+    CYLINDER_INTERIOR_BY_CAPS, has_caps, with_caps,
     _WIRE_IDS,
 )
 from glyphviz_core.node import (
@@ -1606,6 +1607,21 @@ class MainWindow(QMainWindow):
             self._insp_geo.addItem(GEO_NAMES[geo_id], geo_id)
         self._insp_geo.currentIndexChanged.connect(self._on_insp_geo_changed)
 
+        # Caps on/off for the interior cylinder. Not a node field: the two
+        # states ARE two geometry ids (geometry_data.CYLINDER_INTERIOR_BY_CAPS)
+        # and this checkbox just swaps between them, so the choice saves,
+        # loads, cycles on O and animates through Channels like any other
+        # geometry. Meaningless on every other shape, hence disabled there.
+        self._insp_caps = QCheckBox("End caps")
+        self._insp_caps.setToolTip(
+            "Close the ends of a Cylinder (Interior).\n"
+            "Off: an open tube — a cylindrical panorama you look along, or a\n"
+            "link you fly through.\n"
+            "On: a closed room, the texture also covering both ends.\n"
+            "This is stored as the geometry itself, not a separate field."
+        )
+        self._insp_caps.toggled.connect(self._on_insp_caps_toggled)
+
         self._insp_topo = QComboBox()
         for topo_id in range(TOPO_COUNT):
             self._insp_topo.addItem(TOPO_NAMES.get(topo_id, f"Topology {topo_id}"), topo_id)
@@ -1758,6 +1774,7 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Scale Rate:", scale_rate_widget)
         insp_layout.addRow("", self._insp_scale_lock)
         insp_layout.addRow("Geometry:", self._insp_geo)
+        insp_layout.addRow("",          self._insp_caps)
         insp_layout.addRow("Topology:", self._insp_topo)
         insp_layout.addRow("Topo Scale:", topo_scale_widget)
         insp_layout.addRow("Facet:",    self._insp_subspace)
@@ -3334,6 +3351,7 @@ class MainWindow(QMainWindow):
         self._insp_geo.blockSignals(True)
         self._insp_geo.setCurrentIndex(max(idx, 0))
         self._insp_geo.blockSignals(False)
+        self._refresh_caps_row(node.geometry)
 
         idx = self._insp_topo.findData(node.topo)
         self._insp_topo.blockSignals(True)
@@ -3413,6 +3431,7 @@ class MainWindow(QMainWindow):
         self._insp_geo.blockSignals(True)
         self._insp_geo.setCurrentIndex(max(idx, 0))
         self._insp_geo.blockSignals(False)
+        self._refresh_caps_row(primary.geometry)
 
         idx = self._insp_topo.findData(primary.topo)
         self._insp_topo.blockSignals(True)
@@ -3546,6 +3565,34 @@ class MainWindow(QMainWindow):
         self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._update_sel_values()
         self._refresh_grid_group()   # a grid's geometry decides flat vs globe
+        self._refresh_caps_row(geo)  # ...and an interior cylinder's, capped vs open
+        self._viewport.scene_invalidate()
+
+    def _refresh_caps_row(self, geometry: int | None):
+        """Point the End caps checkbox at *geometry*, disabling it on every
+        shape that has no caps to argue about."""
+        applies = geometry in CYLINDER_INTERIOR_BY_CAPS.values()
+        self._insp_caps.setEnabled(applies)
+        self._insp_caps.blockSignals(True)
+        self._insp_caps.setChecked(applies and has_caps(geometry))
+        self._insp_caps.blockSignals(False)
+
+    def _on_insp_caps_toggled(self, checked: bool):
+        """Swap each selected interior cylinder between its capped and open
+        id. Nodes on any other geometry are left alone — with_caps() is a
+        no-op for them — so this can't quietly reshape a mixed selection."""
+        targets = [n for n in self._selected_nodes
+                   if n.geometry in CYLINDER_INTERIOR_BY_CAPS.values()]
+        if not targets:
+            return
+        for node in targets:
+            node.geometry = with_caps(node.geometry, checked)
+        self._table.refresh_nodes(n.id for n in targets)
+        idx = self._geo_combo_index(self._insp_geo, targets[0].geometry,
+                                    targets[0].mesh_id)
+        self._insp_geo.blockSignals(True)
+        self._insp_geo.setCurrentIndex(max(idx, 0))
+        self._insp_geo.blockSignals(False)
         self._viewport.scene_invalidate()
 
     def _on_scale_lock_toggled(self, checked: bool):

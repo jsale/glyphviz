@@ -18,6 +18,8 @@ from glyphviz_core.geometry_data import (
     GEO_ICOSA, GEO_PIN, GEO_PIN_WIRE, GEO_CYLINDER_WIRE, GEO_CYLINDER,
     GEO_GRID_WIRE, GEO_GRID, GEO_POINT, GEO_MESH, GEO_CIRCLE, GEO_CROSS,
     GEO_STAR, GEO_COUNT, GEO_NAMES,
+    GEO_CUBE_INTERIOR, GEO_SPHERE_INTERIOR,
+    GEO_CYLINDER_INTERIOR, GEO_CYLINDER_INTERIOR_OPEN,
     WIRE_TO_SOLID, TORUS_DEFAULT_RATIO, torus_radii, CYLINDER_RADIUS_RATIO,
     CYLINDER_HEIGHT_RATIO, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR,
     GRID_HALF_EXTENT, PIN_HEIGHT, PIN_RADIUS,
@@ -285,6 +287,119 @@ def _draw_cube(solid: bool, textured: bool = False):
         glEnable(GL_LIGHTING)
 
 
+# ---------------------------------------------------------------------------
+# Interior variants — the shape seen from WITHIN, culled from without
+# (geometry_data.INTERIOR_GEOMETRIES)
+# ---------------------------------------------------------------------------
+
+def _unlit(draw):
+    """Run *draw* with lighting off, restoring whatever was there before.
+
+    An interior surface exists to carry an image, and it must carry it at
+    full brightness — the same call the World Grid's globe makes, and for the
+    same reason (see viewport._draw_world_grid: "drawn unlit so the map reads
+    at full brightness with no day/night shading").
+
+    Lighting it instead is not an option worth having here. A reflection
+    carries normals through the inverse transpose, which for diag(-1,1,1)
+    maps a sphere's outward normal to the outward normal at the mirrored
+    point — still OUTWARD, i.e. facing away from a viewer inside. Measured:
+    a white interior sphere came back at 0.505 grey, exactly the ambient
+    terms (0.2 global + 0.3 GL_LIGHT0) with no diffuse contribution at all,
+    identical whichever way the camera faced. Flipping the normals instead
+    would light it, but GL_LIGHT0's position is set with an identity
+    modelview, making it an eye-space headlight — so a video would carry a
+    bright patch that slid around as the viewer turned.
+
+    glPushAttrib rather than a glIsEnabled/restore pair (the GEO_POINT
+    dance below) because these builders are compiled into display lists,
+    where a query would run once at COMPILE time and bake in the wrong
+    answer. It also has to be a save/restore rather than a bare
+    glEnable(GL_LIGHTING) at the end: the colour-ID pick pass turns lighting
+    off for its whole render and relies on it staying off, and interior ids
+    are not covered by the wire→solid pick substitution, so they run there
+    too — re-enabling would bleed lit shading into every node picked after
+    them and corrupt their ID colours.
+    """
+    glPushAttrib(GL_LIGHTING_BIT)
+    glDisable(GL_LIGHTING)
+    draw()
+    glPopAttrib()
+
+
+def _mirrored(draw):
+    """Run *draw* reflected through the plane x = 0.
+
+    That one reflection does two of the three things an interior surface
+    needs, and does them to whatever the existing builder emits — so an
+    interior variant is the same shape, tessellation and UV layout as its
+    exterior twin rather than a second implementation that has to be kept in
+    step with it:
+
+      * the composite matrix's determinant goes negative, so every face's
+        winding flips in window space and paintGL's GL_CULL_FACE(GL_BACK)
+        keeps the INSIDE surface and discards the outside;
+      * the image is mirrored in the surface's angular direction, cancelling
+        the mirroring inherent in viewing any surface from behind — so text
+        in a texture or video reads FORWARDS from inside. Verified by
+        rendering a chiral texture: unmirrored geometry shows it reversed.
+
+    The third — brightness — is _unlit's job; normals survive the reflection
+    still pointing outward, which is why.
+
+    Exact only for shapes with no face perpendicular to x — which covers the
+    sphere and the cylinder, both surfaces of revolution about z. A cube's
+    ±x faces would come back mirrored, so it gets _draw_cube_interior below.
+    """
+    glPushMatrix()
+    glScalef(-1.0, 1.0, 1.0)
+    draw()
+    glPopMatrix()
+
+
+# Each interior cube face as (outward axis, which way is UP on it). The four
+# walls stand upright (+z up). Floor and ceiling have no intrinsic up, so they
+# take OPPOSITE y — and that is not a typo. An orbit camera looking down has
+# screen-up pointing away from its azimuth and one looking up has it pointing
+# along; giving both faces the same y would leave one of the two 180° round
+# from the other (measured). As set here, a viewer at the centre facing +y
+# reads the wall ahead, the floor and the ceiling all the same way up.
+_CUBE_INTERIOR_FACES = (
+    (( 1.0,  0.0,  0.0), (0.0,  0.0, 1.0)),
+    ((-1.0,  0.0,  0.0), (0.0,  0.0, 1.0)),
+    (( 0.0,  1.0,  0.0), (0.0,  0.0, 1.0)),
+    (( 0.0, -1.0,  0.0), (0.0,  0.0, 1.0)),
+    (( 0.0,  0.0,  1.0), (0.0,  1.0, 0.0)),   # ceiling, looked up at
+    (( 0.0,  0.0, -1.0), (0.0, -1.0, 0.0)),   # floor, looked down at
+)
+
+
+def _draw_cube_interior(textured: bool = False):
+    """The cube's six faces turned inward, each mapping the full texture
+    upright and unmirrored as seen from the centre.
+
+    Built face by face rather than by _mirrored(_draw_cube): a single
+    reflection cannot un-mirror all six faces at once — the two perpendicular
+    to the mirror axis swap places without their own UVs turning over, and
+    would read backwards. Here each face gets a screen-space basis for a
+    viewer at the origin looking at it (right = axis x up), which lays u to
+    the viewer's right and v upward and, being right-handed, winds the quad
+    CCW from inside for free."""
+    glBegin(GL_QUADS)
+    for axis, up in _CUBE_INTERIOR_FACES:
+        right = _cross(axis, up)
+        # Faces point inward: the viewer is on the other side of them.
+        glNormal3f(-axis[0], -axis[1], -axis[2])
+        for u, v in _CUBE_UVS:
+            # u,v in {0,1} → corner offsets in {-1,+1} along right/up.
+            su, sv = 2.0 * u - 1.0, 2.0 * v - 1.0
+            if textured:
+                glTexCoord2f(u, v)
+            glVertex3f(*[(axis[k] + su * right[k] + sv * up[k]) * _c
+                         for k in range(3)])
+    glEnd()
+
+
 _TORUS_DEFAULT_MAJOR, _TORUS_DEFAULT_MINOR = torus_radii(TORUS_DEFAULT_RATIO)
 
 
@@ -340,14 +455,20 @@ def _new_quadric(wire: bool, textured: bool = False):
     return q
 
 
-def _draw_cylinder(solid: bool, r=CYLINDER_RADIUS_RATIO, h=CYLINDER_HEIGHT_RATIO, slices=16, textured: bool = False):
+def _draw_cylinder(solid: bool, r=CYLINDER_RADIUS_RATIO, h=CYLINDER_HEIGHT_RATIO, slices=16, textured: bool = False,
+                   caps: bool = True):
+    """The tube, plus (unless *caps* is False) a disk closing each end.
+
+    Capless is only meaningful on the interior variant — from outside, an
+    open tube just shows you its far inner wall through the hole — so
+    everything else leaves the default alone."""
     q = _new_quadric(not solid, textured=textured and solid)
     if not solid:
         glDisable(GL_LIGHTING)
     glPushMatrix()
     glTranslatef(0.0, 0.0, -h/2.0)
     gluCylinder(q, r, r, h, slices, 1)
-    if solid:
+    if solid and caps:
         glPushMatrix()
         glRotatef(180.0, 1.0, 0.0, 0.0)
         gluDisk(q, 0.0, r, slices, 1)
@@ -660,6 +781,13 @@ class GeoRenderer:
             GEO_CIRCLE:        lambda: _draw_circle(),
             GEO_CROSS:         lambda: _draw_cross(),
             GEO_STAR:          lambda: _draw_star(),
+            GEO_CUBE_INTERIOR:          lambda: _unlit(_draw_cube_interior),
+            GEO_SPHERE_INTERIOR:        lambda: _unlit(
+                lambda: _mirrored(lambda: _draw_sphere(True))),
+            GEO_CYLINDER_INTERIOR:      lambda: _unlit(
+                lambda: _mirrored(lambda: _draw_cylinder(True))),
+            GEO_CYLINDER_INTERIOR_OPEN: lambda: _unlit(
+                lambda: _mirrored(lambda: _draw_cylinder(True, caps=False))),
         }
 
         # Textured variants are also compiled into display lists, same as the
@@ -683,6 +811,15 @@ class GeoRenderer:
             GEO_CIRCLE:   lambda: _draw_circle(textured=True),
             GEO_CROSS:    lambda: _draw_cross(textured=True),
             GEO_STAR:     lambda: _draw_star(textured=True),
+            GEO_CUBE_INTERIOR:          lambda: _unlit(
+                lambda: _draw_cube_interior(textured=True)),
+            GEO_SPHERE_INTERIOR:        lambda: _unlit(
+                lambda: _mirrored(lambda: _draw_sphere(True, textured=True))),
+            GEO_CYLINDER_INTERIOR:      lambda: _unlit(
+                lambda: _mirrored(lambda: _draw_cylinder(True, textured=True))),
+            GEO_CYLINDER_INTERIOR_OPEN: lambda: _unlit(
+                lambda: _mirrored(
+                    lambda: _draw_cylinder(True, textured=True, caps=False))),
         }
 
         for geo_id in range(GEO_COUNT):

@@ -212,7 +212,20 @@ center/axis instead of on the rendered surface. Full placement math:
 | 8/9 | Dodecahedron wire/solid | 23 | Mesh (imported; GlyphViz-only, needs `mesh_id`) |
 | 10/11 | Octahedron wire/solid | 24/25/26 | Circle / Cross / Star flat markers (GlyphViz-only) |
 | 12/13 | Tetrahedron wire/solid | 27/28 | Line / Textured Prism (Link nodes only) |
-| 14/15 | Icosahedron wire/solid | | |
+| 14/15 | Icosahedron wire/solid | 29/30 | Cube / Sphere **(Interior)** (GlyphViz-only) |
+| | | 31/32 | Cylinder (Interior) capped / open (GlyphViz-only) |
+
+**Interior geometries (29–32)** draw the shape's *inside* surface, so a
+texture or video can be viewed from within — a 360° sphere, a cylindrical
+panorama, a video room. They are built mirrored, so the image reads
+**forwards** from inside rather than reversed the way an ordinary shape's
+interior would; they draw **unlit**, so the image reads at full brightness
+with no shading over it; they stay single-sided (culling on, alpha
+unaffected); and from outside you see the far inner wall, like looking into a
+bowl. Ids 31 and
+32 are one cylinder with and without its end caps — capless is the one for a
+panorama, or for a link you fly down. Scale as usual: an interior sphere at
+`scale 57.3` (Global Scale 1.0) has a 57.3-unit radius.
 
 ### Geometry on a Link (type 7)
 
