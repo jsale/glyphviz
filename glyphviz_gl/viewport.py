@@ -30,7 +30,9 @@ from glyphviz_core.topology import (
 )
 from glyphviz_core.mesh_loader import load_mesh_file as _load_mesh_data
 
-from glyphviz_core.geometry_data import GEO_TORUS, GEO_TORUS_WIRE, GEO_LINE_PRISM
+from glyphviz_core.geometry_data import (
+    GEO_LINE_PRISM, RATIO_SHAPED_GEOMETRIES, _WIRE_IDS,
+)
 from glyphviz_core.link_geometry import (
     is_glyph_link, link_gl_matrix, local_z_span,
 )
@@ -1582,15 +1584,15 @@ class Viewport(QOpenGLWidget):
             if node.texture_id and not self._tex_mgr.get_gl_name(node.texture_id):
                 if self._video_mgr.get_gl_name(node.texture_id):
                     self._scene_dl_video_ids.add(node.texture_id)
-            # Pre-warm the per-ratio torus lists: GeoRenderer.draw compiles
-            # them lazily, and glNewList must never nest inside the bake
-            # below. (The immediate pass usually warmed them already, but a
-            # frustum-culled off-screen torus wouldn't be.)
-            if node.geometry in (GEO_TORUS, GEO_TORUS_WIRE):
-                textured = (node.geometry == GEO_TORUS and node.texture_id
+            # Pre-warm the per-ratio lists (torus and flat ring): GeoRenderer
+            # .draw compiles them lazily, and glNewList must never nest inside
+            # the bake below. (The immediate pass usually warmed them already,
+            # but a frustum-culled off-screen one wouldn't be.)
+            if node.geometry in RATIO_SHAPED_GEOMETRIES:
+                textured = (node.geometry not in _WIRE_IDS and node.texture_id
                             and bool(self._tex_mgr.get_gl_name(node.texture_id)
                                      or self._video_mgr.get_gl_name(node.texture_id)))
-                self._geo.ensure_torus_list(node.geometry, bool(textured), node.ratio)
+                self._geo.ensure_ratio_list(node.geometry, bool(textured), node.ratio)
         glNewList(self._scene_dl, GL_COMPILE)
         self._draw_nodes_immediate(planes=None, skip_ids=skip_ids)
         glEndList()

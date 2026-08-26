@@ -84,7 +84,39 @@ GEO_CUBE_INTERIOR          = 29
 GEO_SPHERE_INTERIOR        = 30
 GEO_CYLINDER_INTERIOR      = 31
 GEO_CYLINDER_INTERIOR_OPEN = 32
-GEO_COUNT          = 33
+# GlyphViz extensions (no ANTz/GaiaViz equivalent): a torus whose cross-section
+# is a RECTANGLE rather than a circle -- a flat machined band, the kind of ring
+# an armillary sphere, an astrolabe or a graduated dial is built from. The
+# rounded torus reads as soft tubing and its specular highlight slides around
+# the tube; a flat ring has four real faces, each with a constant normal and a
+# crisp edge, which is what makes it read as an instrument and what makes a
+# texture (degree markings, a zodiac strip, a ruler scale) lie flat and legible
+# on it.
+#
+# It takes its two proportions from fields that already exist, so there is no
+# new column and every existing control works on it unchanged:
+#
+#   * `ratio` is the band's RADIAL width -- exactly the meaning it already has
+#     on a torus, where the tube spans radius (1 - 2*ratio) .. 1 and z +/-ratio
+#     (see torus_radii below). The default cross-section is therefore SQUARE,
+#     and a Torus <-> Flat Ring swap changes only the look: the two shapes have
+#     identical extents and TOPO_TORUS places children on both identically.
+#   * `scale_z` is the band's HEIGHT, as it already is for a torus -- it just
+#     stretches a rectangle now instead of an ellipse.
+#
+# That covers both of the forms a ring instrument is built from: a wide, thin
+# washer (large ratio, small scale_z -- a graduated dial read face-on) and a
+# tall, thin hoop (small ratio, large scale_z -- a meridian band whose broad
+# face points outward).
+#
+# Like the torus, the SHAPE depends on `ratio`, so these ids cannot be baked
+# into one fixed display list at setup() time; they join the torus in the lazy
+# per-ratio cache (GeoRenderer.ensure_ratio_list, RATIO_SHAPED_GEOMETRIES).
+# Height staying in glScalef rather than in the compiled geometry is what keeps
+# that cache one-dimensional and bounded.
+GEO_RING           = 33
+GEO_RING_WIRE      = 34
+GEO_COUNT          = 35
 
 GEO_NAMES = {
     GEO_CUBE_WIRE:     "Cube Wire",
@@ -120,6 +152,8 @@ GEO_NAMES = {
     GEO_SPHERE_INTERIOR:        "Sphere (Interior)",
     GEO_CYLINDER_INTERIOR:      "Cylinder (Interior)",
     GEO_CYLINDER_INTERIOR_OPEN: "Cylinder (Interior, Open)",
+    GEO_RING:          "Flat Ring",
+    GEO_RING_WIRE:     "Flat Ring Wire",
 }
 
 # Seen from inside, culled from outside — see the block comment above.
@@ -152,7 +186,7 @@ def with_caps(geometry: int, caps: bool) -> int:
 _WIRE_IDS = frozenset({
     GEO_CUBE_WIRE, GEO_SPHERE_WIRE, GEO_CONE_WIRE, GEO_TORUS_WIRE,
     GEO_DODECA_WIRE, GEO_OCTA_WIRE, GEO_TETRA_WIRE, GEO_ICOSA_WIRE,
-    GEO_PIN_WIRE, GEO_CYLINDER_WIRE, GEO_GRID_WIRE,
+    GEO_PIN_WIRE, GEO_CYLINDER_WIRE, GEO_GRID_WIRE, GEO_RING_WIRE,
 })
 
 # Maps each wireframe geometry to its solid equivalent for FBO picking:
@@ -170,6 +204,7 @@ WIRE_TO_SOLID = {
     GEO_PIN_WIRE:      GEO_PIN,
     GEO_CYLINDER_WIRE: GEO_CYLINDER,
     GEO_GRID_WIRE:     GEO_GRID,
+    GEO_RING_WIRE:     GEO_RING,
 }
 
 
@@ -183,11 +218,42 @@ WIRE_TO_SOLID = {
 # on the rendered surface.
 TORUS_DEFAULT_RATIO = 0.14  # half of the prior fixed minor-radius proportion (0.28)
 
+# The geometries whose SHAPE — not merely their size — is set by the node's own
+# `ratio`, and which therefore cannot be compiled into a single fixed display
+# list at setup() time. They go through GeoRenderer.ensure_ratio_list instead,
+# which caches one list per distinct (quantized) ratio actually seen. Anything
+# that pre-warms or dispatches those lists reads this set rather than naming
+# the ids, so a future ratio-shaped glyph joins by editing one line here.
+RATIO_SHAPED_GEOMETRIES = frozenset({
+    GEO_TORUS, GEO_TORUS_WIRE, GEO_RING, GEO_RING_WIRE,
+})
+
 
 def torus_radii(ratio: float, size: float = 1.0) -> tuple[float, float]:
     """Major/minor radii of a torus glyph for a given `ratio` and overall size."""
     minor = ratio * size
     return size - minor, minor
+
+
+def ring_dims(ratio: float, size: float = 1.0) -> tuple[float, float, float]:
+    """(outer radius, inner radius, half-height) of a Flat Ring glyph.
+
+    Deliberately the torus's own extents, restated as a box rather than a
+    tube: `torus_radii` puts the tube between radius `size - 2*ratio*size` and
+    `size`, spanning z +/- `ratio*size`, and that is exactly the rectangle
+    swept here. So Torus <-> Flat Ring is a pure change of look — same
+    silhouette, same bounding extents, and `_torus_offset` places children of a
+    TOPO_TORUS parent identically whichever of the two the parent wears.
+
+    The half-height is the glyph's LOCAL one; a node's `scale_z` multiplies it
+    at draw time, which is how the band's height is set independently of its
+    radial width (scale_z == scale_x gives the square cross-section).
+
+    A `ratio` at or past 0.5 closes the hole; the inner radius clamps at 0 and
+    the ring becomes a solid wheel rather than inverting.
+    """
+    major, minor = torus_radii(ratio, size)
+    return size, max(0.0, major - minor), minor
 
 
 # Cylinder/rod proportions relative to the unit "size" radius — exposed so

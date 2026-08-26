@@ -20,6 +20,7 @@ from glyphviz_core.geometry_data import (
     GEO_STAR, GEO_COUNT, GEO_NAMES,
     GEO_CUBE_INTERIOR, GEO_SPHERE_INTERIOR,
     GEO_CYLINDER_INTERIOR, GEO_CYLINDER_INTERIOR_OPEN,
+    GEO_RING, GEO_RING_WIRE, RATIO_SHAPED_GEOMETRIES, ring_dims,
     WIRE_TO_SOLID, TORUS_DEFAULT_RATIO, torus_radii, CYLINDER_RADIUS_RATIO,
     CYLINDER_HEIGHT_RATIO, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR,
     GRID_HALF_EXTENT, PIN_HEIGHT, PIN_RADIUS,
@@ -29,7 +30,7 @@ from glyphviz_core.mesh_loader import MeshData
 _WIRE_IDS = frozenset({
     GEO_CUBE_WIRE, GEO_SPHERE_WIRE, GEO_CONE_WIRE, GEO_TORUS_WIRE,
     GEO_DODECA_WIRE, GEO_OCTA_WIRE, GEO_TETRA_WIRE, GEO_ICOSA_WIRE,
-    GEO_PIN_WIRE, GEO_CYLINDER_WIRE, GEO_GRID_WIRE,
+    GEO_PIN_WIRE, GEO_CYLINDER_WIRE, GEO_GRID_WIRE, GEO_RING_WIRE,
 })
 
 
@@ -445,6 +446,108 @@ def _draw_torus(solid: bool, r_major=_TORUS_DEFAULT_MAJOR, r_minor=_TORUS_DEFAUL
         glEnd()
 
 
+def _draw_ring(solid: bool, ratio: float = TORUS_DEFAULT_RATIO, rings=48,
+               rungs=12, textured: bool = False):
+    """A torus with a RECTANGULAR cross-section — a flat machined band, the
+    ring an armillary sphere or a graduated dial is built from.
+
+    Four faces, each with its own constant normal and duplicated corner
+    vertices, so the edges stay crisp instead of shading smoothly round the way
+    the torus's tube does. `ratio` is the radial width via `ring_dims` (the
+    torus's own extents, restated as a box); the local half-height comes from
+    the same number, so the default cross-section is square and the node's
+    `scale_z` is what makes the band tall or thin.
+
+    Texture rule — the reason this shape exists: **every face carries a full
+    0..1 UV span of its own**, with u running around the ring and v across the
+    band, rather than v walking once around the cross-section perimeter the way
+    _draw_torus's does. So a strip of degree markings appears once, undistorted,
+    on the outer wall AND once on the top face, and you choose which one the
+    viewer reads by choosing the aspect (wide+thin = a dial read face-on;
+    narrow+tall = a band read from outside). A perimeter-walking v would smear
+    one image across all four faces and break it at every corner.
+
+    Each face's u runs in the direction that reads FORWARDS from that face's
+    natural viewing side — decreasing angle on the inner wall (seen from within
+    the hole) and on the underside, increasing elsewhere. Equivalently: on all
+    four faces (du x dv) points along the face normal, so no face is mirrored.
+    tests/test_ring_geometry.py pins exactly that.
+    """
+    tau = 2 * math.pi
+    r_out, r_in, half_h = ring_dims(ratio)
+    has_hole = r_in > 1e-6
+
+    if not solid:
+        glDisable(GL_LIGHTING)
+        for r, z in ((r_out, half_h), (r_out, -half_h),
+                     (r_in, half_h), (r_in, -half_h)):
+            if r <= 1e-6:
+                continue
+            glBegin(GL_LINE_LOOP)
+            for i in range(rings):
+                th = tau * i / rings
+                glVertex3f(r * math.cos(th), r * math.sin(th), z)
+            glEnd()
+        for j in range(rungs):          # the cross-section, drawn as a rung
+            th = tau * j / rungs
+            ct, st = math.cos(th), math.sin(th)
+            glBegin(GL_LINE_LOOP)
+            for r, z in ((r_in, -half_h), (r_out, -half_h),
+                         (r_out, half_h), (r_in, half_h)):
+                glVertex3f(r * ct, r * st, z)
+            glEnd()
+        glEnable(GL_LIGHTING)
+        return
+
+    def tex(u, v):
+        if textured:
+            glTexCoord2f(u, v)
+
+    # Outer wall — normals point away from the axis, v runs bottom to top.
+    glBegin(GL_QUAD_STRIP)
+    for i in range(rings + 1):
+        th = tau * i / rings
+        ct, st = math.cos(th), math.sin(th)
+        u = i / rings
+        glNormal3f(ct, st, 0.0)
+        tex(u, 1.0)
+        glVertex3f(r_out * ct, r_out * st, half_h)
+        tex(u, 0.0)
+        glVertex3f(r_out * ct, r_out * st, -half_h)
+    glEnd()
+
+    # Inner wall — normals point at the axis, so it is what you see across the
+    # hole from outside and what surrounds you standing inside a large ring.
+    if has_hole:
+        glBegin(GL_QUAD_STRIP)
+        for i in range(rings + 1):
+            th = tau * i / rings
+            ct, st = math.cos(th), math.sin(th)
+            u = 1.0 - i / rings
+            glNormal3f(-ct, -st, 0.0)
+            tex(u, 0.0)
+            glVertex3f(r_in * ct, r_in * st, -half_h)
+            tex(u, 1.0)
+            glVertex3f(r_in * ct, r_in * st, half_h)
+        glEnd()
+
+    # Top and bottom annulus faces — v = 0 at the outer rim on both.
+    for sign in (1.0, -1.0):
+        glNormal3f(0.0, 0.0, sign)
+        glBegin(GL_QUAD_STRIP)
+        for i in range(rings + 1):
+            th = tau * i / rings
+            ct, st = math.cos(th), math.sin(th)
+            u = i / rings if sign > 0 else 1.0 - i / rings
+            near_r, near_v = (r_in, 1.0) if sign > 0 else (r_out, 0.0)
+            far_r, far_v = (r_out, 0.0) if sign > 0 else (r_in, 1.0)
+            tex(u, near_v)
+            glVertex3f(near_r * ct, near_r * st, sign * half_h)
+            tex(u, far_v)
+            glVertex3f(far_r * ct, far_r * st, sign * half_h)
+        glEnd()
+
+
 def _new_quadric(wire: bool, textured: bool = False):
     q = gluNewQuadric()
     gluQuadricNormals(q, GLU_SMOOTH)
@@ -747,7 +850,7 @@ class GeoRenderer:
     def __init__(self):
         self._lists: dict[int, int] = {}
         self._tex_lists: dict[int, int] = {}
-        self._torus_lists: dict[tuple, int] = {}   # (geo_id, textured, rounded ratio) -> display list
+        self._ratio_lists: dict[tuple, int] = {}   # (geo_id, textured, rounded ratio) -> display list
         self._mesh_lists: dict[int, int] = {}   # mesh_id -> display list
         self._ready = False
 
@@ -827,10 +930,11 @@ class GeoRenderer:
                 continue
             fn = _DISPATCH.get(geo_id)
             if fn is None:
-                # GEO_TORUS/GEO_TORUS_WIRE are deliberately absent: their
-                # shape (not just size) depends on each node's own `ratio`,
-                # so they're compiled lazily per distinct ratio in draw()
-                # instead of baked into one fixed-shape list here.
+                # RATIO_SHAPED_GEOMETRIES (the torus and the flat ring, wire
+                # and solid) are deliberately absent: their shape (not just
+                # size) depends on each node's own `ratio`, so they're compiled
+                # lazily per distinct ratio in draw() instead of baked into one
+                # fixed-shape list here.
                 continue
             dl = glGenLists(1)
             glNewList(dl, GL_COMPILE)
@@ -873,13 +977,18 @@ class GeoRenderer:
         glEndList()
         self._mesh_lists[mesh_id] = dl
 
-    def ensure_torus_list(self, geo_id: int, textured: bool, ratio: float) -> int:
-        """Return (compiling on first use) the display list for a torus with
-        this node's `ratio`. Each node may set its own torus ratio
-        (major/minor radius proportions), so — unlike the other glyphs — its
-        shape can't be baked into one fixed-shape list at setup() time;
-        instead one list is cached per distinct (quantized) ratio actually
-        seen, and reused by every node/frame sharing that ratio.
+    def ensure_ratio_list(self, geo_id: int, textured: bool, ratio: float) -> int:
+        """Return (compiling on first use) the display list for one of the
+        RATIO_SHAPED_GEOMETRIES — a torus or a flat ring — at this node's
+        `ratio`. Each node may set its own (major/minor radius proportions for
+        the torus, radial band width for the ring), so — unlike the other
+        glyphs — the shape can't be baked into one fixed-shape list at setup()
+        time; instead one list is cached per distinct (quantized) ratio
+        actually seen, and reused by every node/frame sharing that ratio.
+
+        Note the ring's HEIGHT is deliberately not part of the key: it rides on
+        the node's `scale_z` through glScalef, outside the compiled geometry,
+        which is what keeps this cache one-dimensional.
 
         Ratio is a proportion of the overall radius, quantized to 1% steps
         here so the cache stays bounded (~100 lists per geo/textured pair)
@@ -892,18 +1001,22 @@ class GeoRenderer:
 
         Kept separate from draw() so callers about to compile their own
         display list (the viewport's retained scene list) can pre-warm every
-        torus ratio first — glNewList must never nest, so the lazy compile
-        here would be an invalid operation if it fired mid-bake."""
+        ratio first — glNewList must never nest, so the lazy compile here would
+        be an invalid operation if it fired mid-bake."""
         quantized = round(ratio, 2)
         key = (geo_id, textured, quantized)
-        dl = self._torus_lists.get(key)
+        dl = self._ratio_lists.get(key)
         if dl is None:
-            r_major, r_minor = torus_radii(quantized)
             dl = glGenLists(1)
             glNewList(dl, GL_COMPILE)
-            _draw_torus(geo_id == GEO_TORUS, r_major, r_minor, textured=textured)
+            if geo_id in (GEO_RING, GEO_RING_WIRE):
+                _draw_ring(geo_id == GEO_RING, quantized, textured=textured)
+            else:
+                r_major, r_minor = torus_radii(quantized)
+                _draw_torus(geo_id == GEO_TORUS, r_major, r_minor,
+                            textured=textured)
             glEndList()
-            self._torus_lists[key] = dl
+            self._ratio_lists[key] = dl
         return dl
 
     def draw(self, geo_id: int, rx: float, ry: float, rz: float,
@@ -953,8 +1066,8 @@ class GeoRenderer:
 
         textured = gl_tex_name > 0 and geo_id not in _WIRE_IDS
 
-        if geo_id in (GEO_TORUS, GEO_TORUS_WIRE):
-            dl = self.ensure_torus_list(geo_id, textured, ratio)
+        if geo_id in RATIO_SHAPED_GEOMETRIES:
+            dl = self.ensure_ratio_list(geo_id, textured, ratio)
             if textured:
                 glEnable(GL_TEXTURE_2D)
                 glBindTexture(GL_TEXTURE_2D, gl_tex_name)
