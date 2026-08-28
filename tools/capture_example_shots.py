@@ -90,6 +90,15 @@ MANIFEST = [
     ("orbital-live-sky", EX / "Orbital_Traffic_Example" / "Live_Sky", None),
     ("orbital-one-orbit", EX / "Orbital_Traffic_Example" / "One_Orbit", None),
     ("orbital-shells", EX / "Orbital_Traffic_Example" / "Orbital_Shells", None),
+    # The Armillary World gets three shots off one scene: the gallery hero, a
+    # close-up of the graduated instrument at the centre, and the whole world.
+    # A slug is just an output filename, so repeating the folder is how a page
+    # gets more than one view.
+    ("armillary-world", EX / "Armillary_World_Example" / "Armillary_World", None),
+    ("armillary-world-instrument",
+     EX / "Armillary_World_Example" / "Armillary_World", None),
+    ("armillary-world-overview",
+     EX / "Armillary_World_Example" / "Armillary_World", None),
 ]
 
 
@@ -97,6 +106,7 @@ MANIFEST = [
 # legend nodes included, so a scene whose caption floats off to one side gets
 # framed around empty space. These overrides run after the load:
 #   zoom       multiplies the fitted camera distance
+#   distance   sets the camera distance outright, ignoring the fit (and zoom)
 #   origin     re-aim at the world origin instead of the bbox centre
 #   azimuth    orbit angle in degrees (default 45)
 #   elevation  degrees above the horizon (default 25; 90 looks straight down)
@@ -121,6 +131,20 @@ CAMERA = {
     "orbital-live-sky": {"origin": True, "zoom": 0.34, "elevation": 20},
     "orbital-one-orbit": {"origin": True, "zoom": 0.85, "elevation": 18},
     "orbital-shells": {"origin": True, "zoom": 0.58, "elevation": 20},
+    # Armillary World. Distances are absolute here rather than fractions of the
+    # fit, because the scene is nested over two orders of magnitude (a 635-unit
+    # world around a 12-unit instrument) and the interesting radii are the
+    # instrument's, not the bounding box's. The hero stands just inside Zone 1
+    # so one zone band reads at full size with the instrument behind it; the
+    # second goes in to the graduated dials; the third pulls out to the whole
+    # world, from well above, since at a low angle the eight zone rings
+    # collapse into each other.
+    "armillary-world": {"origin": True, "distance": 170, "azimuth": 35,
+                        "elevation": 22},
+    "armillary-world-instrument": {"origin": True, "distance": 110,
+                                   "azimuth": 35, "elevation": 22},
+    "armillary-world-overview": {"origin": True, "zoom": 0.72, "azimuth": 35,
+                                 "elevation": 58},
 }
 
 
@@ -169,7 +193,10 @@ def main() -> int:
                     cap.vp._cam_azimuth = cam["azimuth"]
                 if "elevation" in cam:
                     cap.vp._cam_elevation = cam["elevation"]
-                cap.vp._cam_distance *= cam.get("zoom", 1.0)
+                if "distance" in cam:
+                    cap.vp._cam_distance = cam["distance"]
+                else:
+                    cap.vp._cam_distance *= cam.get("zoom", 1.0)
                 cap.vp.update()
                 pump(0.1)
             cap.viewport_png(OUT_DIR / f"{slug}.png")

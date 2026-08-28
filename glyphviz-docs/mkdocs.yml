@@ -88,6 +88,8 @@ nav:
           - "Rotation Conventions": examples/rotation-convention.md
           - "Texture Animation": examples/texture-animation.md
           - "Mood Background": examples/mood-background.md
+      - Teaching worlds:
+          - "The Armillary World": examples/armillary-world.md
       - Audio & music:
           - "Bird Song Spectrogram Surface": examples/bird-song-surface.md
           - "Cat Scan — Audio Animation": examples/audio-cat-scan.md

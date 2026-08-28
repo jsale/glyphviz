@@ -21,6 +21,12 @@ Install notes and good first scenes: [Installation → Example scenes](../gettin
 - **[Texture Animation](texture-animation.md)** — flipbook texture animation via Channels
 - **[Mood Background](mood-background.md)** — Channels animating the background itself
 
+## Teaching worlds
+
+Scenes that are a *place* rather than a dataset — built to be flown through and read, with every glyph carrying its own explanation.
+
+- **[The Armillary World](armillary-world.md)** — a real armillary sphere, ringed by eight zones of mathematics
+
 ## Audio & music
 
 - **[Bird Song Spectrogram Surface](bird-song-surface.md)** — a birdsong spectrogram as animated terrain

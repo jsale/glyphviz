@@ -15,8 +15,8 @@ laid out."
 ## The full list
 
 IDs 0–22 are commented in source as matching ANTz's `kNPgeo*` enum
-(`geometry_data.py:9`); IDs 23–26 are explicitly marked as GlyphViz-only
-extensions with no ANTz/GaiaViz equivalent.
+(`geometry_data.py:9`); IDs 23 and up are GlyphViz-only extensions with no
+ANTz/GaiaViz equivalent.
 
 | ID | Name (`GEO_NAMES`) | Constant | Notes |
 |---|---|---|---|
@@ -31,7 +31,7 @@ extensions with no ANTz/GaiaViz equivalent.
 | 8 | Dodecahedron Wire | `GEO_DODECA_WIRE` | Wireframe; solid pair is `GEO_DODECA` |
 | 9 | Dodecahedron | `GEO_DODECA` | |
 | 10 | Octahedron Wire | `GEO_OCTA_WIRE` | Wireframe; solid pair is `GEO_OCTA` |
-| 11 | Octahedron | `GEO_OCTA` | Default geometry for newly-created nodes (`main_window.py:531`) |
+| 11 | Octahedron | `GEO_OCTA` | Default geometry for newly-created nodes (`main_window.py:1113`) |
 | 12 | Tetrahedron Wire | `GEO_TETRA_WIRE` | Wireframe; solid pair is `GEO_TETRA` |
 | 13 | Tetrahedron | `GEO_TETRA` | |
 | 14 | Icosahedron Wire | `GEO_ICOSA_WIRE` | Wireframe; solid pair is `GEO_ICOSA` |
@@ -53,8 +53,10 @@ extensions with no ANTz/GaiaViz equivalent.
 | 30 | Sphere (Interior) | `GEO_SPHERE_INTERIOR` | **GlyphViz extension** — a 360° / equirectangular image or video sphere |
 | 31 | Cylinder (Interior) | `GEO_CYLINDER_INTERIOR` | **GlyphViz extension** — closed at both ends |
 | 32 | Cylinder (Interior, Open) | `GEO_CYLINDER_INTERIOR_OPEN` | **GlyphViz extension** — an open tube; the same shape as 31 without its end caps |
+| 33 | Flat Ring | `GEO_RING` | **GlyphViz extension** — a torus with a *rectangular* cross-section. `ratio` is the band's radial width, `scale_z` its height — see [The Flat Ring](#the-flat-ring) below |
+| 34 | Flat Ring Wire | `GEO_RING_WIRE` | Wireframe pair for 33 |
 
-`GEO_COUNT = 33` (`geometry_data.py`).
+`GEO_COUNT = 35` (`geometry_data.py`).
 
 ## Interior geometries (seen from within)
 
@@ -98,6 +100,63 @@ Practical notes:
 - These are ordinary geometries, so a **Link** carrying one renders it
   stretched between the two ends: an interior open cylinder on a link is a
   tube you can fly down.
+
+## The Flat Ring
+
+Ids 33 and 34 are a torus whose cross-section is a **rectangle** instead of a
+circle — a machined band rather than soft tubing. Four real faces, each with a
+constant normal and a crisp edge, which is what makes it read as an instrument
+and what lets a texture lie flat and legible on it: degree markings, a zodiac
+strip, a ruler scale, a label wrapped once around a hoop. The
+[Armillary World](../examples/armillary-world.md) example is built out of them.
+
+It introduces **no new column**. Both of its proportions come from fields a
+torus already uses, which is why a Torus ↔ Flat Ring swap is a pure change of
+look — same silhouette, same extents, and a `TOPO_TORUS` parent places its
+children identically whichever of the two it wears:
+
+| Field | Meaning on a Flat Ring |
+|---|---|
+| `ratio` | The band's **radial width**, exactly as on a torus (whose tube spans radius `1 − 2 × ratio` to `1`). Default `0.14` |
+| `scale_z` | The band's **height**. Again as on a torus — it now stretches a rectangle instead of an ellipse |
+
+Because a torus's cross-section is already square, `scale_z = scale_x` gives a
+ring with a square section. The two forms a ring instrument is actually built
+from are the two ways to leave that square:
+
+- **A wide, thin washer** — large `ratio`, small `scale_z`. A graduated dial
+  read face-on.
+- **A tall, thin hoop** — small `ratio`, large `scale_z`. A meridian band whose
+  broad face points outward.
+
+Note that the local half-height *is* `ratio`, so a thin band needs a large
+`scale_z` to be tall: a hoop 0.5 units tall at `ratio = 0.02` wants
+`scale_z = 25`. Working from an instrument maker's numbers, for a ring of
+radius `R` with radial width `w` and thickness `t`:
+`ratio = w / 2R` and `scale_z = t × R / w`.
+
+A `ratio` at or past 0.5 closes the hole and the ring becomes a solid wheel,
+rather than inverting.
+
+### Two authoring rules for rings
+
+Both were learned building the Armillary World, and both are design
+constraints rather than settings:
+
+- **A ring that carries children should be scaled uniformly.** Children inherit
+  a parent's per-axis scale, so a child of a `(S, S, Z)` ring comes out
+  stretched. Split the job: thin *rails* at uniform scale carry the children,
+  and wide, thin, textured *bands* carry the markings and stay childless.
+- **A ring's texture must be built at the ring's own aspect ratio.** `u` runs
+  once around the whole circumference while `v` crosses the narrow reading
+  face, so the canvas is enormously wide — `2πR / face width`. A band 20% of
+  its radius gives 31:1, 10% gives 63:1, and a thin 4% hoop is 157:1. An image
+  at the wrong aspect smears every letter sideways, and "repeat the content
+  more times" starves each copy of pixels. The consequence: **a ring carrying
+  readable text has to be a wide band, on the order of 10–20% of its own
+  radius** — which is exactly what a real armillary's zodiac ring is. Whether
+  the reading face is the band's radial *width* or its *thickness* depends on
+  which way you look at the ring.
 
 ## Geometry on a Link node
 
@@ -143,11 +202,17 @@ thousands of glyphs. Drop back to **Line** where the edge is not the point.
 ## Texture support
 
 Setting a node's `texture_id` maps the image onto the solid geometries: Cube,
-Sphere, Cone, Cylinder, Torus, Grid, Pin, the four Platonic solids, and the
-flat markers Circle, Cross, and Star. Two geometries take no texture — the
-11 **wireframe** variants (there is no surface to map onto), and **Point**,
-whose fixed-pixel `GL_POINTS` sprite has no geometry to carry coordinates. In
-both cases the node simply renders in its solid color; nothing errors.
+Sphere, Cone, Cylinder, Torus, Flat Ring, Grid, Pin, the four Platonic solids,
+the four interior shapes, and the flat markers Circle, Cross, and Star. Two
+geometries take no texture — the 12 **wireframe** variants (there is no surface
+to map onto), and **Point**, whose fixed-pixel `GL_POINTS` sprite has no
+geometry to carry coordinates. In both cases the node simply renders in its
+solid color; nothing errors.
+
+On a **Flat Ring**, each of the four faces carries a full copy of the image,
+oriented to read forwards from that face's own natural viewing side — see [the
+aspect-ratio rule](#two-authoring-rules-for-rings) above, which is the thing
+that most often goes wrong.
 
 The flat markers **crop** the image to their silhouette rather than stretching
 it to fit, using the same image window the Grid uses across its square. A
@@ -157,9 +222,9 @@ show their texture face-on and disappear to an edge when viewed side-on.
 
 ## Picking behavior
 
-The 11 wireframe geometries render as outlines, but for click-picking
+The 12 wireframe geometries render as outlines, but for click-picking
 purposes each is mapped to its solid equivalent in a dedicated pick pass
-(`WIRE_TO_SOLID`, `geometry_data.py:87-99`) — so clicking anywhere inside a
+(`WIRE_TO_SOLID`, `geometry_data.py:195-208`) — so clicking anywhere inside a
 wireframe shape's silhouette registers a hit, not just clicks landing
 precisely on a visible wire.
 

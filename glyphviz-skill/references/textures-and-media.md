@@ -37,6 +37,12 @@ you spend media slots on it:
   Octahedron 11, Tetrahedron 13, Icosahedron 15, Pin 16, Cylinder 19, Grid 21.
 - **Circle 24, Cross 25, Star 26** — the flat markers (added 2026-08-06; they
   rendered untextured before that).
+- **The four interior shapes, 29–32** — Cube, Sphere, Cylinder capped and open.
+  This is what they are *for*: a 360° image or video seen from within. They
+  draw unlit, so the image comes through at its own full brightness rather than
+  shaded (`node-csv-format.md`).
+- **Flat Ring 33** — each of its four faces carries a full copy of the image.
+  See the aspect-ratio rule below before you generate one.
 - Prism 28 on a Link node — the scrollable directed-flow tube.
 - A **Link** carrying any of the solid ids above: it renders that glyph
   stretched between its two ends, and takes a texture exactly as the same
@@ -44,7 +50,7 @@ you spend media slots on it:
 
 **Untextured — the id is read and then ignored**
 
-- Every **wireframe** variant: 0, 2, 4, 6, 8, 10, 12, 14, 17, 18, 20.
+- Every **wireframe** variant: 0, 2, 4, 6, 8, 10, 12, 14, 17, 18, 20, 34.
 - Point 22 — a fixed-pixel `GL_POINTS` sprite drawn outside the display-list
   system, so it has no surface to map onto.
 - Mesh 23 — imported meshes render in their node color only.
@@ -56,6 +62,48 @@ it — a texture keeps identical framing and orientation whether it lands on a
 Grid, a Circle, or a Star. Being flat, all three show the texture face-on and
 vanish to an edge side-on: they work as billboards in a fixed-camera or
 top-down scene, not in one the user will orbit freely.
+
+## Generating a texture for a ring (geometry 33)
+
+**Build the image at the ring's own aspect ratio, and treat the ring's
+proportions as something the text decides.** This is the single most expensive
+mistake available when generating a Flat Ring scene, because nothing errors —
+you get a picture, and the picture is illegible.
+
+`u` runs once around the whole circumference while `v` crosses the narrow
+reading face, so the canvas the ring hands your image is enormously wide:
+
+```
+band aspect = 2 * pi * radius / (the reading face's width)
+```
+
+which is **31:1** for a band 20% of its radius, **63:1** at 10%, and **157:1**
+for a thin 4% hoop. Two failure modes, both real:
+
+- **Wrong aspect** — a 12:1 image on a 180:1 band stretches every letter 15×
+  sideways. The text is there; you cannot read it.
+- **"Fix" it by repeating the content more times** — right in principle, but it
+  starves each copy of pixels. 22 copies of a name across a 1024-pixel image is
+  46 px each, which renders as a solid white streak.
+
+So: compute the aspect from the ring's actual radius and face width, size the
+image to it, and let the *repeat count* follow from how many legible copies fit
+— not the other way round.
+
+**The consequence is a design constraint on the scene, not on the code: a ring
+that carries readable text has to be a wide band, on the order of 10–20% of its
+own radius.** Which is exactly what a real armillary's zodiac ring is. If the
+design calls for a thin hoop, put the label on a tag instead of a texture.
+
+Which face is the "reading face" depends on how the ring is meant to be seen:
+the band's radial **width** for a flat dial read face-on (wide `ratio`, small
+`scale_z`), its **thickness** for a tall hoop read on its outer wall (small
+`ratio`, large `scale_z`).
+
+Each of the four faces carries a full 0..1 UV span of its own, and each one's
+`u` runs in the direction that reads forwards from that face's natural viewing
+side — so a correctly-proportioned image is upright from outside *and* from
+inside, with no per-face flipping to do.
 
 ## Animated textures
 

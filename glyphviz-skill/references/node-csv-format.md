@@ -214,6 +214,7 @@ center/axis instead of on the rendered surface. Full placement math:
 | 12/13 | Tetrahedron wire/solid | 27/28 | Line / Textured Prism (Link nodes only) |
 | 14/15 | Icosahedron wire/solid | 29/30 | Cube / Sphere **(Interior)** (GlyphViz-only) |
 | | | 31/32 | Cylinder (Interior) capped / open (GlyphViz-only) |
+| | | 33/34 | **Flat Ring** solid/wire (GlyphViz-only) |
 
 **Interior geometries (29–32)** draw the shape's *inside* surface, so a
 texture or video can be viewed from within — a 360° sphere, a cylindrical
@@ -226,6 +227,43 @@ bowl. Ids 31 and
 32 are one cylinder with and without its end caps — capless is the one for a
 panorama, or for a link you fly down. Scale as usual: an interior sphere at
 `scale 57.3` (Global Scale 1.0) has a 57.3-unit radius.
+
+**Flat Ring (33/34)** is a torus with a **rectangular** cross-section — a
+machined instrument band rather than soft tubing. Reach for it when a ring has
+to carry a texture that must stay legible (degree markings, a scale, a name
+wrapped around a hoop): a torus curves the image away round its tube, a flat
+ring holds it on a face. It adds **no new column** — both proportions come from
+fields a torus already uses:
+
+| Field | On a Flat Ring |
+|---|---|
+| `ratio` | the band's **radial width**, exactly its torus meaning (the tube spans radius `1 − 2 × ratio` to `1`). Default 0.14 |
+| `scale_z` | the band's **height** — it stretches a rectangle now instead of an ellipse |
+
+A torus's cross-section is already square, so `scale_z = scale_x` gives a square
+section and **Torus ↔ Flat Ring is a pure change of look**: same silhouette,
+same extents, and a `topo = 3` (Torus) parent places its children identically
+whichever it wears. The two useful departures from square are a wide thin
+washer (large `ratio`, small `scale_z` — a dial read face-on) and a tall thin
+hoop (small `ratio`, large `scale_z` — a meridian band read on its outer wall).
+
+The local half-height *is* `ratio`, so a thin band needs a large `scale_z` to be
+tall: a hoop 0.5 units tall at `ratio = 0.02` wants `scale_z = 25`. Working from
+an instrument maker's numbers, for radius `R`, radial width `w`, thickness `t`:
+**`ratio = w / (2R)`** and **`scale_z = t × R / w`**. A `ratio` at or past 0.5
+closes the hole and the ring becomes a solid wheel rather than inverting.
+
+Two authoring rules go with it, both design constraints rather than settings:
+
+1. **A ring that carries children must be scaled uniformly.** Children inherit
+   per-axis scale, so a child of an `(S, S, Z)` ring comes out stretched. Split
+   the job: thin *rails* at uniform scale carry the children; wide, thin,
+   textured *bands* carry the markings and stay childless.
+2. **A ring carrying readable text has to be a wide band**, on the order of
+   10–20% of its own radius, because its texture canvas is `2πR / face width`
+   — 31:1 at 20% of the radius, 63:1 at 10%, 157:1 for a thin 4% hoop. See
+   `textures-and-media.md` — this is the trap, and it is not recoverable by
+   repeating the content more times.
 
 ### Geometry on a Link (type 7)
 

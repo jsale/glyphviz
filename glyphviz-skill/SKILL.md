@@ -322,6 +322,11 @@ scene. Worked exemplar: `examples/RSS_News/`.
 - `references/node-csv-format.md` — the complete, verified column spec
   (required/optional/94-column tables, node types, geometry & topology id
   tables, tag file format). **Read it before generating anything nontrivial.**
+  Two shape families there are easy to miss because they answer a request
+  phrased as a *look* rather than as data: the **interior** geometries (29–32)
+  for anything meant to be seen from within — a 360° video sphere, a panorama,
+  a room — and the **Flat Ring** (33) for a ring that has to carry legible
+  text or graduations, which a torus cannot.
 - `references/topologies.md` — per-topology placement math: coordinate
   meanings, formulas, outward-orientation rules, Plot/Surface overlay
   requirements, and engine-verified worked examples. **Read it before
@@ -349,7 +354,7 @@ scene. Worked exemplar: `examples/RSS_News/`.
   engine-verified placement examples. **Read it before building any
   map/geographic scene.**
 - `references/troubleshooting.md` — the scene loaded, nothing errored, and it
-  still looks wrong: a symptom index of the fifteen silent failure modes
+  still looks wrong: a symptom index of the seventeen silent failure modes
   (children flung away by a topology change, textures ignored on the wrong
   geometry, inert palettes, labels that all vanish, edges that never draw, …)
   with the cause and fix for each. **Read it whenever a generated scene doesn't

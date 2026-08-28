@@ -1,7 +1,7 @@
 # Troubleshooting — when a scene loads but looks wrong
 
 Verified against `glyphviz_core/` and `glyphviz_gl/` (2026-08-13, extended
-2026-08-15/17/23).
+2026-08-15/17/23/28).
 
 Every entry here is a case where **the CSV is valid, the file loads, nothing
 errors** — and the scene still isn't what you intended. That's what makes them
@@ -37,6 +37,8 @@ getting a picture" in `SKILL.md`.
 | The scene changes shape when Global Scale moves | [16](#16-the-scenes-proportions-change-with-the-global-scale-slider) |
 | Labels, markers or rings drift off the thing they belong to | [16](#16-the-scenes-proportions-change-with-the-global-scale-slider) |
 | Your own verification says the scene is right; the app disagrees | [16](#16-the-scenes-proportions-change-with-the-global-scale-slider) |
+| Text wrapped around a ring is smeared sideways | [17](#17-text-wrapped-around-a-ring-is-smeared-or-reads-as-a-white-streak) |
+| A textured band renders as a featureless bright stripe | [17](#17-text-wrapped-around-a-ring-is-smeared-or-reads-as-a-white-streak) |
 
 ---
 
@@ -377,6 +379,39 @@ Two related traps:
 
 Full table of what B moves: `topologies.md` → "What B moves, and what it
 doesn't".
+
+---
+
+## 17. Text wrapped around a ring is smeared or reads as a white streak
+
+**Symptom.** A Torus (7) or Flat Ring (33) carries a texture of graduations,
+labels or a name, and it is unreadable: every letter stretched enormously
+sideways, or the whole band a featureless bright stripe.
+
+**Cause.** `u` runs once around the entire circumference while `v` crosses the
+narrow reading face, so the canvas the ring hands the image is
+`2πR / face width` — **31:1** for a band 20% of its radius, **63:1** at 10%,
+**157:1** for a thin 4% hoop. An image built at any ordinary aspect is
+stretched to fill it. The second version of the mistake is
+worse and looks like a fix: repeating the content more times *does* correct the
+aspect, but it divides the pixel budget by the repeat count. 22 copies of a
+name in a 1024-pixel-wide image is 46 px per copy, which is the white streak.
+
+**Fix.** Compute the aspect from the ring's own radius and face width, generate
+the image at that size, and let the repeat count follow from how many legible
+copies fit — not the reverse.
+
+Then accept the design constraint that falls out of it: **a ring that carries
+readable text has to be a wide band, on the order of 10–20% of its own
+radius.** A thin hoop cannot hold legible text at any image size; put the label
+on a tag instead. Note also that the reading face differs by ring type — the
+band's radial *width* for a flat dial read face-on, its *thickness* for a tall
+hoop read on its outer wall — so the two forms want images of different
+aspects even at the same radius.
+
+Ring proportions and the `ratio` / `scale_z` formulas:
+`node-csv-format.md` → Flat Ring. Texture rules:
+`textures-and-media.md` → "Generating a texture for a ring".
 
 ---
 
