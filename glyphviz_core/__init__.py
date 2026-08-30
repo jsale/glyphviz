@@ -8,4 +8,4 @@ The version follows the dated release convention the Windows builds already
 use (GlyphViz20260806 -> 2026.8.6), normalized to PEP 440.
 """
 
-__version__ = "2026.8.6"
+__version__ = "2026.8.30"
