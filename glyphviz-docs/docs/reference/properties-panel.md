@@ -27,8 +27,8 @@ Viewer (`_on_insp_*` handlers, e.g. `_on_insp_pos_changed` at
 | Show Grid | checkbox | checked | `Viewport.show_grid` |
 | Grid Color | color button | dark gray (56, 56, 71) | The reference grid's line color. Unlike the checkboxes around it this is **scene data**, stored on the World node (`ref_grid_color_r/g/b`) and saved with the file. A World Grid node (type 6) draws its own lattice in its own node color and ignores this setting. |
 | Show Hidden Nodes | checkbox | unchecked | `Viewport.show_hidden` |
-| Show Tag Labels | checkbox | unchecked | `Viewport.show_tags` (also toggled by the **T** key) |
-| Show Tag Labels of Selected | checkbox | unchecked | `Viewport.show_tags_selected_only` — when checked, only selected nodes' tags draw |
+| Show Tag Labels | checkbox | **checked** | `Viewport.show_tags` (also toggled by the **T** key) |
+| Show Tag Labels of Selected | checkbox | **checked** | `Viewport.show_tags_selected_only` — when checked, only selected nodes' tags draw. Uncheck it to label every tagged node at once. |
 | Tag Color | color button | pastel yellow (255, 255, 200) | The color of every tag label. **Scene data**, stored on the World node (`tag_color_r/g/b`) and saved with the file. Disabled while the checkbox below is on. |
 | Tag Text Matches Node Color | checkbox | unchecked | Draws each label in its own node's color instead of the single Tag Color, so a label reads as belonging to the glyph it names (`tag_color_mode`). |
 | Tag Text Size | slider, 6–36 pt | 11 pt | Point size of every tag label. Scene data too (`tag_font_size` on the World node). Labels are a fixed size on screen, so they do **not** shrink with distance — to declutter a dense scene, label fewer nodes rather than shrinking the type. |
@@ -231,6 +231,7 @@ Topology, Ratio, and Color apply the same absolute value to all of them
 | Facet | `subspace` | combo, 6 named faces (`0: +X` … `5: -Z`) | Only meaningful when this node's **parent** uses Cube or Zcube topology |
 | Ratio | `ratio` | spin box, 0.01–10.0, 3 decimals | Torus minor/major radius proportion, and on a **Flat Ring** the same number read as the band's radial width, with `scale_z` as its height ([Geometries](geometries.md#the-flat-ring)); also doubles as Point sprite size and Plot line width (`ratio × 20` px). On a **Link** it is the connector's thickness whatever geometry the link carries — pixels for Line, world-space half-width on both cross-axes for Prism or any stretched glyph ([Geometries](geometries.md#geometry-on-a-link-node)). Values above 1.0 only mean anything there; a torus ratio above 1.0 is degenerate, and a ring ratio of 0.5 or more closes the hole into a solid wheel |
 | Texture ID | `texture_id` | spin box, 0–9999, integer | 0 = none, 1 = first image in texture folder (alphanumeric), 2 = second, etc. |
+| Channel In | `ch_input_id` | spin box, 0–999,999, integer (0 shows as "none") + a hint label | Which channel of the scene's [Channels animation](channels-animation.md) drives this node. Set it while an animation is playing and the node starts moving on the spot; set it back to 0 and it stops and returns to its saved values. Applies to **every** selected node, so several nodes can be pointed at one channel to animate in unison. The hint beside it says what the chosen channel drives (`drives translate_z, color_r`), or which ids the file offers when it doesn't have that one. Saved with the scene, so the field is usable before any channel file is loaded — it just won't animate until one is |
 | Color | `color_r/g/b/a` | color-picker button | |
 | Tag Text | `text` | line edit | Label shown near the node in 3D (toggle with **T**) |
 | Link | `link` | line edit | URL or local file path, opened with **U** |
@@ -244,6 +245,13 @@ A playback transport (Frame label, scrub slider, ▶/■ buttons, FPS spin box,
 Loop checkbox) that only becomes visible when the loaded scene has a
 Channels animation (`ch-map`/`ch-tracks` CSV pair) attached. Hidden by
 default (`self._ch_grp.setVisible(False)` — `main_window.py:834-882`).
+
+It appears whenever that pair loads and has frames in it — **including when
+no node points at a channel yet**. That is the scene you get when the
+animation data arrives separately from the geometry, and the Selected Node
+panel's **Channel In** field is how you connect the two: select a node, dial
+in a channel id, and it animates immediately, with no file edit and no
+reload.
 
 ## Next step
 

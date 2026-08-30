@@ -93,11 +93,19 @@ Other geometries read `ratio` directly with no such cache.
   in a folder disable Channels entirely. So: one Channels scene per folder,
   and stem-style names (`myscene_gv_ch-map.csv`, `myscene_gv_ch-tracks.csv`)
   are convention, not a requirement.
-- A Channels panel appears when bindings exist: frame slider, Play/Pause
-  (Space), Stop (Shift+Space — resets to frame 0 and restores CSV values),
-  an FPS slider (1–30, default 30), and a Loop checkbox (default on; off =
-  playback pauses on the last frame).
+- A Channels panel appears whenever that pair loads and has frames —
+  **including when no node points at a channel yet**: frame slider,
+  Play/Pause (Space), Stop (Shift+Space — resets to frame 0 and restores CSV
+  values), an FPS slider (1–30, default 30), and a Loop checkbox (default on;
+  off = playback pauses on the last frame).
 - Frame indices clamp to `[0, frames − 1]`.
+- **`ch_input_id` is editable in the app**: the Properties panel's Selected
+  Node group has a **Channel In** spin box that writes it to every selected
+  node and re-resolves the bindings on the spot — a node bound mid-playback
+  starts animating on the next frame, and setting it back to 0 restores the
+  node's file values. So a generated scene may legitimately ship with the
+  column at 0 and let the user wire it up by hand; that is a valid authoring
+  choice, not a broken join.
 
 ## Audio-synced playback (GlyphViz-only)
 

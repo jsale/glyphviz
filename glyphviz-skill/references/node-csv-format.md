@@ -90,7 +90,7 @@ GlyphViz).
 | 7 | `child_id` | int | ⚙ | **Link nodes (type 7): the B-end node id** (edge runs `parent_id` → `child_id`). Otherwise round-trip. |
 | 8 | `child_index` | int | ↻ | |
 | 9 | `child_count` | int | ↻ | |
-| 10 | `ch_input_id` | int | ⚙ | **Channels**: binds this node to a channel id in the ch-map/ch-tracks pair (GaiaViz alias `np_ch_in_id` also recognized) — see `channels-animation.md`. |
+| 10 | `ch_input_id` | int | ⚙ | **Channels**: binds this node to a channel id in the ch-map/ch-tracks pair (GaiaViz alias `np_ch_in_id` also recognized) — see `channels-animation.md`. Also settable in the app (Properties > Selected Node > **Channel In**), which rebinds a playing animation on the spot; it writes back through whichever of the two spellings the file already used. |
 | 11 | `ch_output_id` | int | ↻ | |
 | 12 | `ch_last_updated` | int | ↻ | |
 | 13 | `average` | int | ↻ | |

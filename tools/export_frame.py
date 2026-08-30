@@ -100,6 +100,9 @@ def _build_viewport(csv_path, base_scale, show_grid, show_axes, show_tags,
     vp.show_grid = show_grid
     vp.show_axes = show_axes
     vp.show_tags = show_tags
+    # --tags means every tagged node, not "the selection" — a headless export
+    # never has one, and the app's default scopes tags to it.
+    vp.show_tags_selected_only = False
 
     # Size first, so set_nodes() auto-frames against the aspect ratio the
     # image will actually have, then one throwaway grab to create the context.

@@ -36,6 +36,9 @@ from glyphviz_core.csv_reader import (
     stamp_node_and_tag_paths, unstamped_stem,
 )
 from glyphviz_core import camera_smoothing as cs
+from glyphviz_core.channel_engine import (
+    channel_attrs, channel_id_of, set_channel_id,
+)
 from glyphviz_core.drop_router import (
     ACTION_MERGE_CSV, ACTION_MESH, ACTION_OPEN_CSV, ACTION_PDB, ACTION_TEXTURES,
     DropPlan, can_accept, resolve_drop,
@@ -203,8 +206,14 @@ class MainWindow(QMainWindow):
         self._clipboard_nodes: list[Node] = []
         self._clipboard_root_id: int | None = None
 
-        # Channel animation state
+        # Channel animation state. The loaded ch-map/tracks are kept alongside
+        # the engine (not just handed to it and forgotten) so a node's channel
+        # binding can be changed from the Properties panel and re-resolved
+        # in place — see _ch_rebind.
         self._ch_engine = None
+        self._ch_map: dict[int, list[tuple[int, str]]] = {}
+        self._ch_tracks = None
+        self._ch_id_to_col: dict[int, int] = {}
         self._ch_frame = 0
         self._ch_playing = False
         self._ch_timer = QTimer(self)
@@ -446,7 +455,7 @@ class MainWindow(QMainWindow):
 
         self._tags_act = self._view_menu.addAction("Show Tag &Labels")
         self._tags_act.setCheckable(True)
-        self._tags_act.setChecked(False)   # matches Viewport.show_tags default
+        self._tags_act.setChecked(True)   # matches Viewport.show_tags default
         self._tags_act.setToolTip("Toggle tag text display  [T]")
         self._tags_act.triggered.connect(lambda c: self._set_tags(c))
 
@@ -754,15 +763,18 @@ class MainWindow(QMainWindow):
         self._cb_hidden.setChecked(False)
         self._cb_hidden.toggled.connect(self._set_hidden)
 
+        # Both on by default — see Viewport.show_tags for why the pair is the
+        # default rather than either one alone.
         self._cb_tags = QCheckBox("Show Tag Labels")
-        self._cb_tags.setChecked(False)   # matches Viewport.show_tags default
+        self._cb_tags.setChecked(True)   # matches Viewport.show_tags default
         self._cb_tags.setToolTip("Toggle tag text display in 3D view  [T]")
         self._cb_tags.toggled.connect(self._set_tags)
 
         self._cb_tags_selected = QCheckBox("Show Tag Labels of Selected")
-        self._cb_tags_selected.setChecked(False)
+        self._cb_tags_selected.setChecked(True)   # matches Viewport.show_tags_selected_only
         self._cb_tags_selected.setToolTip(
-            "When checked, only selected nodes' tag labels are drawn."
+            "When checked, only selected nodes' tag labels are drawn.\n"
+            "Uncheck to label every tagged node in the scene at once."
         )
         self._cb_tags_selected.toggled.connect(self._set_tags_selected_only)
 
@@ -1740,6 +1752,52 @@ class MainWindow(QMainWindow):
         )
         self._insp_texture_id.valueChanged.connect(self._on_insp_texture_id_changed)
 
+        # Channel input id — which ch-map channel animates this node. Sits
+        # next to Texture ID because it is the same kind of field: a number
+        # that points into a companion file rather than a property of the
+        # glyph itself. Before this existed the binding could only be written
+        # into the node CSV by hand, which meant no way to try an animation
+        # against a node you were looking at.
+        #
+        # Not a Node dataclass field: it lives in node.extras under whichever
+        # of channel_engine._CH_INPUT_KEYS the file spelled it (set_channel_id
+        # handles that), and rides the 94-column write format's ch_input_id
+        # slot on save.
+        ch_in_widget = QWidget()
+        ch_in_layout = QHBoxLayout(ch_in_widget)
+        ch_in_layout.setContentsMargins(0, 0, 0, 0)
+        ch_in_layout.setSpacing(6)
+        self._insp_ch_in = QSpinBox()
+        self._insp_ch_in.setRange(0, 999_999)
+        self._insp_ch_in.setSpecialValueText("none")   # 0
+        # Committed on Enter/focus-out rather than per keystroke: every change
+        # re-resolves the whole scene's bindings (_ch_rebind), and typing "12"
+        # would otherwise bind channel 1 on the way past. Arrow keys and the
+        # spin buttons still step live, which is the point — you can walk up
+        # the channel list and watch the node react.
+        self._insp_ch_in.setKeyboardTracking(False)
+        self._insp_ch_in.setMaximumWidth(90)
+        self._insp_ch_in.valueChanged.connect(self._on_insp_ch_in_changed)
+        self._insp_ch_in_hint = QLabel("—")
+        self._insp_ch_in_hint.setWordWrap(True)
+        ch_in_layout.addWidget(self._insp_ch_in)
+        ch_in_layout.addWidget(self._insp_ch_in_hint, 1)
+        for w in (ch_in_widget, self._insp_ch_in):
+            w.setToolTip(
+                "Which channel of the scene's Channels animation drives this\n"
+                "node (the ch-map's channel id; 0 = not animated).\n"
+                "\n"
+                "Set it while an animation is playing and the node starts\n"
+                "moving on the spot, driven by whatever tracks and attributes\n"
+                "that channel maps. Set it to 0 and the node stops and returns\n"
+                "to its own saved values.\n"
+                "\n"
+                "Applies to every selected node — pointing several nodes at\n"
+                "one channel makes them animate in unison. Saved with the\n"
+                "scene (the ch_input_id column), so it works with no channel\n"
+                "file loaded too; it just won't do anything until one is."
+            )
+
         self._insp_text = QLineEdit()
         self._insp_text.setPlaceholderText("Tag label text…")
         self._insp_text.setToolTip("Text label shown near node in 3D view  [T toggles display]")
@@ -1784,6 +1842,7 @@ class MainWindow(QMainWindow):
         insp_layout.addRow("Facet:",    self._insp_subspace)
         insp_layout.addRow("Ratio:",    self._insp_ratio)
         insp_layout.addRow("Texture ID:", self._insp_texture_id)
+        insp_layout.addRow("Channel In:", ch_in_widget)
         insp_layout.addRow("Palette:",  self._insp_palette)
         insp_layout.addRow("Color Index:", self._insp_color_index)
         insp_layout.addRow("Color:",    self._insp_color_btn)
@@ -3319,6 +3378,7 @@ class MainWindow(QMainWindow):
             self._insp_grp.setTitle("Selected Node")
             self._insp_grp.setEnabled(False)
             self._refresh_grid_group()
+            self._refresh_channel_in_row([])
             return
         self._insp_grp.setTitle("Selected Node")
         self._insp_grp.setEnabled(True)
@@ -3375,6 +3435,7 @@ class MainWindow(QMainWindow):
         self._refresh_topo_scale_controls(node)
         self._refresh_palette_controls(node)
         self._refresh_color_btn(node)
+        self._refresh_channel_in_row([node])
 
         self._insp_text.blockSignals(True)
         self._insp_text.setText(node.text)
@@ -3455,6 +3516,7 @@ class MainWindow(QMainWindow):
         self._refresh_topo_scale_controls(primary)
         self._refresh_palette_controls(primary)
         self._refresh_color_btn(primary)
+        self._refresh_channel_in_row(nodes)
 
         self._insp_text.blockSignals(True)
         self._insp_text.setText(primary.text)
@@ -3487,6 +3549,58 @@ class MainWindow(QMainWindow):
             cb.setTristate(False)
             cb.setChecked(bool(on))
         cb.blockSignals(False)
+
+    def _channel_ids_hint(self) -> str:
+        """The channel ids the loaded ch-map offers, as short display text —
+        "1–64" when they run contiguously (the usual generated case), else a
+        few listed ids with a count of the rest."""
+        ids = sorted(self._ch_map)
+        if not ids:
+            return ""
+        if len(ids) > 1 and ids[-1] - ids[0] == len(ids) - 1:
+            return f"{ids[0]}–{ids[-1]}"
+        shown = ", ".join(str(i) for i in ids[:6])
+        return shown if len(ids) <= 6 else f"{shown}, +{len(ids) - 6} more"
+
+    def _refresh_channel_in_row(self, nodes: list[Node]):
+        """Sync the Channel In spin box and its hint from the selection.
+
+        The hint carries the discovery half of the feature: a channel id is a
+        bare number with nothing on screen to check it against, so say how
+        many channels the file has, which ids they use, and what the chosen
+        one actually drives.
+        """
+        sb = self._insp_ch_in
+        hint = self._insp_ch_in_hint
+        if not nodes:
+            sb.blockSignals(True)
+            sb.setValue(0)
+            sb.blockSignals(False)
+            hint.setText("—")
+            return
+        ids = [channel_id_of(n) for n in nodes]
+        value = ids[0]      # panel convention: show the primary node's value
+        sb.blockSignals(True)
+        sb.setValue(min(value, sb.maximum()))
+        sb.blockSignals(False)
+
+        mixed = " (selection differs)" if len(set(ids)) > 1 else ""
+        if not self._ch_map:
+            hint.setText("no channel file loaded" + mixed)
+        elif value == 0:
+            hint.setText(
+                f"not animated — {len(self._ch_map)} channels available "
+                f"({self._channel_ids_hint()}){mixed}"
+            )
+        elif value in self._ch_map:
+            attrs = channel_attrs(self._ch_map, value)
+            drives = ", ".join(attrs) if attrs else "nothing GlyphViz can bind"
+            hint.setText(f"drives {drives}{mixed}")
+        else:
+            hint.setText(
+                f"no channel {value} in this file "
+                f"({self._channel_ids_hint()}){mixed}"
+            )
 
     def _refresh_color_btn(self, node: Node):
         self._set_color_btn(self._insp_color_btn, node.color_r, node.color_g, node.color_b, node.color_a)
@@ -3725,6 +3839,42 @@ class MainWindow(QMainWindow):
             node.texture_id = tex_id
         self._table.refresh_nodes(n.id for n in self._selected_nodes)
         self._viewport.scene_invalidate()
+
+    def _on_insp_ch_in_changed(self, value: int):
+        """Point every selected node at ch-map channel `value` (0 = none) and
+        re-resolve the animation, so a playing scene picks the change up on
+        the very next frame."""
+        if not self._selected_nodes:
+            return
+        ch_id = int(value)
+        for node in self._selected_nodes:
+            set_channel_id(node, ch_id)
+        self._table.refresh_nodes(n.id for n in self._selected_nodes)
+        self._ch_rebind()
+        self._refresh_channel_in_row(self._selected_nodes)
+
+        n = len(self._selected_nodes)
+        subject = f"Node {self._selected_nodes[0].id}" if n == 1 else f"{n} nodes"
+        if ch_id == 0:
+            self.statusBar().showMessage(
+                f"{subject}: channel binding cleared — back to saved values.")
+        elif not self._ch_map:
+            self.statusBar().showMessage(
+                f"{subject}: channel {ch_id} recorded. No channel file is "
+                f"loaded, so nothing animates yet; the id saves with the scene."
+            )
+        elif ch_id in self._ch_map:
+            attrs = channel_attrs(self._ch_map, ch_id)
+            self.statusBar().showMessage(
+                f"{subject}: bound to channel {ch_id}"
+                + (f" — driving {', '.join(attrs)}." if attrs
+                   else " — but it maps no attribute GlyphViz can bind.")
+            )
+        else:
+            self.statusBar().showMessage(
+                f"{subject}: channel {ch_id} is not in this scene's ch-map "
+                f"(it has {self._channel_ids_hint()})."
+            )
 
     def _on_insp_translate_rate_changed(self, _value: float):
         if not self._selected_nodes:
@@ -4758,10 +4908,7 @@ class MainWindow(QMainWindow):
 
         map_path, tracks_path = find_channel_files(path)
         if not map_path or not tracks_path:
-            self._ch_grp.setVisible(False)
-            self._ch_engine = None
-            self._viewport.set_channel_dynamic_nodes(None)
-            self._ch_unload_audio()
+            self._ch_clear()
             return None
 
         try:
@@ -4769,13 +4916,17 @@ class MainWindow(QMainWindow):
             tracks, id_to_col = load_ch_tracks(tracks_path)
             engine = ChannelEngine()
             engine.load(ch_map, tracks, id_to_col, self.nodes)
-            if engine.frame_count == 0 or not engine.has_bindings:
-                self._ch_grp.setVisible(False)
-                self._ch_engine = None
-                self._viewport.set_channel_dynamic_nodes(None)
-                self._ch_unload_audio()
+            if engine.frame_count == 0:
+                self._ch_clear()
                 return None
+            # Deliberately NOT also requiring engine.has_bindings: a file whose
+            # channels no node points at yet is exactly the case the Properties
+            # panel's "Channel In" field exists to fix, and hiding the transport
+            # would leave nothing to bind against.
             self._ch_engine = engine
+            self._ch_map = ch_map
+            self._ch_tracks = tracks
+            self._ch_id_to_col = id_to_col
             # Enable the playback fast path: bound nodes (and descendants of
             # transform-bound ones) leave the baked display list and draw
             # immediate per frame — see Viewport.channel_frame_update.
@@ -4788,6 +4939,7 @@ class MainWindow(QMainWindow):
             self._ch_slider.blockSignals(False)
             self._ch_frame_label.setText(f"Frame: 0 / {engine.frame_count - 1}")
             self._ch_grp.setVisible(True)
+            self._refresh_channel_in_row(self._selected_nodes)
 
             audio_path = find_audio_file(path)
             if audio_path:
@@ -4804,12 +4956,49 @@ class MainWindow(QMainWindow):
             self._ch_unload_audio()
             return f"channels: {engine.frame_count} frames"
         except Exception as exc:
-            self._ch_grp.setVisible(False)
-            self._ch_engine = None
-            self._viewport.set_channel_dynamic_nodes(None)
-            self._ch_unload_audio()
+            self._ch_clear()
             self.statusBar().showMessage(f"Channel load warning: {exc}")
             return None
+
+    def _ch_clear(self):
+        """Drop every trace of a loaded Channels animation — the engine, the
+        ch-map/tracks kept for rebinding, the viewport's fast-path id sets,
+        the transport, and any synced audio."""
+        self._ch_grp.setVisible(False)
+        self._ch_engine = None
+        self._ch_map = {}
+        self._ch_tracks = None
+        self._ch_id_to_col = {}
+        self._viewport.set_channel_dynamic_nodes(None)
+        self._ch_unload_audio()
+        self._refresh_channel_in_row(self._selected_nodes)
+
+    def _ch_rebind(self):
+        """Re-resolve node↔channel bindings against the loaded ch-map, after
+        the Properties panel has changed some node's channel input id.
+
+        reset() FIRST and then reload: load() snapshots each newly-bound
+        node's current field values as the ones reset() will later restore,
+        so rebinding mid-playback without resetting would bake whatever frame
+        happened to be on screen into the scene permanently.
+
+        Cheap enough to run per edit — one pass over the node list — and the
+        alternative (patching the binding list in place) would have to
+        reproduce load()'s palette and originals bookkeeping.
+        """
+        if self._ch_engine is None or self._ch_tracks is None:
+            return
+        engine = self._ch_engine
+        engine.reset()
+        engine.load(self._ch_map, self._ch_tracks, self._ch_id_to_col, self.nodes)
+        self._viewport.set_channel_dynamic_nodes(
+            engine.bound_node_ids, engine.transform_bound_node_ids)
+        if engine.has_bindings:
+            engine.apply_frame(self._ch_frame)
+        # A node that just came OFF a channel is back in the baked display
+        # list with its restored values, so the scene has to re-bake — this
+        # is an interactive edit, not the per-frame playback path.
+        self._viewport.scene_invalidate()
 
     def _ch_unload_audio(self):
         self._ch_audio.unload()

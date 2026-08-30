@@ -433,8 +433,14 @@ class Viewport(QOpenGLWidget):
         self._pick_rbo = 0
         self._pick_fbo_size = (0, 0)
 
-        self.show_tags = False   # off by default (Jeff's preference); toggle with T
-        self.show_tags_selected_only = False
+        # Tags on, scoped to the selection, is the default pair (2026-08-28).
+        # Either one alone is a poor first impression: all-tags-off hides the
+        # labels a scene's author wrote, and all-tags-on buries a large scene
+        # in text. Together they mean "click a glyph, read what it is" — the
+        # labels are discoverable without ever cluttering the view. T still
+        # toggles the first of them; unchecking the second shows every tag.
+        self.show_tags = True
+        self.show_tags_selected_only = True
         # Yellow selection halo. On by default; toggled with Ctrl+B (ANTz uses
         # the spacebar for this, which GlyphViz already spends on Channels
         # transport). Purely a render toggle — the selection itself stays live,

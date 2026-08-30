@@ -124,10 +124,32 @@ actually moved.
 
 ## Transport
 
-A Channels panel appears whenever bindings exist: frame slider, Play/Pause
-(Space), Stop (Shift+Space, which resets to frame 0 and restores CSV values),
-an FPS slider (1–30, default 30), and a Loop checkbox (on by default; off
-pauses on the last frame).
+A Channels panel appears whenever a valid `ch-map`/`ch-tracks` pair loads —
+even before any node points at a channel: frame slider, Play/Pause (Space),
+Stop (Shift+Space, which resets to frame 0 and restores CSV values), an FPS
+slider (1–30, default 30), and a Loop checkbox (on by default; off pauses on
+the last frame).
+
+## Binding a node from the GUI
+
+The join above is the file-level contract, but it does not have to be authored
+in the CSV. Select any node and set **Channel In** in the Properties panel's
+Selected Node group (see [Properties Panel](properties-panel.md#selected-node)):
+
+- The change takes effect on the **next frame** — bind a node while the
+  animation is playing and it starts moving where it stands. No reload.
+- It applies to the whole selection, so several nodes can be pointed at one
+  channel and animate in unison.
+- Setting it back to **0** unbinds the node and restores the values it had in
+  the file, not the frame it happened to stop on.
+- The hint beside the box reports what that channel drives, or which channel
+  ids the file actually offers — the only place a bare id can be checked
+  against the loaded data.
+
+This is the fastest way to try an animation against a scene whose data and
+geometry were authored separately: open the scene, dial channel ids into the
+nodes you want driven, and **File → Save** writes them into the node CSV's
+`ch_input_id` column.
 
 ## Audio-synced playback
 

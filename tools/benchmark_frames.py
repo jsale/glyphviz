@@ -63,6 +63,9 @@ def main() -> int:
     vp = Viewport()
     vp.base_scale = args.base_scale
     vp.show_tags = args.show_tags
+    # Benchmark the whole-scene tag pass, not the (empty) selection's — the
+    # app's default scopes tags to the selection.
+    vp.show_tags_selected_only = False
     vp.show_grid = args.show_grid
     vp.show_axes = args.show_axes
     vp.stereo_mode = args.stereo

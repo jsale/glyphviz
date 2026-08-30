@@ -22,9 +22,11 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 2,5,1,1,3,0,0,0,0,0,0.6,0.6,0.6,90,200,255,255,3,0,0,Child A
 ```
 
-Save and reload (you should still have **Watch and Reload** on from Tutorial 1 — if not, **File → Open** the file again). Nothing visibly changes yet: **tag labels are off by default**, the same way a freshly-opened example scene shows no text until you ask for it. Press **T**. Both shapes should now show their label floating beside them.
+Save and reload (you should still have **Watch and Reload** on from Tutorial 1 — if not, **File → Open** the file again). Nothing visibly changes yet — until you click a shape. **Tag labels are on by default but scoped to the selection**: the Properties panel's Display group ships with both *Show Tag Labels* and *Show Tag Labels of Selected* checked, so a label appears when you select the glyph it belongs to and a busy scene never fills up with text. Click the octahedron and its "Root" label appears beside it.
 
-This is the one thing worth remembering about tags: the *data* (`text`) and the *display setting* (tags on/off) are completely separate. A scene can be fully labeled and show nothing, or show nothing labeled and display empty space — check both before assuming a labeling bug.
+To see them all at once, uncheck **Show Tag Labels of Selected**. Both shapes should now show their label floating beside them, selected or not. (**T** toggles the other checkbox, *Show Tag Labels* — that one is the master switch.)
+
+This is the one thing worth remembering about tags: the *data* (`text`) and the *display setting* (tags on/off, all/selected) are completely separate. A scene can be fully labeled and show nothing, or show nothing labeled and display empty space — check both before assuming a labeling bug.
 
 ![My_First_Scene with Show Tag Labels on: the octahedron labeled "Root" and the sphere labeled "Child A"](../assets/tutorials/tut02-02-labels-on.png)
 

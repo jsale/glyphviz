@@ -497,6 +497,9 @@ def shots_topology_example(only):
             print(f"  !! could not load {csv}")
             return
         cap.vp.show_tags = True
+        # Explicit: this shot wants EVERY station labeled, and the app's
+        # default scopes tags to the selection (Viewport.show_tags_selected_only).
+        cap.vp.show_tags_selected_only = False
         pump(0.3)
         # Frame a handful of stations (Cube..Pin, x -90..-42 at 12-unit
         # spacing) rather than the whole -102..102 row.

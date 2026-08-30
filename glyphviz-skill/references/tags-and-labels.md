@@ -58,10 +58,14 @@ NA-token parsing can eat them.
 
 ## Display behavior in the app
 
-- Tag labels are **off by default**. Toggle: `T` key, View menu, or the
-  Display panel's "Show Tag Labels" checkbox.
-- "Show Tag Labels of Selected" mode restricts labels to the current
-  selection.
+- Tag labels are **on by default, scoped to the selection**: the Display
+  panel ships with both "Show Tag Labels" and "Show Tag Labels of Selected"
+  checked, so selecting a glyph reads out its label and an unselected scene
+  stays uncluttered. Toggle the first with the `T` key, the View menu, or
+  the checkbox.
+- Unchecking "Show Tag Labels of Selected" labels **every** tagged node at
+  once (subject to the 500-tag cap below). That is the mode to assume when
+  you are authoring a scene whose labels are meant to be read all together.
 - **Pinned labels** (`show_text` = 1 on the node): draw whenever the node
   draws, regardless of both settings above — even with tag display
   entirely off. Set it in the CSV, or select nodes and tick "Always Show

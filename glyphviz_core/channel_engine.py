@@ -158,10 +158,42 @@ def channel_id_of(node: Node) -> int:
     return 0
 
 
+def set_channel_id(node: Node, ch_id: int) -> None:
+    """Bind `node` to ch-map channel `ch_id` (0 = not animated).
+
+    Writes back through whichever of _CH_INPUT_KEYS the node already carries,
+    rather than always adding 'ch_input_id': channel_id_of reads the FIRST key
+    present, so a GaiaViz-dialect node that already spells it 'np_ch_in_id'
+    would otherwise end up with two columns that disagree, and its file would
+    grow a column it never had.
+    """
+    ch_id = int(ch_id)
+    for key in _CH_INPUT_KEYS:
+        if key in node.extras:
+            node.extras[key] = ch_id
+            return
+    node.extras['ch_input_id'] = ch_id
+
+
 def channel_ids_for_nodes(nodes) -> set[int]:
     """Every channel id referenced by `nodes` — what a partial scene export
     has to carry along to keep its animation (see selection_export)."""
     return {cid for cid in (channel_id_of(n) for n in nodes) if cid}
+
+
+def channel_attrs(ch_map: dict[int, list[tuple[int, str]]], ch_id: int) -> list[str]:
+    """The attribute names channel `ch_id` actually drives, in ch-map order
+    with duplicates collapsed.
+
+    Filtered to attributes GlyphViz knows how to bind (_ATTR_TO_FIELD), which
+    is the same filter `load` applies — so this answers "what will happen if I
+    point a node at this channel", not merely "what does the file say".
+    """
+    seen: list[str] = []
+    for _track_id, attr in ch_map.get(ch_id, ()):
+        if attr in _ATTR_TO_FIELD and attr not in seen:
+            seen.append(attr)
+    return seen
 
 
 class ChannelEngine:
