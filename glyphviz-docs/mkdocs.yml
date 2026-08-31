@@ -159,6 +159,7 @@ nav:
       - Glyph Composer: reference/glyph-composer.md
       - Hyperglyph Generator: reference/hyperglyph-generator.md
       - Hyperglyph Tree Designer: reference/tree-designer.md
+      - Epitrochoid Generator: reference/epitrochoid-generator.md
       - Timeline Tower Designer: reference/timeline-tower.md
   - Architecture:
       - Overview: architecture/index.md

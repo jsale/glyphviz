@@ -1,0 +1,8 @@
+id,table_id,record_id,title
+0,0,1,world - the background colour lives on this type=0 row
+1,0,2,"hub - never moves. Its torus IS the circle arm 1 rides; the radius is its own scale, 14 = arm 1's length"
+2,0,3,"arm 1: harmonic 2, length 14, rate_x +2"
+3,0,4,"pen - arm 2: harmonic 2, length 6, rate_x +0, tube radius 4.5 at rate_y +3 (sidebands at -1 and 5)"
+4,0,5,"arm 1 rod - a type=7 Link wearing Cylinder geometry, stretched between the two ring centres"
+5,0,6,"arm 2 rod - a type=7 Link wearing Cylinder geometry, stretched between the two ring centres"
+6,0,7,trail - a Plot-topology parent; its polyline runs through the beads below in CSV row order

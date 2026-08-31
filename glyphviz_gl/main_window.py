@@ -436,6 +436,16 @@ class MainWindow(QMainWindow):
         )
         hyperglyph_act.triggered.connect(self._on_hyperglyph_generator)
 
+        epicycle_act = tools_menu.addAction("&Epitrochoid Generator…")
+        epicycle_act.setShortcut("Ctrl+E")
+        epicycle_act.setToolTip(
+            "Design an epicycle chain — a Fourier series built from nested\n"
+            "Torus-topology parents — and let the pen draw its own path.\n"
+            "Writes a complete scene folder (node + tag CSVs, plus the\n"
+            "Channels pair for a self-drawing trail)."
+        )
+        epicycle_act.triggered.connect(self._on_epitrochoid_generator)
+
         self._view_menu = mb.addMenu("&View")
 
         self._axes_act = self._view_menu.addAction("Show &Axes")
@@ -2426,6 +2436,11 @@ class MainWindow(QMainWindow):
     def _on_hyperglyph_generator(self):
         from .hyperglyph_dialog import HyperglyphGeneratorDialog
         dlg = HyperglyphGeneratorDialog(self, parent=self)
+        dlg.exec()
+
+    def _on_epitrochoid_generator(self):
+        from .epicycle_dialog import EpitrochoidGeneratorDialog
+        dlg = EpitrochoidGeneratorDialog(self, parent=self)
         dlg.exec()
 
     def _toggle_rates_paused(self, checked: bool):
