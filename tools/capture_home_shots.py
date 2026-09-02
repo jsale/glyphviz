@@ -33,8 +33,16 @@ EX = REPO_ROOT / "examples"
 # optional (azimuth_delta, elevation, target_offset_xyz) orbit override —
 # None means keep the auto-fit orbit.
 MANIFEST = [
+    # The auction field's glyph legend stands well clear of the data (out at
+    # x = -395), so the auto-fit bbox is nearly twice the size of the field
+    # and centres on empty space between the two. Both numbers below are
+    # corrections for that: the zoom is the old 0.12 rescaled to the larger
+    # fitted distance, and the target offset walks the aim from the bbox
+    # centre (19.5, 93, 77) back onto the field itself. Re-derive both if the
+    # scene's extents change again — tools/export_frame.py --report prints them.
     ("vehicle-raw-auction-field-close",
-     EX / "Vehicle_Sales_Example" / "Raw_Auction_Field", None, 0.12, None, None),
+     EX / "Vehicle_Sales_Example" / "Raw_Auction_Field", None, 0.068, None,
+     (90.0, 18.0, (185.0, 10.0, -45.0))),
     ("audio-cat-scan-synesthesia-close",
      EX / "Audio_Animation_Example" / "Cat_Scan_Synesthesia_Example", None, 0.6, None, None),
     ("century-swarm-close", EX / "Century_Swarm_Example", None, 0.7, None, None),

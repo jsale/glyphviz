@@ -61,8 +61,40 @@ Spatial distribution (raw values, only normalized to world units):
   Y  model year (8 units/year)
   Z  odometer (0..120 units at 300k miles)
 
-Every car carries a tag with the full raw record (year make model trim,
-condition, miles, price vs MMR, colors, state, sale date).
+Three labelled axis rails (X red, Y green, Z blue -- GlyphViz's own gizmo
+convention) and a glyph legend stand outside the data box, all pinned with
+show_text so they read without turning scene-wide tags on.
+
+Every one of a record's five nodes carries a tag: the cube gets the full raw
+record (year make model trim, condition, miles, price vs MMR, colors, state,
+date, consignor), each part gets a line saying what that part encodes, and
+all five end in the same query-token string.
+
+The query tokens are what make the scene analytic rather than decorative.
+Select By > "Tag contains" is a case-insensitive substring match, so:
+
+  #COARSE #FINE                     which of the TWO scales this row's
+                                    `condition` column is on (see below)
+  #RENTAL #LEASE #FLEET #DEALER     consignor class, from `seller`
+  #OVER #ATBOOK #UNDER              this sale vs MMR book (+/-5% band)
+  #LIGHT #NORMAL #HARD              odometer per year of age
+  #MANUAL                           manual transmission
+
+The scaffolding is not tokenised -- it is a LAYER, picked out by Select By >
+Branch Level > 9. Tick "Add to current selection" and the axes and legend
+stay on screen while a cohort is isolated.
+
+The finding this scene was rebuilt around: the dataset's `condition` column
+holds TWO scales at once. Its 41 distinct values are 1-5 and 11-19, 21-29,
+31-39, 41-49 -- no 6-10, no multiples of ten -- i.e. a 1.1-4.9 grade stored
+x10, plus 12.2% of rows storing the SAME grade rounded to 1-5. Pooling them
+halves the column's measured relationship to everything else: across all
+542k usable sales, corr(condition, odometer) is -0.53 within each scale but
+only -0.30 pooled, and in log(price) ~ log(mmr) + condition the condition
+coefficient goes from +0.005 to +0.110 once the scales are reconciled.
+Because the scene draws condition/49 exactly as published, those rows wear a
+tiny near-black octahedron -- a wreck's badge -- on a big, bright, low-mileage
+cube. Query #COARSE to see where they sit.
 
 Output (subfolder per scene because GlyphViz auto-discovers channel files as
 "the single ch-map/ch-tracks pair sitting next to the node CSV"):
@@ -96,6 +128,7 @@ GEO_CUBE_WIRE, GEO_CUBE, GEO_SPHERE_WIRE, GEO_SPHERE, GEO_CONE = 0, 1, 2, 3, 5
 GEO_TORUS_WIRE, GEO_TORUS, GEO_DODECA_WIRE, GEO_DODECA = 6, 7, 8, 9
 GEO_OCTA_WIRE, GEO_OCTA, GEO_TETRA_WIRE, GEO_TETRA = 10, 11, 12, 13
 GEO_ICOSA, GEO_CYLINDER, GEO_GRID_WIRE, GEO_POINT = 15, 19, 20, 22
+GEO_LINE = 27
 TOPO_NONE, TOPO_CUBE, TOPO_SPHERE, TOPO_TORUS = 0, 1, 2, 3
 
 BODY_GEOMETRY = {
@@ -157,6 +190,71 @@ FACE_MOUNT_TZ = -(1.0 - CUBE_HALF_EXTENT)
 INTERIOR_SCALE = 0.45        # solid body-class glyph inside the wire cube
 COND_SCALE_MIN, COND_SCALE_MAX = 0.2, 0.55    # +Z facet glyph over condition 1..49
 DEAL_SCALE, TRANS_SCALE = 0.35, 0.3           # +X / +Y facet glyphs
+
+# --- Raw Auction Field: the query vocabulary -------------------------------
+# The Properties panel's Select By > "Tag contains" box is a case-insensitive
+# SUBSTRING match over tag text, so a controlled token vocabulary written into
+# every tag turns that one text box into an analytic filter. '#' never occurs
+# in the free-text part of a tag (make, model, trim, paint, state, date), so a
+# token can never collide with the record it rides on, and no token is a
+# substring of another. Every one of a record's five nodes carries the same
+# token string, so "Select Matching Tags" + Show Only Selected [I] isolates
+# WHOLE glyphs rather than bare parent cubes.
+COARSE_MAX = 5.0        # published condition <= 5 => the 1-5 grade scale
+DEAL_BAND = 5.0         # +/-% vs MMR separating #OVER / #ATBOOK / #UNDER
+USE_LIGHT_MPY, USE_HARD_MPY = 9_000.0, 18_000.0   # odometer / year bands
+
+# The axis rails, tick labels and legend are marked as a layer by BRANCH LEVEL
+# rather than by a tag token. Select By's other criterion picks them out in one
+# click (Branch Level -> 9), and unlike a '#GUIDE' token it costs nothing
+# visually: a token has to live in the label text, and 79 pinned captions each
+# ending in '#GUIDE' is a lot of noise on labels as short as "50k mi".
+# branch_level is loaded verbatim from the CSV and read by nothing in the
+# render path, so borrowing it as a layer key is free.
+GUIDE_LEVEL = 9
+
+# Consignor classes, matched against the raw `seller` string. Heuristic and
+# deliberately coarse -- its job is to make the *mechanism* behind the
+# condition-scale artifact selectable, not to audit the auction industry.
+# Order matters: RENTAL wins over FLEET wins over LEASE.
+CONSIGNOR_RENTAL = (
+    "hertz", "avis", "budget", "enterprise", "thrifty", "dtg operations",
+    "national car", "alamo", "pv holding", "u-haul", "uhaul", "rental",
+    "rent-a-car", "rent a car")
+CONSIGNOR_FLEET = (
+    "fleet", "leaseplan", "lease plan", "donlen", "emkay", "wheels ",
+    "city of", "county of", "state of")
+CONSIGNOR_LEASE = (
+    "lease", " lt", "motor credit", "financial services", "credit corp",
+    "acceptance corp", "remarketing", "hvt", "eot", "santander", "ally",
+    "chase bank", "wells fargo dealer", "gm financial", "vw credit",
+    "world omni", "tdaf", "ahfc", "capital one", "capital", "credit union",
+    "bank n.a", "auto finance", "motor finance", "financial corp",
+    "usb dealer", "fiserv", "dealer services", "dealer program",
+    "motors america", "north america", "motor sales usa", "of america")
+
+# --- Raw Auction Field: axes and legend ------------------------------------
+# Axis colours follow GlyphViz's own transform-gizmo convention (X red,
+# Y green, Z blue) so the rails read the same way the handles do.
+AXIS_RGB = {"x": (230, 95, 85), "y": (95, 205, 115), "z": (95, 145, 245)}
+AXIS_PAD = 16.0          # rails stand this far outside the data box
+AXIS_TICK_SCALE = 0.9
+AXIS_END_SCALE = 1.6
+ODO_TICK_STEP = 50_000.0
+# The legend is an upright panel in the XZ plane -- the plane a viewer faces
+# when time runs right and mileage runs up. Three rules it is built on:
+#   * entries stack DOWNWARD, never side by side. A label draws to the RIGHT
+#     of its glyph, so neighbours in X overwrite each other's text.
+#   * it stands OUTSIDE the data box, in the empty -X before the time axis
+#     starts. Anywhere inside it, 100k glyphs render through the captions.
+#   * it is a plane, not a floor plate: flat on the ground it only reads from
+#     straight overhead, which is nobody's view of this scene.
+LEGEND_X0 = -300.0       # leftmost column (the field starts at x=0)
+LEGEND_Y = -20.0
+LEGEND_Z_TOP = 145.0
+LEGEND_COL, LEGEND_ROW = 100.0, 7.0   # column pitch (X) / entry pitch (Z)
+LEGEND_SCALE = 2.0       # legend glyphs are drawn 2x field size to stay legible
+ANATOMY_SCALE = 14.0     # the assembled "this is one sale" reference glyph
 
 # Exterior/interior paint names -> RGB tuned for the black viewport ("black"
 # cars render dark gray, not invisible). '�' is the dataset's mojibake
@@ -267,9 +365,9 @@ def sequential_color(t: float) -> tuple[int, int, int]:
 
 def node_row(node_id, parent_id, branch_level, tx, ty, tz, sx, sy, sz,
              color, geometry, topo, *, alpha=255, hide=0, ratio=0.1,
-             rotate_rate_z=0.0, ch_input_id=0):
+             rotate_rate_z=0.0, ch_input_id=0, node_type=5):
     return {
-        "id": node_id, "type": 5, "parent_id": parent_id,
+        "id": node_id, "type": node_type, "parent_id": parent_id,
         "branch_level": branch_level,
         "translate_x": round(tx, 4), "translate_y": round(ty, 4),
         "translate_z": round(tz, 4),
@@ -559,7 +657,268 @@ def build_depreciation_grid(df: pd.DataFrame, out_dir: Path, grid_makes: int,
 # Scene 3: Raw Auction Field (one glyph per raw sale record, ~100k nodes)
 # ===========================================================================
 
-RAW_NODE_FIELDS = NODE_FIELDS + ["facet"]   # facet: 1-indexed Cube face selector
+#   facet:     1-indexed Cube face selector
+#   child_id:  a Link (type 7) node's B-end -- the axis rails
+#   show_text: pins a label on regardless of the scene-wide tag settings,
+#              which is what makes the axis ticks and the legend readable
+#              under GlyphViz's "tags on selection only" default
+RAW_NODE_FIELDS = NODE_FIELDS + ["child_id", "facet", "show_text"]
+
+GUIDE_DIM = (150, 152, 165)     # legend row headers and neutral swatches
+
+
+def classify_consignor(seller: str) -> str:
+    """RENTAL / FLEET / LEASE / DEALER from the raw `seller` string."""
+    s = str(seller).strip().casefold()
+    if any(k in s for k in CONSIGNOR_RENTAL):
+        return "RENTAL"
+    if any(k in s for k in CONSIGNOR_FLEET):
+        return "FLEET"
+    if any(k in s for k in CONSIGNOR_LEASE):
+        return "LEASE"
+    return "DEALER"
+
+
+def record_tokens(row) -> str:
+    """The query-token string carried by all five of a record's nodes.
+
+    #COARSE/#FINE   which of the two scales this row's `condition` is on
+    #RENTAL/#FLEET/#LEASE/#DEALER   consignor class
+    #OVER/#ATBOOK/#UNDER            this sale vs the MMR book value
+    #LIGHT/#NORMAL/#HARD            odometer per year of age
+    #MANUAL                         manual transmission (absent = automatic)
+    """
+    toks = ["#COARSE" if float(row["condition"]) <= COARSE_MAX else "#FINE",
+            "#" + row["consignor"]]
+    d = float(row["delta_pct"])
+    toks.append("#OVER" if d >= DEAL_BAND
+                else "#UNDER" if d <= -DEAL_BAND else "#ATBOOK")
+    mpy = float(row["miles_per_year"])
+    toks.append("#LIGHT" if mpy < USE_LIGHT_MPY
+                else "#HARD" if mpy > USE_HARD_MPY else "#NORMAL")
+    if str(row["transmission"]).casefold() == "manual":
+        toks.append("#MANUAL")
+    return " ".join(toks)
+
+
+def build_raw_scaffolding(emit, sample: pd.DataFrame, xs, ys) -> int:
+    """Three labelled axis rails plus a glyph legend, all pinned (show_text=1)
+    so they read without turning scene-wide tags on.
+
+    Every guide node sits at branch_level 9, so Select By > Branch Level > 9
+    picks the whole layer up in one click -- which is what lets a reader keep
+    the scaffolding on screen while isolating a cohort: select level 9, tick
+    "Add to current selection", query the cohort, then Show Only Selected.
+
+    Returns the first id free for car glyphs."""
+    nid = 0
+
+    def new_id() -> int:
+        nonlocal nid
+        nid += 1
+        return nid
+
+    def guide(x, y, z, scale, color, geometry, title, *, alpha=255,
+              facet=1, parent=0, topo=TOPO_NONE, ratio=0.1, pin=True):
+        # Guide text is kept terse on purpose: all 76 pinned labels draw at
+        # once, and a sentence-long caption on each one smears the overview
+        # into an unreadable mat. The prose lives in the docs page.
+        return emit(node_row(new_id(), parent, GUIDE_LEVEL, x, y, z,
+                             scale, scale, scale, color, geometry, topo,
+                             alpha=alpha, ratio=ratio),
+                    title, facet=facet, show_text=1 if pin else 0)
+
+    def rail(a_id, b_id, color):
+        """A Link (type 7) drawn A->B: the axis line itself. Untagged -- the
+        ticks carry the text, and a labelled rail would just double it."""
+        emit(node_row(new_id(), a_id, GUIDE_LEVEL, 0, 0, 0, 1, 1, 1, color,
+                      GEO_LINE, TOPO_NONE, alpha=150, ratio=0.02,
+                      node_type=7), None, child_id=b_id)
+
+    day0 = sample["sale_date"].min()
+    x_max, y_max = float(xs.max()), float(ys.max())
+    year_min, year_max = int(sample["year"].min()), int(sample["year"].max())
+
+    # --- scene title, floating over the origin corner ----------------------
+    # Guide text names the query tokens WITHOUT their leading '#', so a guide
+    # never matches its own vocabulary: querying "#COARSE" returns cars, not
+    # the legend entry describing them. Typing the bare word still finds both,
+    # which is why the docs and the legend both insist on the hash.
+    guide(0.0, -AXIS_PAD, CAR_Z_SPAN + 34.0, 1.4, (225, 225, 235), GEO_OCTA_WIRE,
+          f"RAW AUCTION FIELD -- {len(sample):,} auction sales, "
+          f"one 5-part glyph each")
+
+    # --- X: sale date ------------------------------------------------------
+    cx = AXIS_RGB["x"]
+    first = guide(0.0, -AXIS_PAD, 0.0, AXIS_TICK_SCALE, cx, GEO_SPHERE,
+                  f"{day0:%b %d %Y}")
+    for period in pd.period_range(day0, sample["sale_date"].max(), freq="M"):
+        start = period.to_timestamp()
+        if start <= day0:
+            continue          # already covered by the origin tick
+        guide((start - day0).days * CAR_X_PER_DAY, -AXIS_PAD, 0.0,
+              AXIS_TICK_SCALE, cx, GEO_SPHERE, f"{start:%b %Y}")
+    end = guide(x_max + 14.0, -AXIS_PAD, 0.0, AXIS_END_SCALE, cx, GEO_CONE,
+                f"X = SALE DATE ({CAR_X_PER_DAY:g} units/day)")
+    rail(first, end, cx)
+
+    # --- Y: model year -----------------------------------------------------
+    cy = AXIS_RGB["y"]
+    step = max(1, math.ceil((year_max - year_min + 1) / 12))
+    first = None
+    for yr in range(year_min, year_max + 1, step):
+        tick = guide(-AXIS_PAD, (yr - year_min) * CAR_Y_PER_YEAR, 0.0,
+                     AXIS_TICK_SCALE, cy, GEO_SPHERE, str(yr))
+        first = first if first is not None else tick
+    end = guide(-AXIS_PAD, y_max + 14.0, 0.0, AXIS_END_SCALE, cy, GEO_CONE,
+                f"Y = MODEL YEAR ({CAR_Y_PER_YEAR:g} units/year)")
+    rail(first, end, cy)
+
+    # --- Z: odometer -------------------------------------------------------
+    cz = AXIS_RGB["z"]
+    first = None
+    miles = 0.0
+    while miles <= CAR_ODO_CLIP:
+        tick = guide(-AXIS_PAD, -AXIS_PAD, miles / CAR_ODO_CLIP * CAR_Z_SPAN,
+                     AXIS_TICK_SCALE, cz, GEO_SPHERE,
+                     "0 mi" if miles == 0 else f"{miles / 1000:.0f}k mi")
+        first = first if first is not None else tick
+        miles += ODO_TICK_STEP
+    end = guide(-AXIS_PAD, -AXIS_PAD, CAR_Z_SPAN + 14.0, AXIS_END_SCALE, cz,
+                GEO_CONE, f"Z = ODOMETER (clipped at "
+                          f"{CAR_ODO_CLIP / 1000:.0f}k mi)")
+    rail(first, end, cz)
+
+    # --- assembled anatomy glyph ------------------------------------------
+    # One car glyph blown up 14x, built from the same constants the field
+    # uses so its proportions are real. Only the cube is labelled: the parts
+    # sit within a few units of each other, so five pinned captions land on
+    # top of one another -- and the legend columns beside it already name
+    # every part. This shows the assembly; the columns decode it.
+    ax, ay, az = LEGEND_X0 - 0.95 * LEGEND_COL, LEGEND_Y, 62.0
+    car = guide(ax, ay, az, ANATOMY_SCALE, (235, 235, 240), GEO_CUBE_WIRE,
+                f"ONE SALE, {ANATOMY_SCALE:.0f}x -- click a part to read it",
+                topo=TOPO_CUBE)
+    guide(0.0, 0.0, -1.0, INTERIOR_SCALE, (90, 170, 235), GEO_SPHERE,
+          "inside the cube: body class by geometry, interior trim by colour",
+          parent=car, pin=False)
+    guide(0.0, 0.0, FACE_MOUNT_TZ, 0.45, sequential_color(0.75), GEO_OCTA_WIRE,
+          "+Z facet: condition grade, as published (cond/49)",
+          parent=car, facet=5, pin=False)
+    guide(0.0, 0.0, FACE_MOUNT_TZ, DEAL_SCALE, diverging_color(3.0, MODEL_DELTA_CLIP),
+          GEO_DODECA_WIRE, "+X facet: this sale vs the MMR book value",
+          parent=car, facet=1, pin=False)
+    guide(0.0, 0.0, FACE_MOUNT_TZ, TRANS_SCALE, (240, 180, 80), GEO_TETRA_WIRE,
+          "+Y facet: transmission -- gold tetra manual, grey sphere automatic",
+          parent=car, facet=3, pin=False)
+
+    # --- legend rows -------------------------------------------------------
+    mmr_p99 = float(sample["mmr"].quantile(0.99))
+
+    def legend_column(col, groups):
+        """One legend column: (header, entries) groups stacked downwards in
+        -Z, an entry being (scale, colour, geometry, label)."""
+        x = LEGEND_X0 + col * LEGEND_COL
+        z = LEGEND_Z_TOP
+        for title, entries in groups:
+            guide(x, LEGEND_Y, z, 0.7, GUIDE_DIM, GEO_POINT, title)
+            z -= LEGEND_ROW
+            for scale, color, geo, label in entries:
+                guide(x, LEGEND_Y, z, scale, color, geo, label)
+                z -= LEGEND_ROW
+            z -= LEGEND_ROW * 0.6      # breathing room between groups
+
+    def cond_entry(c, label):
+        return ((COND_SCALE_MIN + (COND_SCALE_MAX - COND_SCALE_MIN) * c / 49)
+                * LEGEND_SCALE, sequential_color(c / 49), GEO_OCTA_WIRE, label)
+
+    size_group = ("CUBE SIZE = MMR book value  (2x)",
+                  [((CAR_SCALE_MIN + (CAR_SCALE_MAX - CAR_SCALE_MIN)
+                     * math.sqrt(min(m, mmr_p99) / mmr_p99)) * LEGEND_SCALE,
+                    (225, 225, 235), GEO_CUBE_WIRE,
+                    fmt_money(m) + ("+ (saturates)" if m >= mmr_p99 else ""))
+                   for m in (2_000.0, 12_000.0, mmr_p99)])
+    cond_group = ("+Z FACET = condition (cond/49)",
+                  [cond_entry(4, "4/49 -- COARSE: really 4 of 5")]
+                  + [cond_entry(c, f"{c}/49 = grade {c / 10:.1f}")
+                     for c in (15, 25, 35, 45, 49)])
+    deal_group = ("+X FACET = sale vs MMR book",
+                  [(DEAL_SCALE * LEGEND_SCALE,
+                    diverging_color(d, MODEL_DELTA_CLIP), GEO_DODECA_WIRE,
+                    "at book" if d == 0 else f"{d:+.0f}%")
+                   for d in (-8.0, -4.0, 0.0, 4.0, 8.0)])
+    trans_group = ("+Y FACET = transmission",
+                   [(TRANS_SCALE * LEGEND_SCALE, (240, 180, 80),
+                     GEO_TETRA_WIRE, "manual  (3%)"),
+                    (TRANS_SCALE * LEGEND_SCALE, (120, 130, 160),
+                     GEO_SPHERE_WIRE, "automatic / unlisted")])
+    body_group = ("INSIDE = body class",
+                  [(0.9, (110, 175, 225), geo, name)
+                   for name, geo in BODY_GEOMETRY.items()])
+    paint_group = ("CUBE COLOUR = exterior paint",
+                   [(1.0, PAINT_RGB[name], GEO_CUBE_WIRE,
+                     name + ("  (drawn dark grey)" if name == "black" else ""))
+                    for name in ("black", "white", "silver", "red", "blue",
+                                 "gold", "green", "burgundy")])
+    # Text-only group: the query vocabulary. Tokens are written WITHOUT the
+    # hash so this column never answers its own queries.
+    query_group = ("TAG QUERIES -- Select By > Tag contains, hash and all",
+                   [(0.5, GUIDE_DIM, GEO_POINT, line) for line in (
+                       "COARSE / FINE -- condition scale",
+                       "RENTAL / FLEET / LEASE / DEALER",
+                       "OVER / ATBOOK / UNDER -- vs book",
+                       "LIGHT / NORMAL / HARD -- mi per yr",
+                       "MANUAL -- gearbox",
+                       "these guides: Branch Level 9",
+                       "Isolating? add level 9 first")])
+
+    # Column order matters: labels draw to the right of their glyph and the
+    # field sits to the right of the whole panel, so the LONGEST captions go
+    # in the leftmost column and the shortest column stands nearest the data.
+    legend_column(0, [size_group, cond_group, query_group])
+    legend_column(1, [deal_group, trans_group, body_group])
+    legend_column(2, [paint_group])
+
+    return nid + 1
+
+
+def report_raw_field_stats(sample: pd.DataFrame, tokens: list[str]):
+    """Print what the scene now claims, measured off the sample it was built
+    from -- the numbers the docs page quotes have to come from here, not from
+    a separate analysis that could drift away from the shipped CSV."""
+    n = len(sample)
+    counts = {}
+    for t in tokens:
+        for tok in t.split():
+            counts[tok] = counts.get(tok, 0) + 1
+    print("  query-token census (of "
+          f"{n:,} records; every token is on all 5 nodes of its glyph):")
+    for family in (("#COARSE", "#FINE"),
+                   ("#RENTAL", "#LEASE", "#FLEET", "#DEALER"),
+                   ("#OVER", "#ATBOOK", "#UNDER"),
+                   ("#LIGHT", "#NORMAL", "#HARD"),
+                   ("#MANUAL",)):
+        print("    " + "  ".join(
+            f"{t} {counts.get(t, 0):,} ({counts.get(t, 0) / n * 100:.1f}%)"
+            for t in family))
+
+    coarse = sample["condition"] <= COARSE_MAX
+    drawn = float((sample.loc[coarse, "condition"] / 49).median())
+    true = float((sample.loc[coarse, "condition"] / 5).median())
+    print("  the condition-scale artifact, as this scene renders it:")
+    print(f"    #COARSE rows draw at a median condition/49 of {drawn:.3f} "
+          f"but their true grade fraction is {true:.3f} "
+          f"({true / max(drawn, 1e-9):.1f}x too low)")
+    print(f"    #FINE rows draw at "
+          f"{float((sample.loc[~coarse, 'condition'] / 49).median()):.3f}")
+    for lbl, sub in (("#COARSE", sample[coarse]),
+                     ("#FINE  ", sample[~coarse]),
+                     ("#FINE and truly junk (cond <= 19)",
+                      sample[~coarse & (sample["condition"] <= 19)])):
+        print(f"    {lbl}: n={len(sub):6,}  median model year "
+              f"{sub['year'].median():.0f}, odometer "
+              f"{sub['odometer'].median():,.0f} mi, MMR "
+              f"${sub['mmr'].median():,.0f}")
 
 
 def build_raw_auction_field(df: pd.DataFrame, out_dir: Path, n_rows: int,
@@ -577,9 +936,18 @@ def build_raw_auction_field(df: pd.DataFrame, out_dir: Path, n_rows: int,
     print(f"  dropped {stragglers} timestamp stragglers "
           f"(before {window_start:%b %Y})")
     sample = (complete.sample(n=min(n_rows, len(complete)), random_state=seed)
-                      .sort_values("saledate", kind="stable"))
+                      .sort_values("saledate", kind="stable")
+                      .copy())
     print(f"  sampled {len(sample)} of {len(complete)} complete raw records "
           f"(seed {seed})")
+
+    # Derived columns the query tokens are cut from. `age` is clipped at 1 so a
+    # current-model-year car doesn't divide by zero; miles/year is therefore a
+    # floor on use intensity, never an infinity.
+    sample["consignor"] = sample["seller"].map(classify_consignor)
+    age = (sample["sale_date"].dt.year - sample["year"]).clip(lower=1)
+    sample["miles_per_year"] = sample["odometer"] / age
+    tokens = [record_tokens(r) for _, r in sample.iterrows()]
 
     day = (sample["sale_date"] - sample["sale_date"].min()).dt.days
     # Same-second auction batches fan out along +X instead of stacking
@@ -597,68 +965,79 @@ def build_raw_auction_field(df: pd.DataFrame, out_dir: Path, n_rows: int,
 
     nodes, tags = [], []
 
-    def add_node(row_dict, facet=1):
-        row_dict["facet"] = facet
-        nodes.append(row_dict)
+    def emit(row, title=None, *, facet=1, child_id=0, show_text=0):
+        row["facet"] = facet
+        row["child_id"] = child_id
+        row["show_text"] = show_text
+        nodes.append(row)
+        if title is not None:
+            tags.append({"id": len(tags), "table_id": 0,
+                         "record_id": row["id"], "title": title})
+        return row["id"]
 
-    # Axis anchors (tagged wire spheres at the three axis extremes + origin)
-    year_min = int(sample["year"].min())
-    for nid, (x, y, z, title) in enumerate([
-        (0, 0, 0, (f"RAW AUCTION FIELD | {len(sample)} sale records | "
-                   f"X sale date | Y model year (from {year_min}) | Z odometer")),
-        (float(xs.max()) + 10, 0, 0, f"Sale date -> {sample['sale_date'].max():%b %Y}"),
-        (0, float(ys.max()) + 10, 0, f"Model year -> {int(sample['year'].max())}"),
-        (0, 0, CAR_Z_SPAN + 10, f"Odometer -> {CAR_ODO_CLIP / 1000:.0f}k+ mi"),
-    ], start=1):
-        add_node(node_row(nid, 0, 0, x, y, z, 0.6, 0.6, 0.6, (170, 170, 180),
-                          GEO_SPHERE_WIRE, TOPO_NONE))
-        tags.append({"id": len(tags), "table_id": 0, "record_id": nid,
-                     "title": title})
+    # --- scaffolding first, so it keeps the lowest ids ---------------------
+    # The draw limit and the all-tags cap both walk the scene in file order,
+    # so axis rails and the legend must come before 100k car glyphs or they
+    # are the first things to fall off a capped frame.
+    next_id = build_raw_scaffolding(emit, sample, xs, ys)
 
-    next_id = 5
+    # --- one five-node glyph per raw sale record ---------------------------
     for i, (_, r) in enumerate(sample.iterrows()):
         s = float(car_scales[i])
         car_id = next_id
+        tok = tokens[i]
+        cond_raw = float(r["condition"])
+        coarse = cond_raw <= COARSE_MAX
         # BL0: the car -- wire cube, exterior paint, sized by MMR
-        add_node(node_row(car_id, 0, 0, float(xs[i]), float(ys[i]), float(zs[i]),
-                          s, s, s, paint(r["color"]), GEO_CUBE_WIRE, TOPO_CUBE))
         trim = "" if pd.isna(r["trim"]) else f" {r['trim']}"
-        tags.append({
-            "id": len(tags), "table_id": 0, "record_id": car_id,
-            "title": (f"{r['year']:.0f} {r['make']} {r['model']}{trim} | "
-                      f"cond {r['condition']:.0f}/49 | {fmt_miles(r['odometer'])} | "
-                      f"sold {fmt_money(r['sellingprice'])} "
-                      f"(MMR {fmt_money(r['mmr'])}) | "
-                      f"{r['color']}/{r['interior']} | {r['state']} | "
-                      f"{r['sale_date']:%m/%d/%Y}")})
+        emit(node_row(car_id, 0, 0, float(xs[i]), float(ys[i]), float(zs[i]),
+                      s, s, s, paint(r["color"]), GEO_CUBE_WIRE, TOPO_CUBE),
+             (f"{r['year']:.0f} {r['make']} {r['model']}{trim} | "
+              f"cond {cond_raw:.0f}/49 | {fmt_miles(r['odometer'])} | "
+              f"sold {fmt_money(r['sellingprice'])} "
+              f"(MMR {fmt_money(r['mmr'])}) | "
+              f"{r['color']}/{r['interior']} | {r['state']} | "
+              f"{r['sale_date']:%m/%d/%Y} | {r['seller']} | {tok}"))
         # Interior: solid body-class glyph at the cube's center (tz=-1 puts the
         # Cube-topology placement distance at zero)
-        add_node(node_row(car_id + 1, car_id, 1, 0.0, 0.0, -1.0,
-                          INTERIOR_SCALE, INTERIOR_SCALE, INTERIOR_SCALE,
-                          paint(r["interior"]),
-                          BODY_GEOMETRY[r["body_class"]], TOPO_NONE))
-        # +Z facet: condition grade (size + color)
-        cond = float(r["condition"]) / 49.0
+        emit(node_row(car_id + 1, car_id, 1, 0.0, 0.0, -1.0,
+                      INTERIOR_SCALE, INTERIOR_SCALE, INTERIOR_SCALE,
+                      paint(r["interior"]),
+                      BODY_GEOMETRY[r["body_class"]], TOPO_NONE),
+             f"body {r['body_class']} | interior {r['interior']} | {tok}")
+        # +Z facet: condition grade (size + color). The scene renders the
+        # column exactly as published -- condition/49 -- which is what makes
+        # the 1-5-scale rows draw ~10x too low; the tag says so on the spot.
+        cond = cond_raw / 49.0
         csize = COND_SCALE_MIN + (COND_SCALE_MAX - COND_SCALE_MIN) * cond
-        add_node(node_row(car_id + 2, car_id, 1, 0.0, 0.0, FACE_MOUNT_TZ,
-                          csize, csize, csize, sequential_color(cond),
-                          GEO_OCTA_WIRE, TOPO_NONE), facet=5)
+        emit(node_row(car_id + 2, car_id, 1, 0.0, 0.0, FACE_MOUNT_TZ,
+                      csize, csize, csize, sequential_color(cond),
+                      GEO_OCTA_WIRE, TOPO_NONE),
+             (f"condition {cond_raw:.0f}/49 -- COARSE 1-5 SCALE ROW: true "
+              f"grade {cond_raw:.0f}/5, drawn 10x too low | {tok}"
+              if coarse else
+              f"condition {cond_raw:.0f}/49 = grade {cond_raw / 10:.1f}/5 | {tok}"),
+             facet=5)
         # +X facet: this sale's % over/under MMR book value
-        add_node(node_row(car_id + 3, car_id, 1, 0.0, 0.0, FACE_MOUNT_TZ,
-                          DEAL_SCALE, DEAL_SCALE, DEAL_SCALE,
-                          diverging_color(float(r["delta_pct"]), MODEL_DELTA_CLIP),
-                          GEO_DODECA_WIRE, TOPO_NONE), facet=1)
+        emit(node_row(car_id + 3, car_id, 1, 0.0, 0.0, FACE_MOUNT_TZ,
+                      DEAL_SCALE, DEAL_SCALE, DEAL_SCALE,
+                      diverging_color(float(r["delta_pct"]), MODEL_DELTA_CLIP),
+                      GEO_DODECA_WIRE, TOPO_NONE),
+             f"deal {float(r['delta_pct']):+.1f}% vs MMR book | {tok}", facet=1)
         # +Y facet: transmission (manual is rare -- make it pop)
         manual = str(r["transmission"]).casefold() == "manual"
-        add_node(node_row(car_id + 4, car_id, 1, 0.0, 0.0, FACE_MOUNT_TZ,
-                          TRANS_SCALE, TRANS_SCALE, TRANS_SCALE,
-                          (240, 180, 80) if manual else (120, 130, 160),
-                          GEO_TETRA_WIRE if manual else GEO_SPHERE_WIRE,
-                          TOPO_NONE), facet=3)
+        emit(node_row(car_id + 4, car_id, 1, 0.0, 0.0, FACE_MOUNT_TZ,
+                      TRANS_SCALE, TRANS_SCALE, TRANS_SCALE,
+                      (240, 180, 80) if manual else (120, 130, 160),
+                      GEO_TETRA_WIRE if manual else GEO_SPHERE_WIRE,
+                      TOPO_NONE),
+             f"transmission {'manual' if manual else 'automatic'} | {tok}",
+             facet=3)
         next_id += 5
 
     write_csv(out_dir / "RawAuctionField_gv_node.csv", RAW_NODE_FIELDS, nodes)
     write_csv(out_dir / "RawAuctionField_gv_tag.csv", TAG_FIELDS, tags)
+    report_raw_field_stats(sample, tokens)
 
 
 # ===========================================================================
@@ -666,7 +1045,10 @@ def build_raw_auction_field(df: pd.DataFrame, out_dir: Path, n_rows: int,
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path,
-                        default=Path(r"C:\Jeff\python\vehicle_sales_data\car_prices.csv"))
+                        default=Path(r"C:\Jeff\python\glyphviz"
+                                     r"\kaggle_vehicle_sales_data\car_prices.csv"),
+                        help="Kaggle syedanwarafridi/vehicle-sales-data "
+                             "car_prices.csv")
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).parent)
     parser.add_argument("--top-makes", type=int, default=24,
                         help="makes on the galaxy ring")

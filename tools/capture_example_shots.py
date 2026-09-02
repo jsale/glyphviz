@@ -108,6 +108,9 @@ MANIFEST = [
 #   zoom       multiplies the fitted camera distance
 #   distance   sets the camera distance outright, ignoring the fit (and zoom)
 #   origin     re-aim at the world origin instead of the bbox centre
+#   target     re-aim at an explicit (x, y, z) — for scenes whose data sits
+#              off-origin AND off the bbox centre, i.e. anything with a big
+#              legend panel parked to one side
 #   azimuth    orbit angle in degrees (default 45)
 #   elevation  degrees above the horizon (default 25; 90 looks straight down)
 CAMERA = {
@@ -122,6 +125,13 @@ CAMERA = {
     # chains (they march along +Y, so the eye swings toward +X). Not dead-on —
     # a few degrees of obliquity separates the per-chain labels.
     "decay-chains": {"zoom": 0.55, "azimuth": 22, "elevation": 12},
+    # The Raw Auction Field parks its glyph legend out at x=-395, well clear
+    # of the data (x 0..420) so 100k glyphs don't render through the captions
+    # — which puts the bbox centre in empty space between the two. Aim at the
+    # middle of the field itself, and pick the orbit that shows all three
+    # labelled axis rails plus the December-March and May-June sales bursts.
+    "vehicle-raw-auction-field": {"target": (250, 96, 42), "distance": 520,
+                                  "azimuth": 120, "elevation": 24},
     # Down the helix axis: every group becomes a radial spoke (see README).
     "periodic-system": {"origin": True, "zoom": 0.97, "elevation": 89},
     # Orbital Traffic: all three are Earth-centred, and all three carry a
@@ -189,6 +199,8 @@ def main() -> int:
                 cam = CAMERA[slug]
                 if cam.get("origin"):
                     cap.vp._cam_target = [0.0, 0.0, 0.0]
+                elif "target" in cam:
+                    cap.vp._cam_target = [float(v) for v in cam["target"]]
                 if "azimuth" in cam:
                     cap.vp._cam_azimuth = cam["azimuth"]
                 if "elevation" in cam:

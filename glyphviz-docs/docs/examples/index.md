@@ -72,7 +72,7 @@ Three scenes built from live CelesTrak element sets, each animating a different 
 
 - **[Vehicle Sales — Market Galaxy](vehicle-market-galaxy.md)** — the used-car market as an orbiting galaxy
 - **[Vehicle Sales — Depreciation Grid](vehicle-depreciation-grid.md)** — depreciation curves standing in relief
-- **[Vehicle Sales — Raw Auction Field](vehicle-raw-auction-field.md)** — 20,000 raw records, ~100k nodes
+- **[Vehicle Sales — Raw Auction Field](vehicle-raw-auction-field.md)** — 20,000 raw records, ~100k nodes, and a tag vocabulary that turns Select By into an analytic filter
 
 ## Hockey history
 
