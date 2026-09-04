@@ -84,7 +84,14 @@ around a node without restyling it.
 ## Regenerating
 
 The seven stems are **not shipped** (52 MB of source audio); only the mixdown
-that plays back is, at `media/warm_winter_all.wav`.
+that plays back is, at `media/warm_winter_all.m4a` — Jeff's own Garage Band
+export, remuxed to drop its cover art but with the AAC stream copied
+untouched, so there is no second generation of loss. Playback goes through
+`QMediaPlayer`, and PySide6 bundles Qt's FFmpeg media backend
+(`plugins/multimedia/ffmpegmediaplugin`), so the decoder travels with the app
+rather than depending on system codecs. The analysis path never touches this
+file: it reads the stems, and `to_wav()` shells out to ffmpeg for anything
+that is not already a WAV.
 
 ```
 python generate_warm_winter_synesthesia.py --stems <folder with track1..track7>

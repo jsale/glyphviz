@@ -130,7 +130,7 @@ Output files (written to --out, default: this folder)
   Warm_Winter_Synesthesia_Example_gv_tag.csv        a label on every node
   Warm_Winter_Synesthesia_Example_gv_ch-map.csv     channel -> attribute
   Warm_Winter_Synesthesia_Example_gv_ch-tracks.csv  348 tracks x ~6,800 frames
-  Warm_Winter_Synesthesia_Example_gv_audio.txt      -> media/warm_winter_all.wav
+  Warm_Winter_Synesthesia_Example_gv_audio.txt      -> media/warm_winter_all.m4a
 
 Usage
 -----
@@ -167,7 +167,7 @@ from audio_analysis import analyze, load_wav_mono   # vendored — see that file
 
 OUTPUT_DIR = Path(__file__).parent
 PREFIX     = "Warm_Winter_Synesthesia_Example"
-MIX_WAV    = OUTPUT_DIR / "media" / "warm_winter_all.wav"
+MIX_AUDIO  = OUTPUT_DIR / "media" / "warm_winter_all.m4a"
 
 N_TRACKS = 7
 N_BANDS  = 12          # per glyph: 4 zones x 3 bands
@@ -889,7 +889,7 @@ if __name__ == "__main__":
     ap.add_argument("--stems", type=Path, default=OUTPUT_DIR / "stems",
                     help="folder holding track1..track7 (.wav or .m4a)")
     ap.add_argument("--out", type=Path, default=OUTPUT_DIR)
-    ap.add_argument("--mix", type=Path, default=MIX_WAV,
+    ap.add_argument("--mix", type=Path, default=MIX_AUDIO,
                     help="the full mixdown that plays back in sync")
     args = ap.parse_args()
 
