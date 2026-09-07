@@ -53,14 +53,19 @@ How many points to import. **100,000 is the comfortable default.**
 
 The renderer is not what limits this — it draws a million points in 0.63 ms
 per frame, and a 442,767-point import runs at about 400 fps. The *node model*
-is: every point is a real node, costing about 2 KB of memory and about 550
-bytes in the saved scene file, since GlyphViz writes the full 94-column
-ANTz-compatible row for every node.
+is: every point is a real node, costing about 2 KB of memory and about 90
+bytes in the saved scene file.
 
 | Points | Import from LAZ | Saved scene | Save | Reopen | Memory |
 |---|---|---|---|---|---|
-| 100,000 | 1.4 s | 55 MB | 3.4 s | 1.8 s | ~200 MB |
-| 442,767 | 4.0 s | 244 MB | 15 s | 9 s | ~900 MB |
+| 100,000 | 1.4 s | 9.1 MB | 1.0 s | 1.4 s | ~200 MB |
+| 442,767 | 4.0 s | 40.7 MB | 4.2 s | 6.3 s | ~900 MB |
+
+!!! note "Scenes saved before September 2026 are much larger"
+    GlyphViz used to save every node as a full 94-column ANTz-compatible row,
+    about 550 bytes a point — that made the 442,767-point scan a 243 MB file
+    that took 15 s to save. It now writes only the columns a scene uses.
+    Opening one of those older scenes and saving it shrinks it in place.
 
 **Importing is much cheaper than saving.** Bringing a large cloud in and flying
 around it is comfortable well past the default; it is keeping it as a scene

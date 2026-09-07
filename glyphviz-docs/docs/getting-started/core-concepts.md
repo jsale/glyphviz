@@ -45,7 +45,7 @@ A **tag** is a text label attached to a node — the node's data identity (posit
 
 GlyphViz extends [ANTz](https://github.com/openantz/antz)'s node/tag model rather than inventing a new one, and that lineage explains a few things that might otherwise look like arbitrary choices:
 
-- ANTz's on-disk format is a strict 94-column CSV. GlyphViz still *writes* that full layout (via `save_node_csv`) so files stay readable by ANTz/GaiaViz tooling, but it only *requires* about 20 columns to *read* a scene — everything else has a sensible default. You will rarely hand-author more than the minimal set.
+- ANTz's on-disk format is a strict 94-column CSV. GlyphViz *reads* that layout, but only about 20 of its columns are actually required — everything else has a sensible default — and GlyphViz *writes* just the columns a scene uses. So a saved file looks like the minimal set you would hand-author, not like ANTz's full row. (Writing the full 94-column layout is still possible for ANTz/GaiaViz interop, but it is an explicit option, not the default.)
 - Rotation has two valid interpretations, and GlyphViz supports both: ANTz's original Heading/Tilt/Roll convention (a Z-X-Z Euler sequence, the only one ANTz ever used) and a more intuitive per-axis Euler XYZ convention that GlyphViz adds for hand-posing objects. Files without a `rotation_mode` column load as Heading/Tilt/Roll for backward compatibility; new nodes created in GlyphViz default to Euler XYZ.
 - Two Plot and Surface topologies exist with no ANTz/GaiaViz equivalent at all — GlyphViz's own extensions for line plots/GPS traces and deformable grids/terrain, built to match ANTz's *behavior* everywhere it's defined, and designed from first principles everywhere it isn't.
 

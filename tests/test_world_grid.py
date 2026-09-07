@@ -358,13 +358,29 @@ def test_extents_and_segments_round_trip_through_save(tmp_path):
     assert reloaded.grid_segments() == (10, 5)
 
 
-def test_integral_trigger_values_still_write_as_ints(tmp_path):
-    """Legacy files hold integer zeros in the trigger columns; the
-    int-or-float formatting keeps those byte-identical on save."""
-    rows = [_row(id=1, parent_id=0)]
+def test_integral_extents_write_as_ints(tmp_path):
+    """A whole-degree extents window writes '180', not '180.000000' — the
+    trigger columns hold coordinates, and the padding is pure file size."""
+    rows = [_grid_row(id=1, parent_id=0)]
     nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
+    nodes[0].set_grid_extents(-180, 180, -90, 90)
     out = tmp_path / "out_node.csv"
     save_node_csv(nodes, str(out))
     df = pd.read_csv(out, dtype=str)
-    for col in ('trigger_hi_x', 'trigger_lo_x', 'trigger_hi_y', 'trigger_lo_y'):
-        assert df[col].iloc[0] == '0'
+    assert (df['trigger_lo_x'].iloc[0], df['trigger_hi_x'].iloc[0]) == ('-180', '180')
+    assert (df['trigger_lo_y'].iloc[0], df['trigger_hi_y'].iloc[0]) == ('-90', '90')
+
+
+def test_all_zero_trigger_columns_are_dropped_on_save(tmp_path):
+    """A legacy file's all-zero trigger columns say nothing: a degenerate
+    axis falls back to the whole-earth window, which is exactly what an
+    absent column does. So the compact writer leaves them out rather than
+    carrying six columns of zeros for every node in the scene."""
+    rows = [_row(id=1, parent_id=0)]
+    nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
+    before = nodes[0].grid_extents()
+    out = tmp_path / "out_node.csv"
+    save_node_csv(nodes, str(out))
+    header = pd.read_csv(out, nrows=0).columns.tolist()
+    assert not [c for c in header if c.startswith('trigger_')]
+    assert load_node_csv(str(out))[0].grid_extents() == before

@@ -106,9 +106,9 @@ def main() -> int:
     save_node_csv(nodes, str(args.out))
     mb = args.out.stat().st_size / 1e6
     print(f"  wrote {args.out.name}  ({mb:.1f} MB)")
-    # Worth saying out loud, because it is the one number that surprises
-    # people: a saved node row is the full 94-column ANTz-compatible layout,
-    # about 550 bytes a point. The .laz this came from is 2.55 MB.
+    # Worth saying out loud: a scene file is still much larger than the scan
+    # it came from (2.55 MB as .laz), because every point becomes a real node
+    # row -- about 90 bytes a point in the minimal dialect GlyphViz saves.
     print(f"  (the scan itself is {SCAN.stat().st_size / 1e6:.2f} MB as .laz — "
           f"the CSV is larger because every point becomes a full node row)")
     return 0

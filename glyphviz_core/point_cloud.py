@@ -14,12 +14,15 @@ Measured, which is why the topology exists at all: 100k colored GL_POINTS
 replay from a compiled display list in 0.10 ms/frame, and 1M in 0.63 ms. The
 same 100k drawn as individual glyphs is the thing GlyphViz was already slow
 at. The ceiling on a cloud is therefore NOT the renderer. It is the Node: about
-2 KB resident each, and about 550 BYTES ON DISK, because save_node_csv writes
-the 94-column ANTz-compatible layout whether or not a point uses any of it.
-Measured end to end on real imports:
+2 KB resident each, and about 90 BYTES ON DISK. Measured end to end on real
+imports:
 
-    100,000 points -> 55 MB of node CSV, 3.4 s to save, 1.8 s to reopen
-    442,767 points -> 244 MB,           15 s to save,   9 s to reopen
+    100,000 points -> 9.1 MB of node CSV, 1.0 s to save, 1.4 s to reopen
+    442,767 points -> 40.7 MB,            4.2 s to save, 6.3 s to reopen
+
+(Those numbers were 55 MB and 244 MB until 2026-09-07, when save_node_csv
+stopped writing the full 94-column ANTz layout for every node -- a point uses
+about twenty of those columns. See csv_reader's Writing section.)
 
 So the practical limit is disk and memory, not frame rate, and it is the
 SAVED scene that costs: importing 442k points out of a compressed LAZ takes

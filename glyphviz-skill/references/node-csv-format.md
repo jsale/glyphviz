@@ -1,7 +1,7 @@
 # GlyphViz Node CSV Format
 
 Verified against `glyphviz_core/csv_reader.py` and `glyphviz_core/node.py`
-(2026-07-14). The loader is `load_node_csv()`; the writer is `save_node_csv()`.
+(2026-09-07). The loader is `load_node_csv()`; the writer is `save_node_csv()`.
 
 ## Two dialects
 
@@ -11,20 +11,31 @@ completeness:
 1. **Minimal (authoring) dialect** — a header row plus only the columns you
    need. Just 20 columns are required (see below); every other column has a
    documented load-time default. This is the recommended dialect for
-   generated/scripted data: the repo's own examples (e.g.
-   `examples/Topology_Example/topology_example_gv_node.csv`) are 22-column
-   files. **There are no mandatory "infrastructure rows"** — no camera rows, no
-   grid row, no World row are required (a World row is optional, see Node
-   types).
+   generated/scripted data, and **what `save_node_csv()` writes**: the 20
+   required columns plus `ratio` and `facet` (22 base columns), then only the
+   optional columns the scene's data actually needs. The repo's own examples
+   (e.g. `examples/Topology_Example/topology_example_gv_node.csv`) are
+   22-column files. **There are no mandatory "infrastructure rows"** — no
+   camera rows, no grid row, no World row are required (a World row is
+   optional, see Node types).
 
 2. **Canonical 94-column dialect** — the full ANTz/GaiaViz-compatible layout.
-   `save_node_csv()` always writes this (plus optional GlyphViz extension
-   columns appended after the 94). Use it when a file must round-trip through
-   ANTz/GaiaViz tooling.
+   `save_node_csv(..., compact=False)` writes it (plus optional GlyphViz
+   extension columns appended after the 94). Use it only when a file must
+   round-trip through ANTz/GaiaViz tooling; it costs ~550 bytes a row against
+   the minimal dialect's ~90, and GlyphViz reads either.
+
+**What decides whether an optional column is written**: a column appears only
+when omitting it would make some node reload as a *different* value. A column
+whose values are all covered by the load default below carries no information
+and is left out — including untracked columns inherited from a 94-column file.
+So a load → save cycle never grows a file's column set, and re-saving an
+unedited scene is byte-for-byte stable.
 
 Column *order does not matter to the GlyphViz loader* (pandas reads by header
-name), but the canonical order below is what GlyphViz writes and what ANTz
-expects.
+name). GlyphViz writes the 22 base columns first, in the order listed under
+Required columns, then the optional ones; the canonical 94-column order below
+is what ANTz expects and what `compact=False` writes.
 
 ## Required columns (loader fails if any is missing)
 
@@ -67,8 +78,15 @@ All 20: `id`, `type`, `parent_id`, `branch_level`, `translate_x/y/z`,
 | `ref_grid_color_r/g/b` | 56, 56, 71 | **World-node-only.** Color of the procedural reference grid the viewport draws under scenes that contain no World Grid node (dark gray by default). A type-6 World Grid paints its own lattice from its own `color_r/g/b` and ignores this. All three are written together or not at all. |
 
 Every other column in the file is preserved verbatim in `Node.extras` and
-round-tripped by `save_node_csv` — unknown columns are never lost or reordered
-within a session.
+round-tripped by `save_node_csv`, appended after the columns above in
+first-seen order. Two qualifications: a column whose values are all the value
+GlyphViz assumes for a *missing* column is dropped as information-free (the
+94-column layout's `selected`, `size`, `aux_*`, `proximity_*`, an all-zero
+`child_id`, …), and `record_id`/`data` are dropped when they simply mirror the
+node's `id`, which is what their absence means. A column with **no** documented
+default — a genuinely foreign column, e.g. a `station_name` your generator
+added — is always kept, since there is no way to know what its absence would
+mean.
 
 ## Canonical 94-column order
 
@@ -164,9 +182,12 @@ across a load/save round-trip.
   label text.
 - **Line endings**: GlyphViz writes CRLF (`\r\n`) and reads either; write CRLF
   for ANTz/GaiaViz compatibility.
-- **Number formatting on save**: floats with 6 decimal places; ints bare;
-  `trigger_*` written as int when integral (legacy byte-stability) and 6-dp
-  float otherwise (fractional World Grid extents like −117.5 are preserved).
+- **Number formatting on save**: floats at 6 decimal places with **trailing
+  zeros trimmed** (`0` not `0.000000`, `0.5` not `0.500000` — the padding was
+  most of the file); ints bare; a value that rounds to zero writes as `0`, never
+  `-0`. `topo_scale` is the exception: 10 *significant figures*, since 6 dp
+  would round the ANTz preset (1/180) to four. Reading is unaffected — the
+  loader parses either spelling — so hand-authored files may pad if they like.
 - The loader reads columns **by header name**, order-independent, via pandas.
 
 ## GaiaViz `np_` dialect (read-side interop)
@@ -174,8 +195,10 @@ across a load/save round-trip.
 A file whose *first* header column is `np_node_id` is detected as GaiaViz
 dialect and these columns are remapped: `np_node_id`→`id`,
 `np_geometry_id`→`geometry`, `np_topo_id`→`topo`, `np_texture_id`→`texture_id`.
-All other GaiaViz column names already match. GlyphViz **writes** only the
-canonical (ANTz-name) layout. Never author new data in `np_` dialect — that
+All other GaiaViz column names already match. GlyphViz **writes** only
+ANTz-name columns for the fields it tracks; a GaiaViz-only column it did not
+remap (e.g. `np_ch_in_id`) survives in `Node.extras` and is written back under
+its original name. Never author new data in `np_` dialect — that
 prefix is for genuine GaiaViz files.
 
 ## Node types

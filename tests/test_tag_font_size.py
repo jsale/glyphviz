@@ -90,18 +90,11 @@ def test_custom_size_round_trips(tmp_path):
     assert back[1].tag_font_size == TAG_DEFAULT_FONT_SIZE
 
 
-def test_real_example_file_stays_column_stable(tmp_path):
-    # Guards the 53 shipped example scenes: none of them set a size, so none
-    # of them should grow a column when re-saved.
-    from pathlib import Path
-    examples = sorted(Path('examples').rglob('*gv_node*.csv'))
-    if not examples:
-        pytest.skip('example scenes not present')
-    nodes = load_node_csv(str(examples[0]))
-    assert all(n.tag_font_size == TAG_DEFAULT_FONT_SIZE for n in nodes)
-    out = tmp_path / 'resaved.csv'
-    save_node_csv(nodes, str(out))
-    assert 'tag_font_size' not in out.read_text(encoding='utf-8').splitlines()[0]
+# The "a shipped example must not grow a column when re-saved" guard used to
+# live here, and only ever audited sorted(examples)[0] -- any new scene sorting
+# earlier silently took over the slot. It now covers every scene, and every
+# optional column rather than just this one:
+# tests/test_compact_csv_save.py::test_every_example_scene_stays_column_stable.
 
 
 # --- channel binding ---------------------------------------------------------

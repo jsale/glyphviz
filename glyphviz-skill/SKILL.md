@@ -25,8 +25,10 @@ color_r,color_g,color_b,color_a,geometry,hide,topo
 ```
 
 Everything else is optional with sensible defaults — see
-`references/node-csv-format.md` for the full column-by-column spec (including
-the canonical 94-column ANTz-compatible dialect GlyphViz itself saves).
+`references/node-csv-format.md` for the full column-by-column spec. This
+minimal dialect is also what GlyphViz itself saves; the canonical 94-column
+ANTz-compatible layout is an opt-in interop format, not what you will get back
+out of the app.
 **No infrastructure rows are required**: no camera rows, no grid row. A single
 optional `type=0` World row sets the background color via `color_r/g/b/a`.
 

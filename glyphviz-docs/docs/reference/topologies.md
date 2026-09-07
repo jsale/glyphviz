@@ -91,14 +91,14 @@ every point follows.
 ### How big a cloud can be
 
 The renderer is not the limit; the node model is — and mostly its footprint
-on disk. Each `Node` costs about 2 KB resident and about **550 bytes saved**,
-because `save_node_csv` writes the full 94-column ANTz-compatible row whether
-or not a point uses any of it. Measured end to end:
+on disk. Each `Node` costs about 2 KB resident and about **90 bytes saved**,
+since GlyphViz writes only the columns a point actually uses. Measured end to
+end:
 
 | Points | Import from LAZ | Saved scene | Save | Reopen | Resident |
 |---|---|---|---|---|---|
-| 100,000 | 1.4 s | 55 MB | 3.4 s | 1.8 s | ~200 MB |
-| 442,767 | 4.0 s | 244 MB | 15 s | 9 s | ~900 MB |
+| 100,000 | 1.4 s | 9.1 MB | 1.0 s | 1.4 s | ~200 MB |
+| 442,767 | 4.0 s | 40.7 MB | 4.2 s | 6.3 s | ~900 MB |
 
 **Importing is far cheaper than saving.** A 442,767-point cloud comes out of a
 compressed LAZ in about four seconds and renders at ~400 fps; it is keeping it

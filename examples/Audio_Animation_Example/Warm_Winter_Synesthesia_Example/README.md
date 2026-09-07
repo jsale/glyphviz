@@ -104,8 +104,9 @@ world's arc — is derived from the audio and the tables at the top of
 note.
 
 The committed node CSV is the one Jeff saved out of the app, so it differs from
-a fresh run in three harmless ways: it is in the 94-column save format rather
-than the generator's compact one; the seven roots sit within half a unit of
+a fresh run in three harmless ways: it is in the 94-column save format the app
+wrote at the time (GlyphViz has saved the compact dialect since 2026-09-07, so
+re-saving it now would shrink it); the seven roots sit within half a unit of
 `x = y = 0` rather than exactly on it (they were dragged, not typed); and the
 branch-2/3 rows carry the `rotate_z` and `translate_x` the rate channels had
 accumulated at the moment of the save — the "glyph remembers the song" effect,

@@ -39,10 +39,9 @@ Three things, none of them the file parsing:
 
 3. **Count.** GlyphViz gives every point a real Node -- clickable, taggable,
    animatable. That is the feature, and it is also the ceiling: about 2 KB
-   resident each, and about 550 bytes on disk once save_node_csv writes its
-   94-column ANTz-compatible row. Measured: 100,000 points is a 55 MB scene
-   that saves in 3.4 s and reopens in 1.8 s; 442,767 points is 244 MB, 15 s
-   and 9 s. Importing is far cheaper than saving -- 442k points come out of a
+   resident each, and about 90 bytes on disk. Measured: 100,000 points is a
+   9.1 MB scene that saves in 1.0 s and reopens in 1.4 s; 442,767 points is
+   40.7 MB, 4.2 s and 6.3 s. Importing is cheaper still -- 442k points come out of a
    compressed LAZ in 4 s and render at ~400 fps -- so it is the SAVED scene
    that sets the budget. A 10M-point tile must be decimated, and the
    decimation has to be honest about it.
@@ -62,10 +61,9 @@ SUPPORTED_EXTENSIONS = LAS_EXTENSIONS + ('.ply',) + ASCII_EXTENSIONS
 
 # How many points a scene can carry comfortably. Not a renderer limit --
 # measured, the renderer replays 1M points in 0.63 ms/frame and a 442,767-point
-# import runs at ~400 fps -- but a Node limit, and mostly a DISK one, because
-# save_node_csv writes the full 94-column ANTz row for every point: at 100k the
-# saved scene is 55 MB (3.4 s to save, 1.8 s to reopen, ~200 MB resident); at
-# 442k it is 244 MB (15 s / 9 s). Importing is far cheaper than saving.
+# import runs at ~400 fps -- but a Node limit, and mostly a DISK one: at 100k
+# the saved scene is 9.1 MB (1.0 s to save, 1.4 s to reopen, ~200 MB resident);
+# at 442k it is 40.7 MB (4.2 s / 6.3 s). Importing is cheaper than saving.
 # See point_cloud.py's module docstring.
 DEFAULT_MAX_POINTS = 100_000
 

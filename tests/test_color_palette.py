@@ -100,14 +100,18 @@ def test_missing_columns_default_to_zero(tmp_path):
     assert nodes[0].palette_id == 0
 
 
-def test_palette_id_column_omitted_when_all_default(tmp_path):
+def test_palette_columns_omitted_when_all_default(tmp_path):
+    # Both are elidable: an absent column reloads as 0, which is what a scene
+    # that never cycled a palette holds. The compact writer therefore drops
+    # BOTH -- color_index used to be written unconditionally only because it
+    # had a slot in the 94-column layout.
     rows = [_row(id=1, parent_id=0)]
     nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
     out_path = tmp_path / "out.csv"
     save_node_csv(nodes, str(out_path))
     header = pd.read_csv(out_path, nrows=0).columns.tolist()
     assert "palette_id" not in header
-    assert "color_index" in header   # always written -- it's a real _COL_ORDER column
+    assert "color_index" not in header
 
 
 def test_palette_id_round_trips_when_nonzero(tmp_path):
@@ -115,6 +119,8 @@ def test_palette_id_round_trips_when_nonzero(tmp_path):
     nodes = load_node_csv(str(_write_csv(tmp_path, rows)))
     out_path = tmp_path / "out.csv"
     save_node_csv(nodes, str(out_path))
+    header = pd.read_csv(out_path, nrows=0).columns.tolist()
+    assert "color_index" in header and "palette_id" in header
     reloaded = load_node_csv(str(out_path))
     assert reloaded[0].color_index == 3
     assert reloaded[0].palette_id == 2

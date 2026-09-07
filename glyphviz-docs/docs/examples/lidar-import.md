@@ -50,4 +50,4 @@ You do not need to — the importer is the point. But `build_lidar_example.py` s
 <glyphviz-env>\python.exe examples/LIDAR_Import_Example/build_lidar_example.py --points 100000
 ```
 
-One thing that script prints is worth knowing before you save a large cloud: the scan is 2.55 MB as `.laz`, but saved as a GlyphViz scene it is **243 MB**, because every point becomes a full 94-column node row. Importing is cheap; keeping a big cloud as a scene file is not.
+One thing that script prints is worth knowing before you save a large cloud: the scan is 2.55 MB as `.laz`, but saved as a GlyphViz scene it is **40.7 MB**, because every point becomes a real node row. Importing is cheap; keeping a big cloud as a scene file costs roughly 90 bytes a point.

@@ -1781,8 +1781,9 @@ class MainWindow(QMainWindow):
         #
         # Not a Node dataclass field: it lives in node.extras under whichever
         # of channel_engine._CH_INPUT_KEYS the file spelled it (set_channel_id
-        # handles that), and rides the 94-column write format's ch_input_id
-        # slot on save.
+        # handles that). save_node_csv carries it out under that same name --
+        # a nonzero binding is exactly the case its "drop columns that say
+        # nothing" rule keeps.
         ch_in_widget = QWidget()
         ch_in_layout = QHBoxLayout(ch_in_widget)
         ch_in_layout.setContentsMargins(0, 0, 0, 0)

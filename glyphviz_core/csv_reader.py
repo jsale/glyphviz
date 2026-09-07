@@ -460,8 +460,300 @@ def load_node_csv(path: str) -> list[Node]:
     return nodes
 
 
-def save_node_csv(nodes: list[Node], path: str) -> None:
-    """Write nodes to a GaiaViz/ANTz-compatible 94-column node CSV.
+# ---------------------------------------------------------------------------
+# Writing
+# ---------------------------------------------------------------------------
+#
+# GlyphViz writes the MINIMAL native dialect by default: the columns a scene
+# actually uses, and no others. The canonical 94-column ANTz/GaiaViz layout is
+# still available (save_node_csv(..., compact=False)) for a file that has to
+# round-trip through ANTz tooling, but it is no longer what the app saves --
+# a node row in it is ~550 bytes whether or not a node uses twenty of its
+# fields, which turned a 442k-point LIDAR scan into a 244 MB scene file.
+#
+# The rule for what gets written is unchanged from the old writer's handling of
+# its extension columns, just applied to every column now: a column is written
+# only when omitting it would make some node reload as a DIFFERENT value. A
+# column whose values are all covered by load_node_csv's documented default is
+# information-free and is left out. That is what keeps a scene column-stable
+# across a load/save round trip instead of accreting columns.
+#
+# This matches GlyphViz Web's writer (glyphviz-web/src/gv/writeNodeCsv.ts), so
+# the two apps produce the same file for the same scene.
+
+def _num(v) -> str:
+    """A float column's cell: 6 decimal places, trailing zeros trimmed.
+
+    6 dp is the precision every GlyphViz writer has always used; what the trim
+    saves is the padding, which is most of the file. A scene's numbers are
+    overwhelmingly whole (a translate of 0, a scale of 1, a color-driven
+    layout on integer coordinates), and '0.000000' is eight bytes to say '0'.
+    Reload is unaffected -- pandas parses either spelling to the same float --
+    and it roughly halves a large scene on disk.
+
+    Written as string surgery rather than a value test so a NaN or an inf that
+    somehow reached a node field still writes as 'nan'/'inf' the way the
+    94-column writer did, instead of raising mid-save.
+    """
+    s = f'{v:.6f}'
+    if s[-1] == '0' and '.' in s:
+        s = s.rstrip('0')
+        if s[-1] == '.':
+            s = s[:-1]
+        # A value that rounds to zero at 6 dp has no meaningful sign, and the
+        # generators that produce them (an epicycle's cos at 90 degrees lands
+        # on -1.2e-17) sprinkle them through a scene. Writing '-0' also made
+        # the writer non-idempotent, since pandas reads that cell back as a
+        # positive zero.
+        if s == '-0':
+            s = '0'
+    return s
+
+
+# Always written: the 20 columns load_node_csv requires, plus `ratio` and
+# `facet` -- the 22-column shape this repo's own hand-authored example scenes
+# use, and what GlyphViz Web emits.
+_COMPACT_BASE: tuple[tuple[str, object], ...] = (
+    ('id',            lambda n: n.id),
+    ('type',          lambda n: n.type),
+    ('parent_id',     lambda n: n.parent_id),
+    ('branch_level',  lambda n: n.branch_level),
+    ('translate_x',   lambda n: _num(n.translate_x)),
+    ('translate_y',   lambda n: _num(n.translate_y)),
+    ('translate_z',   lambda n: _num(n.translate_z)),
+    ('rotate_x',      lambda n: _num(n.rotate_x)),
+    ('rotate_y',      lambda n: _num(n.rotate_y)),
+    ('rotate_z',      lambda n: _num(n.rotate_z)),
+    ('scale_x',       lambda n: _num(n.scale_x)),
+    ('scale_y',       lambda n: _num(n.scale_y)),
+    ('scale_z',       lambda n: _num(n.scale_z)),
+    ('color_r',       lambda n: n.color_r),
+    ('color_g',       lambda n: n.color_g),
+    ('color_b',       lambda n: n.color_b),
+    ('color_a',       lambda n: n.color_a),
+    ('geometry',      lambda n: n.geometry),
+    ('hide',          lambda n: n.hide),
+    ('topo',          lambda n: n.topo),
+    ('ratio',         lambda n: _num(n.ratio)),
+    # `facet` is the on-disk (1-indexed) spelling of Node.subspace.
+    ('facet',         lambda n: n.subspace + 1),
+)
+
+# Optional tracked columns, each keyed by the name _needed_columns() uses to
+# report that the scene needs it. Several are groups written all-or-nothing:
+# a rate triple, the fog settings and the two color triples are each ONE
+# setting, and writing only the component that happens to differ would reload
+# as a mix of authored and default values.
+_COMPACT_OPTIONAL: tuple[tuple[str, tuple[tuple[str, object], ...]], ...] = (
+    ('topo_scale',     (('topo_scale', lambda n: f'{float(n.topo_scale):.10g}'),)),
+    ('texture_id',     (('texture_id', lambda n: n.texture_id),)),
+    ('mesh_id',        (('mesh_id', lambda n: n.mesh_id),)),
+    ('rotation_mode',  (('rotation_mode', lambda n: n.rotation_mode),)),
+    ('color_index',    (('color_index', lambda n: n.color_index),)),
+    ('palette_id',     (('palette_id', lambda n: n.palette_id),)),
+    ('translate_rate', (('translate_rate_x', lambda n: _num(n.translate_rate_x)),
+                        ('translate_rate_y', lambda n: _num(n.translate_rate_y)),
+                        ('translate_rate_z', lambda n: _num(n.translate_rate_z)))),
+    ('rotate_rate',    (('rotate_rate_x', lambda n: _num(n.rotate_rate_x)),
+                        ('rotate_rate_y', lambda n: _num(n.rotate_rate_y)),
+                        ('rotate_rate_z', lambda n: _num(n.rotate_rate_z)))),
+    ('scale_rate',     (('scale_rate_x', lambda n: _num(n.scale_rate_x)),
+                        ('scale_rate_y', lambda n: _num(n.scale_rate_y)),
+                        ('scale_rate_z', lambda n: _num(n.scale_rate_z)))),
+    ('text',           (('text', lambda n: str(n.text) if n.text else ''),)),
+    ('link',           (('link', lambda n: str(n.link) if n.link else ''),)),
+    ('show_text',      (('show_text', lambda n: n.show_text),)),
+    ('render_mode',    (('render_mode', lambda n: n.render_mode),)),
+    ('fog',            (('fog_enabled', lambda n: n.fog_enabled),
+                        ('fog_start', lambda n: _num(n.fog_start)),
+                        ('fog_end', lambda n: _num(n.fog_end)))),
+    ('tag_color_mode', (('tag_color_mode', lambda n: n.tag_color_mode),)),
+    ('tag_color',      (('tag_color_r', lambda n: n.tag_color_r),
+                        ('tag_color_g', lambda n: n.tag_color_g),
+                        ('tag_color_b', lambda n: n.tag_color_b))),
+    ('tag_font_size',  (('tag_font_size', lambda n: n.tag_font_size),)),
+    ('ref_grid_color', (('ref_grid_color_r', lambda n: n.ref_grid_color_r),
+                        ('ref_grid_color_g', lambda n: n.ref_grid_color_g),
+                        ('ref_grid_color_b', lambda n: n.ref_grid_color_b))),
+)
+
+_OPTIONAL_COUNT = len(_COMPACT_OPTIONAL)
+
+def _same_value(a, b) -> bool:
+    """True when an extras cell holds the value a MISSING column would give.
+
+    Compared numerically where both sides parse as numbers -- a legacy file's
+    '0' and a default of 0 are the same absent column -- and by text
+    otherwise, so an unparseable cell is never mistaken for a default.
+    """
+    try:
+        return float(a) == float(b)
+    except (TypeError, ValueError):
+        return str(a) == str(b)
+
+
+def _needed_columns(nodes: list[Node]) -> set[str]:
+    """Which of _COMPACT_OPTIONAL's groups this scene actually needs.
+
+    One fused pass rather than an `any()` sweep per group: an all-default
+    scene answers "no" to every question, so every sweep would run to the end,
+    and a point-cloud scene is 400k+ nodes.
+    """
+    need: set[str] = set()
+    add = need.add
+    for n in nodes:
+        # Omitting the column means ROTATION_MODE_HEADING_TILT_ROLL on reload
+        # (see load_node_csv), so the column is needed whenever a node's value
+        # would be *misread* by that fallback -- not merely when it's nonzero.
+        # This one asymmetric default is why old files stay column-stable.
+        if n.rotation_mode != ROTATION_MODE_HEADING_TILT_ROLL:
+            add('rotation_mode')
+        if n.topo_scale != DEFAULT_TOPO_SCALE:
+            add('topo_scale')
+        if n.texture_id:
+            add('texture_id')
+        if n.mesh_id:
+            add('mesh_id')
+        if n.color_index:
+            add('color_index')
+        if n.palette_id:
+            add('palette_id')
+        if n.translate_rate_x or n.translate_rate_y or n.translate_rate_z:
+            add('translate_rate')
+        if n.rotate_rate_x or n.rotate_rate_y or n.rotate_rate_z:
+            add('rotate_rate')
+        if n.scale_rate_x or n.scale_rate_y or n.scale_rate_z:
+            add('scale_rate')
+        if n.text:
+            add('text')
+        if n.link:
+            add('link')
+        if n.show_text:
+            add('show_text')
+        # World-row-only scene settings from here down.
+        if n.render_mode != RENDER_MODE_NORMAL:
+            add('render_mode')
+        if n.fog_enabled or n.fog_start or n.fog_end:
+            add('fog')
+        if n.tag_color_mode != TAG_COLOR_MODE_UNIFORM:
+            add('tag_color_mode')
+        if (n.tag_color_r, n.tag_color_g, n.tag_color_b) != TAG_DEFAULT_TEXT_RGB:
+            add('tag_color')
+        if n.tag_font_size != TAG_DEFAULT_FONT_SIZE:
+            add('tag_font_size')
+        if (n.ref_grid_color_r, n.ref_grid_color_g,
+                n.ref_grid_color_b) != REF_GRID_DEFAULT_RGB:
+            add('ref_grid_color')
+        if len(need) == _OPTIONAL_COUNT:
+            break
+    return need
+
+
+def _fmt_extra(val) -> str:
+    """Format an extras cell for writing: verbatim, minus pandas' float cast.
+
+    An extras value is whatever the source file held, so it goes back out as
+    text rather than being coerced to int the way a known column is -- a
+    third-party column may hold anything. The one adjustment is that pandas
+    reads every numeric column as float64, so an integral value writes as
+    '10', not '10.0', and a blank cell (NaN) writes back blank.
+    """
+    if val is None:
+        return ''
+    if isinstance(val, float):
+        if val != val:          # NaN: the blank cell it was read from
+            return ''
+        if val.is_integer():
+            return str(int(val))
+    return str(val)
+
+
+def _extras_columns(nodes: list[Node]) -> list[str]:
+    """Untracked columns worth carrying, in first-seen order.
+
+    Same rule as the tracked columns: a column every node fills with the value
+    load_node_csv would supply for a MISSING column carries nothing, so it is
+    dropped -- this is what shrinks a scene that was previously saved in the
+    94-column dialect, where 60-odd such columns were written as zeros.
+    Anything with no documented default (a genuinely foreign column) is kept
+    verbatim, because there is no way to know what its absence would mean.
+    """
+    names: list[str] = []
+    seen: set[str] = set()
+    for n in nodes:
+        for key in n.extras:
+            if key not in seen and key not in _TRACKED_COLS:
+                seen.add(key)
+                names.append(key)
+
+    # Two extras columns mirror the node's own id, which is exactly what
+    # load_node_csv assumes when they are absent: 'record_id' is the tag
+    # file's join key and falls back to the node's id (see load_node_csv and
+    # save_tag_csv), and 'data' is ANTz's id mirror, which nothing in
+    # GlyphViz reads at all.
+    keep: list[str] = []
+    for name in names:
+        if name == 'record_id':
+            informative = any(
+                not _same_value(n.extras.get('record_id', n.id), n.id) for n in nodes)
+        elif name == 'data':
+            informative = any(
+                not (_same_value(n.extras.get('data', n.id), n.id)
+                     or _same_value(n.extras.get('data', 0), 0))
+                for n in nodes)
+        elif name in _DEFAULT_EXTRAS:
+            default = _DEFAULT_EXTRAS[name]
+            informative = any(
+                not _same_value(n.extras.get(name, default), default) for n in nodes)
+        else:
+            informative = True
+        if informative:
+            keep.append(name)
+    return keep
+
+
+def save_node_csv(nodes: list[Node], path: str, compact: bool = True) -> None:
+    """Write nodes to a GlyphViz node CSV.
+
+    By default this is the MINIMAL native dialect: the 22 base columns, plus
+    each optional column the scene actually uses, plus any untracked column
+    from Node.extras that still carries information. A column whose values are
+    all covered by load_node_csv's documented default is omitted rather than
+    written out as a row of zeros, so re-saving a scene never grows its column
+    set and a scene of 400k simple nodes costs ~150 bytes a row instead of
+    ~550. Columns are written by name and the loader reads by name, so the
+    file round-trips exactly.
+
+    Pass compact=False for the canonical 94-column ANTz/GaiaViz layout (with
+    GlyphViz extension columns appended after it), for a file that has to be
+    read by ANTz/GaiaViz tooling.
+    """
+    if not compact:
+        _save_node_csv_antz(nodes, path)
+        return
+
+    columns: list[tuple[str, object]] = list(_COMPACT_BASE)
+    needed = _needed_columns(nodes)
+    for name, cols in _COMPACT_OPTIONAL:
+        if name in needed:
+            columns.extend(cols)
+    for name in _extras_columns(nodes):
+        if name == 'record_id':
+            columns.append((name, lambda n: _fmt_extra(n.extras.get('record_id', n.id))))
+        else:
+            fill = _DEFAULT_EXTRAS.get(name, '')
+            columns.append(
+                (name, lambda n, _n=name, _f=fill: _fmt_extra(n.extras.get(_n, _f))))
+
+    getters = [get for _, get in columns]
+    with open(path, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow([name for name, _ in columns])
+        writer.writerows([get(n) for get in getters] for n in nodes)
+
+
+def _save_node_csv_antz(nodes: list[Node], path: str) -> None:
+    """Write nodes in the canonical 94-column ANTz/GaiaViz layout.
 
     Tracked fields (position, rotation, scale, color, geo, topo, hide, ratio)
     reflect the current in-memory values.  All other columns are written from
@@ -469,54 +761,33 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
     for newly-created nodes.
 
     Columns with no slot in the 94-column ANTz standard set (text/link,
-    rotation_mode, show_text, the World node's tag_color_* styling, …) are
+    rotation_mode, show_text, the World node's tag_color_* styling, ...) are
     appended after it, and only when some node's value would otherwise be
-    misread by load_node_csv's fallback for a missing column — so untouched
+    misread by load_node_csv's fallback for a missing column -- so untouched
     legacy files stay byte-for-byte stable. ANTz tools ignore unknown extra
-    columns.
+    columns. Note that a foreign column from Node.extras with no slot in the
+    94 is NOT written by this path (the compact writer does carry those).
     """
     has_text = any(n.text for n in nodes)
     has_link = any(n.link for n in nodes)
-    # Omitting the column means "ROTATION_MODE_HEADING_TILT_ROLL" on reload
-    # (see load_node_csv), so the column is needed whenever a node's value
-    # would be *misread* by that fallback — not merely when it's non-zero.
     has_rotation_mode = any(n.rotation_mode != ROTATION_MODE_HEADING_TILT_ROLL for n in nodes)
-    # mesh_id has no ANTz/GaiaViz equivalent; omitting the column means 0 on
-    # reload (no mesh selected), so it only needs writing when some node
-    # actually references an imported mesh.
     has_mesh_id = any(n.mesh_id for n in nodes)
-    # palette_id has no ANTz/GaiaViz column slot (see node.py); omitting it
-    # means 0 on reload, the same value a fresh Node() gets, so it only needs
-    # writing when some node actually references a non-default palette.
     has_palette_id = any(n.palette_id for n in nodes)
-    # World-node-only scene settings (see node.py); omitting a column means
-    # "default" on reload, so each is only written when some node's value
-    # would actually be misread by that fallback.
     has_render_mode = any(n.render_mode != RENDER_MODE_NORMAL for n in nodes)
     has_fog_enabled = any(n.fog_enabled for n in nodes)
     has_fog_start = any(n.fog_start for n in nodes)
     has_fog_end = any(n.fog_end for n in nodes)
     has_tag_color_mode = any(n.tag_color_mode != TAG_COLOR_MODE_UNIFORM for n in nodes)
-    # The three tag color channels travel together: a custom color is one
-    # setting, and writing only the channels that happen to differ from the
-    # pastel-yellow default would reload as a mix of custom and default.
     has_tag_color = any(
         (n.tag_color_r, n.tag_color_g, n.tag_color_b) != TAG_DEFAULT_TEXT_RGB
         for n in nodes
     )
     has_tag_font_size = any(n.tag_font_size != TAG_DEFAULT_FONT_SIZE for n in nodes)
-    # Reference-grid color: three channels, same all-or-nothing reasoning.
     has_ref_grid_color = any(
         (n.ref_grid_color_r, n.ref_grid_color_g, n.ref_grid_color_b) != REF_GRID_DEFAULT_RGB
         for n in nodes
     )
-    # show_text has no ANTz/GaiaViz column slot; omitting it means 0 (not
-    # pinned) on reload, so it only needs writing when some node is pinned.
     has_show_text = any(n.show_text for n in nodes)
-    # topo_scale has no ANTz/GaiaViz column slot; omitting it reloads as 1.0
-    # (a translate unit is a world unit), so it only needs writing when some
-    # parent has actually been retuned. This is what keeps every pre-existing
-    # file byte-identical through a load/save round trip.
     has_topo_scale = any(n.topo_scale != DEFAULT_TOPO_SCALE for n in nodes)
     col_order = list(_COL_ORDER)
     if has_text:
@@ -554,7 +825,7 @@ def save_node_csv(nodes: list[Node], path: str) -> None:
         writer = csv.writer(f)
         writer.writerow(col_order)
         for node in nodes:
-            # Build row: defaults → preserved extras → current tracked values.
+            # Build row: defaults -> preserved extras -> current tracked values.
             row: dict = dict(_DEFAULT_EXTRAS)
             row.update(node.extras)
             row['data'] = node.id       # 'data' mirrors 'id' by convention

@@ -291,12 +291,15 @@ Rules that follow from "one batch, still real nodes":
 - **The `\` draw limit treats a cloud as one unit** and never decimates it.
 
 **Size budget.** The renderer is not the constraint; the node model is, and
-mostly its size on disk — a saved node row is the full 94-column layout, about
-**550 bytes per point**. Measured: 100,000 points is a 55 MB scene that saves
-in 3.4 s and reopens in 1.8 s; 442,767 points is 244 MB, 15 s and 9 s (and
-renders at ~400 fps). Keep a cloud at or under **100,000 points** unless the
-scene really needs more. Decimate to fit — a 100k-point sample of a 5M scan
-reads the same at any camera distance a person actually uses.
+mostly its size on disk — about **90 bytes per point** in the minimal dialect
+GlyphViz saves. Measured: 100,000 points is a 9.1 MB scene that saves in 1.0 s
+and reopens in 1.4 s; 442,767 points is 40.7 MB, 4.2 s and 6.3 s (and renders
+at ~400 fps). (Before the 2026-09-07 compact-save change a row was the full
+94-column layout at ~550 bytes, which made that same scan a 243 MB file — if
+you meet one of those, re-saving it shrinks it.) Keep a cloud at or under
+**100,000 points** unless the scene really needs more. Decimate to fit — a
+100k-point sample of a 5M scan reads the same at any camera distance a person
+actually uses.
 
 **Back-compat.** An unrecognised `topo` falls back to plain Cartesian
 placement, which is exactly what topology 18 does — so a cloud file opened by
