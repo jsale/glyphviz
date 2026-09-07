@@ -50,6 +50,12 @@ a = Analysis(
         'OpenGL.arrays.numbers',
         # Qt Multimedia — imported conditionally at runtime in video_manager.py
         'PySide6.QtMultimedia',
+        # LAS/LAZ import — laspy is imported lazily inside point_cloud_loader
+        # (so a missing install degrades to a clear error rather than a failed
+        # startup), and it resolves its LAZ backend by NAME at runtime, so
+        # PyInstaller sees neither statically.
+        'laspy',
+        'lazrs',
     ],
     hookspath=[],
     hooksconfig={},

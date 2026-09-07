@@ -79,7 +79,7 @@ distance-valued axes, and nothing else:
 
 | Parent topo | scaled by `topo_scale` | never scaled |
 |---|---|---|
-| None, Plane, Video, Plot, Surface | tx, ty, tz | — |
+| None, Plane, Video, Plot, Surface, Point Cloud | tx, ty, tz | — |
 | Cube, Zcube | tx, ty (face u/v), tz (height off the face) | the base-radius face offset |
 | Sphere, Point, Zsphere | tz (altitude) | tx, ty (lon/lat) |
 | Torus, Ztorus | tz (tube offset) | tx, ty (orbital/tube angles) |
@@ -162,7 +162,7 @@ the axis. Measured, unrotated child, engine output:
 | Sphere / Point / Torus / Ztorus | tangent | **outward (radial)** |
 | Cube (any `facet`) | in-face | **outward (face normal)** |
 | Cylinder / Zcylinder / Spiral / Zrod / Rod | **radial (horizontal)** — swept by `translate_x`, but by `translate_y` on Rod | axial (parent's +Z) |
-| Zsphere, Pin, None, Plane, Video, Plot, Surface | +X | +Z (unrotated) |
+| Zsphere, Pin, None, Plane, Video, Plot, Surface, Point Cloud | +X | +Z (unrotated) |
 
 ## Pointing a glyph: use placement, not rotation
 
@@ -227,7 +227,7 @@ For GlyphViz's overhead **+Z View** (azimuth 0, elevation 89) screen-up is
 the right, 6 at the bottom, 9 at the left — measured off a real render, not
 assumed.
 
-## Cartesian family — None (0), Plane (8), Video (15), Plot (16), Surface (17)
+## Cartesian family — None (0), Plane (8), Video (15), Plot (16), Surface (17), Point Cloud (18)
 
 `offset = (tx, ty, tz)` — plain local-frame Cartesian. Identity orientation.
 
@@ -251,8 +251,57 @@ assumed.
   floats** — a corner that differs in the 7th decimal is a hole in the mesh.
   Needs ≥ 4 children and ≥ 2 distinct values on each axis; per-vertex child
   colors shade the surface. Use for terrain, FFT waterfalls, heatmap relief.
+- **Point Cloud (18)** — same math, but the children **replace** their glyphs
+  with one batched `GL_POINTS` array. Plot and Surface *add* an overlay on top
+  of the glyphs; a Point Cloud parent's children draw no glyphs at all. Use
+  for unstructured scan data — LIDAR, photogrammetry, particle sets. See the
+  dedicated section below.
 
-Example (all five): `child (1.5, -2, 0.5) → world (1.5, -2, 0.5)`.
+Example (all six): `child (1.5, -2, 0.5) → world (1.5, -2, 0.5)`.
+
+## Point Cloud (18) — authoring a cloud
+
+The topology to reach for when you have tens of thousands of positions and
+no structure to impose on them. One `glDrawArrays` for the whole cloud:
+measured, 100k colored points cost 0.10 ms/frame and 1M cost 0.63 ms.
+
+| Field | Meaning |
+|---|---|
+| parent `topo` | `18` |
+| parent `ratio` | rendered point size in pixels = `ratio × 20`, clamped to 1–64. Default `0.1` → 2 px |
+| child `translate_x/y/z` | the point's position relative to the parent — plain Cartesian |
+| child `color_r/g/b/a` | that point's colour; `color_a` blends |
+| child `geometry`, `scale_*`, `rotate_*` | **ignored** — a point is a vertex, not a glyph |
+
+Rules that follow from "one batch, still real nodes":
+
+- **Every point remains a node.** It is individually clickable, selectable,
+  taggable, Channels-bindable, and it saves and merges like anything else.
+- **Point size is per-cloud, not per-point.** Fixed-function OpenGL has no
+  per-vertex point size. Vary colour, not size, to encode a second variable —
+  or split the scan across several cloud parents at different `ratio`s.
+- **Order does not matter.** Unlike Plot (which connects children in row
+  order) and Surface (which needs an exact lattice), a cloud reads its
+  children as an unordered set. Nothing to sort, no holes to avoid.
+- **`topo_scale` scales all three axes** — none is angular. This is the one
+  field that rescales a whole imported scan.
+- **Labels**: in the all-tags mode a cloud's points are deliberately not
+  labelled. A point labels when selected, or when it sets `show_text = 1`.
+  Pin a handful of landmarks; do not label every point.
+- **The `\` draw limit treats a cloud as one unit** and never decimates it.
+
+**Size budget.** The renderer is not the constraint; the node model is, and
+mostly its size on disk — a saved node row is the full 94-column layout, about
+**550 bytes per point**. Measured: 100,000 points is a 55 MB scene that saves
+in 3.4 s and reopens in 1.8 s; 442,767 points is 244 MB, 15 s and 9 s (and
+renders at ~400 fps). Keep a cloud at or under **100,000 points** unless the
+scene really needs more. Decimate to fit — a 100k-point sample of a 5M scan
+reads the same at any camera distance a person actually uses.
+
+**Back-compat.** An unrecognised `topo` falls back to plain Cartesian
+placement, which is exactly what topology 18 does — so a cloud file opened by
+an older GlyphViz build places every point correctly and simply draws them as
+individual glyphs. No new column: the cloud travels in the node CSV.
 
 ## Sphere (2) — KML longitude/latitude/altitude
 

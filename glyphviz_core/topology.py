@@ -40,7 +40,8 @@ TOPO_SPIRAL    = 14
 TOPO_VIDEO     = 15
 TOPO_PLOT      = 16  # 1D/2D/3D line plot, GPS, Oscilloscope (jsale/antz extension)
 TOPO_SURFACE   = 17  # deformable grid, FFT, LIDAR, sound sphere (jsale/antz extension)
-TOPO_COUNT     = 18
+TOPO_POINTCLOUD = 18  # unstructured point cloud, batched GL_POINTS (jsale/antz extension)
+TOPO_COUNT     = 19
 
 TOPO_NAMES = {
     TOPO_NONE:      "None",
@@ -61,6 +62,7 @@ TOPO_NAMES = {
     TOPO_VIDEO:     "Video",
     TOPO_PLOT:      "Plot",
     TOPO_SURFACE:   "Surface",
+    TOPO_POINTCLOUD: "Point Cloud",
 }
 
 
@@ -116,6 +118,7 @@ LINEAR_PLACEMENT_AXES: dict[int, tuple[bool, bool, bool]] = {
     TOPO_VIDEO:     (True,  True,  True),
     TOPO_PLOT:      (True,  True,  True),
     TOPO_SURFACE:   (True,  True,  True),
+    TOPO_POINTCLOUD: (True,  True,  True),
 }
 
 # Row `topo` -> boolean mask, for the batched engine. Out-of-range/unknown ids
@@ -1136,6 +1139,24 @@ def _plot_offset(tx, ty, tz, _base_radius, _parent_ratio, _child_subspace=0):
     return (tx, ty, tz)
 
 
+def _pointcloud_offset(tx, ty, tz, _base_radius, _parent_ratio, _child_subspace=0):
+    """Point Cloud topology (unstructured scan data, LIDAR): children placed
+    at their Cartesian translate_x/y/z coordinates.
+
+    ANTz's own rule — npgldraw.c:641 comments it "children use direct
+    Cartesian coordinates: translate.xyz is world position". Cartesian is
+    also `_batched_topo_offsets`' default fill and the fallback for unknown
+    topo ids, so the batched engine needs no case for this topology, and an
+    older build reading a topo=18 file still places every point correctly
+    (it just draws them as individual glyphs instead of one GL_POINTS batch).
+
+    The topology is a RENDERING contract, not a placement one: the viewport
+    draws a cloud parent's children as a single batched point array in place
+    of their per-child glyphs — see Viewport._draw_point_clouds.
+    """
+    return (tx, ty, tz)
+
+
 def _surface_offset(tx, ty, tz, _base_radius, _parent_ratio, _child_subspace=0):
     """Surface topology (deformable grid, FFT, LIDAR, sound sphere): children
     placed at their Cartesian translate_x/y/z coordinates — translate_x/y
@@ -1162,6 +1183,7 @@ _TOPO_OFFSET_FUNCS = {
     TOPO_SPIRAL:    _spiral_offset,
     TOPO_PLOT:      _plot_offset,
     TOPO_SURFACE:   _surface_offset,
+    TOPO_POINTCLOUD: _pointcloud_offset,
 }
 
 

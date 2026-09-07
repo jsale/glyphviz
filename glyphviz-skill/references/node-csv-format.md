@@ -43,13 +43,13 @@ All 20: `id`, `type`, `parent_id`, `branch_level`, `translate_x/y/z`,
 | `color_r/g/b/a` | int | 0–255. Alpha blends per the World node's `render_mode`. |
 | `geometry` | int | Shape id 0–28 (see Geometry ids). |
 | `hide` | int | 1 = do not render this node. |
-| `topo` | int | Topology id 0–17 controlling how **children** of this node are placed (see Topology ids). |
+| `topo` | int | Topology id 0–18 controlling how **children** of this node are placed (see Topology ids). |
 
 ## Optional tracked columns (read into Node fields, with load defaults)
 
 | Column | Default when column absent | Notes |
 |---|---|---|
-| `ratio` | 0.1 | Geometry/topology aspect parameter: a Torus parent's tube (minor) radius as a fraction of major radius — children of Torus/Ztorus parents sit on the tube defined by the **parent's** ratio. Also the **only** control over a Point glyph's size: `geometry` = 22 draws a `GL_POINTS` sprite `max(2, ratio × 20)` **pixels** wide, which ignores `scale_x/y/z` entirely and does not shrink with distance. Sizing a point cloud therefore means writing `ratio` per node, not `scale_*` — and if you want size to read as depth, use the flat markers (24/25/26) or a solid geometry instead. On a **Link** (type 7) it is the edge's thickness in every drawing mode: `max(ratio × 20, 1)` pixels for a Line, and the radius in world units for a stretched glyph (`scale_*` is inert there). See `links-and-edges.md`. |
+| `ratio` | 0.1 | Geometry/topology aspect parameter: a Torus parent's tube (minor) radius as a fraction of major radius — children of Torus/Ztorus parents sit on the tube defined by the **parent's** ratio. Also the **only** control over a Point glyph's size: `geometry` = 22 draws a `GL_POINTS` sprite `max(2, ratio × 20)` **pixels** wide, which ignores `scale_x/y/z` entirely and does not shrink with distance. Sizing a scatter of such sprites therefore means writing `ratio` per node, not `scale_*` — and if you want size to read as depth, use the flat markers (24/25/26) or a solid geometry instead. On a **Point Cloud parent** (`topo` = 18) `ratio` sets the size of every point in that cloud at once, in the same pixels: the children's own `ratio`, `geometry` and `scale_*` are all ignored, because a cloud point is a vertex in one batched array rather than a glyph of its own. See `topologies.md`. On a **Link** (type 7) it is the edge's thickness in every drawing mode: `max(ratio × 20, 1)` pixels for a Line, and the radius in world units for a stretched glyph (`scale_*` is inert there). See `links-and-edges.md`. |
 | `topo_scale` | 1.0 | **GlyphViz-only.** How far one unit of a **child's** `translate` reaches, for the axes this node's topology reads as a **distance** rather than an angle (a Cube facet's two axes, Pin/Cylinder height, altitude above a Sphere, all three axes of the Cartesian family). Angular axes — longitude, latitude, orbital and tube angles — are never scaled, so no value of this can distort a circular layout. 1.0 = one translate unit is one world unit (GlyphViz's original behavior, hence the load default). **1/180 ≈ 0.005556 = the ANTz convention**, where a linear axis spans the parent's own extent: translate 180 reaches the edge of a cube facet exactly as 180° of longitude reaches the far side of a sphere. Set it on the **parent**, like `topo` and `ratio`. Extension column, written only when ≠ 1.0. See `topologies.md`. |
 | `subspace` / `facet` | 0 | Cube-topology face selector. `subspace` (GaiaViz spelling, 0-indexed) wins if present; else `facet` − 1 (legacy ANTz/GlyphViz spelling, 1-indexed: 1=+X, 2=−X, 3=+Y, 4=−Y, 5=+Z, 6=−Z), clipped at 0. `save_node_csv` always writes `facet`. |
 | `texture_id` | 0 | 0 = untextured; otherwise a 1-based index into the alphanumerically sorted files of the scene's `media/` folder (images first, then videos) — see `textures-and-media.md`. |
@@ -195,7 +195,18 @@ prefix is for genuine GaiaViz files.
 4 Cylinder · 5 Pin · 6 Rod · 7 Point · 8 Plane · 9 Zcube · 10 Zsphere ·
 11 Ztorus · 12 Zcylinder · 13 Zrod · 14 Spiral · 15 Video ·
 16 Plot (line plots/GPS/oscilloscope; GlyphViz extension) ·
-17 Surface (deformable grid/FFT/LIDAR; GlyphViz extension).
+17 Surface (deformable grid/FFT/LIDAR; GlyphViz extension) ·
+18 Point Cloud (unstructured scan data — LIDAR, photogrammetry, particles;
+GlyphViz extension).
+
+Topologies 16–18 all place children at plain Cartesian `translate_x/y/z`,
+exactly as 0/8/15 do; what distinguishes them is what GlyphViz draws for the
+set of children. Plot **adds** a polyline through them in row order, Surface
+**adds** a quad mesh over them as a lattice, and Point Cloud **replaces**
+their glyphs with a single batched `GL_POINTS` array — which is what makes a
+100,000-point scan render in 0.10 ms/frame. An unrecognised `topo` also falls
+back to Cartesian placement, so a file using 18 opens correctly in a build
+that predates it.
 
 Z-variants (9–13) zero the surface/radius offset so children sit through the
 center/axis instead of on the rendered surface. Full placement math:

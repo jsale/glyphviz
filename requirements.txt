@@ -15,3 +15,12 @@ pandas>=2.0.0
 trimesh>=4.0.0
 scipy>=1.11.0
 biopython>=1.83
+
+# LIDAR / point-cloud import (glyphviz_core/point_cloud_loader.py).
+# laspy is BSD-2-Clause and pure Python; lazrs is the MIT-licensed Rust LAZ
+# codec, with wheels for every GlyphViz build target (win_amd64, manylinux
+# x86_64/aarch64, macOS x86_64/arm64). The alternative LAZ backend, the
+# original `laszip`, is LGPL -- lazrs is what keeps the bundled app clear of
+# that. laspy's own `pyproj` extra is deliberately NOT taken: it is only used
+# to name a file's CRS, and the loader treats that as optional.
+laspy[lazrs]>=2.5

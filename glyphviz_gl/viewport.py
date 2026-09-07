@@ -25,9 +25,10 @@ from glyphviz_core import draw_mode as dm
 from glyphviz_core import gizmo as gz
 from glyphviz_core.scene import DEFAULT_SCALE_FLOOR, NO_SCALE_FLOOR, Scene
 from glyphviz_core.topology import (
-    TOPO_NONE, TOPO_PLANE, TOPO_PLOT, TOPO_SURFACE, TOPO_VIDEO,
+    TOPO_NONE, TOPO_PLANE, TOPO_PLOT, TOPO_POINTCLOUD, TOPO_SURFACE, TOPO_VIDEO,
     linear_placement_axes,
 )
+from glyphviz_core import point_cloud as pc
 from glyphviz_core.mesh_loader import load_mesh_file as _load_mesh_data
 
 from glyphviz_core.geometry_data import (
@@ -66,7 +67,7 @@ _RATE_CYCLE_MS = 1000.0 / 60.0
 # cumulative per-axis scale (see _move_axis_divisors). Angular topologies
 # (Sphere/Torus/...) use degrees and keep the historical fixed drag rate.
 _CARTESIAN_PARENT_TOPOS = frozenset({
-    TOPO_NONE, TOPO_PLANE, TOPO_VIDEO, TOPO_PLOT, TOPO_SURFACE,
+    TOPO_NONE, TOPO_PLANE, TOPO_VIDEO, TOPO_PLOT, TOPO_SURFACE, TOPO_POINTCLOUD,
 })
 
 # --- Manipulation sensitivity -------------------------------------------------
@@ -160,13 +161,22 @@ class _SceneScan:
     whole scene several times over in Python, which at 700k nodes cost
     ~900 ms/frame no matter how few nodes the \\-key draw limit let render."""
     __slots__ = ('rate_nodes', 'link_nodes', 'plot_nodes', 'surface_nodes',
-                 'has_grid', 'has_pinned_tags', '_children_of')
+                 'cloud_nodes', 'cloud_parent_ids',
+                 'has_grid', 'has_pinned_tags', '_children_of', '_taggable')
 
     def __init__(self, nodes: list[Node]):
         self.rate_nodes: list[Node] = []
         self.link_nodes: list[Node] = []
         self.plot_nodes: list[Node] = []
         self.surface_nodes: list[Node] = []
+        # TOPO_POINTCLOUD parents, plus their ids as a set. The draw, pick and
+        # tag loops each ask once per node "is this a point inside some
+        # cloud?", and the answer is `node.parent_id in cloud_parent_ids`.
+        # Holding the PARENTS' ids (a handful) rather than the points' (up to
+        # ~100k) is deliberate: the test is O(1) either way, but this set
+        # costs nothing to build or carry.
+        self.cloud_nodes: list[Node] = []
+        self.cloud_parent_ids: set[int] = set()
         self.has_grid = False
         # Any node with show_text set — the tag overlay pass has to run even
         # with the scene-wide tag display off, and this keeps that check off
@@ -177,6 +187,7 @@ class _SceneScan:
         # overlay pass that finds nothing to draw.
         self.has_pinned_tags = False
         self._children_of: dict[int, list[Node]] | None = None
+        self._taggable: list[Node] | None = None
         for n in nodes:
             if (n.translate_rate_x or n.translate_rate_y or n.translate_rate_z
                     or n.rotate_rate_x or n.rotate_rate_y or n.rotate_rate_z
@@ -191,13 +202,57 @@ class _SceneScan:
                     self.plot_nodes.append(n)
                 elif n.topo == TOPO_SURFACE:
                     self.surface_nodes.append(n)
+                elif n.topo == TOPO_POINTCLOUD:
+                    self.cloud_nodes.append(n)
+                    self.cloud_parent_ids.add(n.id)
                 if n.type == NODE_TYPE_GRID:
                     self.has_grid = True
 
+    def taggable_nodes(self, nodes: list[Node]) -> list[Node]:
+        """Nodes the tag overlay pass needs to walk — everything except the
+        points inside a point cloud.
+
+        The tag pass runs EVERY frame over the whole node list, and at a
+        cloud's scale that dominates the frame outright: measured on a
+        442,768-node scene (a 442,767-point LIDAR import), _project_tagged_
+        nodes cost 109 ms of the 111 ms frame — 97% of it — for a loop whose
+        every iteration immediately skipped the node it was looking at. With
+        this list the same scene renders in 2.4 ms.
+
+        Filtering on CLOUD MEMBERSHIP rather than on `text` is what makes the
+        cache safe: membership only changes when the scene does, so a
+        revision bump covers it, whereas `text` changes on every keystroke in
+        the inspector — which is exactly why has_pinned_tags above is
+        deliberately not ANDed with it.
+
+        Returns the caller's own list unchanged when there are no clouds, so
+        a scene without them pays nothing and behaves identically.
+
+        A cloud point that PINS itself with show_text is kept, because a pin
+        outranks every scene-wide tag setting and must still be honoured.
+        That is safe to bake in for the same reason cloud membership is:
+        show_text is a node field the scan already reads (has_pinned_tags),
+        and changing it bumps the scene revision. A cloud point that is
+        merely SELECTED is not kept here and cannot be — selection
+        deliberately does not bump the revision — so the tag pass adds those
+        back itself.
+
+        (A 442k-node scene that is NOT a cloud still walks all of them. That
+        is pre-existing, and the same trick does not apply: any of those
+        nodes could sprout text at any moment.)
+        """
+        if not self.cloud_parent_ids:
+            return nodes
+        if self._taggable is None:
+            clouds = self.cloud_parent_ids
+            self._taggable = [n for n in nodes
+                              if n.parent_id not in clouds or n.show_text]
+        return self._taggable
+
     def children_map(self, nodes: list[Node]) -> dict[int, list[Node]]:
         """parent_id → children (links excluded), built lazily on first use —
-        only Plot/Surface overlay drawing needs it, so scenes without those
-        topologies never pay for the dict."""
+        only Plot/Surface overlay drawing and point-cloud batching need it,
+        so scenes without those topologies never pay for the dict."""
         if self._children_of is None:
             m: dict[int, list[Node]] = {}
             for n in nodes:
@@ -206,6 +261,22 @@ class _SceneScan:
                     m.setdefault(n.parent_id, []).append(n)
             self._children_of = m
         return self._children_of
+
+
+@dataclass
+class _CloudEntry:
+    """One cloud parent's baked point batch (see Viewport._draw_point_clouds).
+
+    `key` is the cache stamp the batch was built at; `dl` is a display list
+    replaying it (0 when the cloud is channel-animated and rebuilt per frame
+    instead); `pick_colors` is built lazily, on the first click, because most
+    clouds are never picked and the array is the same size as the color one.
+    """
+    key: tuple
+    batch: object                      # point_cloud.CloudBatch
+    dl: int = 0
+    dynamic: bool = False
+    pick_colors: object = None         # np.ndarray (N, 4) uint8, lazily built
 
 
 class Viewport(QOpenGLWidget):
@@ -470,6 +541,13 @@ class Viewport(QOpenGLWidget):
         self._scene_dl_video_ids: set[int] = set()
         self._assets_rev = 0
 
+        # Point-cloud batches, one per TOPO_POINTCLOUD parent (see
+        # _draw_point_clouds): parent id -> _CloudEntry. Separate from the
+        # scene display list because a cloud is baked as a vertex ARRAY, not
+        # as a per-node command stream, and because a cloud's own cache can
+        # survive edits elsewhere in the scene.
+        self._cloud_dls: dict[int, _CloudEntry] = {}
+
         # Channels-playback fast path (see set_channel_dynamic_nodes /
         # channel_frame_update): ids of channel-bound nodes (plus all
         # descendants of transform-bound ones) that are excluded from the
@@ -646,6 +724,9 @@ class Viewport(QOpenGLWidget):
 
     def set_nodes(self, nodes: list[Node]):
         self._draw_limit = None   # new scene → show everything
+        # The old scene's clouds are gone; free their lists rather than
+        # letting the revision key quietly orphan them.
+        self._release_cloud_dls()
         self._assets_rev += 1     # new Scene restarts its revision counter — force a scene-list rebuild
         self._tag_text_cache.clear()
         # Any channel dynamic set belonged to the old scene; the caller
@@ -1201,6 +1282,19 @@ class Viewport(QOpenGLWidget):
 
     # --- GL lifecycle ---
 
+    def _release_cloud_dls(self, delete_gl: bool = True):
+        """Drop every cached point-cloud batch.
+
+        `delete_gl=False` is for a context that is already gone (initializeGL
+        after a context recreation): the list ids belong to the dead context,
+        so deleting them would either fail or, worse, free an id the NEW
+        context has since handed out to something else."""
+        if delete_gl:
+            for entry in self._cloud_dls.values():
+                if entry.dl:
+                    glDeleteLists(entry.dl, 1)
+        self._cloud_dls = {}
+
     def initializeGL(self):
         # If the GL context was recreated (widget reparent, screen change),
         # any previously compiled scene display list id is dead — forget it
@@ -1208,6 +1302,7 @@ class Viewport(QOpenGLWidget):
         self._scene_dl = 0
         self._scene_dl_key = None
         self._scene_dl_last_key = None
+        self._release_cloud_dls(delete_gl=False)
         glClearColor(*_DEFAULT_BG, 1.0)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
@@ -1532,6 +1627,7 @@ class Viewport(QOpenGLWidget):
             self._draw_nodes_immediate(self._frustum_planes(mv, pr),
                                        nodes=self._ch_dynamic_nodes)
 
+        self._draw_point_clouds()
         self._draw_selected_outlines()
         self._draw_topology_overlays()
         self._draw_gizmo()
@@ -1547,12 +1643,29 @@ class Viewport(QOpenGLWidget):
         play (see _draw_scene_content), so the decimation count still sees
         every node in scene order when it is active."""
         visible_count = 0
+        clouds = self._cloud_parent_ids()
         for node in (self._scene.nodes if nodes is None else nodes):
             if node.type in NON_VISUAL_TYPES:
                 continue
             if node.type == NODE_TYPE_LINK:
                 continue   # rendered as lines in _draw_topology_overlays
             if not self.show_hidden and node.hide:
+                continue
+            if clouds and node.parent_id in clouds:
+                # A point inside a TOPO_POINTCLOUD parent. Its glyph is NOT
+                # drawn here: the whole cloud goes out as one batched
+                # GL_POINTS array in _draw_point_clouds. This is the one
+                # topology that REPLACES its children's rendering rather than
+                # decorating it (Plot and Surface add an overlay on top of
+                # the glyphs) -- ANTz does the same, npgldraw.c:336.
+                #
+                # Skipped BEFORE the draw-limit counter on purpose: a cloud
+                # counts as ONE unit toward the backslash limit (its parent
+                # glyph, counted below like any other node), never one per
+                # point. Halving the limit on a scene holding a 100k-point
+                # cloud should thin the glyphs around it, not decimate the
+                # cloud -- which is also why the cloud pass itself ignores
+                # the limit, exactly as the link and plot passes do.
                 continue
             if skip_ids is not None and node.id in skip_ids:
                 continue
@@ -1869,6 +1982,181 @@ class Viewport(QOpenGLWidget):
                        gl_tex_name=gl_tex, mesh_id=link.mesh_id)
         glPopMatrix()
 
+    # ---- Point Cloud topology (TOPO_POINTCLOUD) ----
+    #
+    # A cloud parent's children do not draw as glyphs. They are flattened into
+    # one interleaved position+color array (glyphviz_core.point_cloud) and
+    # emitted as a single glDrawArrays(GL_POINTS), which is ANTz's own
+    # treatment of the topology (npgldraw.c:391) and the reason it exists:
+    # measured on this renderer, 100k colored points replay from a compiled
+    # display list in 0.10 ms/frame and 1M in 0.63 ms, against a per-glyph
+    # cost that makes 100k nodes a heavy scene.
+    #
+    # Every point is still a real node underneath -- pickable (see
+    # _draw_cloud_pick_targets), selectable, taggable, savable, and
+    # Channels-bindable. Only the drawing is pooled.
+
+    def _cloud_nodes(self) -> list[Node]:
+        """Every TOPO_POINTCLOUD parent in the scene, right now.
+
+        Membership normally comes from the per-revision scan, but Channels can
+        animate `topo`, and the playback fast path deliberately never bumps
+        Scene._revision -- so a node may have entered or left the topology
+        since the scan was built. Re-derived for the dynamic set only, exactly
+        as _draw_topology_overlays does for Plot and Surface.
+        """
+        scan = self._scene_scan()
+        clouds = scan.cloud_nodes
+        if self._ch_dynamic_ids:
+            self._ch_ensure_playback_cache()
+            dyn = self._ch_dynamic_ids
+            clouds = [n for n in clouds if n.id not in dyn]
+            clouds += [n for n in self._ch_dynamic_nodes if pc.is_cloud_parent(n)]
+        return clouds
+
+    def _cloud_parent_ids(self) -> set[int]:
+        """Ids of the current cloud parents, for the "is this node a point?"
+        test in the draw, pick and tag loops. Returns the scan's own set
+        untouched in the common case (no channel animation), so the loops pay
+        nothing for a scene with no clouds."""
+        if not self._ch_dynamic_ids:
+            return self._scene_scan().cloud_parent_ids
+        return {n.id for n in self._cloud_nodes()}
+
+    def _cloud_entry(self, parent: Node, children_of: dict) -> '_CloudEntry | None':
+        """The baked batch for one cloud, rebuilding it if the cache is stale.
+
+        Cached on (Scene revision, assets revision, show-hidden), i.e. exactly
+        the sources that can move a point, add or remove one, or change its
+        color. Rebuilding costs ~50 ms at 100k points and happens only on a
+        scene edit, never per frame.
+
+        A cloud whose parent or points are transform-bound to a Channels track
+        is marked `dynamic` and gets NO display list: playback moves those
+        nodes without bumping the revision, so a baked list would freeze the
+        cloud mid-animation. Those redraw from the arrays every frame instead
+        (measured 4.4 ms/frame at 1M points, 0.9 ms at 100k) -- still one draw
+        call, just not a retained one.
+        """
+        key = (self._scene._revision, self._assets_rev, self.show_hidden)
+        entry = self._cloud_dls.get(parent.id)
+        if entry is not None and entry.key == key and not entry.dynamic:
+            return entry
+
+        kids = pc.drawable_children(children_of.get(parent.id, []),
+                                    self.show_hidden)
+        mask, positions = self._scene.world_pos_rows([k.id for k in kids])
+        if not mask.all():
+            kids = [k for k, ok in zip(kids, mask) if ok]
+        batch = pc.build_batch(kids, positions)
+
+        if entry is not None and entry.dl:
+            glDeleteLists(entry.dl, 1)
+        if batch is None:
+            self._cloud_dls.pop(parent.id, None)
+            return None
+
+        moving = self._ch_transform_ids
+        dynamic = bool(moving) and (parent.id in moving
+                                    or any(k.id in moving for k in kids))
+        dl = 0
+        if not dynamic:
+            dl = glGenLists(1)
+            glNewList(dl, GL_COMPILE)
+            self._draw_cloud_arrays(batch.positions, batch.colors)
+            glEndList()
+        entry = _CloudEntry(key=key, batch=batch, dl=dl, dynamic=dynamic)
+        self._cloud_dls[parent.id] = entry
+        return entry
+
+    def _draw_cloud_arrays(self, positions, colors):
+        """One glDrawArrays(GL_POINTS) over client-side vertex/color arrays.
+
+        Client array state is never captured by a display list -- only the
+        glDrawArrays is, which dereferences the pointers at COMPILE time and
+        copies the data. That is what lets the same helper serve both the
+        retained bake and the per-frame dynamic path. The client states are
+        always turned back off: leaving GL_VERTEX_ARRAY pointing at a numpy
+        buffer that Python may free is a crash waiting for the next
+        glDrawArrays anywhere in the renderer.
+        """
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glEnableClientState(GL_COLOR_ARRAY)
+        glVertexPointer(3, GL_FLOAT, 0, positions)
+        glColorPointer(4, GL_UNSIGNED_BYTE, 0, colors)
+        glDrawArrays(GL_POINTS, 0, len(positions))
+        glDisableClientState(GL_COLOR_ARRAY)
+        glDisableClientState(GL_VERTEX_ARRAY)
+
+    def _draw_point_clouds(self):
+        """Draw every TOPO_POINTCLOUD parent's children as batched points.
+
+        Runs inside _draw_scene_content, so it happens once per stereo eye
+        with that eye's matrices already loaded -- clouds need no stereo case
+        of their own.
+
+        Like the link and plot passes, this ignores the backslash draw limit:
+        a cloud is one unit of scene content and is drawn whole or not at all
+        (its parent glyph is what the limit counts). GL_POINT_SMOOTH and
+        GL_BLEND are already on globally from initializeGL, so points come out
+        round and antialiased and a point's color_a is honoured.
+        """
+        clouds = self._cloud_nodes()
+        if not clouds:
+            return
+        children_of = self._scene_scan().children_map(self._scene.nodes)
+        glDisable(GL_LIGHTING)   # points carry flat color, like links and plots
+        drew = False
+        for parent in clouds:
+            if not self.show_hidden and parent.hide:
+                continue
+            entry = self._cloud_entry(parent, children_of)
+            if entry is None:
+                continue
+            glPointSize(pc.point_size(parent))
+            if entry.dl:
+                glCallList(entry.dl)
+            else:
+                self._draw_cloud_arrays(entry.batch.positions, entry.batch.colors)
+            drew = True
+        if drew:
+            glPointSize(1.0)
+        glEnable(GL_LIGHTING)    # restore this pass's caller-visible baseline
+
+    def _draw_cloud_pick_targets(self):
+        """Render every cloud's points into the pick FBO in their color-IDs.
+
+        **This pass draws what the visible pass draws** -- the same points, at
+        the same size, from the same arrays -- which is the invariant the link
+        picking bug came down to (see _draw_link_pick_targets). Same size in
+        particular: a fatter pick point would let a cloud steal clicks from
+        glyphs its visible form does not actually cover.
+
+        Per-point color-IDs make individual points clickable, which is better
+        than ANTz managed -- it fell back to redrawing every child as a full
+        glyph in its pick pass (npgldraw.c:337). One draw call here does the
+        same job for a whole cloud.
+
+        Point antialiasing is already disabled by the caller: a smoothed edge
+        pixel blends the ID color toward the background and decodes as a
+        different node, the same way fog would.
+        """
+        clouds = self._cloud_nodes()
+        if not clouds:
+            return
+        children_of = self._scene_scan().children_map(self._scene.nodes)
+        for parent in clouds:
+            if not self.show_hidden and parent.hide:
+                continue
+            entry = self._cloud_entry(parent, children_of)
+            if entry is None:
+                continue
+            if entry.pick_colors is None:
+                entry.pick_colors = pc.id_colors(entry.batch.ids)
+            glPointSize(pc.point_size(parent))
+            self._draw_cloud_arrays(entry.batch.positions, entry.pick_colors)
+        glPointSize(1.0)
+
     def _draw_topology_overlays(self):
         """Draw type=7 links (line, prism, or any glyph geometry stretched
         between the two ends), TOPO_PLOT polylines, and TOPO_SURFACE quad
@@ -2115,16 +2403,53 @@ class Viewport(QOpenGLWidget):
         pinned_flags: list[bool] = []
         any_pinned = False
         visible_count = 0
-        for node in self._scene.nodes:
+        clouds = self._cloud_parent_ids()
+        # Cloud points are filtered out BEFORE the loop, not inside it (see
+        # _SceneScan.taggable_nodes) -- at 442k points, skipping them one at a
+        # time still cost 109 ms a frame. The in-loop check below stays as the
+        # safety net for membership Channels changed since the scan was built.
+        candidates = self._scene_scan().taggable_nodes(self._scene.nodes)
+        if clouds and self.selected_node_ids:
+            # Selected cloud points ARE labelled (the rule: a point labels
+            # when it is pinned or selected), but selection deliberately does
+            # not bump the scene revision, so it cannot be baked into the
+            # cached list -- these are gathered per frame instead. The set is
+            # normally a handful; a rubber-band over 50k points makes it 50k,
+            # which is exactly what the user asked to see. show_text ones are
+            # skipped because the cached list already holds them.
+            extra = [n for n in (self._scene.node_by_id(i)
+                                 for i in self.selected_node_ids)
+                     if n is not None and not n.show_text
+                     and n.parent_id in clouds]
+            if extra:
+                candidates = list(candidates) + extra
+        for node in candidates:
             if node.type in NON_VISUAL_TYPES:
                 continue
             if node.type == NODE_TYPE_LINK:
                 continue   # links carry labels too — collected in pass 1b
             if not self.show_hidden and node.hide:
                 continue
-            if self._draw_limit is not None and visible_count >= self._draw_limit:
+            if clouds and node.parent_id in clouds:
+                # A point inside a cloud. In the unscoped all-tags mode a
+                # 100k-point cloud would otherwise hand this pass 100k labels
+                # to project and lay out — the _MAX_TAGS_PER_FRAME cap would
+                # keep the frame rate but the result is an unreadable wall of
+                # text over the cloud, and which 500 labels survive would be
+                # scene order rather than anything the user chose. So a point
+                # labels only when it is individually pinned (show_text) or
+                # selected — the two cases where the label is a deliberate
+                # act. Selected-only mode (the default) already behaves this
+                # way for every node, so this changes nothing there.
+                #
+                # No visible_count bump, matching the draw and pick loops:
+                # cloud points do not consume the backslash draw limit.
+                if not (node.show_text or node.id in self.selected_node_ids):
+                    continue
+            elif self._draw_limit is not None and visible_count >= self._draw_limit:
                 break
-            visible_count += 1
+            else:
+                visible_count += 1
             pinned = self._tag_pin_state(node)
             if pinned is None:
                 continue
@@ -2664,6 +2989,7 @@ class Viewport(QOpenGLWidget):
         # nodes, which stay pickable/modifiable even past the cutoff
         # (matches ANTz: selecting then hiding keeps the selection live).
         visible_count = 0
+        clouds = self._cloud_parent_ids()
         for node in self._scene.nodes:
             if node.type in NON_VISUAL_TYPES:
                 continue
@@ -2671,6 +2997,8 @@ class Viewport(QOpenGLWidget):
                 continue   # links are picked via lines below
             if not self.show_hidden and node.hide:
                 continue
+            if clouds and node.parent_id in clouds:
+                continue   # picked as batched points in _draw_cloud_pick_targets
             if node.type == NODE_TYPE_GRID:
                 # World Grids are never click/rubber-band targets: a grid
                 # usually fills the view under its children, so making it
@@ -2717,6 +3045,7 @@ class Viewport(QOpenGLWidget):
             self._geo.draw(pick_geo, 1.0, 1.0, 1.0, ratio=node.ratio, mesh_id=node.mesh_id)
             glPopMatrix()
 
+        self._draw_cloud_pick_targets()
         self._draw_link_pick_targets()
 
         return qt_fbo, fb_w, fb_h, dpr, w, h

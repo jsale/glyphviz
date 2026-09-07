@@ -26,6 +26,7 @@ the Qt event handlers in `main_window.py` so it can be tested on its own
 | **Tag or channel CSV** | Redirects to the node CSV it belongs with — grabbing the wrong file of a pair still works |
 | **`.pdb`** | Imports the protein structure (File → Import PDB File) |
 | **`.obj` `.stl` `.ply` `.glb` `.gltf`** | Imports as a mesh, onto the selected node or a new one |
+| **`.las` `.laz` `.xyz` `.pts`** | Opens the [point-cloud importer](point-cloud-import.md) — LIDAR and scan data, merged into the current scene. One file at a time, since the import opens a dialog |
 | **Image / video file, or a folder of them** | Loads that folder as the texture set |
 
 Anything else is reported in the status bar and ignored.
@@ -49,6 +50,12 @@ each other:
   one Open with several Ctrl+M's.
 - **Meshes and textures** are additive, and are applied *after* the scene loads,
   since a mesh attaches to the current selection.
+- **`.ply` is a mesh, not a point cloud.** It has routed to the mesh importer
+  since mesh import shipped, and a dropped PLY is far more often a model than
+  a scan. To bring one in as points, use Meshes ▸ Import Point Cloud… instead.
+  For the same reason `.csv` and `.txt` never route to the point-cloud
+  importer: a dropped CSV is a scene, and node CSVs are identified by their
+  columns rather than their names.
 - **A PDB dropped alongside a node CSV** is skipped, with a note. Both are
   whole-scene replacements, and the CSV wins.
 

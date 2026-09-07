@@ -191,6 +191,24 @@ class Scene:
         x, y, z = self._transforms.world_pos[row]
         return (float(x), float(y), float(z))
 
+    def world_pos_rows(self, ids) -> tuple[np.ndarray, np.ndarray]:
+        """Batched world_pos for many ids at once: (resolved_mask, positions).
+
+        `resolved_mask` is a (len(ids),) bool saying which ids exist in the
+        scene; `positions` is (M, 3) float64 for the M that do, in the given
+        order. One vectorized gather out of the cached transforms instead of
+        M dict-lookup-plus-tuple-build round trips through world_pos(), which
+        costs ~1 us each -- 0.1 s per rebuild at a 100k-point cloud, on every
+        scene edit. Used by the point-cloud batch builder; anything else
+        gathering thousands of positions at once should use it too.
+        """
+        self._ensure()
+        row_of_id = self._transforms.row_of_id
+        rows = np.fromiter((row_of_id.get(i, -1) for i in ids),
+                           dtype=np.int64, count=len(ids))
+        mask = rows >= 0
+        return mask, self._transforms.world_pos[rows[mask]]
+
     def world_scale(self, node_id: int) -> tuple[float, float, float] | None:
         """Approximate per-axis cumulative scale (column norms of the node's
         RAW world_basis) — a camera-framing/UI hint, not exact glyph-shape

@@ -40,14 +40,92 @@ that topology's placement axes sweeping, one at a time.
 | 15 | Video | `_cartesian_offset` | Plain Cartesian offset — treats the parent as a flat "screen," children placed at literal `tx/ty/tz` | `topo08_grid_probe` |
 | 16 | Plot | `_plot_offset` | Plain Cartesian offset — 1D/2D/3D line plot, GPS, or oscilloscope data; GlyphViz/ANTz-extension topology, not in the original ANTz/GaiaViz set (`topology.py:35, 487-491`) | `topo08_grid_probe` |
 | 17 | Surface | `_surface_offset` | Plain Cartesian offset — `tx`/`ty` form a grid position, `tz` is the height/value at that point (deformable grid, FFT, LIDAR, sound sphere); GlyphViz/ANTz-extension topology (`topology.py:36, 494-499`) | `topo08_grid_probe` |
+| 18 | Point Cloud | `_pointcloud_offset` | Plain Cartesian offset — **but the children render as one batched `GL_POINTS` array instead of one glyph apiece**, which is what makes six-figure point counts practical. For unstructured scan data: LIDAR, photogrammetry, particle sets. GlyphViz/ANTz-extension topology. See [Point clouds](#point-clouds-topology-18) below | `topo08_grid_probe` |
 
-`TOPO_COUNT = 18` (`topology.py:37`). Default topology for newly-created
+`TOPO_COUNT = 19` (`topology.py`). Default topology for newly-created
 nodes is **Point** (`main_window.py:536`).
 
-Five topologies share one animation because they share one offset function:
-None (0), Plane (8), Video (15), Plot (16) and Surface (17) are all plain
-Cartesian, so `topo08_grid_probe` is the animation for all of them. (A Video
-plate is separately shown *in use* in `06_sphere_probe_with_screen`.)
+Six topologies share one animation because they share one offset function:
+None (0), Plane (8), Video (15), Plot (16), Surface (17) and Point Cloud (18)
+are all plain Cartesian, so `topo08_grid_probe` is the animation for all of
+them. (A Video plate is separately shown *in use* in
+`06_sphere_probe_with_screen`.)
+
+## Point clouds (topology 18)
+
+Point Cloud is the one topology that **replaces** how its children draw
+rather than decorating it. Plot and Surface add a polyline or a quad mesh
+*on top of* the children's glyphs; a Point Cloud parent's children draw no
+glyphs at all. They are gathered into a single position + color array and
+issued as one `glDrawArrays(GL_POINTS)`.
+
+That is the whole reason the topology exists. Measured on an RTX 3080 Ti:
+
+| Points | Drawn as a cloud | Drawn as glyphs |
+|---|---|---|
+| 100,000 | 0.10 ms/frame | the scene GlyphViz is already slow at |
+| 1,000,000 | 0.63 ms/frame | — |
+
+**Every point is still a real node.** It has an id, a color, a label, a
+channel binding; it is individually clickable (the pick pass renders the same
+batch in per-point colour-IDs); it selects, saves and merges like any other
+node. Only the drawing is pooled.
+
+### Using it
+
+1. Give a parent node `topo = 18`.
+2. Give each point a child row whose `translate_x/y/z` is its position
+   relative to that parent. Plain Cartesian — no angles, no surface.
+3. Colour each point with its own `color_r/g/b/a`.
+
+The parent's **`ratio`** sets the rendered point size in pixels
+(`ratio × 20`, minimum 1, maximum 64) — the same conversion Link lines and
+Plot polylines use for their widths. The default `ratio` of 0.1 gives 2 px
+points. Size is per-cloud, not per-point: fixed-function OpenGL has no
+per-vertex point size.
+
+The parent itself still draws as an ordinary glyph, so it stays visible and
+clickable as the handle for the whole cloud — move, rotate or scale it and
+every point follows.
+
+### How big a cloud can be
+
+The renderer is not the limit; the node model is — and mostly its footprint
+on disk. Each `Node` costs about 2 KB resident and about **550 bytes saved**,
+because `save_node_csv` writes the full 94-column ANTz-compatible row whether
+or not a point uses any of it. Measured end to end:
+
+| Points | Import from LAZ | Saved scene | Save | Reopen | Resident |
+|---|---|---|---|---|---|
+| 100,000 | 1.4 s | 55 MB | 3.4 s | 1.8 s | ~200 MB |
+| 442,767 | 4.0 s | 244 MB | 15 s | 9 s | ~900 MB |
+
+**Importing is far cheaper than saving.** A 442,767-point cloud comes out of a
+compressed LAZ in about four seconds and renders at ~400 fps; it is keeping it
+as a scene file that gets expensive. 100,000 is the comfortable default —
+decimate on import for anything much larger, see
+[Importing point clouds](point-cloud-import.md).
+
+### Interaction rules
+
+- **The `\` draw limit counts a cloud as one unit** — its parent glyph. The
+  limit thins the glyphs around a cloud and never decimates the cloud
+  itself, the same way it leaves links and plot lines alone.
+- **Labels**: in the all-tags display mode a cloud's points are *not*
+  labelled, because a six-figure scan would bury the scene in text. A point
+  is labelled when it is **selected**, or when it pins itself with
+  `show_text`. The default tag mode (selected only) already behaves this way
+  for every node, so nothing changes there.
+- **`topo_scale`** applies to all three axes, since none of them is angular —
+  it is the single field that rescales an imported scan.
+
+### Compatibility
+
+A `topo` value the loader does not recognise falls back to plain Cartesian
+placement, and `_pointcloud_offset` *is* that fallback. So a `topo=18` file
+opened by a GlyphViz build predating this topology puts every point in
+exactly the right place — it just draws them as individual glyphs, slowly.
+Nothing is lost and no column was added: the cloud travels in the CSV.
 
 ## Topology Scale — when children fly off after a topology change
 

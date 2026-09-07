@@ -4,7 +4,7 @@ Every scene below ships in the GlyphViz examples set — download it once and ev
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~255 MB download, ~453 MB extracted*
+*~269 MB download, ~488 MB extracted*
 
 You can also take just one. Every page below has its own download button, and the examples that hold several scenes offer one zip per scene — most are a few megabytes. Each single-example zip contains that scene's files at its top level: extract it and you have one self-contained folder, or drag the zip onto the GlyphViz window and it extracts beside itself and loads.
 
@@ -92,6 +92,7 @@ Three scenes built from live CelesTrak element sets, each animating a different 
 - **[Decay Chains](decay-chains.md)** — sixteen chains whose depth is the data
 - **[YBCO Superconductor](ybco-superconductor.md)** — crystal structure meets its physics
 - **[Protein Import (PDB)](protein-import.md)** — an ideal α-helix through the PDB importer
+- **[LIDAR Import (LAS/LAZ)](lidar-import.md)** — 442,767 aerial laser returns, every one a real node
 - **[Flocking (Boids)](flocking.md)** — a boids murmuration baked into Channels
 - **[AutoSleep — A Year of Sleep](autosleep-2025.md)** — a year of sleep as monthly towers
 - **[Hacking Creativity Glyph](hacking-creativity-glyph.md)** — one person's creative style as one glyph

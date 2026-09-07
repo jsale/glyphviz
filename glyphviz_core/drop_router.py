@@ -26,6 +26,18 @@ from pathlib import Path
 # --- what we recognise -------------------------------------------------------
 
 MESH_EXTS = frozenset({'.obj', '.stl', '.ply', '.glb', '.gltf'})
+# Point-cloud files (LIDAR and friends) -- see point_cloud_loader.py.
+#
+# `.ply` is deliberately NOT here even though the loader reads it: PLY has
+# routed to the mesh importer since mesh import shipped, and a dropped PLY is
+# far more often a model than a scan. It stays a mesh on drop; File > Import
+# Point Cloud accepts it explicitly for the other case.
+#
+# `.txt` and `.csv` are also absent, for a sharper reason: a dropped CSV is a
+# scene, and node CSVs are identified by their COLUMNS rather than their name
+# (see find_node_csvs). Claiming every .csv/.txt for the point-cloud importer
+# would break that. Those extensions load through the file dialog only.
+POINT_CLOUD_EXTS = frozenset({'.las', '.laz', '.xyz', '.pts'})
 PDB_EXTS = frozenset({'.pdb'})
 ZIP_EXTS = frozenset({'.zip'})
 
@@ -55,6 +67,7 @@ ACTION_OPEN_CSV = 'open_csv'
 ACTION_MERGE_CSV = 'merge_csv'
 ACTION_PDB = 'pdb'
 ACTION_MESH = 'mesh'
+ACTION_POINT_CLOUD = 'point_cloud'
 ACTION_TEXTURES = 'textures'
 
 
@@ -303,6 +316,7 @@ def resolve_drop(paths, *, merge: bool = False) -> DropPlan:
     node_csvs: list[Path] = []
     pdbs: list[Path] = []
     meshes: list[Path] = []
+    clouds: list[Path] = []
     tex_folders: list[Path] = []
     unknown: list[Path] = []
 
@@ -370,6 +384,8 @@ def resolve_drop(paths, *, merge: bool = False) -> DropPlan:
 
         if suffix in PDB_EXTS:
             pdbs.append(p)
+        elif suffix in POINT_CLOUD_EXTS:
+            clouds.append(p)
         elif suffix in MESH_EXTS:
             meshes.append(p)
         elif suffix in MEDIA_EXTS:
@@ -385,6 +401,7 @@ def resolve_drop(paths, *, merge: bool = False) -> DropPlan:
     node_csvs = _dedupe(node_csvs)
     tex_folders = _dedupe(tex_folders)
     meshes = _dedupe(meshes)
+    clouds = _dedupe(clouds)
 
     for i, csv_path in enumerate(node_csvs):
         first = i == 0
@@ -403,6 +420,13 @@ def resolve_drop(paths, *, merge: bool = False) -> DropPlan:
         plan.actions.append(DropAction(ACTION_TEXTURES, folder))
     for mesh in meshes:
         plan.actions.append(DropAction(ACTION_MESH, mesh))
+    if clouds:
+        # One at a time: importing a cloud opens a dialog, and queueing
+        # several would stack modal dialogs on top of each other.
+        plan.actions.append(DropAction(ACTION_POINT_CLOUD, clouds[0]))
+        if len(clouds) > 1:
+            plan.notes.append(
+                f"opened {clouds[0].name} — one point cloud at a time")
 
     if unknown:
         names = ', '.join(p.name for p in unknown[:3])

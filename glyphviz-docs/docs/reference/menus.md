@@ -51,6 +51,7 @@ scene folder, or a zip onto the window opens it, and Shift+drop merges. See
 | Item | Action |
 |---|---|
 | Import Mesh File… | Loads an OBJ/STL/PLY/glTF file as a `GEO_MESH` shape — applies to the selected node if exactly one is selected, otherwise creates a new root node (`_import_mesh_file` — `main_window.py:989-1030`) |
+| Import Point Cloud… | Loads a LIDAR or scan file (LAS, LAZ, PLY, XYZ, PTS) as a [Point Cloud topology](topologies.md#point-clouds-topology-18) node — one real, clickable node per point. Opens an options dialog first that reports what is in the file, then merges the result into the current scene. See [Importing point clouds](point-cloud-import.md) |
 
 ## Tools
 

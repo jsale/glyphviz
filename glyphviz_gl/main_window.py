@@ -39,8 +39,10 @@ from glyphviz_core import camera_smoothing as cs
 from glyphviz_core.channel_engine import (
     channel_attrs, channel_id_of, set_channel_id,
 )
+from glyphviz_core import point_cloud_loader as pcl
 from glyphviz_core.drop_router import (
-    ACTION_MERGE_CSV, ACTION_MESH, ACTION_OPEN_CSV, ACTION_PDB, ACTION_TEXTURES,
+    ACTION_MERGE_CSV, ACTION_MESH, ACTION_OPEN_CSV, ACTION_PDB,
+    ACTION_POINT_CLOUD, ACTION_TEXTURES,
     DropPlan, can_accept, resolve_drop,
 )
 from glyphviz_core.draw_mode import place_stamp
@@ -420,6 +422,14 @@ class MainWindow(QMainWindow):
             "Applies to the selected node, or creates a new root node if none is selected."
         )
         import_mesh_act.triggered.connect(self._import_mesh_file)
+
+        import_cloud_act = mesh_menu.addAction("Import &Point Cloud…")
+        import_cloud_act.setToolTip(
+            "Import a LIDAR or scan file (LAS, LAZ, PLY, XYZ, PTS) as a\n"
+            "Point Cloud topology node — one real, clickable node per point.\n"
+            "Large files are decimated to a target count you choose."
+        )
+        import_cloud_act.triggered.connect(self._import_point_cloud)
 
         tools_menu = mb.addMenu("&Tools")
         composer_act = tools_menu.addAction("&Glyph Composer…")
@@ -2261,6 +2271,8 @@ class MainWindow(QMainWindow):
                 ok = self._load_pdb_path(path)
             elif action.kind == ACTION_MESH:
                 ok = self._load_mesh_path(path)
+            elif action.kind == ACTION_POINT_CLOUD:
+                ok = self._load_point_cloud_path(path)
             elif action.kind == ACTION_TEXTURES:
                 self._apply_texture_folder(action.path, silent=True)
                 ok = True
@@ -2497,6 +2509,75 @@ class MainWindow(QMainWindow):
         if not path:
             return
         self._load_mesh_path(path)
+
+    def _import_point_cloud(self):
+        """Meshes > Import Point Cloud…: bring a LIDAR/scan file into the
+        scene as a TOPO_POINTCLOUD parent with one node per point."""
+        exts = ' '.join('*' + e for e in pcl.SUPPORTED_EXTENSIONS)
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Import Point Cloud", str(Path.home()),
+            f"Point Clouds ({exts});;LAS/LAZ (*.las *.laz);;"
+            f"PLY (*.ply);;ASCII XYZ (*.xyz *.pts *.txt *.csv);;"
+            f"All Files (*)",
+        )
+        if not path:
+            return
+        self._load_point_cloud_path(path)
+
+    def _load_point_cloud_path(self, path: str) -> bool:
+        """Import *path* as a point cloud. Shared by the menu action and
+        drag and drop.
+
+        The cloud is MERGED into the loaded scene rather than replacing it —
+        a scan is nearly always context for something else (sensors placed in
+        a building, per-tree glyphs over a canopy), so replacing the scene
+        would be the wrong default and is one Ctrl+Z away from impossible.
+        Node ids are rebased past whatever is already loaded, exactly as a
+        Ctrl+M merge does.
+        """
+        from .point_cloud_dialog import PointCloudImportDialog
+
+        dlg = PointCloudImportDialog(path, self)
+        if dlg.exec() != QDialog.DialogCode.Accepted or not dlg.nodes:
+            return False
+
+        nodes, report = dlg.nodes, dlg.report
+
+        # Go through the same merge the Ctrl+M path uses rather than
+        # rebasing ids by hand: it is the one place that knows how to renumber
+        # every id-bearing field (parent_id, a link's child_id, tag record_id)
+        # consistently, and reusing it means a cloud import can never drift
+        # away from what a merge does.
+        result = merge_nodes(self.nodes, nodes)
+        if not result.nodes:                            # pragma: no cover
+            self.statusBar().showMessage("Point cloud import produced no nodes.")
+            return False
+        parent = result.nodes[0]
+
+        # An import is a manual edit of the in-memory scene; leaving Watch and
+        # Reload armed would silently throw it away on the next disk change.
+        if self._watch_act.isChecked():
+            self._watch_act.setChecked(False)
+            self._toggle_watch_reload(False)
+
+        self.nodes.extend(result.nodes)          # same list object as _scene.nodes
+        self._viewport.register_nodes(result.nodes)
+        self._table.set_nodes(self.nodes)
+        self._on_table_selection()
+        self._update_stats()
+        self._update_sel_values()
+        self._table.select_by_ids({parent.id})
+        self._viewport.focus_on_node(parent)
+
+        dropped = report['total_points'] - report['points']
+        msg = (f"Imported {report['points']:,} points from "
+               f"{Path(path).name}, coloured by {report['color_mode']}")
+        if dropped > 0:
+            msg += (f" ({report['decimation']} sample of "
+                    f"{report['total_points']:,})")
+        msg += f" — node {parent.id}."
+        self.statusBar().showMessage(msg)
+        return True
 
     def _load_mesh_path(self, path: str) -> bool:
         """Import *path* as a GEO_MESH shape. Shared by Meshes > Import Mesh
