@@ -1,6 +1,6 @@
 ---
 name: glyphviz
-description: Generate and validate CSV scene files for GlyphViz, a 3D hierarchical data visualization app. Creates gv_node.csv (and optional gv_tag.csv / Channels animation files) with correct columns, topologies, hierarchy, links, colors, and labels. Use when users want to visualize data in GlyphViz, build glyph hierarchies, graphs/networks or branching structures, convert data to GlyphViz format, or debug why a GlyphViz CSV doesn't load or render as expected.
+description: Generate and validate CSV scene files for GlyphViz, a 3D hierarchical data visualization app. Creates gv_node.csv (and optional gv_tag.csv / Channels animation files) with correct columns, topologies, hierarchy, links, colors, and labels. Use when users want to visualize data in GlyphViz, build glyph hierarchies or hyperglyphs, graphs/networks or branching structures, bar charts or scatter plots, convert data to GlyphViz format, or debug why a GlyphViz CSV doesn't load or render as expected. Also use when a scene loads but looks wrong — parts buried inside each other, children flung far out or collapsed to the centre, bars that sink below the baseline, glyphs that distort or fly apart when scaled, or components hidden behind their siblings.
 ---
 
 # GlyphViz CSV Generation Skill
@@ -43,15 +43,88 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 ```
 
 ## Hard rules (each verified against `glyphviz_core`)
-
 1. `id` unique, ≥ 1. `parent_id = 0` means root. `branch_level`: roots are
    **0**, children 1, etc.
-2. **Author visible nodes at raw `scale_x/y/z` ≥ 0.2.** Scale renders exactly
-   as written, but the viewer has an optional clamp (View → Enforce Minimum
-   Glyph Size, off by default) that lifts rendered scale to 0.2/axis, and a
-   sub-0.2 glyph is also hard to click. Staying above 0.2 makes a scene read
-   the same either way. Never encode size as huge-parent × tiny-child.
-3. **Author against Global Scale = 1.0**, and put any given distance in only
+
+2. **Every geometry is centred on its own origin and spans −1…+1 per axis**
+   before scale. So `scale_z = 4` is not a bar four units tall standing on its
+   position; it is eight units tall with half of it *below*. **Pin (16/17) is the
+   only exception** — it stands *on* its origin, spanning 0…1.1. A node's
+   **rendered half-extent** is its own `scale` × every ancestor's scale × Global
+   Scale, and its bottom edge is `translate_z − rendered half-extent`. Nothing in
+   the CSV records rendered size, so you have to compute it — `tools/export_frame.py
+   --report` prints it per hierarchy level. Most "the parts are buried in each
+   other" bugs are this rule.
+
+3. **Know where a child lands before you place it.** `translate` is read in the
+   parent's topology (rule 10), and every topology puts its own surface at a
+   different number. Under a parent of scale S, measured:
+
+   | Parent `topo` | Child `translate` | Child **centre** lands at |
+   |---|---|---|
+   | None (0), Plane (8), Video, Plot, Surface, Point Cloud | `(1, 0, 0)` | `1·S` — Cartesian, so translate magnitude 1 is the surface |
+   | Sphere (2) | `(lon, lat, 0)` | `1·S` — `translate_z` then adds altitude above it |
+   | Point (7) | `(lon, lat, 1)` | `1·S` — `translate_z` is the **full reach**; 0 is the centre |
+   | Torus (3) | `(0, 0, 0)` | `1·S` — the tube's outer equator |
+   | Cylinder (4) | `(0, 0, 0)` | `1·S` — the wall |
+   | Cube (1) | `(0, 0, 0)` | `1·S` — centred on the facet |
+   | Pin (5) | `(h, 0, 0)` | `(1 + h)·S` — stacks up the axis from the parent's top |
+   | Rod (6) | `(180, 0, 0)` | `10·S` — 0…180 spans the rod, which itself draws 0.25 wide and 5.0 long per unit of its own scale |
+   | Zcube, Zsphere, Zcylinder, Zrod | `(0, 0, 0)` | `0` — pulled to the centre or axis |
+   | Ztorus (11) | `(0, 0, 0)` | `(1 − ratio)·S` — the tube's centreline, **not** the centre |
+
+   A child placed *at* the surface is half buried, because the child has its own
+   half-extent (rule 2). **To clear it, add the child's own rendered radius plus a
+   gap, expressed in the parent's units.** Under a Cartesian parent that is
+   `translate magnitude = 1 + (child_radius + gap) / parent_scale`.
+
+4. **Resize a hyperglyph by scaling the ROOT and nothing else.** Every
+   descendant's size *and* its seating distance ride the same chain, so proportions
+   hold exactly: measured, taking a root from scale 1 to scale 3 moves a grandchild
+   from 1.95 to 5.85 and grows its half-extent from 0.090 to 0.270 — the same
+   factor. Two corollaries. **Author a constant per-level factor** and let
+   inheritance compound it once: writing 0.6, 0.36, 0.216 down three levels
+   *thinking those are final sizes* renders 0.6, 0.216 and 0.047, because the
+   engine multiplies them together. And **a non-uniform ancestor shears any rotated
+   descendant** — a cube at `rotate_x = 45` under a `(0.2, 0.2, 3)` rod comes out
+   skewed, its basis axes 8° apart instead of 90°, while a spin about that rod's
+   own long axis stays clean. Anything that must tumble freely belongs on a
+   uniformly-scaled carrier (rule 13).
+
+5. **A length that carries data belongs in position space, not scale space.**
+   Write the value into `scale_z` and the glyph grows *both* ways from its position
+   (rule 2), so the bar sinks below its baseline; and because Global Scale
+   multiplies rendered size but not a root's coordinates (rule 7), the base moves
+   again whenever the viewer changes it. For a bar of height H rooted at z = 0,
+   measured at Global Scale 1 and 3:
+
+   | Recipe | at B = 1 | at B = 3 |
+   |---|---|---|
+   | **D** — a **Link** from a hidden base node at 0 to a hidden tip node at H, `geometry` = Cylinder, `ratio` = thickness | 0…H | **0…H, fully invariant** |
+   | **C** — a **Pin** at `scale_z = H/1.1` | 0…H | 0…3H — base holds, height scales |
+   | **B** — a cube at `scale_z = H/2`, lifted to `translate_z = H/2` | 0…H | −H…2H — **the base sinks** |
+   | **A** — plain `scale_z = H` | −H…H | −3H…3H |
+
+   Prefer **D**: the value is literally a coordinate you can read back, and nothing
+   the viewer does moves either end. This generalises well past bar charts — it is
+   the answer whenever a part's length, not its size, is the measurement. See
+   `references/links-and-edges.md`.
+
+6. **The minimum-glyph-size clamp is OFF by default — do not design around it.**
+   `Scene.scale_floor` is `0.0` unless the user ticks View → Enforce Minimum Glyph
+   Size. When it *is* on, it lifts each node's **own** `scale × Global Scale` to
+   0.2 per axis and **ignores every ancestor**, which has one consequence worth
+   stating plainly: **it breaks counter-scaled children.** A bead authored
+   `(5.0, 5.0, 0.073)` so that it renders round on a thin tall parent measures
+   0.500 / 0.500 / 0.500 with the clamp off, and 0.500 / 0.500 / 1.378 — a 2.8 : 1
+   ellipsoid — with it on. So keep the **rendered** size of a visible glyph at
+   roughly 0.2 or more, both so the scene reads the same either way and because a
+   smaller glyph is hard to click. But a small *authored* number under a large
+   parent is **not** an error: that is exactly what counter-scaling is, and it is
+   the right technique when a part must stay round under a deliberately stretched
+   parent.
+
+7. **Author against Global Scale = 1.0**, and put any given distance in only
    one place. The viewer applies a base scale **B** that the CSV does *not*
    record (Properties → Global Scale, default **1.0**). B multiplies two
    things: every glyph's rendered size (`scale_x/y/z × B`), and the placement
@@ -65,52 +138,78 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
    drift apart at another. Measured: a Sphere child at `translate_z = 5` sits
    6.0 units out at B = 1 and 8.0 at B = 3, while its sibling on the surface
    goes 1.0 → 3.0. See `references/topologies.md`.
-4. Colors are ints 0–255 (all four of r/g/b/a).
-5. Save with **`encoding="utf-8"`** and CRLF line endings
+
+8. Colors are ints 0–255 (all four of r/g/b/a).
+
+9. Save with **`encoding="utf-8"`** and CRLF line endings
    (`lineterminator='\r\n'`); sanitize control characters out of any label
    text — one bad byte can silently kill all tags.
-6. `translate_x/y/z` are coordinates **in the parent's topology system**, not
-   world units: lon/lat/alt under a Sphere parent, orbital-angle/tube-angle/
-   elevation under a Torus parent, Cartesian under None/Plane.
-7. The parent's optional **`topo_scale`** (default **1.0**) says how far one
-   unit of a child's `translate` reaches, on exactly the axes that parent's
-   topology reads as a **distance** rather than an angle. Angular axes
-   (longitude, latitude, orbital/tube angle) are never scaled, so no value of
-   it can distort a circular layout. Leave it at 1.0 for Cartesian-authored
-   scenes; set **1/180 ≈ 0.005556** (the ANTz convention: a linear axis spans
-   the parent's own extent) when you author a layout **in degrees** and want it
-   to survive a switch between an angular and a linear topology — without it,
-   0…360 on a Cube face is 360 *world units* and children fly out of sight.
-   See `references/topologies.md`.
-8. **Aiming a glyph is the topology's job, not `rotate_*`'s.** Under a Sphere
-   (2), Point (7), Torus (3), Ztorus (11) or Cube (1) parent the engine already
-   orients every child from its own coordinates: it applies a base rotation
-   that puts the child's local **+Z** along the outward direction there
-   (surface normal, or face normal on a Cube). And **+Z is the pointing axis of
-   every directional geometry** — Cylinder (18/19), Cone (4/5) and Pin (16/17)
-   are elongated along it; the flat shapes (20/21 Grid, 24/25/26
-   Circle/Cross/Star) face along it. Put those together: a Cylinder child of a
-   Sphere parent with **all three rotate fields 0** is a spoke pointing
-   straight out, and the direction you want is its `translate_x` (longitude),
-   *not* a rotation. Use `rotate_x/y/z` only to pose a glyph **relative to**
-   that frame (a twist, a deliberate lean) — never to aim one the topology
-   already aims. Hand-posed rotations compose *on top of* the base rotation, so
-   fighting it is what turns an intended starburst into a flat stacked fan.
-   If you do hand-pose, add a `rotation_mode` column and write **0** (Euler
-   XYZ — each field spins its own axis); a file *without* the column loads in
-   ANTz Heading/Tilt/Roll mode (Z-X-Z). If all rotations are 0, omit the
-   column. Per-topology aim table, geometry axes, and the spokes recipe:
-   `references/topologies.md`.
-9. Labels: prefer inline `text` (label) and `link` (URL/file for the U key)
-   columns — GlyphViz-native and simpler than a tag file. Use a companion
-   `gv_tag.csv` only for ANTz/GaiaViz compatibility (`table_id` must be 0
-   there). Labels are off by default (T toggles); show-all mode draws at
-   most 500 tags per frame. Full rules: `references/tags-and-labels.md`.
-10. Node types: 5 = ordinary glyph; 0 = World (scene settings, never drawn);
+
+10. `translate_x/y/z` are coordinates **in the parent's topology system**, not
+    world units: lon/lat/alt under a Sphere parent, orbital-angle/tube-angle/
+    elevation under a Torus parent, Cartesian under None/Plane.
+
+11. The parent's optional **`topo_scale`** (default **1.0**) says how far one
+    unit of a child's `translate` reaches, on exactly the axes that parent's
+    topology reads as a **distance** rather than an angle. Angular axes
+    (longitude, latitude, orbital/tube angle) are never scaled, so no value of
+    it can distort a circular layout. Leave it at 1.0 for Cartesian-authored
+    scenes; set **1/180 ≈ 0.005556** (the ANTz convention: a linear axis spans
+    the parent's own extent) when you author a layout **in degrees** and want it
+    to survive a switch between an angular and a linear topology — without it,
+    0…360 on a Cube face is 360 *world units* and children fly out of sight.
+    See `references/topologies.md`.
+
+12. **Aiming a glyph is the topology's job, not `rotate_*`'s.** Under a Sphere
+    (2), Point (7), Torus (3), Ztorus (11) or Cube (1) parent the engine already
+    orients every child from its own coordinates: it applies a base rotation
+    that puts the child's local **+Z** along the outward direction there
+    (surface normal, or face normal on a Cube). And **+Z is the pointing axis of
+    every directional geometry** — Cylinder (18/19), Cone (4/5) and Pin (16/17)
+    are elongated along it; the flat shapes (20/21 Grid, 24/25/26
+    Circle/Cross/Star) face along it. Put those together: a Cylinder child of a
+    Sphere parent with **all three rotate fields 0** is a spoke pointing
+    straight out, and the direction you want is its `translate_x` (longitude),
+    *not* a rotation. Use `rotate_x/y/z` only to pose a glyph **relative to**
+    that frame (a twist, a deliberate lean) — never to aim one the topology
+    already aims. Hand-posed rotations compose *on top of* the base rotation, so
+    fighting it is what turns an intended starburst into a flat stacked fan.
+    If you do hand-pose, add a `rotation_mode` column and write **0** (Euler
+    XYZ — each field spins its own axis); a file *without* the column loads in
+    ANTz Heading/Tilt/Roll mode (Z-X-Z). If all rotations are 0, omit the
+    column. Per-topology aim table, geometry axes, and the spokes recipe:
+    `references/topologies.md`.
+
+13. **Carriers and shields.** For a structural node that positions things without
+    drawing — a joint, a uniform frame, a pivot — use **`hide = 1` at uniform
+    scale 1**. Both the render pass and the pick pass skip it, and its children are
+    unaffected: a hidden parent still places its child at exactly the same world
+    position. Three things that look like carriers and are not. **`color_a = 0`**
+    still draws and still *picks*, so it silently steals clicks from whatever is
+    behind it. **`scale = 0.001`** does not hide a node, it shrinks its entire
+    subtree by a thousand. And a **tall anisotropic rod** shears whatever hangs on
+    it (rule 4). Separately, a **wireframe hull is a click shield** — the pick pass
+    maps every wire id to its solid counterpart, so a wire sphere blocks selection
+    of everything inside it. To outline a container the user can reach through, draw
+    it from Plot-topology (16) line children instead.
+
+14. Labels default to **selected-only**: a fresh scene draws the label of whatever
+    the user selects and nothing else. `T` toggles labels off and on; unchecking
+    "Show Tag Labels of Selected" labels every tagged node at once, capped at 500
+    tags per frame. Prefer inline `text` (label) and `link` (URL/file for the U key)
+    columns — GlyphViz-native and simpler than a tag file. Use a companion
+    `gv_tag.csv` only for ANTz/GaiaViz compatibility (`table_id` must be 0 there).
+    Set `show_text = 1` on the handful of nodes whose label should always be
+    visible. **Label every node with what it is and what value it carries** — a
+    scene the user can interrogate by clicking is worth far more than one they have
+    to decode. Full rules: `references/tags-and-labels.md`.
+
+15. Node types: 5 = ordinary glyph; 0 = World (scene settings, never drawn);
     1 = Camera; 6 = World Grid (children attach explicitly via
     `parent_id = grid.id`, place by lon/lat); 7 = Link (edge `parent_id` →
     `child_id`).
-11. A **Link** has no pose — its `translate`/`rotate`/`scale` are ignored and
+
+16. A **Link** has no pose — its `translate`/`rotate`/`scale` are ignored and
     both endpoints must resolve or it draws nothing. Its `geometry` picks how
     the edge looks: 27 (Line) for bulk graphs, 28 (Prism) for animated flow,
     or **any solid/wire glyph id, which renders that shape stretched from A to
@@ -128,6 +227,58 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 - ~~"np_ prefixes"~~ — never author `np_` files; that dialect is read-side
   interop for genuine GaiaViz data only.
 
+## Placement myths — these are WRONG, and they are in circulation
+
+Every one of these has been stated confidently in a real GlyphViz session, and
+several have been written down as numbered rules inside skills built on top of
+this one. If you are carrying any of them from another document, that document
+is out of date. The bracketed number is the rule above with the correct answer.
+
+- ~~"The renderer floors every glyph at 0.2, so authored scale must stay above
+  it"~~ — the clamp is **off by default**, and when it is on it lifts a node's
+  *own* scale only, so it *destroys* a counter-scaled child rather than
+  protecting it. [rule 6]
+- ~~"A sphere's native half-extent is 0.5"~~ — every geometry spans −1…+1, so a
+  sphere has radius 1 at scale 1. [rule 2]
+- ~~"A child's surface is at translate magnitude 1 under any parent"~~ — true
+  only under **Cartesian** parents. Under Sphere the surface is
+  `translate_z = 0`, under Point it is 1, under Torus/Cylinder/Cube it is 0.
+  [rule 3]
+- ~~"The root must stay at scale 1 or the subtree gets crushed"~~ — any root
+  scale scales the subtree exactly proportionally. A `scale = 0.001` "invisible
+  carrier" crushes its children because 0.001 is the scale it asked for.
+  [rules 4, 13]
+- ~~"The World row's `scale_x/y/z` is Global Scale"~~ — Global Scale is a viewer
+  setting that the CSV never records. [rule 7]
+- ~~"Rotations compose as Rz·Ry·Rx"~~ — a file with no `rotation_mode` column
+  loads in ANTz Heading/Tilt/Roll (Z-X-Z); write `rotation_mode = 0` for Euler
+  XYZ. Better: don't hand-build a rotation to aim something. [rule 12]
+- ~~"An alpha-0 node is invisible scaffolding"~~ — it still draws and still
+  picks. `hide = 1` is the carrier. [rule 13]
+- ~~"A wireframe hull lets you click what's inside it"~~ — wire ids pick as
+  their solid counterpart, so it is a click shield. [rule 13]
+
+## Writing a skill on top of this one
+
+Packaging a GlyphViz workflow as its own skill — a generator for one chart
+family, a house style, a domain vocabulary — is a good pattern, and this skill
+is meant to be the layer underneath it. Two rules keep that working.
+
+**Don't restate placement facts.** Extents, seating, scale inheritance, the
+minimum-size clamp, carriers and rotation belong to this skill, and they change
+when the app changes. A companion skill that copies them freezes a snapshot, and
+a stale copy is worse than no copy, because whichever document happens to be
+read at design time is the one that wins. Cite the rule number instead.
+
+**Do write down what is genuinely yours**: which columns of the user's data map
+to which visual channel, the house palette, the named glyph designs and their
+anatomy, the domain's conventions, and your own generator scripts. That is the
+part this skill cannot know.
+
+If you are a companion skill and you find yourself disagreeing with a rule
+above, the rules above were measured against `glyphviz_core` directly.
+Re-measure before overriding one, and say in your own text that you did.
+
 ## Choosing topologies (`topo` on the PARENT arranges its children)
 
 | Data shape | Topology |
@@ -142,7 +293,7 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 | Heightfield, terrain, FFT | Surface (17) |
 | Branching structure (tree, fern, dendrite) | Point (7) + Link limbs |
 | **Graph / network** — nodes with no hierarchy, related by edges | **None (0)**, as flat ROOT rows whose `translate_x/y/z` are the world positions a 3-D force layout computed, plus Link rows. See "Laying out a graph" in `references/links-and-edges.md` |
-| **Spokes from a hub** — clock face, starburst, wind rose, needles, rays | **Point (7)** (`translate_z` = full reach from the center) or **Sphere (2)** (`translate_z` = height above the surface). Both aim each child outward for you — see rule 8 |
+| **Spokes from a hub** — clock face, starburst, wind rose, needles, rays | **Point (7)** (`translate_z` = full reach from the center) or **Sphere (2)** (`translate_z` = height above the surface). Both aim each child outward for you — see rule 12 |
 | Free manual placement | None (0) |
 | Geo-registered map/globe scene | World Grid node (type 6) as the parent |
 
@@ -151,7 +302,7 @@ center/axis. Full placement math, coordinate meanings per topology, and
 worked examples: `references/topologies.md`.
 
 Pick the topology to match the **shape of the data**, then set the parent's
-`topo_scale` to match the **units you author children in** (rule 7): degrees
+`topo_scale` to match the **units you author children in** (rule 11): degrees
 throughout → 1/180 on the linear-axis topologies, world units → leave 1.0.
 Mixing the two within one scene is fine — `topo_scale` is per-parent.
 
@@ -170,9 +321,24 @@ Mixing the two within one scene is fine — `topo_scale` is per-parent.
    fields never repaint on load — they resolve only on keypress. Palette
    tables, gradient formulas, and the category-coloring recipe:
    `references/color-palettes.md`.
-5. **Validate before delivering**: re-read the file with pandas; check
-   required columns present, ids unique, every `parent_id` exists (or 0),
-   colors in range, visible scales ≥ 0.2, UTF-8 clean.
+5. **Validate before delivering — run the checker.**
+
+   ```
+   python code/gv_extents.py my_scene_gv_node.csv
+   ```
+
+   `code/` ships GlyphViz's own placement engine, so this reports the sizes and
+   positions the app will actually draw. It names children swallowed by their
+   parent, children flung far outside its layout, glyphs that will shear,
+   `color_a = 0` nodes used as carriers, links with an unresolvable end, and
+   anything that would distort if a user switched on the minimum-size clamp. It
+   needs numpy and pandas and nothing else. See `code/README.md`.
+
+   Do the file-level checks too — required columns, unique ids, every
+   `parent_id` resolves, colors in range, UTF-8 clean — but know that they pass
+   happily on a scene whose parts are buried inside each other. Rendered size
+   and seating have to be *computed* (rules 2 and 3); you cannot read them off
+   the `scale_*` column.
 6. **Check the geometry you actually promised — not just the file's validity.**
    The checks above pass on scenes that render completely wrong, because they
    only test the *file*. Ask what the scene claims visually and re-derive
@@ -247,13 +413,20 @@ iteration. **GlyphViz Web** (`iluvdata.org/glyphvizweb/`) opens the same CSV in
 a browser with nothing to install, which is often the quickest way for them to
 look at all.
 
-**Do not build your own previewer.** Rendering these CSVs "yourself" in a
-small three.js or matplotlib scene means reimplementing the placement math —
-and that math is precisely what is under suspicion whenever a scene looks
-wrong, so a disagreement between your previewer and the app proves nothing and
-you will end up debugging the previewer. If you want an independent check, make
-it a *numbers* check: re-derive positions from the formulas in
-`references/topologies.md` and compare them against what the design intended.
+**Never reimplement the placement math.** `code/gv_kernel/` is GlyphViz's own
+engine, copied verbatim, so `code/gv_extents.py` and anything you build on it
+report what the app will actually draw. Hand-rolling that math in a matplotlib
+or three.js previewer has a long history of producing confident wrong answers —
+a sphere's half-extent guessed at 0.5, a rotation order that did not match, a
+previewer that sized each node by the *mean* of its basis columns and therefore
+drew every thin tall rod as a fat disc, generating bug reports about geometry
+that was already correct. If a scene looks wrong, the placement math is exactly
+what is under suspicion, so a home-made previewer disagreeing with the app
+proves nothing.
+
+What you can safely build on the kernel is a *numbers* check, and
+`gv_extents.py` already is one. For a picture, use the app's renderer or ask the
+user — see below.
 
 ### When the app can build it faster than a script
 
@@ -272,6 +445,10 @@ one beats scripting it blind:
   branching, tree-like hyperglyphs with a live 3-D preview and exports them as
   Glyph Composer templates. Reach for it for trees, ferns, and dendrites.
 - **Hyperglyph Lab** — batch/random generation of composite glyph designs.
+- **Epitrochoid Generator** (Ctrl+E) — design an epicycle chain (a stack of
+  rotating arms, each turning on the tip of the last) and let the pen at the end
+  draw its path. Reach for it for spirograph-family curves and for anything
+  built from a Fourier series of circles.
 - **Timeline Tower Designer** — a browser tool
   (`iluvdata.org/glyphviz/twitter_lab/tut_designer.html`) that turns an **X
   (Twitter) archive** into a finished scene: every post a needle radiating from
@@ -321,6 +498,17 @@ scene. Worked exemplar: `examples/RSS_News/`.
 
 ## References
 
+- `code/` — **GlyphViz's own placement engine plus a checker built on it.**
+  `code/gv_extents.py` reports rendered sizes, seating, and the specific faults
+  that make a valid CSV render wrong; `code/gv_kernel/` is the engine itself,
+  byte-identical to the app's, for computing positions and sizes yourself.
+  Requires only numpy and pandas. **Run the checker on anything nontrivial
+  before you hand it over** — see `code/README.md`.
+- `references/hyperglyph-design.md` — how to design a composite glyph a person
+  can actually read: anatomy, the design envelope that stops real data breaking
+  a layout that worked on samples, readability and occlusion rules, and the
+  patterns that keep parts connected and legible. **Read it before designing a
+  glyph that carries more than one variable.**
 - `references/node-csv-format.md` — the complete, verified column spec
   (required/optional/94-column tables, node types, geometry & topology id
   tables, tag file format). **Read it before generating anything nontrivial.**

@@ -1,7 +1,7 @@
 # Troubleshooting — when a scene loads but looks wrong
 
 Verified against `glyphviz_core/` and `glyphviz_gl/` (2026-08-13, extended
-2026-08-15/17/23/28).
+2026-08-15/17/23/28, 2026-09-08).
 
 Every entry here is a case where **the CSV is valid, the file loads, nothing
 errors** — and the scene still isn't what you intended. That's what makes them
@@ -39,6 +39,11 @@ getting a picture" in `SKILL.md`.
 | Your own verification says the scene is right; the app disagrees | [16](#16-the-scenes-proportions-change-with-the-global-scale-slider) |
 | Text wrapped around a ring is smeared sideways | [17](#17-text-wrapped-around-a-ring-is-smeared-or-reads-as-a-white-streak) |
 | A textured band renders as a featureless bright stripe | [17](#17-text-wrapped-around-a-ring-is-smeared-or-reads-as-a-white-streak) |
+| Bars sink below the baseline; short ones start underground | [18](#18-bars-sink-below-the-baseline) |
+| Parts of a glyph are missing until you turn the parent transparent | [19](#19-parts-of-the-glyph-are-hidden-inside-another-part) |
+| Satellites are flung far out into space | [20](#20-satellites-are-flung-far-out-into-space) |
+| A glyph you scaled up swallowed its own children | [21](#21-scaling-a-glyph-made-it-swallow-its-own-children) |
+| An invisible helper node still blocks clicks | [22](#22-an-invisible-node-still-takes-clicks) |
 
 ---
 
@@ -78,11 +83,16 @@ Size** — that lifts rendered scale to 0.2 per axis so near-zero glyphs stay
 clickable. It is **off by default**, but a user can switch it on at any time,
 and then every value below 0.2 collapses to the same floor.
 
-**Fix.** Keep visible nodes at raw `scale_x/y/z` **≥ 0.2** and put the dynamic
-range above that floor, so the scene reads identically with the setting either
-way. Never encode size as a huge parent times a tiny child — scale multiplies
-down the hierarchy, so the *cumulative* value is what gets clamped. World Grid
-footprints are exempt from the clamp whatever the setting.
+**Fix.** Put the dynamic range of a size encoding where the **rendered** sizes
+land at 0.2 or above, so the scene reads identically with the setting either
+way. Be precise about what the clamp acts on: **each node's own
+`scale × Global Scale`, not the cumulative value.** Two consequences follow.
+It does *not* protect a small glyph that is small because its parent is large,
+since it never looks at the parent. And it *will* distort a child that was
+deliberately counter-scaled to render round under a stretched parent — that
+child's authored numbers are supposed to be small, and lifting them to 0.2
+turns it into an ellipsoid. Counter-scaling and this setting cannot both be
+used. World Grid footprints are exempt whatever the setting.
 
 ---
 
@@ -412,6 +422,113 @@ aspects even at the same radius.
 Ring proportions and the `ratio` / `scale_z` formulas:
 `node-csv-format.md` → Flat Ring. Texture rules:
 `textures-and-media.md` → "Generating a texture for a ring".
+
+---
+
+## 18. Bars sink below the baseline
+
+**Symptom.** A bar chart built from cubes: the tall bars look right, the short
+ones start below the ground plane, and none of them sit on the baseline. Raising
+Global Scale makes it worse.
+
+**Cause.** Every geometry is centred on its own origin and spans -1 to +1 before
+scale, so `scale_z = H` is a bar of height **2H** with half of it below the
+node's position. Global Scale then multiplies rendered size but *not* a root's
+coordinates, so any correction made by lifting the bar with `translate_z` comes
+apart when the viewer moves the slider.
+
+**Fix.** Put the length in position space, not scale space. Best is a **Link**
+between a hidden base node at 0 and a hidden tip node at H, with
+`geometry` = Cylinder and `ratio` as the thickness: both ends are coordinates,
+so nothing the viewer does moves them. A **Pin** is the next best thing, because
+it is the one geometry that stands *on* its origin. `SKILL.md` rule 5 has the
+measured comparison at two Global Scale settings.
+
+**Reference.** `SKILL.md` rules 2 and 5, `references/links-and-edges.md`.
+
+---
+
+## 19. Parts of the glyph are hidden inside another part
+
+**Symptom.** A composite glyph looks too simple. Turning the big central sphere
+transparent, or moving it, reveals several components that were inside it all
+along.
+
+**Cause.** The children were seated at or inside the parent's surface. A child
+placed *at* the surface is already half buried because it has its own
+half-extent, and a child inherits its parent's scale, so it is larger than the
+number you authored — a child at `scale 0.3` under a `scale 3` parent renders at
+0.9.
+
+**Fix.** Seat children by clearance: the parent's surface in that direction plus
+the child's own **rendered** radius plus a gap. Run
+`python code/gv_extents.py scene_gv_node.csv`, which lists every buried child
+and prints the exact distance that would clear it.
+
+**Reference.** `SKILL.md` rules 2 and 3, `references/hyperglyph-design.md` §2.
+
+---
+
+## 20. Satellites are flung far out into space
+
+**Symptom.** Most of the glyph is fine, but a few small parts sit hundreds of
+units away, visible only when you zoom right out.
+
+**Cause.** Almost always an angle written into a slot the parent reads as a
+distance. Under a Cartesian parent (`topo` None or Plane) `translate_x/y/z` are
+world offsets, so a longitude of 270 means 270 units sideways, multiplied by the
+parent's scale. The same mistake happens when a layout authored in degrees is
+moved onto a linear topology.
+
+**Fix.** Either give the parent an angular topology, so those numbers are read
+as angles, or set the parent's `topo_scale` — 1/180 makes a linear axis span the
+parent's own extent, which is the ANTz convention for degree-authored layouts.
+`gv_extents.py` flags these and says which parent is responsible.
+
+**Reference.** `SKILL.md` rules 10 and 11, `references/topologies.md`.
+
+---
+
+## 21. Scaling a glyph made it swallow its own children
+
+**Symptom.** A hyperglyph that looked right at one size loses its parts at
+another — the body grows and the satellites end up inside it, or the whole thing
+collapses toward its centre.
+
+**Cause.** Something other than the root was scaled. Root-only scaling is exactly
+proportional: every descendant's size *and* its seating distance ride the same
+chain. The moment you also adjust a child's own `scale` or `translate` to
+compensate, you break that proportionality and the glyph changes shape rather
+than size. The other common form is pre-compounding a taper — authoring 0.6,
+0.36, 0.216 down three levels *as if those were final sizes* renders 0.6, 0.216
+and 0.047, because the engine multiplies them together.
+
+**Fix.** Resize by changing the root's `scale` and nothing else. Author a
+constant per-level factor and let inheritance compound it once.
+
+**Reference.** `SKILL.md` rule 4, `references/hyperglyph-design.md` §3.
+
+---
+
+## 22. An invisible node still takes clicks
+
+**Symptom.** Clicking a glyph selects something else, or nothing. A node you
+made invisible is still in the way. Or: a wireframe sphere drawn as a container
+prevents you selecting anything inside it.
+
+**Cause.** `color_a = 0` does not remove a node from the scene. It is still
+drawn and still rendered into the pick pass, so it takes clicks from whatever is
+behind it. Separately, the pick pass maps every **wireframe** geometry id to its
+solid counterpart, so a wire hull is a solid click shield even though you can
+see through it.
+
+**Fix.** For a structural node that should not draw or pick, use `hide = 1` at
+uniform `scale 1`; its children are unaffected. For a container the user can
+reach through, draw the outline from Plot-topology (16) line children instead of
+a wire hull. The one place alpha 0 is correct is a Plot or Surface vertex, where
+`hide = 1` would drop the point from the overlay as well.
+
+**Reference.** `SKILL.md` rule 13, `references/hyperglyph-design.md` §3.
 
 ---
 

@@ -5,7 +5,7 @@ design — not just the file formats. The first three were generated in the
 wild by a skill-equipped Claude instance (2026-07); `RSS_News/`,
 `Wind_Rose/`, and `Decay_Chain/` were built in-repo. All passed the repo's
 curation gate: loaded through the real `load_node_csv`, channel joins
-validated through the real `ChannelEngine`, cumulative render-scale floor
+validated through the real `ChannelEngine`, rendered-scale
 checked, and confirmed with a real headless render.
 
 **`Wind_Rose/` and `Decay_Chain/` are the two to read first if you're

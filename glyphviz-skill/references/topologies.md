@@ -518,7 +518,10 @@ but never child sizes. Full rules and engine-verified examples:
   use *their* parent's topo — mix topologies per level (torus of pins,
   sphere of plots, …).
 - Deep hierarchies inherit cumulative scale: a 0.5-scale parent halves its
-  children's spacing *and* rendered size (except World Grid parents). Keep
-  every visible node's raw scale ≥ 0.2 so the viewer's optional
-  minimum-glyph-size clamp (off by default) can't alter your proportions,
-  and so glyphs stay easy to click.
+  children's spacing *and* rendered size (except World Grid parents). So
+  resize a whole glyph by scaling its **root and nothing else** — every
+  descendant's size and its seating distance ride the same chain, and
+  proportions hold exactly. Aim for a **rendered** size near 0.2 or more on
+  anything the user should see or click; the viewer's optional
+  minimum-glyph-size clamp (off by default) acts on each node's *own*
+  `scale × Global Scale`, not on the cumulative value.

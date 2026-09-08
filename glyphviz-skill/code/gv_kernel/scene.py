@@ -1,0 +1,510 @@
+"""
+Scene — node collection with lazily cached world transforms, plus the single
+authoritative node_world_matrix() function used by the renderer, the picker,
+and the golden-master tests.
+
+Design contract
+---------------
+* node_world_matrix(node, scene) is the ONLY place world transforms are
+  computed.  The renderer loads its result directly with glMultMatrixf;
+  the color-ID FBO picker renders with the same call; tests compare it
+  against the ANTz C oracle.  No other code path may compose node transforms.
+  (Scene._bake_draw_data batches the same formula across all nodes for the
+  render loop — the old-vs-new verification and golden tests pin the batch
+  to node_world_matrix's numbers.)
+
+* The 4x4 matrix produced is (row-major NumPy, translation in last column):
+      T_world  @  parent_basis  @  child_local  @  S_child  [@  T_cap_rod]
+  where parent_basis (see topology.compute_world_transforms) is the parent's
+  full recursive rotation+scale composition down the ancestor chain. For rod
+  nodes a cap-offset T(0,0,drz) shifts the bottom to the node's world origin
+  (ANTz kNPoffsetRod convention).
+
+* Transforms are recomputed lazily on demand via Scene._ensure(), then cached
+  until Scene.invalidate() is called.  The viewport calls invalidate() at the
+  start of each paint to match ANTz's per-frame recomputation, and the pick
+  pass reuses the freshly-computed cache without a second invalidation.
+  Internally the cache is one batched numpy state (SceneTransforms) computed
+  by the vectorized engine in topology.py — the per-node recursive dicts this
+  replaced cost ~3.3 s per invalidation at 100k nodes.
+"""
+
+import math
+
+import numpy as np
+
+from .csv_reader import load_node_csv
+from .geometry_data import ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR
+from .node import (
+    GRID_GLOBE_RADIUS, Node, NODE_TYPE_GRID, NODE_TYPE_WORLD, NON_VISUAL_TYPES,
+)
+from .topology import (
+    TOPO_ROD,
+    SceneTransforms,
+    compute_world_transforms,
+    update_world_transform_rows,
+)
+
+_MAT_IDENTITY_3 = ((1., 0., 0.), (0., 1., 0.), (0., 0., 1.))
+
+# Optional per-axis minimum on a glyph's rendered scale (scale * base_scale).
+# GlyphViz clamped every glyph to this in its earliest commits, to keep a
+# near-zero-scale node big enough to click; the clamp silently overrode
+# authored data, so it is now OFF by default (Scene.scale_floor = 0.0) and
+# opt-in via View > Enforce Minimum Glyph Scale. World Grid (type=6) draw
+# matrices never floor at all, whatever this is set to — see _grid_draw_scale.
+DEFAULT_SCALE_FLOOR = 0.2
+NO_SCALE_FLOOR = 0.0
+
+_ROD_SCALE_FACTORS = np.array([ROD_RADIUS_FACTOR, ROD_RADIUS_FACTOR,
+                               ROD_HEIGHT_FACTOR])
+
+
+def _grid_draw_scale(node: Node) -> tuple[float, float, float]:
+    """Per-axis draw-matrix scale for a World Grid node (type=6).
+
+    The grid's geometry is drawn in ±1 local units (see the viewport's
+    _draw_world_grid), so the matrix scale is the node's RAW scale times the
+    shape's half-spans — with neither base_scale nor the optional render
+    floor applied. Both exemptions are alignment requirements, not style: child
+    POSITIONS map through the grid's raw world_basis (base_scale plays no
+    part there), so the rendered surface only stays under the children it
+    frames if its own footprint uses exactly the same raw factors.
+
+    Flat form: half-spans are the extents window's — at scale 1 the default
+    window renders 360x180 world units, 1:1 with world coordinates.
+    Globe form (sphere geometry): the half-span is GRID_GLOBE_RADIUS on all
+    three axes, matching the KML child-placement radius exactly."""
+    if node.grid_is_globe():
+        r = GRID_GLOBE_RADIUS
+        return (node.scale_x * r, node.scale_y * r, node.scale_z * r)
+    half_lon, half_lat = node.grid_half_extents()
+    return (node.scale_x * half_lon, node.scale_y * half_lat, node.scale_z)
+
+
+class Scene:
+    """Collection of nodes with lazily cached world-space transforms."""
+
+    def __init__(self, nodes: list[Node], base_scale: float = 3.0,
+                 scale_floor: float = NO_SCALE_FLOOR):
+        self.nodes = nodes
+        self.base_scale = base_scale
+        # Per-axis minimum applied to rendered scale (see DEFAULT_SCALE_FLOOR).
+        # 0.0 = authored scale is honoured exactly, however small.
+        self.scale_floor = scale_floor
+        self._by_id: dict[int, Node] = {n.id: n for n in nodes}
+        self._dirty = True
+        # Monotonic change counter, bumped by invalidate()/register_node().
+        # Lets a renderer detect "scene content changed since I last baked
+        # it" (e.g. the viewport's retained scene display list) without
+        # subscribing to every mutation path individually.
+        self._revision = 0
+        # Batched transform state (see topology.SceneTransforms): world/parent
+        # bases and child-local rotations are RAW, dimensionless-scale
+        # compositions — base_scale is applied once in the draw matrices, not
+        # once per hierarchy level. world_basis also doubles as the matrix
+        # that orients/stretches a node's children's topology offsets into
+        # world space.
+        self._transforms: SceneTransforms | None = None
+        # Finished draw data (see node_draw_data), baked in one batch on
+        # first access after a recompute: row-major 4x4 world matrices,
+        # column-major float32 GL forms, and bounding-sphere radii.
+        self._draw_M: np.ndarray | None = None
+        self._draw_gl: np.ndarray | None = None
+        self._draw_radius: np.ndarray | None = None
+        # world_node() result, cached per revision — the renderer asks every
+        # frame and a full node-list scan costs ~50 ms at 700k nodes.
+        self._world_node_cache: tuple[int, 'Node | None'] | None = None
+
+    def invalidate(self):
+        """Mark cached transforms stale; they will be recomputed on next access."""
+        self._dirty = True
+        self._revision += 1
+
+    def touch(self):
+        """Bump the revision counter WITHOUT invalidating cached transforms.
+
+        For edits that change what the renderer must draw but not where
+        anything sits (e.g. hide flags): a renderer keyed on _revision rebakes
+        its retained state, while the transform recompute (~0.4 s at 100k
+        nodes) is skipped because node placement is untouched."""
+        self._revision += 1
+
+    def register_node(self, node: Node):
+        """Called after a node is appended directly to self.nodes — keeps _by_id in sync."""
+        self._by_id[node.id] = node
+        self._dirty = True
+        self._revision += 1
+
+    def register_nodes(self, nodes: list[Node]):
+        """Bulk register_node, for a batch appended in one go (a scene merge).
+        One revision bump for the whole batch instead of one per node."""
+        for node in nodes:
+            self._by_id[node.id] = node
+        self._dirty = True
+        self._revision += 1
+
+    def _ensure(self):
+        if not self._dirty:
+            return
+        self._transforms = compute_world_transforms(self.nodes, self.base_scale)
+        self._draw_M = self._draw_gl = self._draw_radius = None
+        self._dirty = False
+
+    def _row_of(self, node_id: int) -> int | None:
+        self._ensure()
+        return self._transforms.row_of_id.get(node_id)
+
+    def rows_for_ids(self, ids) -> np.ndarray:
+        """Row indices (sorted, int64) for the given node ids; unknown ids
+        are silently dropped. For refresh_rows callers."""
+        self._ensure()
+        row_of_id = self._transforms.row_of_id
+        return np.array(sorted(row_of_id[i] for i in ids if i in row_of_id),
+                        dtype=np.int64)
+
+    def refresh_rows(self, rows: np.ndarray) -> bool:
+        """Partially refresh cached transforms + draw data for `rows` only,
+        WITHOUT bumping _revision — the Channels-playback fast path: a
+        renderer keyed on _revision keeps replaying its retained state for
+        everything else while the animated subtrees get current matrices.
+
+        `rows` must satisfy update_world_transform_rows' contract (closed
+        under descendants; only translate/rotate/scale changed). Returns
+        False when the cache was stale and a full recompute ran instead —
+        either way, all draw data is current on return."""
+        if self._dirty or self._transforms is None:
+            self._ensure()
+            return False
+        update_world_transform_rows(self.nodes, self.base_scale,
+                                    self._transforms, rows)
+        if self._draw_M is not None:
+            self._bake_draw_rows(rows)
+        return True
+
+    # --- public accessors (trigger lazy compute) ---
+
+    def world_pos(self, node_id: int) -> tuple[float, float, float] | None:
+        row = self._row_of(node_id)
+        if row is None:
+            return None
+        x, y, z = self._transforms.world_pos[row]
+        return (float(x), float(y), float(z))
+
+    def world_pos_rows(self, ids) -> tuple[np.ndarray, np.ndarray]:
+        """Batched world_pos for many ids at once: (resolved_mask, positions).
+
+        `resolved_mask` is a (len(ids),) bool saying which ids exist in the
+        scene; `positions` is (M, 3) float64 for the M that do, in the given
+        order. One vectorized gather out of the cached transforms instead of
+        M dict-lookup-plus-tuple-build round trips through world_pos(), which
+        costs ~1 us each -- 0.1 s per rebuild at a 100k-point cloud, on every
+        scene edit. Used by the point-cloud batch builder; anything else
+        gathering thousands of positions at once should use it too.
+        """
+        self._ensure()
+        row_of_id = self._transforms.row_of_id
+        rows = np.fromiter((row_of_id.get(i, -1) for i in ids),
+                           dtype=np.int64, count=len(ids))
+        mask = rows >= 0
+        return mask, self._transforms.world_pos[rows[mask]]
+
+    def world_scale(self, node_id: int) -> tuple[float, float, float] | None:
+        """Approximate per-axis cumulative scale (column norms of the node's
+        RAW world_basis) — a camera-framing/UI hint, not exact glyph-shape
+        math (see node_world_matrix for that)."""
+        row = self._row_of(node_id)
+        if row is None:
+            return None
+        wb = self._transforms.world_basis[row]
+        norms = np.sqrt((wb * wb).sum(axis=0))
+        return (float(norms[0]), float(norms[1]), float(norms[2]))
+
+    def basis_matrices(self, node_id: int):
+        """(world_basis, parent_basis, child_local) 3x3s for one node, or None.
+
+        The raw compositions SceneTransforms already holds — copies, so a
+        caller can't scribble on the cache. The transform gizmo needs all
+        three to answer three different questions about the same node: which
+        world direction each scale field stretches (world_basis columns),
+        which direction each translate field pushes it (the PARENT's
+        world_basis, times the placement gradient), and which world axis each
+        rotate field spins it about (parent_basis @ child_local, with the
+        node's own rotation divided back out)."""
+        row = self._row_of(node_id)
+        if row is None:
+            return None
+        t = self._transforms
+        return (t.world_basis[row].copy(), t.parent_basis[row].copy(),
+                t.child_local[row].copy())
+
+    def _bake_draw_data(self):
+        """Batch-compute node_world_matrix's formula for every node at once.
+
+        Profiling showed per-node recomposition dominated both the static-
+        scene render loop (fixed previously with a per-node cache) and the
+        post-edit rebuild at 100k nodes (~1.3 s recomposed one node at a
+        time; the batch is ~30 ms). Must stay numerically identical to
+        node_world_matrix — the golden tests and the render/pick contract
+        depend on it.
+        """
+        t = self._transforms
+        n = len(self.nodes)
+        bs = self.base_scale
+        scale = np.array([(nd.scale_x, nd.scale_y, nd.scale_z)
+                          for nd in self.nodes], dtype=np.float64)
+        sc = scale * bs
+        if self.scale_floor:
+            sc = np.maximum(sc, self.scale_floor)
+        topo = np.array([nd.topo for nd in self.nodes], dtype=np.int64)
+        types = np.array([nd.type for nd in self.nodes], dtype=np.int64)
+        grids = types == NODE_TYPE_GRID
+        rod = (topo == TOPO_ROD) & ~grids   # a Grid row is never rod-shaped
+        if rod.any():
+            sc[rod] *= _ROD_SCALE_FACTORS
+        for i in np.flatnonzero(grids):
+            sc[i] = _grid_draw_scale(self.nodes[int(i)])
+
+        M3 = (t.parent_basis @ t.child_local) * sc[:, None, :]
+        pos = t.world_pos.copy()
+        if rod.any():
+            # Cap offset: translate bottom of cylinder to world origin (ANTz
+            # convention). M3[:, :, 2] is the rendered Z-axis vector.
+            pos[rod] += M3[rod][:, :, 2]
+
+        M = np.zeros((n, 4, 4))
+        M[:, :3, :3] = M3
+        M[:, :3, 3] = pos
+        M[:, 3, 3] = 1.0
+        self._draw_M = M
+        self._draw_gl = np.ascontiguousarray(
+            M.transpose(0, 2, 1).reshape(n, 16), dtype=np.float32)
+        self._draw_radius = np.sqrt((M3 * M3).sum(axis=1)).max(axis=1)
+
+    def _bake_draw_rows(self, rows: np.ndarray):
+        """Row-subset version of _bake_draw_data, writing in place — must
+        stay numerically identical to it (same formula, same dtypes)."""
+        t = self._transforms
+        k = len(rows)
+        if k == 0:
+            return
+        bs = self.base_scale
+        sub = [self.nodes[int(i)] for i in rows]
+        scale = np.array([(nd.scale_x, nd.scale_y, nd.scale_z)
+                          for nd in sub], dtype=np.float64)
+        sc = scale * bs
+        if self.scale_floor:
+            sc = np.maximum(sc, self.scale_floor)
+        topo = np.array([nd.topo for nd in sub], dtype=np.int64)
+        types = np.array([nd.type for nd in sub], dtype=np.int64)
+        grids = types == NODE_TYPE_GRID
+        rod = (topo == TOPO_ROD) & ~grids   # a Grid row is never rod-shaped
+        if rod.any():
+            sc[rod] *= _ROD_SCALE_FACTORS
+        for i in np.flatnonzero(grids):
+            sc[i] = _grid_draw_scale(sub[int(i)])
+
+        M3 = (t.parent_basis[rows] @ t.child_local[rows]) * sc[:, None, :]
+        pos = t.world_pos[rows]   # fancy index -> already a copy
+        if rod.any():
+            pos[rod] += M3[rod][:, :, 2]
+
+        M = np.zeros((k, 4, 4))
+        M[:, :3, :3] = M3
+        M[:, :3, 3] = pos
+        M[:, 3, 3] = 1.0
+        self._draw_M[rows] = M
+        self._draw_gl[rows] = M.transpose(0, 2, 1).reshape(k, 16)
+        self._draw_radius[rows] = np.sqrt((M3 * M3).sum(axis=1)).max(axis=1)
+
+    def node_draw_data(self, node: Node) -> tuple:
+        """Per-node data the renderer needs every frame, batch-computed once
+        and cached until invalidate():
+
+            (M, gl_matrix, radius)
+
+        M          -- node_world_matrix() result (float64 row-major 4x4)
+        gl_matrix  -- the same matrix as a float32 column-major flat array,
+                      ready for glMultMatrixf/glLoadMatrixf
+        radius     -- max column norm of M's 3x3 linear part = the node's
+                      world-space bounding-sphere radius for unit geometry
+                      (callers add their own headroom for corner-touching
+                      shapes / selection halos)
+        """
+        row = self._row_of(node.id)
+        if row is None:
+            # Node not in the scene list (legacy fallback): compose directly.
+            M = node_world_matrix(node, self)
+            gl_matrix = M.astype(np.float32).T.flatten()
+            radius = float(np.linalg.norm(M[:3, :3], axis=0).max())
+            return (M, gl_matrix, radius)
+        if self._draw_M is None:
+            self._bake_draw_data()
+        return (self._draw_M[row], self._draw_gl[row],
+                float(self._draw_radius[row]))
+
+    def glyph_nodes(self) -> list[Node]:
+        """Nodes that render in the viewport (not World/Camera settings rows).
+        Includes World Grid (type=6) nodes — they're real scene objects."""
+        return [n for n in self.nodes if n.type not in NON_VISUAL_TYPES]
+
+    def grid_nodes(self) -> list[Node]:
+        """All World Grid (type=6) nodes in scene order — for the G-key
+        select/cycle and the World Grid panel. Any number may exist; each
+        child references its grid via parent_id = grid.id (no implicit
+        attachment, unlike GaiaViz's parent_id=0 main-grid legacy)."""
+        return [n for n in self.nodes if n.type == NODE_TYPE_GRID]
+
+    def node_by_id(self, node_id: int) -> Node | None:
+        return self._by_id.get(node_id)
+
+    def worst_child_placement_ratio(self, parent_ids) -> tuple[float, int]:
+        """How far the given parents' children have been thrown, measured in
+        multiples of the parent's own rendered radius.
+
+        Returns (ratio, parent_id) for the worst offender, or (0.0, -1) if
+        none of them has a visible child. A ratio near 1 means children sit on
+        or near their parent's surface; a large one means they are somewhere
+        off in the distance, which is what happens when translate values
+        authored as degrees are read as world units by a linear topology (see
+        Node.topo_scale). The GUI uses this to notice that a topology change
+        just scattered a subtree and point at the field that reels it back in.
+
+        One pass over the node list, so cost is independent of how many
+        parents are asked about.
+        """
+        ids = set(parent_ids)
+        if not ids:
+            return (0.0, -1)
+        self._ensure()
+        row_of_id = self._transforms.row_of_id
+        world_pos = self._transforms.world_pos
+        worst = 0.0
+        worst_id = -1
+        radii: dict[int, float] = {}
+        for node in self.nodes:
+            if node.parent_id not in ids or node.type in NON_VISUAL_TYPES:
+                continue
+            crow = row_of_id.get(node.id)
+            prow = row_of_id.get(node.parent_id)
+            if crow is None or prow is None:
+                continue
+            radius = radii.get(node.parent_id)
+            if radius is None:
+                parent = self._by_id.get(node.parent_id)
+                if parent is None:
+                    continue
+                # Bounding-sphere radius of the parent's own glyph. Falls back
+                # to base_scale for a degenerate (zero-scale) parent so the
+                # ratio stays meaningful instead of dividing by ~nothing.
+                radius = self.node_draw_data(parent)[2] or self.base_scale
+                radii[node.parent_id] = radius
+            if radius <= 0.0:
+                continue
+            dist = float(np.linalg.norm(world_pos[crow] - world_pos[prow]))
+            ratio = dist / radius
+            if ratio > worst:
+                worst = ratio
+                worst_id = node.parent_id
+        return (worst, worst_id)
+
+    def world_node(self) -> Node | None:
+        """The World node (type=0), holding scene-wide background/render-mode/
+        fog settings — see node.py. Returns the lowest-id match, or None if
+        the file has no World row (old files render with hardcoded defaults).
+        Cached per revision (any node add/remove bumps it via invalidate/
+        register_node/touch, same contract the draw-data caches rely on)."""
+        cached = self._world_node_cache
+        if cached is not None and cached[0] == self._revision:
+            return cached[1]
+        world_nodes = [n for n in self.nodes if n.type == NODE_TYPE_WORLD]
+        result = min(world_nodes, key=lambda n: n.id) if world_nodes else None
+        self._world_node_cache = (self._revision, result)
+        return result
+
+    @classmethod
+    def load(cls, path, base_scale: float = 3.0,
+             scale_floor: float = NO_SCALE_FLOOR) -> 'Scene':
+        """Load a node CSV (GlyphViz gv_node.csv or GaiaViz/ANTz np_node.csv) and return a Scene."""
+        return cls(load_node_csv(str(path)), base_scale, scale_floor)
+
+
+def node_world_matrix(node: Node, scene: Scene) -> np.ndarray:
+    """
+    4x4 float64 transform placing this node's unit geometry in world space.
+
+    The rendering 3x3 is built as the ANTz-correct hierarchical product:
+
+        M3 = parent_basis @ child_local @ S_child
+
+    where parent_basis is the parent's full recursive rotation+scale
+    composition (see compute_world_transforms — fusing each ancestor level's
+    rotation AND scale into one matrix before moving to the next level,
+    rather than a flat cumulative-scale vector that doesn't commute with
+    intervening rotation), child_local is this node's own topo_base+rotation
+    contribution, and S_child = diag(this node's own scale * base_scale,
+    floored at scene.scale_floor when that opt-in clamp is on — it is off
+    (0.0) by default, so authored scale is honoured exactly however small
+    the glyph gets). base_scale is applied here, exactly once, rather than
+    inside the recursive composition — applying it once per hierarchy level
+    would compound it as base_scale**depth.
+
+    This means a non-uniform ancestor scale distorts a descendant's rendered
+    shape relative to its *actual* accumulated orientation at every level —
+    e.g. a sphere stretched along X produces a diamond-shaped child at 45° —
+    correctly at any nesting depth, since rotation and non-uniform scale
+    don't commute.
+
+    For rod nodes the child-scale vector is further adjusted by the fixed
+    ROD_RADIUS/HEIGHT factors relating the rod glyph's modeled proportions
+    to its scale fields, and the translation gains a cap offset (bottom of
+    the cylinder at the node's world origin, ANTz's kNPoffsetRod convention).
+
+    This function is the single source of truth for node transforms.
+    The renderer loads it with glMultMatrixf; the FBO picker renders with it;
+    tests compare it against the ANTz C oracle.  It runs without a GL context.
+    """
+    scene._ensure()
+    t = scene._transforms
+    row = t.row_of_id.get(node.id) if t is not None else None
+    if row is not None:
+        wx, wy, wz = (float(v) for v in t.world_pos[row])
+        pwb = t.parent_basis[row]
+        lc = t.child_local[row]
+    else:
+        wx, wy, wz = node.translate_x, node.translate_y, node.translate_z
+        pwb = np.array(_MAT_IDENTITY_3, dtype=np.float64)
+        lc = np.array(_MAT_IDENTITY_3, dtype=np.float64)
+
+    bs = scene.base_scale
+    if node.type == NODE_TYPE_GRID:
+        # World Grid: extent-sized footprint at RAW scale (see _grid_draw_scale).
+        sc = np.array(_grid_draw_scale(node), dtype=np.float64)
+    else:
+        fl = scene.scale_floor
+        sc = np.array([
+            max(node.scale_x * bs, fl),
+            max(node.scale_y * bs, fl),
+            max(node.scale_z * bs, fl),
+        ], dtype=np.float64)
+
+    if node.topo == TOPO_ROD and node.type != NODE_TYPE_GRID:
+        sc_rod = sc * np.array([ROD_RADIUS_FACTOR, ROD_RADIUS_FACTOR, ROD_HEIGHT_FACTOR])
+        M3 = (pwb @ lc) * sc_rod
+        # Cap offset: translate bottom of cylinder to world origin (ANTz convention).
+        # M3[:, 2] is the rendered Z-axis vector (direction + magnitude), so adding
+        # it once shifts the origin from the cylinder centre to its bottom cap.
+        return np.array([
+            [M3[0, 0], M3[0, 1], M3[0, 2], wx + M3[0, 2]],
+            [M3[1, 0], M3[1, 1], M3[1, 2], wy + M3[1, 2]],
+            [M3[2, 0], M3[2, 1], M3[2, 2], wz + M3[2, 2]],
+            [0.,       0.,       0.,        1.             ],
+        ], dtype=np.float64)
+
+    M3 = (pwb @ lc) * sc
+    return np.array([
+        [M3[0, 0], M3[0, 1], M3[0, 2], wx],
+        [M3[1, 0], M3[1, 1], M3[1, 2], wy],
+        [M3[2, 0], M3[2, 1], M3[2, 2], wz],
+        [0.,       0.,       0.,        1.],
+    ], dtype=np.float64)

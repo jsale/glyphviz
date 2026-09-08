@@ -149,8 +149,9 @@ exaggeration control for elevation-as-data scenes.
 
 - Attach children explicitly — a type-6 row in a legacy file renders, but
   nothing attaches to it unless `parent_id` says so.
-- Keep child scales ≥ 0.2 as usual (the clamp exemption is for the grid's
-  own rendered plate, not for glyphs).
+- Keep children at a **rendered** size near 0.2 or more as usual, so they stay
+  readable and clickable (the minimum-glyph-size clamp exemption is for the
+  grid's own rendered plate, not for the glyphs on it).
 - Rotating a grid rotates the whole layout (children ride along); rotating
   it 90° about X turns a floor map into a wall map.
 - Don't use `gluSphere`-style UV assumptions for globe textures — GlyphViz
