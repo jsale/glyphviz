@@ -431,9 +431,11 @@ Ring proportions and the `ratio` / `scale_z` formulas:
 ones start below the ground plane, and none of them sit on the baseline. Raising
 Global Scale makes it worse.
 
-**Cause.** Every geometry is centred on its own origin and spans -1 to +1 before
-scale, so `scale_z = H` is a bar of height **2H** with half of it below the
-node's position. Global Scale then multiplies rendered size but *not* a root's
+**Cause.** Every geometry is centred on its own origin, so `scale_z = H` puts
+half the bar below the node's position. On a cube it is worse than that: a cube
+fits inside *radius* 1 rather than spanning -1 to +1, so its faces are only
+0.577 out and the visible half is **0.58H, not H** — the wrong height as well as
+the wrong place. Global Scale then multiplies rendered size but *not* a root's
 coordinates, so any correction made by lifting the bar with `translate_z` comes
 apart when the viewer moves the slider.
 
@@ -441,8 +443,10 @@ apart when the viewer moves the slider.
 between a hidden base node at 0 and a hidden tip node at H, with
 `geometry` = Cylinder and `ratio` as the thickness: both ends are coordinates,
 so nothing the viewer does moves them. A **Pin** is the next best thing, because
-it is the one geometry that stands *on* its origin. `SKILL.md` rule 5 has the
-measured comparison at two Global Scale settings.
+it is the one geometry that stands *on* its origin — remember it is also a
+needle 0.1 wide, so a Pin bar needs `scale_x/y` ten times a cube's for the same
+width. `SKILL.md` rule 5 has the measured comparison at two Global Scale
+settings, and `examples/Rooted_Bars/` draws all four recipes over one dataset.
 
 **Reference.** `SKILL.md` rules 2 and 5, `references/links-and-edges.md`.
 

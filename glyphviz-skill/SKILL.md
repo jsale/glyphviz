@@ -46,15 +46,33 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 1. `id` unique, ≥ 1. `parent_id = 0` means root. `branch_level`: roots are
    **0**, children 1, etc.
 
-2. **Every geometry is centred on its own origin and spans −1…+1 per axis**
-   before scale. So `scale_z = 4` is not a bar four units tall standing on its
-   position; it is eight units tall with half of it *below*. **Pin (16/17) is the
-   only exception** — it stands *on* its origin, spanning 0…1.1. A node's
-   **rendered half-extent** is its own `scale` × every ancestor's scale × Global
-   Scale, and its bottom edge is `translate_z − rendered half-extent`. Nothing in
-   the CSV records rendered size, so you have to compute it — `tools/export_frame.py
-   --report` prints it per hierarchy level. Most "the parts are buried in each
-   other" bugs are this rule.
+2. **Every geometry is centred on its own origin and fits inside radius 1** —
+   which is *not* the same as spanning −1…+1 on each axis. A cube's eight
+   corners sit on that sphere, so its faces are only **0.577** out; a Pin is a
+   needle **0.1** wide; a flat square reaches **0.707**. So `scale_z = 4` is not
+   a bar four units tall standing on its position — on a cube it is 4.6 tall
+   with half of it *below*, and on a Pin it is 4.4 tall standing on its
+   position. Measured from the app's own geometry builders:
+
+   | geometry | x, y half-extent | z |
+   |---|---|---|
+   | Sphere, Cone, Cylinder, Octahedron (and their interiors) | 1 | −1…+1 |
+   | Cube, Cube Interior | 0.577 | ±0.577 |
+   | Icosahedron | 0.851 | ±0.851 |
+   | Dodecahedron | 0.934 | ±0.934 |
+   | Tetrahedron | 0.943 / 0.816 | −0.333…+1 |
+   | **Pin (16/17)** — a needle standing *on* its origin | **0.1** | **0…1.1** |
+   | Square / "Grid" (20/21) | 0.707 | flat |
+   | Circle, Cross, Star (24–26) | 1 | flat |
+   | Torus, Flat Ring | 1 | ±`ratio` |
+
+   A node's **rendered half-extent** is that number × its own `scale` × every
+   ancestor's scale × Global Scale, and its bottom edge is `translate_z −
+   rendered half-extent`. Nothing in the CSV records rendered size, so compute
+   it: `code/gv_extents.py` prints it per node and per level, and
+   `gv_extents.local_box(geometry, ratio)` returns the table above. Most "the
+   parts are buried in each other" bugs are this rule; most "my bar is the
+   wrong height" bugs are the 0.577.
 
 3. **Know where a child lands before you place it.** `translate` is read in the
    parent's topology (rule 10), and every topology puts its own surface at a
@@ -72,6 +90,17 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
    | Rod (6) | `(180, 0, 0)` | `10·S` — 0…180 spans the rod, which itself draws 0.25 wide and 5.0 long per unit of its own scale |
    | Zcube, Zsphere, Zcylinder, Zrod | `(0, 0, 0)` | `0` — pulled to the centre or axis |
    | Ztorus (11) | `(0, 0, 0)` | `(1 − ratio)·S` — the tube's centreline, **not** the centre |
+
+   Every one of those numbers is `1 · S` because **placement uses radius 1
+   whatever geometry the parent wears** — the topology seats children on the
+   parent's circumscribed sphere, not on its drawn skin. The two only coincide
+   when the geometry reaches radius 1 in that direction (rule 2). Measured: a
+   scale-2 cube with `topo = Cube` seats a child at 2.000, while its drawn face
+   is at 1.155 — so the child floats 0.845 above it, and that gap is a feature
+   of the format, not a bug in your file. It scales with the parent, so a
+   **Pin, Cube, Icosahedron or flat-square parent always looks like its children
+   are hovering**; either accept it, or pull the child in with a negative
+   `translate_z` (or a shorter Cartesian translate) sized from the table.
 
    A child placed *at* the surface is half buried, because the child has its own
    half-extent (rule 2). **To clear it, add the child's own rendered radius plus a
@@ -102,13 +131,19 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
    |---|---|---|
    | **D** — a **Link** from a hidden base node at 0 to a hidden tip node at H, `geometry` = Cylinder, `ratio` = thickness | 0…H | **0…H, fully invariant** |
    | **C** — a **Pin** at `scale_z = H/1.1` | 0…H | 0…3H — base holds, height scales |
-   | **B** — a cube at `scale_z = H/2`, lifted to `translate_z = H/2` | 0…H | −H…2H — **the base sinks** |
-   | **A** — plain `scale_z = H` | −H…H | −3H…3H |
+   | **B** — a cube at `scale_z = H/1.155`, lifted to `translate_z = H/2` | 0…H | −H…2H — **the base sinks** |
+   | **A** — plain `scale_z = H` on a cube | −0.58H…0.58H | −1.73H…1.73H |
+
+   Note what A costs: not only is half the bar underground, the visible half is
+   **0.58H, not H** — a cube reaches 0.577 of its scale (rule 2), so the naive
+   recipe encodes the wrong number as well as drawing it in the wrong place.
+   B and C divide that geometry factor back out; D never introduces it.
 
    Prefer **D**: the value is literally a coordinate you can read back, and nothing
    the viewer does moves either end. This generalises well past bar charts — it is
    the answer whenever a part's length, not its size, is the measurement. See
-   `references/links-and-edges.md`.
+   `references/links-and-edges.md`, and `examples/Rooted_Bars/` for all four
+   drawn side by side over the same data.
 
 6. **The minimum-glyph-size clamp is OFF by default — do not design around it.**
    `Scene.scale_floor` is `0.0` unless the user ticks View → Enforce Minimum Glyph
@@ -238,8 +273,16 @@ is out of date. The bracketed number is the rule above with the correct answer.
   it"~~ — the clamp is **off by default**, and when it is on it lifts a node's
   *own* scale only, so it *destroys* a counter-scaled child rather than
   protecting it. [rule 6]
-- ~~"A sphere's native half-extent is 0.5"~~ — every geometry spans −1…+1, so a
-  sphere has radius 1 at scale 1. [rule 2]
+- ~~"A sphere's native half-extent is 0.5"~~ — every geometry fits inside
+  radius 1, so a sphere has radius 1 at scale 1. [rule 2]
+- ~~"Every geometry spans −1…+1 per axis"~~ — they fit inside *radius* 1, which
+  is not the same thing. A cube's faces are at 0.577, a Pin is 0.1 wide, a flat
+  square 0.707. This one was in an earlier version of this file, and it makes
+  every bar built on a cube 15% too tall and every Pin ten times too thin.
+  [rule 2]
+- ~~"A child seated on a cube parent touches the cube"~~ — placement uses the
+  parent's circumscribed sphere whatever geometry it wears, so a child on a
+  cube facet floats 0.42 × parent scale above the drawn face. [rule 3]
 - ~~"A child's surface is at translate magnitude 1 under any parent"~~ — true
   only under **Cartesian** parents. Under Sphere the surface is
   `translate_z = 0`, under Point it is 1, under Torus/Cylinder/Cube it is 0.
@@ -555,12 +598,14 @@ scene. Worked exemplar: `examples/RSS_News/`.
 
 ## Worked examples
 
-`examples/` holds six complete, verified scenes with READMEs that explain the
+`examples/` holds eight complete, verified scenes with READMEs that explain the
 **design thinking**, not just the format. Read the closest one before designing
 a scene of your own:
 
 | If you're building… | Study |
 |---|---|
+| **a bar chart, or anything whose length is the measurement** | `Rooted_Bars/` — four recipes over one dataset, measured at two Global Scale settings |
+| **a glyph that has to survive the whole dataset, not the sample** | `Glyph_Envelope/` — one glyph at the min, median and max of every variable, with its budget and its extent report |
 | a hyperglyph — one repeating composite glyph carrying several variables | `Wind_Rose/`, `Decay_Chain/` |
 | a geographic or multi-grid scene | `SD_Seismicity/`, `Wind_Rose/Monsoon_Year/` |
 | time-series animation over many nodes | `Breathing_Century/`, `Decay_Chain/Secular_Equilibrium/` |

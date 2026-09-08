@@ -75,7 +75,8 @@ m = node_world_matrix(nodes[0], scene)           # 4x4; columns carry the full s
 
 Because every previous attempt to re-derive this math by hand has drifted from
 the app and produced confident wrong answers: a sphere's half-extent guessed at
-0.5 when every geometry spans −1…+1, a rotation order that did not match what
+0.5 when a sphere has radius 1, a cube assumed to reach its full scale when its
+faces stop at 0.577, a rotation order that did not match what
 GlyphViz composes, degrees written into a slot the parent reads as distance, a
 "verified engine" transcribed from documentation whose numbers disagreed with
 the screen. Those cost real sessions to find.

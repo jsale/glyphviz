@@ -18,8 +18,10 @@ and what a Global Scale change would do.
 
 Sizes come from each geometry's own silhouette: a box for cubes, grids, flat
 markers and rings, a cylinder for cones, tori, pins and cylinders, an ellipsoid
-for everything else. The z extent is the geometry's real span — Pin is 0…1.1,
-everything else −1…+1.
+for everything else. Every glyph is built to fit inside RADIUS 1, which is not
+the same as spanning −1…+1 per axis — a cube's faces are 1/√3 out, a Pin is a
+needle 0.1 wide and 1.1 tall, a flat square reaches 0.707 — so the per-axis
+half-extents come from the measured `LOCAL_BOX` table below.
 
 Burial is only judged under topologies where a child is meant to sit *on* its
 parent. A Rod parent threads its children along its own axis and the Z-variants
@@ -38,7 +40,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gv_kernel import (  # noqa: E402
     load_node_csv, compute_world_transforms, Scene, node_world_matrix,
-    local_z_span, TOPO_NAMES, GEO_NAMES, DEFAULT_SCALE_FLOOR, NO_SCALE_FLOOR,
+    TOPO_NAMES, GEO_NAMES, DEFAULT_SCALE_FLOOR, NO_SCALE_FLOOR,
     NODE_TYPE_GRID, NODE_TYPE_LINK, NON_VISUAL_TYPES,
 )
 
@@ -62,6 +64,61 @@ SHOW = 4                          # problem rows printed before truncating
 
 # --------------------------------------------------------------------- geometry
 
+# Every glyph is built to FIT INSIDE RADIUS 1, which is not the same thing as
+# spanning -1..+1 on each axis: a cube's eight corners sit on that sphere, so
+# its faces are only 1/sqrt(3) = 0.577 out. Placement is unaffected -- a
+# topology seats its children on the radius-1 sphere whatever geometry the
+# parent wears -- but rendered SIZE is per-geometry, and getting this wrong is
+# how a Pin bar comes out ten times too thin beside a cube of the same scale.
+#
+# geometry id -> (x half, y half, z low, z high) in local units, before scale.
+# Measured from the app's own builders in glyphviz_gl/geometry.py; the repo
+# test tests/test_skill_kernel.py re-measures them and fails if they drift.
+_C = 1.0 / math.sqrt(3.0)           # cube: corners on the unit sphere
+_SQ = 1.0 / math.sqrt(2.0)          # flat square: corners on the unit circle
+_UNIT = (1.0, 1.0, -1.0, 1.0)
+_FLAT = (1.0, 1.0, 0.0, 0.0)
+
+LOCAL_BOX = {
+    0: (_C, _C, -_C, _C), 1: (_C, _C, -_C, _C),           # Cube, Cube Wire
+    2: _UNIT, 3: _UNIT,                                    # Sphere
+    4: _UNIT, 5: _UNIT,                                    # Cone  (r 1, h 2)
+    6: _UNIT, 7: _UNIT,                                    # Torus (z is ratio)
+    8: (0.9342, 0.9342, -0.9342, 0.9342),                  # Dodecahedron
+    9: (0.9342, 0.9342, -0.9342, 0.9342),
+    10: _UNIT, 11: _UNIT,                                  # Octahedron
+    12: (0.9428, 0.8165, -0.3333, 1.0),                    # Tetrahedron
+    13: (0.9428, 0.8165, -0.3333, 1.0),
+    14: (0.8507, 0.8507, -0.8507, 0.8507),                 # Icosahedron
+    15: (0.8507, 0.8507, -0.8507, 0.8507),
+    16: (0.1, 0.1, 0.0, 1.1), 17: (0.1, 0.1, 0.0, 1.1),    # Pin: a NEEDLE
+    18: _UNIT, 19: _UNIT,                                  # Cylinder (r 1, h 2)
+    20: (_SQ, _SQ, 0.0, 0.0), 21: (_SQ, _SQ, 0.0, 0.0),    # flat square
+    22: _UNIT,                                             # Point: screen-space
+    23: _UNIT,                                             # Mesh: model-dependent
+    24: _FLAT, 25: _FLAT, 26: _FLAT,                       # Circle, Cross, Star
+    27: _UNIT, 28: _UNIT,                                  # Line, Line Prism
+    29: (_C, _C, -_C, _C),                                 # Cube Interior
+    30: _UNIT, 31: _UNIT, 32: _UNIT,                       # interior sphere/cyl
+    33: _UNIT, 34: _UNIT,                                  # Flat Ring (z is ratio)
+}
+# These two carry their z half-extent in the node's own `ratio` instead.
+RATIO_SHAPED = {6, 7, 33, 34}
+# A flat glyph has no thickness at all; give it a sliver so a support width of
+# exactly zero never divides into anything.
+FLAT_EPS = 1e-6
+
+
+def local_box(geometry, ratio=0.14):
+    """(half(3), centre(3)) of one geometry's local bounding box, before scale."""
+    hx, hy, zlo, zhi = LOCAL_BOX.get(int(geometry), _UNIT)
+    if int(geometry) in RATIO_SHAPED:
+        zlo, zhi = -abs(ratio), abs(ratio)
+    hz = max((zhi - zlo) / 2.0, FLAT_EPS)
+    return (np.array([max(hx, FLAT_EPS), max(hy, FLAT_EPS), hz]),
+            np.array([0.0, 0.0, (zhi + zlo) / 2.0]))
+
+
 def _boxes(nodes, scene):
     """id -> (centre_world(3), cols(3,3), half(3)) for every drawable node.
 
@@ -74,9 +131,7 @@ def _boxes(nodes, scene):
         if n.type in NON_VISUAL_TYPES or n.type == NODE_TYPE_LINK or n.hide:
             continue
         m = node_world_matrix(n, scene)
-        lo, hi = local_z_span(n.geometry)
-        half = np.array([1.0, 1.0, (hi - lo) / 2.0])
-        local_centre = np.array([0.0, 0.0, (hi + lo) / 2.0])
+        half, local_centre = local_box(n.geometry, n.ratio)
         centre = m[:3, 3] + m[:3, :3] @ local_centre
         out[n.id] = (centre, m[:3, :3], half)
     return out
@@ -284,8 +339,10 @@ def report(r, show_all=False):
     say(f"GlyphViz extent report -- {os.path.basename(r['path'])}")
     say(f"  {len(nodes):,} rows | {drawable:,} drawable | {roots:,} roots | "
         f"Global Scale {r['base_scale']:g}")
-    say("  sizes are rendered half-extents from each geometry's own silhouette "
-        "(Pin spans 0...1.1, else -1...+1)")
+    say("  sizes are rendered half-extents from each geometry's own measured "
+        "silhouette:")
+    say("  every glyph fits inside RADIUS 1, so a cube reaches 0.577 and a Pin "
+        "is 0.1 wide by 1.1 tall")
     say("")
 
     problems = 0

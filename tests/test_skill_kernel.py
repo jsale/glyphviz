@@ -157,3 +157,151 @@ def test_gv_extents_is_quiet_on_curated_examples():
         if hard:
             noisy.append((s.name, hard))
     assert not noisy, f"checker reports problems on curated examples: {noisy}"
+
+
+# ---------------------------------------------------------------------------
+# The geometry table in gv_extents.py is measured, not vendored, so it needs
+# its own guard. Every glyph is built to fit inside RADIUS 1, which is not the
+# same as spanning -1..+1 per axis: a cube's faces stop at 1/sqrt(3), a Pin is
+# a needle 0.1 wide, a flat square reaches 0.707. Getting that wrong makes
+# every cube bar 15% too tall and every Pin ten times too thin, which is
+# exactly the class of confident-wrong number the skill exists to prevent --
+# so the table is re-measured here from the app's own display-list builders.
+# ---------------------------------------------------------------------------
+
+class _GLRecorder:
+    """Stands in for the GL entry points, logging every call in order.
+
+    Same trick as tests/test_interior_geometry.py: glyphviz_gl.geometry pulls
+    the GL names into its own module namespace, so swapping the callables
+    captures the exact vertex stream each builder emits, with no GL context.
+    """
+
+    def __init__(self):
+        self.calls = []
+
+    def install(self, monkeypatch, module):
+        for name in dir(module):
+            if not name.startswith("gl") or name.startswith("GL"):
+                continue
+            if not callable(getattr(module, name)):
+                continue
+            monkeypatch.setattr(module, name, self._stub(name), raising=False)
+
+    def _stub(self, name):
+        def fn(*args):
+            self.calls.append((name,) + args)
+            if name == "glGenLists":
+                return 1
+            if name == "glIsEnabled":
+                return False
+            if name == "gluNewQuadric":
+                return object()
+            return None
+        return fn
+
+    def bounds(self):
+        v = [c[1:4] for c in self.calls if c[0] == "glVertex3f"]
+        assert v, "builder emitted no vertices"
+        return (max(abs(p[0]) for p in v), max(abs(p[1]) for p in v),
+                min(p[2] for p in v), max(p[2] for p in v))
+
+
+def test_gv_extents_local_box_matches_the_real_geometry_builders():
+    geometry = pytest.importorskip("glyphviz_gl.geometry")
+    from _pytest.monkeypatch import MonkeyPatch
+
+    gx = _load("gv_extents_box", CODE / "gv_extents.py")
+
+    # Only the builders that emit explicit vertices can be measured this way;
+    # sphere, cone and cylinder are gluQuadric calls with documented radii
+    # (r = 1, h = 2), covered by the constants assertion below.
+    mp = MonkeyPatch()
+    try:
+        rec = _GLRecorder()
+        rec.install(mp, geometry)
+        cases = {
+            1: lambda: geometry._draw_cube(True),
+            7: lambda: geometry._draw_torus(True),
+            9: lambda: geometry._draw_poly_solid(geometry._DODECA_VERTS,
+                                                 geometry._DODECA_FACES),
+            11: lambda: geometry._draw_tri_solid(geometry._OCTA_VERTS,
+                                                 geometry._OCTA_FACES),
+            13: lambda: geometry._draw_tri_solid(geometry._TETRA_VERTS,
+                                                 geometry._TETRA_FACES),
+            15: lambda: geometry._draw_tri_solid(geometry._ICOSA_VERTS,
+                                                 geometry._ICOSA_FACES),
+            16: lambda: geometry._draw_pin(True),
+            21: lambda: geometry._draw_grid_solid(),
+            24: lambda: geometry._draw_circle(),
+            29: lambda: geometry._draw_cube_interior(),
+        }
+        for geo_id, build in cases.items():
+            rec.calls.clear()
+            build()
+            hx, hy, zlo, zhi = rec.bounds()
+            want = gx.LOCAL_BOX[geo_id]
+            # Ratio-shaped glyphs carry their z half-extent in `ratio`; the
+            # builder's default ratio is the table's stand-in value.
+            if geo_id in gx.RATIO_SHAPED:
+                zlo, zhi = want[2], want[3]
+            assert np.allclose((hx, hy, zlo, zhi), want, atol=1e-3), (
+                f"geometry {geo_id} measures {(hx, hy, zlo, zhi)} but "
+                f"gv_extents.LOCAL_BOX says {want}")
+    finally:
+        mp.undo()
+
+    # The quadric-built shapes, from the constants the builders are called with.
+    from glyphviz_core.geometry_data import (
+        CYLINDER_RADIUS_RATIO, CYLINDER_HEIGHT_RATIO, PIN_HEIGHT, PIN_RADIUS,
+        GRID_HALF_EXTENT,
+    )
+    assert gx.LOCAL_BOX[3] == (1.0, 1.0, -1.0, 1.0), "sphere is r = 1"
+    assert gx.LOCAL_BOX[19] == (CYLINDER_RADIUS_RATIO, CYLINDER_RADIUS_RATIO,
+                                -CYLINDER_HEIGHT_RATIO / 2.0,
+                                CYLINDER_HEIGHT_RATIO / 2.0)
+    assert gx.LOCAL_BOX[16] == (PIN_RADIUS, PIN_RADIUS,
+                                0.0, PIN_HEIGHT + PIN_RADIUS)
+    assert np.allclose(gx.LOCAL_BOX[21][:2], GRID_HALF_EXTENT)
+
+
+def test_gv_extents_local_box_covers_every_geometry():
+    """A geometry added to the app must be added to the table, not defaulted."""
+    from glyphviz_core.geometry_data import GEO_COUNT
+    gx = _load("gv_extents_cover", CODE / "gv_extents.py")
+    missing = [g for g in range(GEO_COUNT) if g not in gx.LOCAL_BOX]
+    assert not missing, (
+        f"gv_extents.LOCAL_BOX has no entry for geometry {missing}; add the "
+        f"measured half-extents rather than letting it fall back to unit size")
+
+
+def test_placement_radius_is_one_whatever_the_parent_geometry_draws():
+    """The gap a Cube parent leaves under its children is real, and documented.
+
+    A topology seats children on the parent's circumscribed sphere; the drawn
+    body is inscribed in it. SKILL.md rule 3 states the 0.42 x parent-scale gap
+    a cube leaves, so it has to keep being true.
+    """
+    from glyphviz_core.csv_reader import load_node_csv
+    from glyphviz_core.scene import Scene, node_world_matrix
+    from glyphviz_core.topology import compute_world_transforms
+    import tempfile
+    import math
+
+    hdr = ("id,type,parent_id,branch_level,translate_x,translate_y,translate_z,"
+           "rotate_x,rotate_y,rotate_z,scale_x,scale_y,scale_z,"
+           "color_r,color_g,color_b,color_a,geometry,hide,topo\n")
+    body = ("1,5,0,0,0,0,0,0,0,0,2,2,2,255,255,255,255,1,0,1\n"
+            "2,5,1,1,0,0,0,0,0,0,0.3,0.3,0.3,255,0,0,255,3,0,0\n")
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "cube_gv_node.csv"
+        p.write_text(hdr + body, encoding="utf-8")
+        nodes = load_node_csv(str(p))
+        tr = compute_world_transforms(nodes, 1.0)
+        scene = Scene(nodes, 1.0)
+        child = tr.world_pos[tr.row_of_id[2]]
+        face = node_world_matrix(nodes[0], scene)[0, 0] / math.sqrt(3.0)
+
+    assert np.allclose(child, [2.0, 0.0, 0.0]), child
+    assert np.isclose(face, 2.0 / math.sqrt(3.0))
+    assert np.isclose(child[0] - face, 0.845, atol=1e-3)

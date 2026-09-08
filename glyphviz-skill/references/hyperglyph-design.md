@@ -134,6 +134,25 @@ own stem".
 glyph, the field will read backwards at a glance. A struggling record should not
 be the largest thing on screen unless you mean it to be.
 
+**Expect the envelope to change the design, not just trim it.** In
+`examples/Glyph_Envelope/` — the whole of this section, built — a palm glyph
+gained a bare lower stem that carries no data at all, purely because the worst
+record's branch droop otherwise went through the floor. That stem is not
+decoration and it is not a fudge; it is the clearance the domain demands, and
+nothing but building the minimum would have found it. Two checks run on all
+three probes there and block the write if either fails: nothing below the
+baseline, and no part's centre inside another part's silhouette.
+
+**There is a second envelope, and it is Global Scale.** A glyph composed from
+Cartesian offsets (`topo = None` parents, plain `translate` children) does not
+survive the viewer raising Global Scale: sizes multiply, Cartesian coordinates
+do not, so the parts grow into each other. A glyph composed on **surface-riding**
+topologies — Sphere, Torus, Cylinder, Cube, Pin — scales coherently, because
+size and seating ride the same multiplier (SKILL.md rule 7). Cartesian offsets
+buy immunity from shear and complete predictability; surface-riding placement
+buys Global Scale invariance. Pick knowingly, and run `gv_extents.py
+--base-scale 3` on whichever you picked.
+
 ---
 
 ## 5. Readability

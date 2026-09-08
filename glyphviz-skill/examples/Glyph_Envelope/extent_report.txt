@@ -1,0 +1,69 @@
+glyph_envelope_gv_node.csv -- committed alongside the scene so the
+measurements can be read without running anything.
+
+Regenerate with:  python ../../code/gv_extents.py glyph_envelope_gv_node.csv
+
+THE ENVELOPE
+  variable           channel                    domain     range
+  group mean score   trunk segment colour       0..100     40..95 ROYGBV
+  group mean score   branch lift angle          0..100     -24..+52 deg
+  individual test    branch bead radius         0..100     0.21..0.46
+  individual test    branch bead brightness     0..100     0.45..1.0
+  CBSE score         crown radius               0..100     0.42..0.92
+  CBSE score         crown colour               0..100     30..90 ROYGBV
+  Step 1 pass/fail   planter box colour         {0, 1}     blue | red
+
+GlyphViz extent report -- glyph_envelope_gv_node.csv
+  232 rows | 219 drawable | 6 roots | Global Scale 1
+  sizes are rendered half-extents from each geometry's own measured silhouette:
+  every glyph fits inside RADIUS 1, so a cube reaches 0.577 and a Pin is 0.1 wide by 1.1 tall
+
+PROBLEMS
+  none found -- no buried or flung children, no shear, no dead links,
+  no alpha-0 carriers, no root overlaps, nothing riding the size clamp.
+
+SCENE
+  extents      x    -12.82 ... 11.58      y     -4.60 ... 3.32       z      0.02 ... 9.13     
+  root glyphs  6, bounding radius 0.60 ... 9.25
+  crowding     3 root pairs have interpenetrating bounding spheres,
+               worst roots 156 and 232 by 5.22. A bounding sphere over a
+               sprawling glyph over-reports, so treat this as a hint to look, not a defect.
+  rendered half-extent by branch_level
+      level 0      0.577 ... 0.600           6 nodes
+      level 1      0.400 ... 0.906           6 nodes
+      level 2      0.257 ... 0.650         207 nodes
+
+GLOBAL SCALE 1 -> 3
+  every glyph's rendered size scales by 3
+  0 of 232 nodes also change world position (largest move 0.00)
+  root and Cartesian coordinates do not move; surface-riding placement does,
+  so a distance written as parent scale and one written as translate drift apart.
+
+AT GLOBAL SCALE 3
+GlyphViz extent report -- glyph_envelope_gv_node.csv
+  232 rows | 219 drawable | 6 roots | Global Scale 3
+  sizes are rendered half-extents from each geometry's own measured silhouette:
+  every glyph fits inside RADIUS 1, so a cube reaches 0.577 and a Pin is 0.1 wide by 1.1 tall
+
+PROBLEMS
+  ! 3 children have their centre inside their parent, so only the part that pokes out shows
+      id 3 (Cylinder) is 0.977 from parent 2, whose surface that way is at 1.732 -- 56% of the way out; clear it at 2.932
+      id 80 (Cylinder) is 0.977 from parent 79, whose surface that way is at 1.732 -- 56% of the way out; clear it at 2.932
+      id 157 (Cylinder) is 0.977 from parent 156, whose surface that way is at 1.732 -- 56% of the way out; clear it at 2.932
+
+SCENE
+  extents      x    -12.82 ... 11.58      y     -4.60 ... 3.32       z      0.02 ... 9.13     
+  root glyphs  6, bounding radius 1.80 ... 10.20
+  crowding     4 root pairs have interpenetrating bounding spheres,
+               worst roots 79 and 156 by 10.17. A bounding sphere over a
+               sprawling glyph over-reports, so treat this as a hint to look, not a defect.
+  rendered half-extent by branch_level
+      level 0      1.732 ... 1.800           6 nodes
+      level 1      1.200 ... 2.720           6 nodes
+      level 2      0.770 ... 1.950         207 nodes
+
+GLOBAL SCALE 3 -> 9
+  every glyph's rendered size scales by 3
+  0 of 232 nodes also change world position (largest move 0.00)
+  root and Cartesian coordinates do not move; surface-riding placement does,
+  so a distance written as parent scale and one written as translate drift apart.
