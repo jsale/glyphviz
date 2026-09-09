@@ -40,8 +40,39 @@ inside their parent, children flung far outside their parent's layout (with a
 hint when the numbers look like degrees written into a Cartesian slot), glyphs
 that will shear because they are rotated under a stretched parent, `color_a = 0`
 nodes being used as carriers when they still draw and still take clicks, links
-with an end that does not resolve, and anything whose proportions would change
-if a user switched on View > Enforce Minimum Glyph Size.
+with an end that does not resolve, spokes that were aimed by hand and all came
+out parallel, and anything whose proportions would change if a user switched on
+View > Enforce Minimum Glyph Size.
+
+## Which way does this glyph point?
+
+The `AIM` section answers the one question a position check cannot. A set of
+perfectly placed rods can still be aimed into a flat fan, and no amount of
+checking coordinates will show it -- so the checker prints the world **+Z**,
+which is the pointing axis of every directional geometry, for each one:
+
+```
+AIM
+  parent 2 (Sphere (KML)) aims its 12 directional children -- all at the aim placement gave them
+      id 3      +Z (+1.000, +0.000, +0.000)  Cylinder
+      id 4      +Z (+0.866, +0.500, +0.000)  Cylinder
+      id 5      +Z (+0.500, +0.866, +0.000)  Cylinder
+```
+
+Twelve unit vectors 30 degrees apart in the XY plane: those spokes point
+outward, and you know it without rendering anything. **Read this instead of
+reverse-engineering the rotation convention from test renders.**
+`examples/Radial_Spokes/` is the known-good scene to calibrate against, with
+its own report committed beside it as `aim_report.txt`.
+
+Exactly one aim fault is reported, because only one has a signature that cannot
+also be a deliberate design: a set of glyphs **rotated by hand under a Cartesian
+parent that all ended up pointing the same way**, while their positions fan out
+around it. That is the classic mistake -- right positions, wrong bodies. A glyph
+merely rotated *off* the aim its parent gave it is stated in the `AIM` section
+and never called a fault, because that is also exactly how a deliberate lean is
+authored: `Armillary_World` lays its pins along their rings at `rotate_x = -90`
+on purpose, and an inclined orrery tilts its planes on purpose.
 
 `--base-scale B` evaluates at a different Global Scale. `--all` lists every
 offending row instead of the first few.

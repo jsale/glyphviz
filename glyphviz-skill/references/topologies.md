@@ -213,6 +213,14 @@ twelve rods): every rod center at z = 0 and radius 3.0, bearings exactly 30°
 apart, each rod's inner end at radius 1.000 (flush with the hub) and its axis
 matching its own outward radial to 1.7e-16.
 
+**That scene is bundled: `examples/Radial_Spokes/`** — the same twelve rods on a
+Sphere hub and on a Point hub, plus a Cube hub for contrast, every rotate field
+0, with each rod's measured world +Z committed in `aim_report.txt`. Calibrate
+against it instead of probing with test renders. For your own scene,
+`code/gv_extents.py` prints the same thing under **`AIM`**: every directional
+glyph's world +Z, and a flag when a set of hand-rotated glyphs has ended up all
+pointing the same way while their positions fan out — the flat stacked fan.
+
 **Which way is clockwise.** Longitude runs **counter-clockwise seen from +Z**
 (0 → +X, 90 → +Y), so a clock face — clockwise — needs *decreasing* longitude:
 

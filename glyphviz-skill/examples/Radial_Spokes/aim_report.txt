@@ -1,0 +1,71 @@
+radial_spokes_gv_node.csv -- the checker's own output, committed so the
+numbers can be read without running anything.
+
+Regenerate with:  python ../../code/gv_extents.py radial_spokes_gv_node.csv --all
+
+GlyphViz extent report -- radial_spokes_gv_node.csv
+  37 rows | 36 drawable | 6 roots | Global Scale 1
+  sizes are rendered half-extents from each geometry's own measured silhouette:
+  every glyph fits inside RADIUS 1, so a cube reaches 0.577 and a Pin is 0.1 wide by 1.1 tall
+
+PROBLEMS
+  none found -- no buried or flung children, no shear, no dead links,
+  no alpha-0 carriers, no root overlaps, no hand-aimed fans,
+  nothing riding the size clamp.
+
+AIM
+  +Z is the pointing axis of a cone, pin, cylinder, torus, ring or flat
+  marker. Sphere, Point, Torus, Ztorus and Cube parents turn each child's
+  +Z outward from its own translate; rotate_x/y/z then turns it off that.
+  3 directional root children -- no parent to aim them; +Z comes from rotate_* alone
+      id 15     +Z (+0.000, +0.000, +1.000)  Circle
+      id 29     +Z (+0.000, +0.000, +1.000)  Circle
+      id 37     +Z (+0.000, +0.000, +1.000)  Circle
+  parent 2 (Sphere (KML)) aims its 12 directional children -- all at the aim placement gave them
+      id 3      +Z (+1.000, +0.000, +0.000)  Cylinder
+      id 4      +Z (+0.866, +0.500, +0.000)  Cylinder
+      id 5      +Z (+0.500, +0.866, +0.000)  Cylinder
+      id 6      +Z (+0.000, +1.000, +0.000)  Cylinder
+      id 7      +Z (-0.500, +0.866, +0.000)  Cylinder
+      id 8      +Z (-0.866, +0.500, +0.000)  Cylinder
+      id 9      +Z (-1.000, +0.000, +0.000)  Cylinder
+      id 10     +Z (-0.866, -0.500, +0.000)  Cylinder
+      id 11     +Z (-0.500, -0.866, +0.000)  Cylinder
+      id 12     +Z (-0.000, -1.000, +0.000)  Cylinder
+      id 13     +Z (+0.500, -0.866, +0.000)  Cylinder
+      id 14     +Z (+0.866, -0.500, +0.000)  Cylinder
+  parent 16 (Point) aims its 12 directional children -- all at the aim placement gave them
+      id 17     +Z (+1.000, +0.000, +0.000)  Cylinder
+      id 18     +Z (+0.866, +0.500, +0.000)  Cylinder
+      id 19     +Z (+0.500, +0.866, +0.000)  Cylinder
+      id 20     +Z (+0.000, +1.000, +0.000)  Cylinder
+      id 21     +Z (-0.500, +0.866, +0.000)  Cylinder
+      id 22     +Z (-0.866, +0.500, +0.000)  Cylinder
+      id 23     +Z (-1.000, +0.000, +0.000)  Cylinder
+      id 24     +Z (-0.866, -0.500, +0.000)  Cylinder
+      id 25     +Z (-0.500, -0.866, +0.000)  Cylinder
+      id 26     +Z (-0.000, -1.000, +0.000)  Cylinder
+      id 27     +Z (+0.500, -0.866, +0.000)  Cylinder
+      id 28     +Z (+0.866, -0.500, +0.000)  Cylinder
+  parent 30 (Cube) aims its 6 directional children -- all at the aim placement gave them
+      id 31     +Z (+1.000, +0.000, +0.000)  Cylinder
+      id 32     +Z (-1.000, +0.000, +0.000)  Cylinder
+      id 33     +Z (+0.000, +1.000, +0.000)  Cylinder
+      id 34     +Z (+0.000, -1.000, +0.000)  Cylinder
+      id 35     +Z (+0.000, +0.000, +1.000)  Cylinder
+      id 36     +Z (+0.000, -0.000, -1.000)  Cylinder
+
+SCENE
+  extents      x     -3.00 ... 13.00      y    -19.00 ... 19.00      z     -3.00 ... 3.00     
+  root glyphs  6, bounding radius 1.10 ... 5.00
+  contact      3 children overlap their parent's surface without their
+               centre going inside it -- normal when parts are meant to touch
+  rendered half-extent by branch_level
+      level 0      0.577 ... 1.100           6 nodes
+      level 1      2.000 ... 2.000          30 nodes
+
+GLOBAL SCALE 1 -> 3
+  every glyph's rendered size scales by 3
+  18 of 37 nodes also change world position (largest move 2.00)
+  root and Cartesian coordinates do not move; surface-riding placement does,
+  so a distance written as parent scale and one written as translate drift apart.

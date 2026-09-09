@@ -15,16 +15,18 @@ that teaches the form, and a large one that puts it to work. That pairing is
 itself the lesson — a reader who has never seen your glyph can't decode a
 thousand of them at once.
 
-**`Rooted_Bars/` and `Glyph_Envelope/` are the two to read first if a scene
-you built came out wrong.** They are deliberately small, and each one is about
-a single failure mode rather than a subject: the first is what a `scale` number
-actually means, the second is what happens when real data meets a design tuned
-on one record. Both carry their own measurement — `Rooted_Bars` re-derives its
-table through the real engine before writing the CSV, `Glyph_Envelope` commits
-`extent_report.txt` beside the scene.
+**`Radial_Spokes/`, `Rooted_Bars/` and `Glyph_Envelope/` are the ones to read
+first if a scene you built came out wrong.** They are deliberately small, and
+each is about a single failure mode rather than a subject: which way a glyph
+*points*, what a `scale` number actually *means*, and what happens when real
+data meets a design tuned on one record. All three carry their own measurement,
+committed — `Radial_Spokes` every rod's world +Z in `aim_report.txt`,
+`Glyph_Envelope` its `extent_report.txt`, and `Rooted_Bars` re-derives its
+table through the real engine before it will write the CSV at all.
 
 | Example | Demonstrates |
 |---|---|
+| `Radial_Spokes/` | **Aiming is the topology's job, not `rotate_*`'s** — the known-good scene for anything that has to point somewhere. Twelve rods on a Sphere hub (also a working clock face), twelve on a Point hub, six on a Cube hub, and every rotate field in the file is 0. Each rod's measured world +Z is committed in `aim_report.txt`, so the direction question can be answered by reading a number rather than by rendering and squinting. Also records what the mistake measures like, since it fails silently: positions right, bodies wrong. |
 | `Rooted_Bars/` | **A length that carries data belongs in position space, not scale space** — the same 14 values drawn four ways, side by side, so the difference is visible at Global Scale 1 and again at 3. Also the rule underneath it: every geometry fits inside *radius* 1, which is not the same as spanning −1…+1, so a cube reaches 0.577 of its scale and a Pin is a needle 0.1 wide. The generator re-measures its own documentation through the placement engine and refuses to emit if the table and the code disagree. |
 | `Glyph_Envelope/` | **The design envelope** — one hyperglyph built at the minimum, median and maximum of every variable, with the variable → channel → domain → clamped-range budget stated and enforced, and a design-specific audit (nothing below the baseline, no part swallowing another) run on all three probes before generating all N. Shows the envelope changing the design: the palm grew a bare stem purely so the worst record's droop clears the ground. Glyph design credited to Dr Dave Warner; data synthetic. |
 | `Breathing_Century/` | The **channel-sharing compression pattern**: ~1,700 animated glyphs on 204 channels (nodes sharing birth-year + final-alpha share one `ch_input_id`); step-function `color_a` appear-and-stay timelines; one track feeding `scale_x/y/z` for a breathing glyph; era-fair encoding; carrying values across source-data gaps. |

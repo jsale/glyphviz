@@ -153,7 +153,8 @@ def test_gv_extents_is_quiet_on_curated_examples():
         r = gx.analyse(str(s), 1.0)
         hard = (len([b for b in r["buried"] if b[5] == "swallowed"])
                 + len(r["flung"]) + len(r["sheared"])
-                + len(r["alpha_carriers"]) + len(r["dead_links"]))
+                + len(r["alpha_carriers"]) + len(r["dead_links"])
+                + len(r["aim_fan"]))
         if hard:
             noisy.append((s.name, hard))
     assert not noisy, f"checker reports problems on curated examples: {noisy}"
@@ -305,3 +306,125 @@ def test_placement_radius_is_one_whatever_the_parent_geometry_draws():
     assert np.allclose(child, [2.0, 0.0, 0.0]), child
     assert np.isclose(face, 2.0 / math.sqrt(3.0))
     assert np.isclose(child[0] - face, 0.845, atol=1e-3)
+
+
+# ---------------------------------------------------------------------------
+# Aim. Which way a glyph POINTS is decided by placement, not rotate_*, and a
+# position check cannot see it get this wrong: correctly placed rods can still
+# be aimed into a flat fan. The checker's AIM section exists so a session with
+# no render can answer the direction question with a number, and these pin the
+# two halves of that -- the aim table it rests on, and the one fault it claims.
+# ---------------------------------------------------------------------------
+
+_AIM_HDR = ("id,type,parent_id,branch_level,translate_x,translate_y,translate_z,"
+            "rotate_x,rotate_y,rotate_z,scale_x,scale_y,scale_z,"
+            "color_r,color_g,color_b,color_a,geometry,hide,topo,ratio,"
+            "rotation_mode\n")
+
+
+def _spokes(tmp, topo, rot=(0.0, 0.0, 0.0), n=12, cartesian_positions=False):
+    """n cylinder rods around one hub, written to a real CSV."""
+    import math
+    rows = [f"1,5,0,0,0,0,0,0,0,0,1,1,1,255,255,255,255,3,0,{topo},0.1,0"]
+    for i in range(n):
+        if cartesian_positions:
+            a = math.radians(i * 360.0 / n)
+            tx, ty, tz = 3 * math.cos(a), 3 * math.sin(a), 0.0
+        else:
+            tx, ty, tz = i * 360.0 / n, 0.0, 2.0
+        rx, ry, rz = rot[0], rot[1], (rot[2] + i * 360.0 / n if rot[2] else rot[2])
+        rows.append(f"{2 + i},5,1,1,{tx},{ty},{tz},{rx},{ry},{rz},"
+                    f"0.2,0.2,2,110,160,220,255,19,0,0,0.1,0")
+    p = tmp / "spokes_gv_node.csv"
+    p.write_text(_AIM_HDR + "\n".join(rows) + "\n", encoding="utf-8")
+    return p
+
+
+def test_aiming_topologies_turn_a_childs_z_outward(tmp_path):
+    """SKILL.md rule 12's central claim, measured: a Cylinder child of a Sphere
+    or Point parent with every rotate field 0 points straight out."""
+    gx = _load("gv_extents_aim", CODE / "gv_extents.py")
+    for topo in (2, 7):                       # Sphere, Point
+        r = gx.analyse(str(_spokes(tmp_path, topo)), 1.0)
+        assert not r["aim_fan"], topo
+        assert len(r["aim"]) == 12, topo
+        tr = r["tr"]
+        hub = tr.world_pos[tr.row_of_id[1]]
+        for n, parent, z, dev, aims in r["aim"]:
+            assert aims, f"topo {topo} should aim its children"
+            assert dev == pytest.approx(0.0, abs=1e-9), "no rotation, no deviation"
+            radial = tr.world_pos[tr.row_of_id[n.id]] - hub
+            radial = radial / np.linalg.norm(radial)
+            assert float(z @ radial) == pytest.approx(1.0, abs=1e-12), (
+                f"topo {topo} node {n.id}: +Z is not the outward radial")
+
+
+def test_zsphere_does_not_aim_and_the_table_says_so(tmp_path):
+    """The exception that makes the table worth having: Zsphere pulls children
+    to the centre and leaves their +Z alone."""
+    gx = _load("gv_extents_zsphere", CODE / "gv_extents.py")
+    assert 10 not in gx.AIMING_TOPOS
+    r = gx.analyse(str(_spokes(tmp_path, 10)), 1.0)
+    for _n, _p, z, _dev, aims in r["aim"]:
+        assert not aims
+        assert np.allclose(z, [0.0, 0.0, 1.0], atol=1e-9)
+
+
+def test_hand_aimed_fan_is_reported(tmp_path):
+    """The reported bug: positions computed by hand around a Cartesian parent,
+    aim supplied by rotate_*, and every rod ends up parallel."""
+    gx = _load("gv_extents_fan", CODE / "gv_extents.py")
+    p = _spokes(tmp_path, 0, rot=(90.0, 0.0, 30.0), cartesian_positions=True)
+    r = gx.analyse(str(p), 1.0)
+    assert len(r["aim_fan"]) == 1, "the flat stacked fan must be caught"
+    parent, count, spread, _z = r["aim_fan"][0]
+    assert parent.id == 1 and count == 12 and spread > 45.0
+    text = gx.report(r)
+    assert "pointing the same way" in text
+    assert text.isascii()
+
+
+def test_upright_forest_is_not_a_fan(tmp_path):
+    """The discriminator. Trees standing up, spread on the ground, all +Z up:
+    identical to the fan in every way except that no sibling lies ALONG the
+    shared direction. This must stay quiet or the check is worthless."""
+    import math
+    gx = _load("gv_extents_forest", CODE / "gv_extents.py")
+    rows = ["1,5,0,0,0,0,0,0,0,0,1,1,1,255,255,255,255,3,0,0,0.1,0"]
+    for i in range(12):
+        a = math.radians(i * 30)
+        rows.append(f"{2 + i},5,1,1,{6 * math.cos(a):.4f},{6 * math.sin(a):.4f},1,"
+                    f"0,0,45,0.3,0.3,1,90,150,90,255,19,0,0,0.1,0")
+    p = tmp_path / "forest_gv_node.csv"
+    p.write_text(_AIM_HDR + "\n".join(rows) + "\n", encoding="utf-8")
+    r = gx.analyse(str(p), 1.0)
+    assert not r["aim_fan"], "an upright forest is not a mis-aimed fan"
+
+
+def test_a_deliberate_lean_is_reported_but_not_called_a_fault(tmp_path):
+    """Measured across the example gallery, "rotated off the placed aim" is
+    indistinguishable from a deliberate lean -- Armillary_World lays its pins
+    along their rings at rotate_x = -90 on purpose. So it is stated in the AIM
+    section and must never be counted as a problem."""
+    gx = _load("gv_extents_lean", CODE / "gv_extents.py")
+    r = gx.analyse(str(_spokes(tmp_path, 2, rot=(90.0, 0.0, 0.0))), 1.0)
+    assert len(r["fighting_aim"]) == 12, "the deflection should be measured"
+    assert not r["aim_fan"], "and it must not be reported as a fault"
+    text = gx.report(r)
+    assert "no hand-aimed fans" in text, "PROBLEMS must stay clean"
+    assert "turns them off that aim" in text, "but AIM must say what happened"
+
+
+def test_radial_spokes_example_is_the_known_good_scene():
+    """The example exists to be calibrated against, so its numbers are pinned
+    here too: this is the scene SKILL.md rule 12 points a reader at."""
+    gx = _load("gv_extents_example", CODE / "gv_extents.py")
+    scene = CODE.parent / "examples" / "Radial_Spokes" / "radial_spokes_gv_node.csv"
+    assert scene.exists(), "the known-good spokes scene is missing"
+    r = gx.analyse(str(scene), 1.0)
+    assert not r["aim_fan"] and not r["fighting_aim"]
+    assert all(n.rotate_x == n.rotate_y == n.rotate_z == 0.0
+               for n in r["nodes"]), "this scene must carry no rotations at all"
+    aimed = [a for a in r["aim"] if a[4]]
+    assert len(aimed) == 30, f"expected 30 aimed rods, got {len(aimed)}"
+    assert (CODE.parent / "examples" / "Radial_Spokes" / "aim_report.txt").exists()

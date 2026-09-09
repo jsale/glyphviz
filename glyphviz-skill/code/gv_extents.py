@@ -30,6 +30,7 @@ place them at the centre on purpose, so neither counts as buried.
 from __future__ import annotations
 
 import argparse
+import copy
 import math
 import os
 import sys
@@ -60,6 +61,29 @@ FLUNG_OUTLIER = 10.0              # ... or this many times its own siblings' med
 DEGREES_HINT = 45.0               # a Cartesian translate this large may be degrees
 SHEAR_COS = 0.09                  # |cos| between a node's own basis axes (~5 deg off square)
 SHOW = 4                          # problem rows printed before truncating
+
+# --------------------------------------------------------------------------
+# Aim. Placement decides which way a glyph POINTS, not `rotate_*`, and getting
+# that wrong is the one error a position check cannot see: a set of perfectly
+# placed rods can still be aimed into a flat fan. So it gets measured here.
+#
+# +Z is the pointing axis of every directional geometry -- these are the
+# geometries that HAVE an aim to get wrong. A sphere or a cube has none.
+DIRECTIONAL_GEOMETRIES = {
+    4, 5,                    # Cone: long axis, apex at +Z
+    16, 17,                  # Pin: the shaft, tip at the origin
+    18, 19, 31, 32,          # Cylinder (and its interiors): the long axis
+    6, 7, 33, 34,            # Torus, Flat Ring: the ring's axis
+    20, 21, 24, 25, 26,      # Grid/square, Circle, Cross, Star: the facing normal
+}
+# Topologies that hand a child a base rotation turning its +Z outward. Measured
+# through the engine: Sphere (2) and Point (7) aim exactly outward (dot 1.0000
+# with the radial), Torus (3) and Ztorus (11) at the tube's own normal, Cube (1)
+# at the facet's normal. Zsphere (10) deliberately does NOT aim, and the axis
+# family (Cylinder, Rod, Spiral and their Z variants) sends +X radial while
+# leaving +Z along the parent's axis.
+AIMING_TOPOS = {1, 2, 3, 7, 11}
+AIM_FIGHT_DEG = 15.0              # deflection off the placed aim worth reporting
 
 
 # --------------------------------------------------------------------- geometry
@@ -163,6 +187,33 @@ def _radius(cols, half):
     return float(np.linalg.norm(cols * half[None, :], axis=0).max())
 
 
+def _placed_aim(nodes, base_scale, rotated):
+    """World +Z each of `rotated` would have if its own rotate_* were 0.
+
+    That is the direction its parent's topology aims it, which is the thing a
+    hand-written rotation is composed on top of -- never replaces. Only the
+    named nodes are zeroed; ancestors keep their own rotations, because the
+    question is what THIS node's rotation is doing.
+    """
+    ids = {n.id for n in rotated}
+    probe = []
+    for n in nodes:
+        if n.id in ids:
+            m = copy.copy(n)
+            m.rotate_x = m.rotate_y = m.rotate_z = 0.0
+            probe.append(m)
+        else:
+            probe.append(n)
+    t = compute_world_transforms(probe, base_scale)
+    out = {}
+    for n in rotated:
+        z = t.world_basis[t.row_of_id[n.id]][:, 2]
+        nz = float(np.linalg.norm(z))
+        if nz > 1e-12:
+            out[n.id] = z / nz
+    return out
+
+
 # --------------------------------------------------------------------- checks
 
 def analyse(path, base_scale=1.0):
@@ -252,6 +303,89 @@ def analyse(path, base_scale=1.0):
                        and (n.parent_id not in ids
                             or int(n.extras.get("child_id", 0) or 0) not in ids)]
 
+    # --- which way does everything point? ---------------------------------
+    # A position check cannot see this: correctly placed rods can still be
+    # aimed into a flat fan. Skipped entirely when the scene has no directional
+    # geometry, which is what keeps a 400k-point scan fast.
+    aimable = [n for n in nodes
+               if n.geometry in DIRECTIONAL_GEOMETRIES
+               and n.type not in NON_VISUAL_TYPES
+               and n.type != NODE_TYPE_LINK      # a link aims from its endpoints
+               and n.type != NODE_TYPE_GRID
+               and not n.hide]
+    aim, fighting = [], []
+    if aimable:
+        # A node with no rotation of its own IS already at its placed aim, so
+        # only the rotated ones need the counterfactual pass.
+        rotated = [n for n in aimable
+                   if any((n.rotate_x, n.rotate_y, n.rotate_z))]
+        ref = _placed_aim(nodes, base_scale, rotated) if rotated else {}
+        for n in aimable:
+            z = tr.world_basis[tr.row_of_id[n.id]][:, 2]
+            nz = float(np.linalg.norm(z))
+            if nz < 1e-12:
+                continue
+            z = z / nz
+            placed = ref.get(n.id, z)
+            dev = math.degrees(math.acos(min(1.0, max(-1.0, float(z @ placed)))))
+            p = by_id.get(n.parent_id)
+            aims = p is not None and p.topo in AIMING_TOPOS
+            aim.append((n, p, z, dev, aims))
+            if aims and dev > AIM_FIGHT_DEG:
+                # Reported, but NOT as a fault. Measured across the example
+                # gallery, "rotated off the aim its parent gave it" is
+                # indistinguishable from a deliberate lean: an armillary
+                # sphere's pins lie along their ring at rotate_x = -90, an
+                # inclined orrery's planes are tilted on purpose. Both look
+                # exactly like the bug. So this is information, not a verdict.
+                fighting.append((n, p, dev, placed, z))
+    # Spokes that were placed by hand and aimed by hand: their positions fan out
+    # around the parent, but every one of them points the same way. That is the
+    # "flat stacked fan" -- correct positions, wrong bodies -- and it is
+    # invisible to every other check here.
+    #
+    # Four conditions together, because each one alone has a legitimate scene
+    # behind it, all found in the example gallery:
+    #   parent is plainly Cartesian   - a Rod parent threads children along its
+    #                                   own axis, so shared aim is correct there
+    #   the children carry rotations  - nobody was trying to aim them by hand if
+    #                                   every rotate field is 0 (a ring of pins
+    #                                   lying flat is authored exactly that way)
+    #   positions fan out > 45 deg    - otherwise it is a row, not a fan
+    #   some sibling sits ALONG the   - a forest of upright trees is spread in
+    #   shared direction                the plane perpendicular to its shared
+    #                                   +Z, so this never happens there
+    fan = []
+    sibs = defaultdict(list)
+    for a in aim:
+        p = a[1]
+        if (p is not None and p.topo in CARTESIAN_TOPOS
+                and any((a[0].rotate_x, a[0].rotate_y, a[0].rotate_z))):
+            sibs[a[0].parent_id].append(a)
+    for pid, items in sibs.items():
+        if len(items) < 3:
+            continue
+        zs = np.array([a[2] for a in items])
+        if float(np.abs(zs @ zs[0]).min()) < math.cos(math.radians(5.0)):
+            continue                       # they do not share one direction
+        p = by_id[pid]
+        pc = tr.world_pos[tr.row_of_id[pid]]
+        dirs = []
+        for a in items:
+            v = tr.world_pos[tr.row_of_id[a[0].id]] - pc
+            d = float(np.linalg.norm(v))
+            if d > 1e-9:
+                dirs.append(v / d)
+        if len(dirs) < 3:
+            continue
+        dirs = np.array(dirs)
+        spread = math.degrees(math.acos(min(1.0, max(-1.0,
+                                                     float((dirs @ dirs.T).min())))))
+        along = float(np.abs(dirs @ zs[0]).max())
+        if spread > 45.0 and along > 0.5:
+            fan.append((p, len(items), spread, zs[0]))
+    r["aim"], r["fighting_aim"], r["aim_fan"] = aim, fighting, fan
+
     # what would move if View > Enforce Minimum Glyph Size were switched on
     floored = []
     for n in nodes:
@@ -328,6 +462,64 @@ def analyse(path, base_scale=1.0):
 
 # --------------------------------------------------------------------- report
 
+def _vec(v):
+    return f"({v[0]:+.3f}, {v[1]:+.3f}, {v[2]:+.3f})"
+
+
+def _aim_section(r, say, lim):
+    """Which way every directional glyph points, grouped by parent.
+
+    This is the answer to "are my spokes pointing outward?" as a number, so it
+    does not have to be guessed from a render -- which is exactly the check the
+    workflow asks for and nothing else here could perform.
+    """
+    if not r["aim"]:
+        return
+    by_id = r["by_id"]
+    say("AIM")
+    say("  +Z is the pointing axis of a cone, pin, cylinder, torus, ring or flat")
+    say("  marker. Sphere, Point, Torus, Ztorus and Cube parents turn each child's")
+    say("  +Z outward from its own translate; rotate_x/y/z then turns it off that.")
+
+    groups = defaultdict(list)
+    for a in r["aim"]:
+        groups[a[0].parent_id].append(a)
+
+    for pid, items in sorted(groups.items()):
+        p = by_id.get(pid)
+        n = len(items)
+        word = "child" if n == 1 else "children"
+        if p is not None and p.topo in AIMING_TOPOS:
+            worst = max(a[3] for a in items)
+            verdict = ("all at the aim placement gave them"
+                       if worst <= 1e-6 else
+                       f"up to {worst:.1f} deg off it")
+            say(f"  parent {pid} ({TOPO_NAMES.get(p.topo, p.topo)}) aims its "
+                f"{n} directional {word} -- {verdict}")
+        elif p is None:
+            say(f"  {n} directional root {word} -- no parent to aim "
+                f"{'it' if n == 1 else 'them'}; +Z comes from rotate_* alone")
+        else:
+            say(f"  parent {pid} ({TOPO_NAMES.get(p.topo, p.topo)}) does not aim "
+                f"its {n} directional {word}; +Z comes from rotate_* alone")
+        for a in (items if lim is None else items[:lim]):
+            say(f"      id {a[0].id:<6} +Z {_vec(a[2])}  "
+                f"{GEO_NAMES.get(a[0].geometry, a[0].geometry)}")
+        if lim is not None and n > lim:
+            say(f"      ... {n - lim} more (--all to list)")
+        off = [f for f in r["fighting_aim"] if f[1] is not None and f[1].id == pid]
+        if off:
+            say(f"      ^ {len(off)} of these carry a rotation that turns them off "
+                f"that aim,")
+            say(f"        by up to {max(f[2] for f in off):.0f} deg. That is how a "
+                f"deliberate lean is")
+            say("        authored AND how the classic mistake looks, so it is stated,")
+            say("        not judged: rotate_* composes on top of the placed aim rather")
+            say("        than replacing it. If you meant these to point outward, set")
+            say("        every rotate field to 0 and put the angle in translate_x.")
+    say("")
+
+
 def report(r, show_all=False):
     out = []
     say = out.append
@@ -397,6 +589,19 @@ def report(r, show_all=False):
           lambda s: (f"id {s[0].id} under parent {s[1].id}: its own axes meet at "
                      f"{s[2]:.0f} deg instead of 90 -- rotating under a stretched "
                      f"parent skews it"))
+    block(sorted(r["aim_fan"], key=lambda f: -f[1]),
+          "set of glyphs was rotated by hand and all ended up pointing the same way",
+          "sets of glyphs were rotated by hand and all ended up pointing the same way",
+          lambda f: (f"parent {f[0].id} (topo {TOPO_NAMES.get(f[0].topo, f[0].topo)}): "
+                     f"all {f[1]} directional children point {_vec(f[3])} while their "
+                     f"positions fan out over {f[2]:.0f} deg around it"))
+    if r["aim_fan"]:
+        say("      If they were meant to radiate, they do not -- this is the flat")
+        say("      stacked fan: right positions, wrong bodies. Aiming is the")
+        say("      topology's job. Give the parent topo 2 (Sphere) or 7 (Point), put")
+        say("      each child's bearing in its translate_x, and set every rotate")
+        say("      field to 0.")
+        say("")
     block(r["alpha_carriers"],
           "node has color_a = 0 but is not hidden",
           "nodes have color_a = 0 but are not hidden",
@@ -424,8 +629,11 @@ def report(r, show_all=False):
 
     if not problems:
         say("  none found -- no buried or flung children, no shear, no dead links,")
-        say("  no alpha-0 carriers, no root overlaps, nothing riding the size clamp.")
+        say("  no alpha-0 carriers, no root overlaps, no hand-aimed fans,")
+        say("  nothing riding the size clamp.")
         say("")
+
+    _aim_section(r, say, lim)
 
     lo, hi = r["bbox"]
     say("SCENE")

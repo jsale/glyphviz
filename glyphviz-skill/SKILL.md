@@ -213,7 +213,10 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
     XYZ — each field spins its own axis); a file *without* the column loads in
     ANTz Heading/Tilt/Roll mode (Z-X-Z). If all rotations are 0, omit the
     column. Per-topology aim table, geometry axes, and the spokes recipe:
-    `references/topologies.md`.
+    `references/topologies.md`. **Known-good scene, with every rod's measured
+    +Z committed beside it: `examples/Radial_Spokes/`** — calibrate against it
+    rather than probing with renders. `code/gv_extents.py` prints the same
+    numbers for your own scene, under `AIM`.
 
 13. **Carriers and shields.** For a structural node that positions things without
     drawing — a joint, a uniform frame, a pivot — use **`hide = 1` at uniform
@@ -392,10 +395,15 @@ Mixing the two within one scene is fine — `topo_scale` is per-parent.
    - **directions** — if the scene's meaning depends on which way a glyph
      *points* (spokes, needles, arrows, cones, tree limbs, anything elongated),
      positions are not enough: a set of correctly-placed rods can still be
-     aimed wrong. Re-derive each glyph's aimed axis — under a Sphere/Point/
-     Torus/Ztorus parent with rotations 0 it is the outward direction at that
-     child's own `(translate_x, translate_y)` — and confirm it matches the
-     direction the design calls for.
+     aimed wrong, and no position check can see it. **Read the checker's `AIM`
+     section** — it prints every directional glyph's world **+Z**, which is its
+     pointing axis, so this is a number to compare rather than something to
+     infer from a picture. Under a Sphere/Point/Torus/Ztorus/Cube parent with
+     rotations 0, that +Z is the outward direction at the child's own
+     `(translate_x, translate_y)`. Calibrate against
+     `examples/Radial_Spokes/` — twelve rods on a Sphere hub, twelve on a
+     Point hub, every rotate field 0, with the measured vectors committed in
+     `aim_report.txt`. **Do not reverse-engineer this from test renders.**
    - *counts and extremes* — the far end of the longest branch, the child
      nearest the parent's center, the one at a wrap point (360°/0°).
 
@@ -604,6 +612,7 @@ a scene of your own:
 
 | If you're building… | Study |
 |---|---|
+| **spokes, rods, needles, rays — anything that has to point somewhere** | `Radial_Spokes/` — Sphere, Point and Cube hubs, every rotate field 0, with the measured +Z of every rod committed |
 | **a bar chart, or anything whose length is the measurement** | `Rooted_Bars/` — four recipes over one dataset, measured at two Global Scale settings |
 | **a glyph that has to survive the whole dataset, not the sample** | `Glyph_Envelope/` — one glyph at the min, median and max of every variable, with its budget and its extent report |
 | a hyperglyph — one repeating composite glyph carrying several variables | `Wind_Rose/`, `Decay_Chain/` |
