@@ -277,19 +277,57 @@ def test_the_class_ticks_survive_changing_the_point_target(qapp,
     dlg.close()
 
 
-def test_the_step_crosses_the_whole_range_in_a_few_clicks(qapp,
-                                                          classified_las):
+def test_the_step_crosses_a_practical_range_in_a_few_clicks(qapp,
+                                                           classified_las):
+    """The arrows must not be absurdly fine. They are no longer expected to
+    cross the WHOLE range -- there is no meaningful top to the range any more
+    -- so the bar is the span anyone actually clicks through: the minimum up
+    to a million points."""
     dlg = pcd.PointCloudImportDialog(classified_las)
     _settled(qapp, dlg, '_summary')
     assert dlg._target.singleStep() == pcd.POINT_TARGET_STEP
 
     dlg._target.setValue(dlg._target.minimum())
     clicks = 0
-    while dlg._target.value() < dlg._target.maximum() and clicks < 100:
+    while dlg._target.value() < 1_000_000 and clicks < 200:
         dlg._target.stepUp()
         clicks += 1
-    assert dlg._target.value() == dlg._target.maximum()
-    assert clicks <= 12, f"{clicks} clicks to cross the range is too many"
+    assert dlg._target.value() >= 1_000_000
+    assert clicks <= 25, f"{clicks} clicks to reach a million is too many"
+    dlg.close()
+
+
+def test_the_point_target_has_no_upper_limit(qapp, classified_las):
+    """Jeff hit a 500,000-point ceiling he had never asked for and that no
+    measurement justified -- the renderer draws a million points in well under
+    a millisecond. Any file, at any point count, must be allowed through; if a
+    scan is too big for the machine, that is for the machine to say.
+
+    Values here are past every ceiling the field has ever had, including one
+    past a million, and the field must hold each exactly rather than clamp."""
+    dlg = pcd.PointCloudImportDialog(classified_las)
+    _settled(qapp, dlg, '_summary')
+    for want in (500_001, 1_000_000, 10_000_000, dlg._target.maximum()):
+        dlg._target.setValue(want)
+        assert dlg._target.value() == want, (
+            f"the target clamped {want:,} to {dlg._target.value():,}")
+    dlg.close()
+
+
+def test_a_target_past_the_file_size_imports_every_point(qapp,
+                                                         classified_las):
+    """The other half of having no limit: asking for more points than the file
+    holds imports all of them, and says so rather than silently decimating."""
+    dlg = pcd.PointCloudImportDialog(classified_las)
+    _settled(qapp, dlg, '_summary')
+    total = dlg._summary['points']
+    dlg._target.setValue(10_000_000)
+    assert 'every point' in dlg._info.text()
+
+    dlg._start_import()
+    _settled(qapp, dlg, 'report')
+    assert dlg.report['points'] == total
+    assert dlg.report['decimation'] == 'none'
     dlg.close()
 
 

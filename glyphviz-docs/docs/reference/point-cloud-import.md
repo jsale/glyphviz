@@ -49,7 +49,10 @@ needs different answers than a 200,000-point coloured scan in metres.
 
 ### Keep at most
 
-How many points to import. **100,000 is the comfortable default.**
+How many points to import. **100,000 is the comfortable default, and there
+is no upper limit** — type a number at or above the file's own point count and
+every point in it is imported. The field is a suggestion about what you want,
+not a ceiling on what GlyphViz will accept.
 
 The renderer is not what limits this — it draws a million points in 0.63 ms
 per frame, and a 442,767-point import runs at about 400 fps. The *node model*

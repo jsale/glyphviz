@@ -30,15 +30,19 @@ from PySide6.QtWidgets import (
 
 from glyphviz_core import point_cloud_loader as pcl
 
-# Point counts the target spin box steps through. The top of the range is
-# deliberately reachable but signposted: 100k is comfortable, 250k works and
-# is slow to load, past that the node model (not the renderer) gives out.
+# Point counts the target spin box steps through. There is deliberately no
+# upper limit on how many points may be imported: the ceiling below is simply
+# the largest value a QSpinBox can hold (Qt stores its range in a 32-bit int),
+# not a judgement about what the app can take. Any file, at any point count,
+# is allowed through -- if a scan is too big for the machine it runs on, that
+# shows up as the machine struggling, which is information, rather than as a
+# dialog quietly refusing to load what was asked for.
 POINT_TARGET_MIN = 1_000
-POINT_TARGET_MAX = 500_000
-# One click of the arrows. 10,000 was the first choice and it is too fine for
-# a range that runs to half a million -- Jeff's report: climbing from the
-# 100,000 default toward a 442,767-point file meant ~34 clicks. 50,000 crosses
-# the whole range in ten, and an exact count is typed rather than clicked.
+POINT_TARGET_MAX = 2_147_483_647
+# One click of the arrows. 10,000 was the first choice and it is too fine --
+# Jeff's report: climbing from the 100,000 default toward a 442,767-point file
+# meant ~34 clicks. The range no longer has a top to cross in a fixed number
+# of clicks, so the arrows nudge and an exact count is typed.
 POINT_TARGET_STEP = 50_000
 
 
@@ -144,7 +148,9 @@ class PointCloudImportDialog(QDialog):
         # clicks locked the app up hard. Jeff hit exactly that.
         self._target.valueChanged.connect(self._refresh_info)
         self._target.setToolTip(
-            "How many points to keep.\n\n"
+            "How many points to keep. There is no upper limit -- type a "
+            "number at or above the file's own point count and "
+            "every point is imported.\n\n"
             "Every point becomes a real node — clickable, taggable, "
             "animatable. The renderer is not the limit: it draws a million "
             "points in 0.6 ms, and a 442,000-point cloud runs at about "
