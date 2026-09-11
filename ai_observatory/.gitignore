@@ -1,0 +1,4 @@
+# Downloaded model data, Neuronpedia exports, atlases and per-prompt runs:
+# all regenerable by extract_gpt2.py.
+cache/
+__pycache__/
