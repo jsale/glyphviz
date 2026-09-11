@@ -104,9 +104,11 @@ def load_explanations():
 def themes(descriptions, n=3):
     counts = Counter()
     for d in descriptions:
-        words = set(w for w in re.findall(r"[a-z]{4,}", d.lower()) if w not in _STOP)
-        counts.update(words)
-    return [w for w, _ in counts.most_common(n)]
+        counts.update(sorted(set(w for w in re.findall(r"[a-z]{4,}", d.lower()) if w not in _STOP)))
+    # Break ties alphabetically. most_common() breaks them by insertion order,
+    # which followed set iteration and so changed with Python's hash seed:
+    # two builds of the same run wrote different cluster labels.
+    return [w for w, _ in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:n]]
 
 
 class Rows:

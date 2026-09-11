@@ -27,6 +27,12 @@ Scenes that are a *place* rather than a dataset — built to be flown through an
 
 - **[The Armillary World](armillary-world.md)** — a real armillary sphere, ringed by eight zones of mathematics
 
+## AI Observatory
+
+Scenes that look inside a language model while it reads: every feature it represents, placed by meaning, lit up token by token, with sound.
+
+- **[Inside GPT-2: Mary and John](ai-observatory-gpt2.md)** — watch GPT-2 small work out who gets the drink
+
 ## Audio & music
 
 - **[Bird Song Spectrogram Surface](bird-song-surface.md)** — a birdsong spectrogram as animated terrain

@@ -99,6 +99,9 @@ MANIFEST = [
      EX / "Armillary_World_Example" / "Armillary_World", None),
     ("armillary-world-overview",
      EX / "Armillary_World_Example" / "Armillary_World", None),
+    # Static (Channels stopped) is the scene's last token -- the answer -- so
+    # frame 0 is the right hero, unlike most animated scenes.
+    ("ai-observatory-gpt2", EX / "AI_Observatory_GPT2_Example", None),
 ]
 
 
@@ -155,6 +158,15 @@ CAMERA = {
                                    "azimuth": 35, "elevation": 22},
     "armillary-world-overview": {"origin": True, "zoom": 0.72, "azimuth": 35,
                                  "elevation": 58},
+    # AI Observatory: a 180-unit tower of 12 layer rings with the prompt row in
+    # front. The pinned feature labels run off to the right of the tower, so aim
+    # right of centre to leave them room. Tag text is a fixed pixel size, so the
+    # capture window's short viewport needs a closer camera than export_frame's
+    # 1000 px renders did, or the prompt-row tokens run together.
+    # The shot has to span the prompt row (z 0) to the prediction label (z ~196):
+    # 450 kept the tokens apart but cropped the answer; 540 is the compromise.
+    "ai-observatory-gpt2": {"target": (55, -30, 100), "distance": 540,
+                            "azimuth": -90, "elevation": 10},
 }
 
 

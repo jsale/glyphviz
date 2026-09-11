@@ -90,6 +90,8 @@ nav:
           - "Mood Background": examples/mood-background.md
       - Teaching worlds:
           - "The Armillary World": examples/armillary-world.md
+      - AI Observatory:
+          - "Inside GPT-2: Mary and John": examples/ai-observatory-gpt2.md
       - Audio & music:
           - "Bird Song Spectrogram Surface": examples/bird-song-surface.md
           - "Cat Scan — Audio Animation": examples/audio-cat-scan.md
