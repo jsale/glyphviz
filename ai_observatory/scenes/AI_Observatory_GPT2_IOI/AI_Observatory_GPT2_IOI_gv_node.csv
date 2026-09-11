@@ -3,20 +3,20 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 2,5,0,0,0,0,0,0,0,0,1.6,1.6,1.6,170,180,210,255,3,0,0,0.1,"GPT-2 small (124M parameters, 12 layers) reading: ""When Mary and John went to the store, John gave a drink to""",1,0,0,11
 3,5,2,1,0,0,91,0,0,0,0.22,0.22,91,120,135,175,90,19,0,0,0.1,Residual stream: the running total every layer reads from and writes to,0,0,0,11
 4,5,2,1,0,-84,0,0,0,0,0.6,0.6,0.6,120,130,150,255,1,0,16,0.08,"The prompt, one glyph per token; the enlarged token is the one being read",0,0,0,11
-5,5,4,2,-117,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,When,1,0,1,11
-6,5,4,2,-99,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,Mary,1,0,2,11
-7,5,4,2,-81,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,and,1,0,3,11
-8,5,4,2,-63,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,John,1,0,4,11
-9,5,4,2,-45,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,went,1,0,5,11
-10,5,4,2,-27,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,to,1,0,6,11
-11,5,4,2,-9,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,the,1,0,7,11
-12,5,4,2,9,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,store,1,0,8,11
-13,5,4,2,27,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,",",1,0,9,11
-14,5,4,2,45,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,John,1,0,10,11
-15,5,4,2,63,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,gave,1,0,11,11
-16,5,4,2,81,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,a,1,0,12,11
-17,5,4,2,99,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,drink,1,0,13,11
-18,5,4,2,117,0,0,0,0,0,2.2,2.2,2.2,235,235,245,255,1,0,0,0.1,to,1,0,14,11
+5,5,4,2,-164.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,When,1,0,1,11
+6,5,4,2,-135.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,Mary,1,0,2,11
+7,5,4,2,-106.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,and,1,0,3,11
+8,5,4,2,-83.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,John,1,0,4,11
+9,5,4,2,-54.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,went,1,0,5,11
+10,5,4,2,-25.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,to,1,0,6,11
+11,5,4,2,-8.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,the,1,0,7,11
+12,5,4,2,14.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,store,1,0,8,11
+13,5,4,2,49.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,",",1,0,9,11
+14,5,4,2,60.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,John,1,0,10,11
+15,5,4,2,89.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,gave,1,0,11,11
+16,5,4,2,118.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,a,1,0,12,11
+17,5,4,2,129.5,0,0,0,0,0,1.3,1.3,1.3,235,235,245,255,1,0,0,0.1,drink,1,0,13,11
+18,5,4,2,164.5,0,0,0,0,0,2.2,2.2,2.2,235,235,245,255,1,0,0,0.1,to,1,0,14,11
 19,5,2,1,0,0,182,0,0,0,1.2,1.2,1.2,255,215,120,255,3,0,0,0.1,Output: GPT-2's prediction of the next token,0,0,0,11
 20,5,19,2,0,0,5,0,0,0,2.4,2.4,2.4,255,200,80,255,15,1,0,0.1,"After ""…When"" GPT-2 predicts 'I' 9% · 'you' 9% · 'the' 7%",1,0,15,11
 21,5,19,2,0,0,5,0,0,0,2.4,2.4,2.4,255,200,80,255,15,1,0,0.1,"After ""…When Mary"" GPT-2 predicts 'Ann' 5% · 'Jane' 3% · 'Jo' 2%",1,0,16,11
@@ -49295,7 +49295,7 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 49294,5,24719,3,-9.387,58.258,-0.731,0,0,0,1,1,1,131,204,92,119,22,0,0,0.1,"L1 #24574: instances where the word ""Modern"" appears",0,0,0,11
 49295,5,24719,3,30.308,-50.385,-1.508,0,0,0,1,1,1,204,92,202,145,22,0,0,0.1,"L1 #24575: proper nouns specifically related to the name ""Lawson"" with various activations indicating different levels of relevance",0,0,0,11
 49296,5,24717,2,31.521,-57.987,0,0,0,0,0.55,0.55,0.55,251,77,255,200,13,0,0,0.1,"Layer 1 cluster 0: 201 features · themes: specifically, names, individuals",0,0,0,11
-49297,5,24717,2,60.585,-26.182,0,0,0,0,0.55,0.55,0.55,255,77,146,200,13,0,0,0.1,"Layer 1 cluster 1: 233 features · themes: medical, names, nouns",0,0,0,11
+49297,5,24717,2,60.585,-26.182,0,0,0,0,0.55,0.55,0.55,255,77,146,200,13,0,0,0.1,"Layer 1 cluster 1: 233 features · themes: medical, names, proper",0,0,0,11
 49298,5,24717,2,-61.856,23.019,0,0,0,0,0.55,0.55,0.55,77,255,194,200,13,0,0,0.1,"Layer 1 cluster 2: 367 features · themes: food, types, specifically",0,0,0,11
 49299,5,24717,2,-31.891,-57.784,0,0,0,0,0.55,0.55,0.55,80,77,255,200,13,0,0,0.1,"Layer 1 cluster 3: 473 features · themes: adjectives, negative, something",0,0,0,11
 49300,5,24717,2,26.931,-60.256,0,0,0,0,0.55,0.55,0.55,237,77,255,200,13,0,0,0.1,"Layer 1 cluster 4: 406 features · themes: actions, names, technical",0,0,0,11
@@ -49306,7 +49306,7 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 49305,5,24717,2,65.912,-3.415,0,0,0,0,0.55,0.55,0.55,255,77,85,200,13,0,0,0.1,"Layer 1 cluster 9: 383 features · themes: names, name, proper",0,0,0,11
 49306,5,24717,2,60.176,27.108,0,0,0,0,0.55,0.55,0.55,255,149,77,200,13,0,0,0.1,"Layer 1 cluster 10: 449 features · themes: name, names, named",0,0,0,11
 49307,5,24717,2,-51.497,-41.28,0,0,0,0,0.55,0.55,0.55,77,140,255,200,13,0,0,0.1,"Layer 1 cluster 11: 460 features · themes: actions, something, keywords",0,0,0,11
-49308,5,24717,2,52.602,-39.863,0,0,0,0,0.55,0.55,0.55,255,77,187,200,13,0,0,0.1,"Layer 1 cluster 12: 199 features · themes: names, nouns, proper",0,0,0,11
+49308,5,24717,2,52.602,-39.863,0,0,0,0,0.55,0.55,0.55,255,77,187,200,13,0,0,0.1,"Layer 1 cluster 12: 199 features · themes: names, proper, nouns",0,0,0,11
 49309,5,24717,2,62.826,20.222,0,0,0,0,0.55,0.55,0.55,255,130,77,200,13,0,0,0.1,"Layer 1 cluster 13: 426 features · themes: followed, names, proper",0,0,0,11
 49310,5,24717,2,-46.322,-47.014,0,0,0,0,0.55,0.55,0.55,77,120,255,200,13,0,0,0.1,"Layer 1 cluster 14: 456 features · themes: legal, actions, activities",0,0,0,11
 49311,5,24717,2,-41.504,-51.317,0,0,0,0,0.55,0.55,0.55,77,103,255,200,13,0,0,0.1,"Layer 1 cluster 15: 310 features · themes: news, media, content",0,0,0,11
@@ -74019,15 +74019,15 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 74018,5,49416,2,48.494,-44.769,0,0,0,0,0.55,0.55,0.55,255,77,204,200,13,0,0,0.1,"Layer 2 cluster 23: 212 features · themes: names, proper, people",0,0,0,11
 74019,5,49416,2,24.14,-61.427,0,0,0,0,0.55,0.55,0.55,230,77,255,200,13,0,0,0.1,"Layer 2 cluster 24: 385 features · themes: names, proper, nouns",0,0,0,11
 74020,5,49416,2,63.244,-18.874,0,0,0,0,0.55,0.55,0.55,255,77,126,200,13,0,0,0.1,"Layer 2 cluster 25: 357 features · themes: adjectives, concept, things",0,0,0,11
-74021,5,49416,2,58.995,-29.589,0,0,0,0,0.55,0.55,0.55,255,77,156,200,13,0,0,0.1,"Layer 2 cluster 26: 187 features · themes: specifically, does, neuron",0,0,0,11
-74022,5,49416,2,54.671,-36.974,0,0,0,0,0.55,0.55,0.55,255,77,178,200,13,0,0,0.1,"Layer 2 cluster 27: 188 features · themes: names, programming, respond",0,0,0,11
+74021,5,49416,2,58.995,-29.589,0,0,0,0,0.55,0.55,0.55,255,77,156,200,13,0,0,0.1,"Layer 2 cluster 26: 187 features · themes: specifically, neuron, does",0,0,0,11
+74022,5,49416,2,54.671,-36.974,0,0,0,0,0.55,0.55,0.55,255,77,178,200,13,0,0,0.1,"Layer 2 cluster 27: 188 features · themes: names, programming, provided",0,0,0,11
 74023,5,49416,2,36.56,54.948,0,0,0,0,0.55,0.55,0.55,255,244,77,200,13,0,0,0.1,"Layer 2 cluster 28: 313 features · themes: names, name, proper",0,0,0,11
-74024,5,49416,2,65.898,-3.674,0,0,0,0,0.55,0.55,0.55,255,77,86,200,13,0,0,0.1,"Layer 2 cluster 29: 224 features · themes: activate, provided, neuron",0,0,0,11
+74024,5,49416,2,65.898,-3.674,0,0,0,0,0.55,0.55,0.55,255,77,86,200,13,0,0,0.1,"Layer 2 cluster 29: 224 features · themes: provided, activate, neuron",0,0,0,11
 74025,5,49416,2,-57.435,32.515,0,0,0,0,0.55,0.55,0.55,77,255,167,200,13,0,0,0.1,"Layer 2 cluster 30: 402 features · themes: political, organizations, specifically",0,0,0,11
 74026,5,49416,2,3.017,65.931,0,0,0,0,0.55,0.55,0.55,174,255,77,200,13,0,0,0.1,"Layer 2 cluster 31: 842 features · themes: physical, actions, specifically",0,0,0,11
 74027,5,49416,2,-64.839,12.327,0,0,0,0,0.55,0.55,0.55,77,255,223,200,13,0,0,0.1,"Layer 2 cluster 32: 560 features · themes: individuals, specifically, political",0,0,0,11
 74028,5,49416,2,11.502,-64.99,0,0,0,0,0.55,0.55,0.55,196,77,255,200,13,0,0,0.1,"Layer 2 cluster 33: 246 features · themes: verb, actions, contractions",0,0,0,11
-74029,5,49416,2,35.88,-55.395,0,0,0,0,0.55,0.55,0.55,255,77,246,200,13,0,0,0.1,"Layer 2 cluster 34: 236 features · themes: evident, activation, finding",0,0,0,11
+74029,5,49416,2,35.88,-55.395,0,0,0,0,0.55,0.55,0.55,255,77,246,200,13,0,0,0.1,"Layer 2 cluster 34: 236 features · themes: provided, therefore, values",0,0,0,11
 74030,5,49416,2,57.726,31.996,0,0,0,0,0.55,0.55,0.55,255,163,77,200,13,0,0,0.1,"Layer 2 cluster 35: 785 features · themes: variations, names, concept",0,0,0,11
 74031,5,49416,2,61.666,-23.523,0,0,0,0,0.55,0.55,0.55,255,77,139,200,13,0,0,0.1,"Layer 2 cluster 36: 225 features · themes: names, proper, individuals",0,0,0,11
 74032,5,49416,2,-64.302,-14.874,0,0,0,0,0.55,0.55,0.55,77,216,255,200,13,0,0,0.1,"Layer 2 cluster 37: 536 features · themes: specifically, keywords, financial",0,0,0,11
@@ -74056,7 +74056,7 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 74055,5,49416,2,39.142,-53.141,0,0,0,0,0.55,0.55,0.55,255,77,236,200,13,0,0,0.1,"Layer 2 cluster 60: 234 features · themes: names, locations, proper",0,0,0,11
 74056,5,49416,2,-53.211,-39.046,0,0,0,0,0.55,0.55,0.55,77,147,255,200,13,0,0,0.1,"Layer 2 cluster 61: 636 features · themes: concept, something, keywords",0,0,0,11
 74057,5,49416,2,-53.243,39.002,0,0,0,0,0.55,0.55,0.55,77,255,147,200,13,0,0,0.1,"Layer 2 cluster 62: 514 features · themes: sports, team, company",0,0,0,11
-74058,5,49416,2,15.047,-64.262,0,0,0,0,0.55,0.55,0.55,205,77,255,200,13,0,0,0.1,"Layer 2 cluster 63: 183 features · themes: nouns, names, proper",0,0,0,11
+74058,5,49416,2,15.047,-64.262,0,0,0,0,0.55,0.55,0.55,205,77,255,200,13,0,0,0.1,"Layer 2 cluster 63: 183 features · themes: proper, nouns, specifically",0,0,0,11
 74059,5,49416,2,52.333,-28.302,0.823,0,0,0,0.22,0.22,0.22,255,51,148,255,3,0,0,0.1,L2 #46: past tense verbs · peak 3.4 on 'went',0,0,125,11
 74060,5,49416,2,49.987,-29.788,2.228,0,0,0,0.22,0.22,0.22,255,51,156,255,3,0,0,0.1,"L2 #264: words or punctuation associated with connecting or relating concepts, such as conjunctions or hyphenations · peak 1.0 on 'and'",0,0,126,11
 74061,5,49416,2,52.083,-28.183,1.069,0,0,0,0.22,0.22,0.22,255,51,148,255,3,0,0,0.1,"L2 #352: words indicating illumination or clarity, and numeric quantification or measurement · peak 2.9 on 'store'",0,0,127,11
@@ -98705,7 +98705,7 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 98704,5,74122,2,-38.232,53.799,0,0,0,0,0.55,0.55,0.55,77,255,93,200,13,0,0,0.1,"Layer 3 cluster 3: 533 features · themes: types, items, specifically",0,0,0,11
 98705,5,74122,2,-45.572,47.741,0,0,0,0,0.55,0.55,0.55,77,255,117,200,13,0,0,0.1,"Layer 3 cluster 4: 596 features · themes: physical, something, actions",0,0,0,11
 98706,5,74122,2,32.855,-57.241,0,0,0,0,0.55,0.55,0.55,255,77,255,200,13,0,0,0.1,"Layer 3 cluster 5: 366 features · themes: pronouns, followed, actions",0,0,0,11
-98707,5,74122,2,-51.104,-41.766,0,0,0,0,0.55,0.55,0.55,77,138,255,200,13,0,0,0.1,"Layer 3 cluster 6: 266 features · themes: activities, verbs, actions",0,0,0,11
+98707,5,74122,2,-51.104,-41.766,0,0,0,0,0.55,0.55,0.55,77,138,255,200,13,0,0,0.1,"Layer 3 cluster 6: 266 features · themes: activities, actions, verbs",0,0,0,11
 98708,5,74122,2,55.319,-35.998,0,0,0,0,0.55,0.55,0.55,255,77,175,200,13,0,0,0.1,"Layer 3 cluster 7: 335 features · themes: names, actions, political",0,0,0,11
 98709,5,74122,2,-21.016,62.565,0,0,0,0,0.55,0.55,0.55,111,255,77,200,13,0,0,0.1,"Layer 3 cluster 8: 283 features · themes: numerical, numbers, values",0,0,0,11
 98710,5,74122,2,-23.728,-61.587,0,0,0,0,0.55,0.55,0.55,103,77,255,200,13,0,0,0.1,"Layer 3 cluster 9: 401 features · themes: concepts, concept, something",0,0,0,11
@@ -271948,7 +271948,7 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 271947,5,247337,2,65.928,3.076,0,0,0,0,0.55,0.55,0.55,255,84,77,200,13,0,0,0.1,"Layer 10 cluster 31: 314 features · themes: time, events, followed · direction promotes '-', '‑', '‐', '-['",0,0,0,11
 271948,5,247337,2,10.415,-65.173,0,0,0,0,0.55,0.55,0.55,193,77,255,200,13,0,0,0.1,"Layer 10 cluster 32: 419 features · themes: locations, events, prepositions · direction promotes 'the', 'accordance', 'lieu', 'Europe'",0,0,0,11
 271949,5,247337,2,62.083,22.399,0,0,0,0,0.55,0.55,0.55,255,136,77,200,13,0,0,0.1,"Layer 10 cluster 33: 1,202 features · themes: names, locations, political · direction promotes 'ida', 'az', 'ê', 'oz'",0,0,0,11
-271950,5,247337,2,21.14,-62.523,0,0,0,0,0.55,0.55,0.55,221,77,255,200,13,0,0,0.1,"Layer 10 cluster 34: 238 features · themes: actions, locations, information · direction promotes 'albeit', 'although', 'namely', 'but'",0,0,0,11
+271950,5,247337,2,21.14,-62.523,0,0,0,0,0.55,0.55,0.55,221,77,255,200,13,0,0,0.1,"Layer 10 cluster 34: 238 features · themes: actions, locations, legal · direction promotes 'albeit', 'although', 'namely', 'but'",0,0,0,11
 271951,5,247337,2,-8.166,-65.493,0,0,0,0,0.55,0.55,0.55,145,77,255,200,13,0,0,0.1,"Layer 10 cluster 35: 417 features · themes: statements, actions, events · direction promotes 'they', 'we', 'it', 'there'",0,0,0,11
 271952,5,247337,2,-54.496,-37.232,0,0,0,0,0.55,0.55,0.55,77,153,255,200,13,0,0,0.1,"Layer 10 cluster 36: 316 features · themes: medical, conditions, physical · direction promotes 'calcium', 'nutrients', 'nutrient', 'nitrogen'",0,0,0,11
 271953,5,247337,2,-61.087,24.987,0,0,0,0,0.55,0.55,0.55,77,255,189,200,13,0,0,0.1,"Layer 10 cluster 37: 376 features · themes: locations, physical, keywords · direction promotes 'yard', 'mates', 'operated', 'front'",0,0,0,11
@@ -296668,7 +296668,7 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
 296667,5,272092,3,2.131,59.824,-0.958,0,0,0,1,1,1,152,204,92,209,22,0,0,0.1,L11 #24574: mentions of details or events in news articles,0,0,0,11
 296668,5,272092,3,-60.848,-2.691,-0.592,0,0,0,1,1,1,92,199,204,194,22,0,0,0.1,L11 #24575: statements related to financial transactions or business deals,0,0,0,11
 296669,5,272090,2,-25.338,60.942,0,0,0,0,0.55,0.55,0.55,99,255,77,200,13,0,0,0.1,"Layer 11 cluster 0: 144 features · themes: special, names, information · direction promotes '⏎', '␣', '␣', '␣'",0,0,0,11
-296670,5,272090,2,-60.683,-25.952,0,0,0,0,0.55,0.55,0.55,77,186,255,200,13,0,0,0.1,"Layer 11 cluster 1: 521 features · themes: events, pronouns, followed · direction promotes 'latest', 'slightest', 'biggest', 'entire'",0,0,0,11
+296670,5,272090,2,-60.683,-25.952,0,0,0,0,0.55,0.55,0.55,77,186,255,200,13,0,0,0.1,"Layer 11 cluster 1: 521 features · themes: events, pronouns, possessive · direction promotes 'latest', 'slightest', 'biggest', 'entire'",0,0,0,11
 296671,5,272090,2,-38.994,-53.249,0,0,0,0,0.55,0.55,0.55,77,95,255,200,13,0,0,0.1,"Layer 11 cluster 2: 225 features · themes: verbs, something, making · direction promotes 'how', 'why', 'whether', 'what'",0,0,0,11
 296672,5,272090,2,16.94,63.789,0,0,0,0,0.55,0.55,0.55,210,255,77,200,13,0,0,0.1,"Layer 11 cluster 3: 571 features · themes: actions, events, something · direction promotes 'during', 'in', 'alongside', 'with'",0,0,0,11
 296673,5,272090,2,-31.658,-57.912,0,0,0,0,0.55,0.55,0.55,80,77,255,200,13,0,0,0.1,"Layer 11 cluster 4: 228 features · themes: locations, descriptions, places · direction promotes 'plaza', 'courtyard', 'apartment', 'parking'",0,0,0,11

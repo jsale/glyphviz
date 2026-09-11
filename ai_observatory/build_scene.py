@@ -269,13 +269,21 @@ def build(args):
              text="Residual stream: the running total every layer reads from and writes to")
 
     # --- Prompt row ---------------------------------------------------------
-    spacing = args.token_spacing
+    # Tag labels are drawn at a fixed pixel size starting just right of their
+    # glyph, so evenly spaced tokens let a long word run into the next one
+    # ("wereproudto"). Advance each token by the previous label's length.
+    token_text = {t: clean(show_token(tokens[t]), 40) for t in readable}
+    token_x, x = [], 0.0
+    for k, t in enumerate(readable):
+        if k:
+            x += args.token_gap + args.char_width * len(token_text[readable[k - 1]])
+        token_x.append(x)
+    x_mid = token_x[-1] / 2
     prompt_node = rows.add(parent_id=root, branch_level=1, geometry=GEO_CUBE, scale=0.6,
                            pos=(0, -(R + 24), 0), topo=TOPO_PLOT, ratio=0.08,
                            rgba=(120, 130, 150, 255),
                            text="The prompt, one glyph per token; the enlarged token is the one being read")
     token_ids = {}
-    mid = (len(readable) - 1) / 2
     for k, t in enumerate(readable):
         s0, s1 = window(t)
         vals = np.full(frames, 0.9)
@@ -284,9 +292,9 @@ def build(args):
         vals[s1:] = 1.3
         cid = ch.channel([("scale_x", vals), ("scale_y", vals), ("scale_z", vals)])
         token_ids[t] = rows.add(parent_id=prompt_node, branch_level=2, geometry=GEO_CUBE,
-                                pos=((k - mid) * spacing, 0, 0),
+                                pos=(round(token_x[k] - x_mid, 3), 0, 0),
                                 scale=2.2 if t == last else 1.3, rgba=(235, 235, 245, 255),
-                                text=clean(show_token(tokens[t]), 40), show_text=1,
+                                text=token_text[t], show_text=1,
                                 ch_input_id=cid)
 
     # --- Output: one prediction node per token, shown in its window ----------
@@ -528,7 +536,13 @@ def main():
     ap.add_argument("--out", default=None)
     ap.add_argument("--radius", type=float, default=60.0)
     ap.add_argument("--layer-gap", type=float, default=14.0)
-    ap.add_argument("--token-spacing", type=float, default=18.0)
+    ap.add_argument("--token-gap", type=float, default=5.0,
+                    help="world units between one token label's end and the next token")
+    # Measured off a render: an 11 pt label character is ~8 px, which is
+    # distance/109 world units. Labels stay clear out to ~109 x this value,
+    # so 6.0 reads from the ~650-unit distance that frames the whole tower.
+    ap.add_argument("--char-width", type=float, default=6.0,
+                    help="world units per label character; labels stay separate out to ~109x this distance")
     ap.add_argument("--frames-per-token", type=int, default=36)
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--point-ratio", type=float, default=0.1)

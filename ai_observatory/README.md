@@ -13,15 +13,57 @@ explanations. Design and later phases: [DESIGN.md](DESIGN.md).
 | B | `build_scene.py` | `glyphviz` (numpy + pandas) | writes the scene folder: node CSV, Channels pair, sonified audio |
 | check | `verify_scene.py` | `glyphviz` | loads the result through GlyphViz's own loaders and Channels engine |
 
-The GlyphViz app never imports torch. `$env:OBSERVATORY_PYTHON` and
-`$env:GLYPHVIZ_PYTHON` are set in `.claude/settings.local.json`.
+The GlyphViz app never imports torch.
+
+## Making a scene from your own prompt
+
+One line, from a PowerShell terminal:
 
 ```powershell
-# one prompt, end to end
-& $env:OBSERVATORY_PYTHON ai_observatory\extract_gpt2.py "When Mary and John went to the store, John gave a drink to" --slug ioi
-& $env:GLYPHVIZ_PYTHON   ai_observatory\build_scene.py ioi --name AI_Observatory_GPT2_IOI
-& $env:GLYPHVIZ_PYTHON   ai_observatory\verify_scene.py ai_observatory\scenes\AI_Observatory_GPT2_IOI\AI_Observatory_GPT2_IOI_gv_node.csv
+cd C:\Users\jsale\source\repos\glyphviz
+.\ai_observatory\make_scene.ps1 "The Eiffel Tower is in the city of" Eiffel
 ```
+
+That runs all three stages and writes
+`ai_observatory\scenes\AI_Observatory_GPT2_Eiffel\`; drag its `_gv_node.csv`
+into GlyphViz. It finds both conda envs' Python on its own and prints GPT-2's
+prediction at the end. If Windows refuses to run scripts, use
+`powershell -ExecutionPolicy Bypass -File .\ai_observatory\make_scene.ps1 "..." Eiffel`.
+
+The prompt is an argument; the sentence inside `extract_gpt2.py` is only the
+fallback when none is given, so there is no need to edit it. Good prompts:
+
+- stop right before the word you want GPT-2 to produce ("…in the city of"),
+  with no trailing space (the script trims one);
+- keep them to roughly 5-25 tokens: each adds about 1.2 s of animation and
+  widens the prompt row;
+- a different `Name` per prompt keeps every scene. Reusing a name overwrites
+  that scene.
+
+Bundled scenes, all in `scenes/`: `AI_Observatory_GPT2_IOI` (name copying:
+"…John gave a drink to" → " Mary"), `AI_Observatory_GPT2_Induction` (pattern
+copying: "Mr and Mrs Dursley were proud to say that they were perfectly normal.
+Mr and Mrs" → " D" 85% -- GPT-2 spells the name " D" + "urs" + "ley", so its
+next token is the name's first piece), `AI_Observatory_GPT2_Eiffel` (fact
+recall, and a near miss: "The Eiffel Tower is in the city of" → " London" 8%,
+" Paris" 7% -- a 124M-parameter model barely knows this, though its
+location features clearly know a city belongs there), and
+`AI_Observatory_GPT2_Jordan` (fact recall that works: "Michael Jordan plays
+the sport of" → " basketball" 50%). Eiffel and Jordan make a pair: the same
+kind of question, answered once by guessing and once by knowing.
+
+### The three stages by hand
+
+The wrapper is just these, with full paths to each env's Python:
+
+```powershell
+& C:\Users\jsale\anaconda3\envs\observatory\python.exe ai_observatory\extract_gpt2.py "When Mary and John went to the store, John gave a drink to" --slug ioi
+& C:\Users\jsale\anaconda3\envs\glyphviz\python.exe ai_observatory\build_scene.py ioi --name AI_Observatory_GPT2_IOI
+& C:\Users\jsale\anaconda3\envs\glyphviz\python.exe ai_observatory\verify_scene.py ai_observatory\scenes\AI_Observatory_GPT2_IOI\AI_Observatory_GPT2_IOI_gv_node.csv
+```
+
+`--slug` names the cached run in `cache/runs/`; `--name` names the scene
+folder and files.
 
 The first extraction downloads GPT-2 small (~0.5 GB) and the 12 SAEs into the
 Hugging Face cache and writes `cache/atlas_gpt2-small-res-jb.npz`; later
