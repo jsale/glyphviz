@@ -570,8 +570,17 @@ def build_terrain(sb: SceneBuilder, layout: Layout, dem, dem_origin,
     cols, rows = len(lons), len(lats)
     sz = surface_scale_z(layout)
 
+    # A Surface parent with a texture_id drapes the image across its lattice;
+    # without one the mesh interpolates the children's vertex colours. The
+    # texture is far better here — vertex colour caps the map at one pixel per
+    # vertex, which throws away all but 11,400 samples of a 2,391 px image,
+    # while the texture carries the whole thing over the same relief. Vertex
+    # colours are still written as the fallback for a scene opened without its
+    # media/ folder, and they are what a data layer (burn severity, land
+    # cover) would use instead.
+    textured = map_path is not None and map_path.is_file()
     tex = None
-    if map_path is not None and map_path.is_file():
+    if textured:
         from PIL import Image
         tex = np.asarray(Image.open(map_path).convert("RGB"))
 
@@ -579,7 +588,8 @@ def build_terrain(sb: SceneBuilder, layout: Layout, dem, dem_origin,
                     geometry=GEO_POINT, topo=TOPO_SURFACE,
                     translate_x=0.0, translate_y=0.0, translate_z=0.0,
                     scale_x=1.0, scale_y=1.0, scale_z=1.0,
-                    color_r=200, color_g=200, color_b=200, color_a=255,
+                    color_r=255, color_g=255, color_b=255, color_a=255,
+                    texture_id=1 if textured else 0,
                     text=f"Terrain · {SURFACE_VERT_EXAG:g}x vertical exaggeration")
 
     added = 1

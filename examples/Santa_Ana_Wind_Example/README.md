@@ -62,7 +62,15 @@ OpenTopoMap loses the coastline into the coastal plain.
 ## The terrain, and why two exaggerations
 
 The county is a real DEM surface, built from free AWS Terrarium elevation tiles
-and coloured per-vertex from the same imagery.
+with the terrain map **draped on it as a texture**.
+
+That last part matters for sharpness. A Surface parent can be coloured either
+per-vertex or by a texture, and per-vertex caps the picture at one pixel per
+lattice point — 11,400 samples of a 2,391-pixel-wide image, with the rest
+thrown away. The texture carries the whole image over the same relief, so the
+lattice density is chosen for the *landform* and the map stays crisp
+regardless. Vertex colours are still written into the file as a fallback for a
+scene opened without its `media/` folder.
 
 It is deliberately drawn at **6× vertical exaggeration while the stations sit
 at 15×**. One number for both does not work: at 15× the relief turns to spikes
