@@ -279,6 +279,26 @@ class _CloudEntry:
     pick_colors: object = None         # np.ndarray (N, 4) uint8, lazily built
 
 
+@dataclass
+class _SurfaceEntry:
+    """One TOPO_SURFACE parent's baked quad mesh (see
+    Viewport._draw_topology_overlays).
+
+    A surface mesh is expensive to emit and almost always static, so it is
+    retained exactly the way a point cloud is. Measured on the Santa Ana Wind
+    example's 11,400-vertex terrain: emitting it per frame cost 404 ms of a
+    412 ms frame (2.4 fps); replaying it as a display list costs one
+    glCallList.
+
+    `key` is the cache stamp the list was compiled at. A parent or child bound
+    to a Channels track gets NO entry at all and re-emits every frame, because
+    playback moves and recolours those nodes without bumping the scene
+    revision — a baked list would freeze the animation.
+    """
+    key: tuple
+    dl: int = 0
+
+
 class Viewport(QOpenGLWidget):
     # Plain left-click on a node: replaces the selection
     nodeClicked = Signal(int)
@@ -548,6 +568,13 @@ class Viewport(QOpenGLWidget):
         # survive edits elsewhere in the scene.
         self._cloud_dls: dict[int, _CloudEntry] = {}
 
+        # Baked TOPO_SURFACE meshes, one per Surface parent (see
+        # _draw_topology_overlays): parent id -> _SurfaceEntry. Same reasoning
+        # as the cloud cache above — the mesh is a large per-vertex command
+        # stream that almost never changes, so retaining it turns a
+        # tens-of-thousands-of-calls emission into one glCallList.
+        self._surface_dls: dict[int, _SurfaceEntry] = {}
+
         # Channels-playback fast path (see set_channel_dynamic_nodes /
         # channel_frame_update): ids of channel-bound nodes (plus all
         # descendants of transform-bound ones) that are excluded from the
@@ -727,6 +754,7 @@ class Viewport(QOpenGLWidget):
         # The old scene's clouds are gone; free their lists rather than
         # letting the revision key quietly orphan them.
         self._release_cloud_dls()
+        self._release_surface_dls()
         self._assets_rev += 1     # new Scene restarts its revision counter — force a scene-list rebuild
         self._tag_text_cache.clear()
         # Any channel dynamic set belonged to the old scene; the caller
@@ -1295,6 +1323,15 @@ class Viewport(QOpenGLWidget):
                     glDeleteLists(entry.dl, 1)
         self._cloud_dls = {}
 
+    def _release_surface_dls(self, delete_gl: bool = True):
+        """Drop every cached Surface mesh. `delete_gl=False` for a context
+        that is already gone — see _release_cloud_dls."""
+        if delete_gl:
+            for entry in self._surface_dls.values():
+                if entry.dl:
+                    glDeleteLists(entry.dl, 1)
+        self._surface_dls = {}
+
     def initializeGL(self):
         # If the GL context was recreated (widget reparent, screen change),
         # any previously compiled scene display list id is dead — forget it
@@ -1303,6 +1340,7 @@ class Viewport(QOpenGLWidget):
         self._scene_dl_key = None
         self._scene_dl_last_key = None
         self._release_cloud_dls(delete_gl=False)
+        self._release_surface_dls(delete_gl=False)
         glClearColor(*_DEFAULT_BG, 1.0)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
@@ -2160,7 +2198,8 @@ class Viewport(QOpenGLWidget):
     def _draw_topology_overlays(self):
         """Draw type=7 links (line, prism, or any glyph geometry stretched
         between the two ends), TOPO_PLOT polylines, and TOPO_SURFACE quad
-        meshes."""
+        meshes (vertex-coloured, or textured when the parent has a
+        texture_id)."""
         # Membership comes from the per-revision scene scan — most scenes
         # (no links/plots/surfaces) return here without touching the node
         # list, and the parent→children map is built once per revision, not
@@ -2294,46 +2333,150 @@ class Viewport(QOpenGLWidget):
                 if len(kids) < 4:
                     continue
 
-                # Build (translate_x, translate_y) → node grid.
-                # Children use translate_z as height at that grid point.
-                grid: dict[tuple[float, float], Node] = {}
-                for kid in kids:
-                    grid[(round(kid.translate_x, 6), round(kid.translate_y, 6))] = kid
-                xs = sorted(set(k[0] for k in grid))
-                ys = sorted(set(k[1] for k in grid))
-                if len(xs) < 2 or len(ys) < 2:
-                    continue
+                # A Surface parent carrying a texture_id takes the image
+                # across its own lattice bounding box; without one it keeps
+                # interpolating the children's vertex colours. Both stay
+                # available on purpose — a texture is what you want for
+                # imagery (and decouples map resolution from mesh density,
+                # which otherwise caps the picture at one pixel per vertex),
+                # while vertex colour is what you want for DATA painted on
+                # the terrain: burn severity, land cover, slope.
+                #
+                # UVs follow GEO_GRID's convention exactly (see _grid_plate):
+                # u grows with +x, v grows with +y. That is what lets the same
+                # georeferenced image register identically whether it is
+                # draped on a flat World Grid or on a relief surface.
+                gl_tex = 0
+                if node.texture_id:
+                    gl_tex = self._tex_mgr.get_gl_name(node.texture_id)
+                    if not gl_tex:
+                        gl_tex = self._video_mgr.get_gl_name(node.texture_id)
+                if gl_tex:
+                    glEnable(GL_TEXTURE_2D)
+                    glBindTexture(GL_TEXTURE_2D, gl_tex)
+                    # MODULATE, and set explicitly rather than trusting the
+                    # default: this mesh is the one textured surface drawn
+                    # WITH lighting, and the relief only reads as relief
+                    # because lighting shades it. REPLACE would paste a flat
+                    # image over it and throw the shading away.
+                    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE)
+                    glColor4f(1.0, 1.0, 1.0, node.color_a / 255.0)
 
-                glBegin(GL_QUADS)
-                for ri in range(len(ys) - 1):
-                    for ci in range(len(xs) - 1):
-                        n00 = grid.get((xs[ci],     ys[ri]))
-                        n10 = grid.get((xs[ci + 1], ys[ri]))
-                        n11 = grid.get((xs[ci + 1], ys[ri + 1]))
-                        n01 = grid.get((xs[ci],     ys[ri + 1]))
-                        if n00 is None or n10 is None or n11 is None or n01 is None:
-                            continue
-                        p00 = self._scene.world_pos(n00.id) or (n00.translate_x, n00.translate_y, n00.translate_z)
-                        p10 = self._scene.world_pos(n10.id) or (n10.translate_x, n10.translate_y, n10.translate_z)
-                        p11 = self._scene.world_pos(n11.id) or (n11.translate_x, n11.translate_y, n11.translate_z)
-                        p01 = self._scene.world_pos(n01.id) or (n01.translate_x, n01.translate_y, n01.translate_z)
-                        # Per-face normal from cross product (CCW winding → outward normal)
-                        ea = np.asarray(p10, dtype=np.float64) - np.asarray(p00, dtype=np.float64)
-                        eb = np.asarray(p01, dtype=np.float64) - np.asarray(p00, dtype=np.float64)
-                        norm = np.cross(ea, eb)
-                        nl = np.linalg.norm(norm)
-                        if nl > 1e-10:
-                            norm /= nl
-                        else:
-                            norm = np.array([0.0, 0.0, 1.0])
-                        glNormal3f(float(norm[0]), float(norm[1]), float(norm[2]))
-                        for nn, pp in ((n00, p00), (n10, p10), (n11, p11), (n01, p01)):
-                            glColor4f(nn.color_r / 255.0, nn.color_g / 255.0,
-                                      nn.color_b / 255.0, nn.color_a / 255.0)
-                            glVertex3f(float(pp[0]), float(pp[1]), float(pp[2]))
-                glEnd()
+                # The mesh itself is retained wherever it can be. The texture
+                # bind above deliberately stays OUTSIDE the list: it is three
+                # calls a frame, and keeping GL state out of the recorded
+                # stream means a texture reload cannot leave a stale binding
+                # compiled into it.
+                entry = self._surface_entry(node, kids, bool(gl_tex))
+                if entry is not None:
+                    glCallList(entry.dl)
+                else:
+                    self._emit_surface_mesh(node, kids, bool(gl_tex))
+
+                if gl_tex:
+                    glDisable(GL_TEXTURE_2D)
 
         glEnable(GL_LIGHTING)  # restore for subsequent passes (rubber band, etc.)
+
+    def _surface_entry(self, node: Node, kids: list,
+                       textured: bool) -> '_SurfaceEntry | None':
+        """The baked mesh for a Surface parent, or None if it must re-emit.
+
+        Returns None for a surface whose parent or any child is bound to a
+        Channels track: playback moves and recolours those nodes without
+        bumping the scene revision, so a retained list would freeze the
+        animation mid-flight. Everything else — which is almost every surface,
+        terrain included — is compiled once and replayed.
+
+        `textured` is part of the key because it decides whether the recorded
+        stream carries texcoords or per-vertex colours. Revision covers node
+        edits; _assets_rev covers a media reload changing what texture_id
+        resolves to.
+        """
+        key = (self._scene._revision, self._assets_rev, self.show_hidden,
+               textured)
+        entry = self._surface_dls.get(node.id)
+        if entry is not None and entry.key == key:
+            return entry
+
+        bound = self._ch_dynamic_ids
+        if bound and (node.id in bound or any(k.id in bound for k in kids)):
+            if entry is not None:
+                if entry.dl:
+                    glDeleteLists(entry.dl, 1)
+                del self._surface_dls[node.id]
+            return None
+
+        if entry is not None and entry.dl:
+            glDeleteLists(entry.dl, 1)
+        dl = glGenLists(1)
+        glNewList(dl, GL_COMPILE)
+        self._emit_surface_mesh(node, kids, textured)
+        glEndList()
+        entry = _SurfaceEntry(key=key, dl=dl)
+        self._surface_dls[node.id] = entry
+        return entry
+
+    def _emit_surface_mesh(self, node: Node, kids: list, textured: bool):
+        """Emit one Surface parent's quad mesh.
+
+        Children are bucketed by their EXACT (translate_x, translate_y) — a
+        corner differing in the 7th decimal is a hole in the mesh — and a quad
+        is drawn for every cell whose four corners all exist.
+
+        The per-face normal is computed with scalar arithmetic rather than
+        numpy: these are 3-element vectors, and at ~11k quads the numpy call
+        overhead dominated the real work. This path still runs every frame for
+        a channel-animated surface, so it stays hot.
+        """
+        grid: dict[tuple[float, float], Node] = {}
+        for kid in kids:
+            grid[(round(kid.translate_x, 6), round(kid.translate_y, 6))] = kid
+        xs = sorted(set(k[0] for k in grid))
+        ys = sorted(set(k[1] for k in grid))
+        if len(xs) < 2 or len(ys) < 2:
+            return
+
+        tex_x0, tex_y0 = xs[0], ys[0]
+        tex_xspan = (xs[-1] - xs[0]) or 1.0
+        tex_yspan = (ys[-1] - ys[0]) or 1.0
+
+        world_pos = self._scene.world_pos
+        glBegin(GL_QUADS)
+        for ri in range(len(ys) - 1):
+            y0, y1 = ys[ri], ys[ri + 1]
+            for ci in range(len(xs) - 1):
+                x0, x1 = xs[ci], xs[ci + 1]
+                n00 = grid.get((x0, y0))
+                n10 = grid.get((x1, y0))
+                n11 = grid.get((x1, y1))
+                n01 = grid.get((x0, y1))
+                if n00 is None or n10 is None or n11 is None or n01 is None:
+                    continue
+                p00 = world_pos(n00.id) or (n00.translate_x, n00.translate_y, n00.translate_z)
+                p10 = world_pos(n10.id) or (n10.translate_x, n10.translate_y, n10.translate_z)
+                p11 = world_pos(n11.id) or (n11.translate_x, n11.translate_y, n11.translate_z)
+                p01 = world_pos(n01.id) or (n01.translate_x, n01.translate_y, n01.translate_z)
+                # Per-face normal from cross product (CCW winding → outward)
+                ax, ay, az = p10[0] - p00[0], p10[1] - p00[1], p10[2] - p00[2]
+                bx, by, bz = p01[0] - p00[0], p01[1] - p00[1], p01[2] - p00[2]
+                nx = ay * bz - az * by
+                ny = az * bx - ax * bz
+                nz = ax * by - ay * bx
+                nl = (nx * nx + ny * ny + nz * nz) ** 0.5
+                if nl > 1e-10:
+                    glNormal3f(nx / nl, ny / nl, nz / nl)
+                else:
+                    glNormal3f(0.0, 0.0, 1.0)
+                for nn, pp in ((n00, p00), (n10, p10), (n11, p11), (n01, p01)):
+                    if textured:
+                        glTexCoord2f((nn.translate_x - tex_x0) / tex_xspan,
+                                     (nn.translate_y - tex_y0) / tex_yspan)
+                    else:
+                        glColor4f(nn.color_r / 255.0, nn.color_g / 255.0,
+                                  nn.color_b / 255.0, nn.color_a / 255.0)
+                    glVertex3f(float(pp[0]), float(pp[1]), float(pp[2]))
+        glEnd()
 
     def _tag_pin_state(self, node: Node) -> bool | None:
         """Whether this node's label should draw at all, and if so whether it

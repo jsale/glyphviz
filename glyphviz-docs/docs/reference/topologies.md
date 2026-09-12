@@ -51,6 +51,37 @@ are all plain Cartesian, so `topo08_grid_probe` is the animation for all of
 them. (A Video plate is separately shown *in use* in
 `06_sphere_probe_with_screen`.)
 
+## Colouring a surface (topology 17)
+
+A Surface parent draws a lit quad mesh through its children, and there are two
+ways to colour it. The parent's `texture_id` decides which.
+
+**No `texture_id` — per-vertex colour.** Each child's own colour becomes that
+lattice point's colour and the mesh interpolates between them. This is what
+you want when the colour *is data*: burn severity, land cover, slope, depth.
+
+**`texture_id` set — a draped image.** The texture is mapped across the mesh's
+own lattice bounding box using the same UV convention as a World Grid — u
+grows with `+x`, v grows with `+y` — so one georeferenced image lands
+identically whether you drape it on a flat grid or on relief. This is what you
+want for imagery.
+
+The practical difference is resolution. With vertex colour, the picture can
+never be finer than the mesh: a 120 × 95 lattice samples an aerial photo
+11,400 times and throws the rest away. A texture carries the full image over
+the same mesh, so you can choose the lattice density for the *landform* and
+let the picture stay sharp regardless.
+
+Two details worth knowing:
+
+- Texturing uses `GL_MODULATE`, not `GL_REPLACE`, so lighting still shades the
+  relief. A surface is the one textured thing in GlyphViz drawn *lit* — grids
+  and globes draw unlit so their maps read at full brightness — and without
+  the shading a relief mesh looks flat.
+- A `texture_id` that does not resolve falls back to vertex colour rather than
+  rendering a blank white sheet, so a scene with a missing `media/` folder
+  still reads.
+
 ## Point clouds (topology 18)
 
 Point Cloud is the one topology that **replaces** how its children draw

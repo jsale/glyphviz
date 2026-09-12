@@ -257,8 +257,19 @@ assumed.
   four corners all exist. `translate_z` is the height at that lattice point.
   **Generate lattice coordinates from identical values, never accumulated
   floats** — a corner that differs in the 7th decimal is a hole in the mesh.
-  Needs ≥ 4 children and ≥ 2 distinct values on each axis; per-vertex child
-  colors shade the surface. Use for terrain, FFT waterfalls, heatmap relief.
+  Needs ≥ 4 children and ≥ 2 distinct values on each axis. Use for terrain,
+  FFT waterfalls, heatmap relief.
+  **Two ways to colour it, chosen by the parent's `texture_id`:**
+  - *no `texture_id`* — per-vertex child colors shade the surface. Use this
+    for **data** painted on the shape: burn severity, land cover, slope.
+  - *`texture_id` set* — the image is draped across the mesh's own lattice
+    bounding box, same UV convention as a World Grid (u grows with `+x`,
+    v grows with `+y`), so one georeferenced image lands identically on a
+    flat grid and on relief. Use this for **imagery**. It also decouples
+    picture resolution from mesh density, which otherwise caps the image at
+    one pixel per vertex. Texturing is `GL_MODULATE`, so lighting still
+    shades the relief. An unresolvable `texture_id` falls back to vertex
+    colour rather than drawing a blank sheet.
 - **Point Cloud (18)** — same math, but the children **replace** their glyphs
   with one batched `GL_POINTS` array. Plot and Surface *add* an overlay on top
   of the glyphs; a Point Cloud parent's children draw no glyphs at all. Use
