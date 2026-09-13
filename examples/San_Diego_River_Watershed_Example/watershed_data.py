@@ -566,6 +566,44 @@ def fetch_daily_rain_field(bbox: tuple[float, float, float, float], sdate: str,
     return _cached(f"rain_daily_field_{key}.json", refresh, fetch)
 
 
+# ---------------------------------------------------------------------------
+# Fire (Phase 3): perimeters and incident times
+# ---------------------------------------------------------------------------
+
+FRAP_LAYER = ("https://services1.arcgis.com/jUJYIo9tSA7EHvfZ/arcgis/rest/services/"
+              "California_Historic_Fire_Perimeters/FeatureServer/2")
+SD_FIRE_UNITS = ("MVU", "SDU", "CNF", "MCP")   # CAL FIRE San Diego, USFS Cleveland, Camp Pendleton
+
+
+def fetch_fire_perimeters(year: int, refresh=False, units=SD_FIRE_UNITS) -> dict:
+    """CAL FIRE FRAP perimeters for one year, filtered to reporting units.
+
+    -> GeoJSON (EPSG:4326). Properties include FIRE_NAME, ALARM_DATE and
+    CONT_DATE (epoch ms, DAY precision only), GIS_ACRES, CAUSE, UNIT_ID,
+    AGENCY. The shape is each fire's FINAL perimeter, not its progression.
+    Camp Pendleton (MCP) records can carry names and dates that differ from
+    the incident record, which is why fetch_calfire_incidents exists.
+    """
+    def fetch():
+        ids = ",".join(f"'{u}'" for u in units)
+        return json.loads(_get(f"{FRAP_LAYER}/query", {
+            "where": f"YEAR_ = {year} AND UNIT_ID IN ({ids})",
+            "outFields": "FIRE_NAME,ALARM_DATE,CONT_DATE,GIS_ACRES,CAUSE,UNIT_ID,"
+                         "AGENCY,INC_NUM,YEAR_",
+            "returnGeometry": "true", "outSR": "4326", "f": "geojson"}))
+    return _cached(f"frap_perimeters_{year}.geojson", refresh, fetch)
+
+
+def fetch_calfire_incidents(year: int, refresh=False) -> list[dict]:
+    """CAL FIRE's public incident list for one year: name, county, start and
+    extinguished times to the MINUTE (UTC), acres, and a point location that
+    is sometimes 0,0. The minute-level start times are what FRAP lacks."""
+    def fetch():
+        return json.loads(_get("https://incidents.fire.ca.gov/umbraco/api/IncidentApi/List",
+                               {"year": year, "inactive": "true"}))
+    return _cached(f"calfire_incidents_{year}.json", refresh, fetch)
+
+
 def reservoir_shorelines(wb: dict) -> list[dict]:
     """-> [{name, area_km2, ring}] using each waterbody's largest outer ring."""
     out = []
