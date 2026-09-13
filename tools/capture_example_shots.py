@@ -102,6 +102,10 @@ MANIFEST = [
     # Static (Channels stopped) is the scene's last token -- the answer -- so
     # frame 0 is the right hero, unlike most animated scenes.
     ("ai-observatory-gpt2", EX / "AI_Observatory_GPT2_Example", None),
+    # Static (Channels stopped) is the month's signature frame, 19 Dec 2012
+    # 15:50 -- the Santa Ana at its peak -- authored into the node CSV.
+    ("santa-ana-wind", EX / "Santa_Ana_Wind_Example", None),
+    ("sd-river-watershed", EX / "San_Diego_River_Watershed_Example", None),
 ]
 
 
@@ -167,6 +171,14 @@ CAMERA = {
     # 450 kept the tokens apart but cropped the answer; 540 is the compromise.
     "ai-observatory-gpt2": {"target": (55, -30, 100), "distance": 540,
                             "azimuth": -90, "elevation": 10},
+    # From over the Pacific looking up the valley: the mouth in the foreground,
+    # the mountains behind, the Strahler legend in the empty space to the north.
+    # From over the coast looking inland: the humidity legend on the left, the
+    # December timeline and its running clock along the right.
+    "santa-ana-wind": {"target": (-45, -15, 25), "distance": 400,
+                       "azimuth": 225, "elevation": 28},
+    "sd-river-watershed": {"target": (10, 20, 0), "distance": 430,
+                           "azimuth": 180, "elevation": 32},
 }
 
 

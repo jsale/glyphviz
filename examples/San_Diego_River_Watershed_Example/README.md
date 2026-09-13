@@ -47,8 +47,9 @@ A few things in the Atlas plan were wrong, and the data put them right:
   ("San Diego") covers 1,553 sq mi, including the Sweetwater, Otay and San
   Diego Bay basins. The river's own watershed is **1,120.8 km² = 432.8 sq mi**.
 - **The mainstem is 81.0 km (50.3 mi)** by NHDPlus reach lengths, not 52 mi.
-- **It rises near the Volcan Mountains**, west of Julian, not in the Cuyamaca
-  Mountains. Cuyamaca drains in through Boulder Creek.
+- **It rises near the Volcan Mountains**, northwest of Julian, not in the
+  Cuyamaca Mountains. Lake Cuyamaca sits at the head of Boulder Creek, a
+  tributary.
 - **Julian CDF and Descanso Ranger Station are outside the divide.** Both are
   long-record rain stations close to the watershed. Their labels say so.
 
@@ -107,9 +108,10 @@ because the averaged mesh understates every peak.
 ## Performance
 
 69,676 nodes and a 7.7 MB node CSV, rendering at about **3.3 ms a frame**
-headless. Building this scene turned up five places where GlyphViz's desktop
-renderer did per-frame work that grew with scene size. All five are fixed with
-pixel-identical output; on this file the earlier renderer took 89 ms a frame.
+headless. Building this scene turned up four places where GlyphViz's desktop
+renderer did work every frame that grew with scene size. All four are fixed,
+with pixel-identical output; on this file the previous renderer took 89 ms a
+frame.
 The terrain and river vertices are authored at **scale 0**, which the renderer
 now skips outright; see "Large terrain" in the Topologies reference.
 

@@ -33,6 +33,13 @@ Scenes that look inside a language model while it reads: every feature it repres
 
 - **[Inside GPT-2: Mary and John](ai-observatory-gpt2.md)** — watch GPT-2 small work out who gets the drink
 
+## San Diego River Watershed Atlas
+
+One watershed, built up in phases: its terrain and river network first, then the weather, water and fire that cross it, all on the same map.
+
+- **[The Watershed, Source to Sea](sd-river-watershed.md)** — 433 square miles of real relief, the whole river network by stream order, gauges and rain stations
+- **[Santa Ana Wind, December 2012](santa-ana-wind.md)** — 130 weather stations every ten minutes for a month, as the wind swings offshore and the county dries out
+
 ## Audio & music
 
 - **[Bird Song Spectrogram Surface](bird-song-surface.md)** — a birdsong spectrogram as animated terrain

@@ -92,6 +92,9 @@ nav:
           - "The Armillary World": examples/armillary-world.md
       - AI Observatory:
           - "Inside GPT-2: Mary and John": examples/ai-observatory-gpt2.md
+      - San Diego River Watershed Atlas:
+          - "The Watershed, Source to Sea": examples/sd-river-watershed.md
+          - "Santa Ana Wind, December 2012": examples/santa-ana-wind.md
       - Audio & music:
           - "Bird Song Spectrogram Surface": examples/bird-song-surface.md
           - "Cat Scan — Audio Animation": examples/audio-cat-scan.md

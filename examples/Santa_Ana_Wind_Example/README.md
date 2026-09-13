@@ -32,8 +32,6 @@ from, straight out of the archive.
 
 ## How to read the scene
 
-Each cone is one station.
-
 Each cone is one station, with a small white bead at its pivot.
 
 | Encoding | Variable |
@@ -224,5 +222,5 @@ where the Atlas picks this thread up again.
   has at least one station like that; December 2012 was not audited for it.
 - A station missing from a scrape **carries its previous reading forward**
   rather than disappearing, so a gap looks like persistence.
-- The gust factor is undefined at zero wind and is pinned to 1.0 (thinnest
-  cone) below 0.5 mph.
+- The gust factor is undefined at zero wind and is pinned to 1.0 (the
+  smallest bead) below 0.5 mph.
