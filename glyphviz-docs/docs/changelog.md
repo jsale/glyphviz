@@ -16,6 +16,13 @@ GlyphViz doesn't cut numbered releases yet — development moves in daily commit
     - **The panel** shows the whole season, every rain burst followed by a spike in the river.
 
     Rain totals that an observer read after several unattended days are drawn as wire columns, not spread across days nobody measured.
+- Added **[The May 2014 Fire Siege](examples/sd-fire-siege-2014.md)**, the Atlas's first fire scene. It shows the Santa Ana week that sparked eight fires in northern San Diego County as a **space-time cube**: the county map is the floor, and time rises one unit per hour.
+    - **Weather stations** are 128 threads coloured by humidity.
+    - **Fire alerts** are 2,654 discs, sized by the fire-alert index Jeff Sale wrote for this same station network in 2014.
+    - **Fires** are prisms rising from their ignition to when they were declared out.
+    - **The now plane** sweeps up through the cube carrying the wind.
+
+    It shows the alerts clustering in the mountains while the fires broke out near the coast, in air that was extremely dry and hot but mostly below the index's wind threshold.
 
 ## 2026-09-12
 

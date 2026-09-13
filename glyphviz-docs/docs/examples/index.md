@@ -40,6 +40,7 @@ One watershed, built up in phases: its terrain and river network first, then the
 - **[The Watershed, Source to Sea](sd-river-watershed.md)** — 433 square miles of real relief, the whole river network by stream order, gauges and rain stations
 - **[The Pulse: A Century of the San Diego River](sd-river-pulse.md)** — river flow and mountain rain, month by month since 1912, with the whole century on a panel beside it
 - **[The Storm Winter, 2004–05](sd-river-storm-2005.md)** — one of the wettest winters on record, day by day: 18 rain gauges across the county and the river answering each storm
+- **[The May 2014 Fire Siege](sd-fire-siege-2014.md)** — eight fires and a Santa Ana as a space-time cube: 128 weather stations, 2,654 fire alerts and every fire at its real place and moment
 - **[Santa Ana Wind, December 2012](santa-ana-wind.md)** — 130 weather stations every ten minutes for a month, as the wind swings offshore and the county dries out
 
 ## Audio & music

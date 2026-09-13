@@ -112,6 +112,9 @@ MANIFEST = [
     # Static is 21 February 2005, the resting pose the generator authors: wet
     # across the rain field and high on the river at once.
     ("sd-river-storm-2005", EX / "San_Diego_River_Storm_Example", None),
+    # Static is 14 May 2014 11:00 PDT, the ten minutes with the most stations
+    # in fire alert, with the now plane and its wind cones parked there.
+    ("sd-fire-siege-2014", EX / "San_Diego_Fire_Siege_Example", None),
 ]
 
 
@@ -193,6 +196,9 @@ CAMERA = {
     # image than squeezed into a wide gallery frame.
     "sd-river-storm-2005": {"target": (-40, -30, 10), "distance": 330,
                             "azimuth": 215, "elevation": 35},
+    # The whole cube from the south-west, the legend above its east side.
+    "sd-fire-siege-2014": {"target": (60, -30, 112), "distance": 640,
+                           "azimuth": 215, "elevation": 18},
 }
 
 
