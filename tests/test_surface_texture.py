@@ -305,6 +305,48 @@ def test_channel_bound_surface_is_never_cached(qapp, monkeypatch):
     assert 'glCallList' not in later
 
 
+def test_binding_a_channel_after_caching_stops_the_replay(qapp, monkeypatch):
+    """Channels are often bound AFTER the first paint — a channel file found
+    beside the scene, or a Channel In rebind from the Properties panel.
+    set_channel_dynamic_nodes bumps _ch_dynamic_rev but NOT the scene
+    revision, so a key without it kept replaying the list compiled before the
+    binding and the animated terrain stood still."""
+    nodes = _surface_scene(cols=4, rows=4, texture_id=3)
+    rec = _GLRecorder()
+    rec.install(monkeypatch)
+    view = _viewport(nodes)
+
+    view._draw_topology_overlays()                   # compiled, unbound
+    view._ch_dynamic_ids = {nodes[3].id}             # what binding does...
+    view._ch_dynamic_rev += 1                        # ...and all it bumps
+    before = len(rec.calls)
+    view._draw_topology_overlays()
+    later = [c[0] for c in rec.calls[before:]]
+    assert later.count('glVertex3f') == 36, 'bound mesh kept replaying'
+    assert 'glCallList' not in later
+    assert later.count('glDeleteLists') == 1, 'stale list must be freed'
+
+
+def test_cached_replay_does_not_rebuild_the_child_list(qapp, monkeypatch):
+    """The replay path must not walk the children: filtering a 58k-vertex
+    terrain's child list every frame was ~7 ms on its own."""
+    rec = _GLRecorder()
+    rec.install(monkeypatch)
+    view = _viewport(_surface_scene(cols=4, rows=4, texture_id=3))
+    view._draw_topology_overlays()
+
+    class _Untouchable(list):
+        def __iter__(self):
+            raise AssertionError('replay iterated the child list')
+
+    scan = view._scene_scan()
+    real = scan.children_map(view._scene.nodes)
+    monkeypatch.setattr(type(scan), 'children_map',
+                        lambda self, nodes: {k: _Untouchable(v)
+                                             for k, v in real.items()})
+    view._draw_topology_overlays()                   # must not raise
+
+
 def test_editing_the_scene_rebuilds_the_mesh(qapp, monkeypatch):
     """A cache that never invalidates is worse than no cache."""
     nodes = _surface_scene(cols=4, rows=4, texture_id=3)

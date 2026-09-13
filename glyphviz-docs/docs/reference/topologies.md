@@ -81,6 +81,30 @@ Two details worth knowing:
 - A `texture_id` that does not resolve falls back to vertex colour rather than
   rendering a blank white sheet, so a scene with a missing `media/` folder
   still reads.
+- A textured surface is drawn with its **parent's** alpha. Keep the parent's
+  `color_a` at 255 — setting it to 0 to hide the parent's own glyph makes the
+  whole mesh invisible.
+
+### Large terrain: give the vertices scale 0
+
+Every child of a Surface also draws its own glyph, and on a terrain those glyphs
+are noise on top of the mesh. You can't hide them the obvious ways: `hide = 1`
+removes the vertex from the mesh too, and `color_a = 0` makes the mesh
+transparent wherever that vertex is used.
+
+Give the vertices **`scale_x = scale_y = scale_z = 0`** and a solid geometry
+such as Cube instead. A glyph whose rendered size is zero on all three axes
+can't produce a single pixel, so GlyphViz skips it outright. The vertex still
+shapes the mesh, and the mesh looks exactly the same. On a 58,500-vertex
+terrain that took the frame from 35.6 ms to 10.4 ms.
+
+Three exceptions still draw, because they *can* put pixels on screen at zero
+size: **Point** (a fixed-size sprite), any **wire** geometry, and a node with
+a `texture_id`. If you've switched on the minimum glyph size, a zero-scale
+glyph is drawn at that minimum instead.
+
+The same applies to the children of a Plot: the line is drawn through them
+either way.
 
 ## Point clouds (topology 18)
 

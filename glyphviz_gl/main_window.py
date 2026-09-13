@@ -4020,7 +4020,8 @@ class MainWindow(QMainWindow):
             return
         for node in self._selected_nodes:
             node.text = value
-        self._viewport.update()
+        # tags_touch, not update: the tag pass caches which nodes carry text.
+        self._viewport.tags_touch()
 
     def _on_insp_show_text_toggled(self, checked: bool):
         """Pin (or unpin) the selected nodes' tag text — see Node.show_text.

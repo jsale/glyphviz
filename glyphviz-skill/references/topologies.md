@@ -269,7 +269,14 @@ assumed.
     picture resolution from mesh density, which otherwise caps the image at
     one pixel per vertex. Texturing is `GL_MODULATE`, so lighting still
     shades the relief. An unresolvable `texture_id` falls back to vertex
-    colour rather than drawing a blank sheet.
+    colour rather than drawing a blank sheet. A textured mesh takes the
+    **parent's** `color_a` — keep it 255.
+  **Terrain-sized surfaces and long plots:** give the children
+  `scale_x = scale_y = scale_z = 0` with a solid geometry (Cube). A glyph of
+  zero rendered size is skipped by the renderer, while the vertex still shapes
+  the mesh or line. Do NOT use `hide = 1` (drops the vertex from the mesh) or
+  `color_a = 0` (makes the mesh transparent). Point, wire geometries and
+  textured nodes are not skipped.
 - **Point Cloud (18)** — same math, but the children **replace** their glyphs
   with one batched `GL_POINTS` array. Plot and Surface *add* an overlay on top
   of the glyphs; a Point Cloud parent's children draw no glyphs at all. Use

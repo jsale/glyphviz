@@ -172,6 +172,7 @@ def _bare_viewport(nodes, show_hidden=False, draw_limit=None):
     view.selected_node_ids = set()
     view.show_tags = True
     view.show_tags_selected_only = False
+    view._tag_text_rev = 0
     view._tex_mgr = type('T', (), {'get_gl_name': lambda self, i: 0})()
     view._video_mgr = type('V', (), {'get_gl_name': lambda self, i: 0})()
     view._geo = _GeoSpy()

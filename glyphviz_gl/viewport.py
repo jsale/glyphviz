@@ -32,7 +32,7 @@ from glyphviz_core import point_cloud as pc
 from glyphviz_core.mesh_loader import load_mesh_file as _load_mesh_data
 
 from glyphviz_core.geometry_data import (
-    GEO_LINE_PRISM, RATIO_SHAPED_GEOMETRIES, _WIRE_IDS,
+    GEO_LINE_PRISM, GEO_POINT, RATIO_SHAPED_GEOMETRIES, _WIRE_IDS,
 )
 from glyphviz_core.link_geometry import (
     is_glyph_link, link_gl_matrix, local_z_span,
@@ -96,6 +96,38 @@ _FLY_WHEEL_STEP = 0.12          # fraction of arm length per wheel notch
 _LOOK_DEG_PER_PX = 0.25         # look-around (right-drag) rate, both axes
 
 _Vec3 = tuple[float, float, float]
+
+
+def _draws_nothing(node: Node, radius: float) -> bool:
+    """True when a glyph's draw call cannot put a single pixel on screen, so
+    both the draw and pick passes can skip it outright.
+
+    `radius` is Scene.node_draw_data's max column norm of the draw matrix,
+    which is exactly 0 when the RENDERED scale is zero on all three axes —
+    after base_scale and the optional minimum-glyph-size floor, so a node the
+    floor lifts back to visible never qualifies. A degenerate matrix collapses
+    every vertex of a solid shape onto one point and its triangles cover no
+    samples.
+
+    This exists for the vertices of a TOPO_SURFACE: the mesh is the picture
+    and each child's own glyph is noise, but the children have to stay
+    visible (hide=1 deletes the mesh) and opaque (the mesh takes their
+    alpha). A 58k-vertex terrain spent ~70% of its frame on push/multiply/
+    call/pop for glyphs that drew nothing (measured 34.6 -> 9.9 ms). Authoring
+    those vertices at scale 0 now costs nothing.
+
+    Deliberately narrow, so the picture is identical with or without it:
+      * GEO_POINT is a fixed-pixel sprite that ignores the matrix — a
+        zero-scale Point still draws its dot.
+      * Wire geometries are GL_LINES, and a zero-length line can rasterise a
+        pixel on some drivers (the diamond-exit rule is not universal).
+      * Textured nodes still bind their texture, and a video texture that no
+        draw call asks for is paused by VideoManager.
+    """
+    return (radius == 0.0
+            and node.geometry != GEO_POINT
+            and node.geometry not in _WIRE_IDS
+            and not node.texture_id)
 
 
 def _past_deadzone(offset: float) -> float:
@@ -162,7 +194,8 @@ class _SceneScan:
     ~900 ms/frame no matter how few nodes the \\-key draw limit let render."""
     __slots__ = ('rate_nodes', 'link_nodes', 'plot_nodes', 'surface_nodes',
                  'cloud_nodes', 'cloud_parent_ids',
-                 'has_grid', 'has_pinned_tags', '_children_of', '_taggable')
+                 'has_grid', 'has_pinned_tags', '_children_of', '_taggable',
+                 '_labelled', '_labelled_rev')
 
     def __init__(self, nodes: list[Node]):
         self.rate_nodes: list[Node] = []
@@ -188,6 +221,8 @@ class _SceneScan:
         self.has_pinned_tags = False
         self._children_of: dict[int, list[Node]] | None = None
         self._taggable: list[Node] | None = None
+        self._labelled: list[Node] | None = None
+        self._labelled_rev = -1
         for n in nodes:
             if (n.translate_rate_x or n.translate_rate_y or n.translate_rate_z
                     or n.rotate_rate_x or n.rotate_rate_y or n.rotate_rate_z
@@ -249,6 +284,30 @@ class _SceneScan:
                               if n.parent_id not in clouds or n.show_text]
         return self._taggable
 
+    def labelled_nodes(self, nodes: list[Node], text_rev: int) -> list[Node]:
+        """taggable_nodes() narrowed to the nodes that carry text at all.
+
+        The fix for the case taggable_nodes' docstring leaves open — a big
+        scene that is NOT a cloud. Measured on the San Diego River watershed
+        (69,677 nodes, 15 of them pinned labels): walking every node for its
+        text cost 35 ms of a 34-40 ms frame, while the scene itself drew in
+        about 4.
+
+        `text` changes on keystrokes without bumping the scene revision, so
+        this list is keyed on its own counter instead — Viewport.tags_touch()
+        bumps it, and the Properties panel's text field calls that. Nothing
+        else edits text on a live scene: loading, merging and generators all
+        arrive through set_nodes, which starts a new scan.
+
+        Only valid with no draw limit: the \\-key cutoff counts EVERY visible
+        node in scene order, so the tag pass walks the full list whenever a
+        limit is set.
+        """
+        if self._labelled is None or self._labelled_rev != text_rev:
+            self._labelled = [n for n in self.taggable_nodes(nodes) if n.text]
+            self._labelled_rev = text_rev
+        return self._labelled
+
     def children_map(self, nodes: list[Node]) -> dict[int, list[Node]]:
         """parent_id → children (links excluded), built lazily on first use —
         only Plot/Surface overlay drawing and point-cloud batching need it,
@@ -293,7 +352,26 @@ class _SurfaceEntry:
     `key` is the cache stamp the list was compiled at. A parent or child bound
     to a Channels track gets NO entry at all and re-emits every frame, because
     playback moves and recolours those nodes without bumping the scene
-    revision — a baked list would freeze the animation.
+    revision — a baked list would freeze the animation. The key carries
+    _ch_dynamic_rev for the same reason: binding a channel AFTER the list was
+    compiled (a channel file loaded later, a Channel In rebind) changes which
+    nodes are dynamic without touching the revision, and must stop the replay.
+    """
+    key: tuple
+    dl: int = 0
+
+
+@dataclass
+class _PlotEntry:
+    """One TOPO_PLOT parent's baked polyline (see
+    Viewport._draw_topology_overlays) — the same retention, for the same
+    reasons, as _SurfaceEntry.
+
+    Emitting per frame costs a world_pos lookup and two GL calls per vertex,
+    twice over (line strip + round-join points). The San Diego River's
+    NHDPlus tributary network — 484 lines, 10k vertices — measured 41 ms a
+    frame that way, before any other content. Replayed, it is one glCallList
+    per line.
     """
     key: tuple
     dl: int = 0
@@ -544,6 +622,9 @@ class Viewport(QOpenGLWidget):
         # cleared on scene load (see set_nodes) and size-guarded in
         # _paint_tags against pathological churn.
         self._tag_text_cache: dict[str, QStaticText] = {}
+        # Bumped by tags_touch() when a node's text is edited in place; keys
+        # _SceneScan.labelled_nodes, which the scene revision cannot.
+        self._tag_text_rev = 0
 
         # Cached camera matrices for tag world→screen projection (updated each frame).
         self._mv_matrix: np.ndarray | None = None
@@ -574,6 +655,8 @@ class Viewport(QOpenGLWidget):
         # stream that almost never changes, so retaining it turns a
         # tens-of-thousands-of-calls emission into one glCallList.
         self._surface_dls: dict[int, _SurfaceEntry] = {}
+        # Baked TOPO_PLOT polylines, parent id -> _PlotEntry, likewise.
+        self._plot_dls: dict[int, _PlotEntry] = {}
 
         # Channels-playback fast path (see set_channel_dynamic_nodes /
         # channel_frame_update): ids of channel-bound nodes (plus all
@@ -641,6 +724,15 @@ class Viewport(QOpenGLWidget):
         """Mark scene transforms stale and request a repaint.
         Call this whenever node data (position, rotation, scale, topo) changes."""
         self._scene.invalidate()
+        self.update()
+
+    def tags_touch(self):
+        """Request a repaint after editing node TEXT in place. Cheaper than
+        scene_touch() — no retained-list rebake, which a keystroke must not
+        cost — but it refreshes which nodes the tag pass considers labelled
+        (see _SceneScan.labelled_nodes). Without it, text typed onto a node
+        that had none would not show until the next scene edit."""
+        self._tag_text_rev += 1
         self.update()
 
     def scene_touch(self):
@@ -755,6 +847,7 @@ class Viewport(QOpenGLWidget):
         # letting the revision key quietly orphan them.
         self._release_cloud_dls()
         self._release_surface_dls()
+        self._release_plot_dls()
         self._assets_rev += 1     # new Scene restarts its revision counter — force a scene-list rebuild
         self._tag_text_cache.clear()
         # Any channel dynamic set belonged to the old scene; the caller
@@ -1332,6 +1425,14 @@ class Viewport(QOpenGLWidget):
                     glDeleteLists(entry.dl, 1)
         self._surface_dls = {}
 
+    def _release_plot_dls(self, delete_gl: bool = True):
+        """Drop every cached Plot polyline — see _release_surface_dls."""
+        if delete_gl:
+            for entry in self._plot_dls.values():
+                if entry.dl:
+                    glDeleteLists(entry.dl, 1)
+        self._plot_dls = {}
+
     def initializeGL(self):
         # If the GL context was recreated (widget reparent, screen change),
         # any previously compiled scene display list id is dead — forget it
@@ -1341,6 +1442,7 @@ class Viewport(QOpenGLWidget):
         self._scene_dl_last_key = None
         self._release_cloud_dls(delete_gl=False)
         self._release_surface_dls(delete_gl=False)
+        self._release_plot_dls(delete_gl=False)
         glClearColor(*_DEFAULT_BG, 1.0)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
@@ -1714,6 +1816,8 @@ class Viewport(QOpenGLWidget):
             # cap rather than fluctuating with camera angle.
             visible_count += 1
             M, gl_matrix, radius = self._scene.node_draw_data(node)
+            if _draws_nothing(node, radius):
+                continue
             if planes is not None and not self._sphere_in_frustum(
                     planes, M[0, 3], M[1, 3], M[2, 3], radius * 1.2):
                 continue
@@ -2288,36 +2392,26 @@ class Viewport(QOpenGLWidget):
 
         # ---- TOPO_PLOT polylines ----
         if plot_nodes:
+            key = self._overlay_key()
             for node in plot_nodes:
                 if not self.show_hidden and node.hide:
+                    continue
+                # A matching entry was compiled at this dynamic revision while
+                # nothing in it was bound, so it replays without touching the
+                # children at all.
+                entry = self._plot_dls.get(node.id)
+                if entry is not None and entry.key == key:
+                    glCallList(entry.dl)
                     continue
                 kids = [k for k in children_of.get(node.id, [])
                         if self.show_hidden or not k.hide]
                 if len(kids) < 2:
                     continue
-                width = max(node.ratio * 20.0, 1.0)
-                kid_positions = [
-                    self._scene.world_pos(kid.id) or
-                    (kid.translate_x, kid.translate_y, kid.translate_z)
-                    for kid in kids
-                ]
-                glLineWidth(width)
-                glBegin(GL_LINE_STRIP)
-                for kid, pos in zip(kids, kid_positions):
-                    glColor4f(kid.color_r / 255.0, kid.color_g / 255.0,
-                              kid.color_b / 255.0, kid.color_a / 255.0)
-                    glVertex3f(pos[0], pos[1], pos[2])
-                glEnd()
-                # Round caps/joins: see the matching comment in the link-line
-                # block above -- one antialiased point per vertex, including
-                # interior joints, so corners aren't left mitred/jagged.
-                glPointSize(width)
-                glBegin(GL_POINTS)
-                for kid, pos in zip(kids, kid_positions):
-                    glColor4f(kid.color_r / 255.0, kid.color_g / 255.0,
-                              kid.color_b / 255.0, kid.color_a / 255.0)
-                    glVertex3f(pos[0], pos[1], pos[2])
-                glEnd()
+                entry = self._plot_entry(node, kids, key)
+                if entry is not None:
+                    glCallList(entry.dl)
+                else:
+                    self._emit_plot_line(node, kids)
 
         glLineWidth(1.0)
         glPointSize(1.0)
@@ -2327,10 +2421,6 @@ class Viewport(QOpenGLWidget):
             glEnable(GL_LIGHTING)
             for node in surface_nodes:
                 if not self.show_hidden and node.hide:
-                    continue
-                kids = [k for k in children_of.get(node.id, [])
-                        if self.show_hidden or not k.hide]
-                if len(kids) < 4:
                     continue
 
                 # A Surface parent carrying a texture_id takes the image
@@ -2351,6 +2441,20 @@ class Viewport(QOpenGLWidget):
                     gl_tex = self._tex_mgr.get_gl_name(node.texture_id)
                     if not gl_tex:
                         gl_tex = self._video_mgr.get_gl_name(node.texture_id)
+                textured = bool(gl_tex)
+
+                # A matching entry was compiled at this revision while nothing
+                # in it was bound, so it replays without rebuilding the child
+                # list — which alone was ~7 ms a frame on a 58k-vertex terrain.
+                entry = self._surface_dls.get(node.id)
+                kids = None
+                if entry is None or entry.key != self._overlay_key() + (textured,):
+                    entry = None
+                    kids = [k for k in children_of.get(node.id, [])
+                            if self.show_hidden or not k.hide]
+                    if len(kids) < 4:
+                        continue
+
                 if gl_tex:
                     glEnable(GL_TEXTURE_2D)
                     glBindTexture(GL_TEXTURE_2D, gl_tex)
@@ -2367,11 +2471,12 @@ class Viewport(QOpenGLWidget):
                 # calls a frame, and keeping GL state out of the recorded
                 # stream means a texture reload cannot leave a stale binding
                 # compiled into it.
-                entry = self._surface_entry(node, kids, bool(gl_tex))
+                if entry is None:
+                    entry = self._surface_entry(node, kids, textured)
                 if entry is not None:
                     glCallList(entry.dl)
                 else:
-                    self._emit_surface_mesh(node, kids, bool(gl_tex))
+                    self._emit_surface_mesh(node, kids, textured)
 
                 if gl_tex:
                     glDisable(GL_TEXTURE_2D)
@@ -2389,12 +2494,10 @@ class Viewport(QOpenGLWidget):
         terrain included — is compiled once and replayed.
 
         `textured` is part of the key because it decides whether the recorded
-        stream carries texcoords or per-vertex colours. Revision covers node
-        edits; _assets_rev covers a media reload changing what texture_id
-        resolves to.
+        stream carries texcoords or per-vertex colours. See _overlay_key for
+        the rest.
         """
-        key = (self._scene._revision, self._assets_rev, self.show_hidden,
-               textured)
+        key = self._overlay_key() + (textured,)
         entry = self._surface_dls.get(node.id)
         if entry is not None and entry.key == key:
             return entry
@@ -2416,6 +2519,70 @@ class Viewport(QOpenGLWidget):
         entry = _SurfaceEntry(key=key, dl=dl)
         self._surface_dls[node.id] = entry
         return entry
+
+    def _overlay_key(self) -> tuple:
+        """Cache stamp shared by the Surface and Plot display lists. Revision
+        covers node edits; _assets_rev a media reload changing what a
+        texture_id resolves to; show_hidden which children take part; and
+        _ch_dynamic_rev a change in WHICH nodes are channel-bound, which
+        touches none of the others and must stop a replay of a now-animated
+        overlay (see _SurfaceEntry)."""
+        return (self._scene._revision, self._assets_rev, self.show_hidden,
+                self._ch_dynamic_rev)
+
+    def _plot_entry(self, node: Node, kids: list,
+                    key: tuple) -> '_PlotEntry | None':
+        """The baked polyline for a Plot parent, or None if it must re-emit
+        because the parent or a child is channel-bound — the same rule, for
+        the same reason, as _surface_entry."""
+        entry = self._plot_dls.get(node.id)
+        bound = self._ch_dynamic_ids
+        if bound and (node.id in bound or any(k.id in bound for k in kids)):
+            if entry is not None:
+                if entry.dl:
+                    glDeleteLists(entry.dl, 1)
+                del self._plot_dls[node.id]
+            return None
+        if entry is not None and entry.dl:
+            glDeleteLists(entry.dl, 1)
+        dl = glGenLists(1)
+        glNewList(dl, GL_COMPILE)
+        self._emit_plot_line(node, kids)
+        glEndList()
+        entry = _PlotEntry(key=key, dl=dl)
+        self._plot_dls[node.id] = entry
+        return entry
+
+    def _emit_plot_line(self, node: Node, kids: list):
+        """Emit one Plot parent's polyline through its children, in order.
+
+        Width is recorded into the stream along with the vertices, so a
+        replayed list carries its own line width and point size; the caller
+        resets both to 1 after the whole plot pass.
+        """
+        width = max(node.ratio * 20.0, 1.0)
+        kid_positions = [
+            self._scene.world_pos(kid.id) or
+            (kid.translate_x, kid.translate_y, kid.translate_z)
+            for kid in kids
+        ]
+        glLineWidth(width)
+        glBegin(GL_LINE_STRIP)
+        for kid, pos in zip(kids, kid_positions):
+            glColor4f(kid.color_r / 255.0, kid.color_g / 255.0,
+                      kid.color_b / 255.0, kid.color_a / 255.0)
+            glVertex3f(pos[0], pos[1], pos[2])
+        glEnd()
+        # Round caps/joins: see the matching comment in the link-line
+        # block above -- one antialiased point per vertex, including
+        # interior joints, so corners aren't left mitred/jagged.
+        glPointSize(width)
+        glBegin(GL_POINTS)
+        for kid, pos in zip(kids, kid_positions):
+            glColor4f(kid.color_r / 255.0, kid.color_g / 255.0,
+                      kid.color_b / 255.0, kid.color_a / 255.0)
+            glVertex3f(pos[0], pos[1], pos[2])
+        glEnd()
 
     def _emit_surface_mesh(self, node: Node, kids: list, textured: bool):
         """Emit one Surface parent's quad mesh.
@@ -2551,7 +2718,10 @@ class Viewport(QOpenGLWidget):
         # _SceneScan.taggable_nodes) -- at 442k points, skipping them one at a
         # time still cost 109 ms a frame. The in-loop check below stays as the
         # safety net for membership Channels changed since the scan was built.
-        candidates = self._scene_scan().taggable_nodes(self._scene.nodes)
+        scan = self._scene_scan()
+        candidates = (scan.labelled_nodes(self._scene.nodes, self._tag_text_rev)
+                      if self._draw_limit is None
+                      else scan.taggable_nodes(self._scene.nodes))
         if clouds and self.selected_node_ids:
             # Selected cloud points ARE labelled (the rule: a point labels
             # when it is pinned or selected), but selection deliberately does
@@ -3175,11 +3345,13 @@ class Viewport(QOpenGLWidget):
                 visible_count += 1
             elif not is_selected:
                 continue
+            _, gl_matrix, radius = self._scene.node_draw_data(node)
+            if _draws_nothing(node, radius):
+                continue   # no pixels to pick; counted above like the draw loop
             r = node.id & 0xFF
             g = (node.id >> 8) & 0xFF
             b = (node.id >> 16) & 0xFF
             glColor4ub(r, g, b, 255)
-            _, gl_matrix, _ = self._scene.node_draw_data(node)
             glPushMatrix()
             glMultMatrixf(gl_matrix)
             # Draw the solid equivalent for wireframe geometries so the
