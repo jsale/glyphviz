@@ -23,6 +23,8 @@ Pass refresh=True (build script: --refresh) to re-download.
   Stream gauges       USGS NWIS site service.
   Rain stations       NOAA GHCN-Daily station metadata via RCC-ACIS.
   Place names         USGS National Map Gazetteer (GNIS).
+  Monthly flow        USGS NWIS daily values, averaged per month (Phase 2).
+  Monthly rainfall    NOAA GHCN-Daily monthly totals via RCC-ACIS (Phase 2).
 """
 
 from __future__ import annotations
@@ -401,6 +403,98 @@ def fetch_reservoirs(refresh=False) -> dict:
                           if (f["properties"].get("gnis_name") or "").strip()]
         return wb
     return _cached("nhd_reservoirs.geojson", refresh, fetch)
+
+
+# ---------------------------------------------------------------------------
+# Time series (Phase 2, "The Pulse"): monthly river flow and monthly rainfall
+# ---------------------------------------------------------------------------
+
+def _month_keys(first: str, last: str) -> list[str]:
+    y, m = int(first[:4]), int(first[5:7])
+    ly, lm = int(last[:4]), int(last[5:7])
+    out = []
+    while (y, m) <= (ly, lm):
+        out.append(f"{y:04d}-{m:02d}")
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return out
+
+
+def fetch_monthly_flow(site: str, refresh=False) -> dict:
+    """Monthly mean discharge (cfs) for one USGS gauge, from its DAILY values.
+
+    -> {"site", "first_day", "last_day", "months": {"YYYY-MM": {"cfs", "days",
+    "of", "provisional", "estimated"}}}. Months with no daily value at all are
+    absent — they are gaps in the record, not zero flow, and the scene draws
+    them as gaps. A month missing a few days keeps the mean of the days it has
+    ("days" of "of"); callers decide how complete is complete enough.
+
+    Built from the daily values rather than taken from NWIS's monthly
+    statistics service so the completeness of every month is known and
+    reported. Only the monthly result is cached (small, and all Phase 2
+    needs); the storm scene will fetch its own daily window.
+
+    USGS is moving these services to api.waterdata.usgs.gov. The cache under
+    data/ means a rebuild never depends on this endpoint staying up.
+    """
+    def fetch():
+        import calendar
+        txt = _get("https://waterservices.usgs.gov/nwis/dv/",
+                   {"format": "rdb", "sites": site, "parameterCd": "00060",
+                    "statCd": "00003", "startDT": "1900-01-01"}).decode()
+        lines = [l.split("\t") for l in txt.splitlines()
+                 if l and not l.startswith("#")]
+        head = lines[0]
+        vcol = next(i for i, h in enumerate(head) if h.endswith("_00060_00003"))
+        ccol = vcol + 1
+        acc: dict[str, list] = {}
+        days = []
+        for row in lines[2:]:
+            if len(row) <= vcol or not row[vcol].strip():
+                continue
+            try:
+                q = float(row[vcol])
+            except ValueError:            # "Ice", "Eqp", "Dis" and friends
+                continue
+            code = row[ccol] if len(row) > ccol else ""
+            day = row[head.index("datetime")]
+            days.append(day)
+            a = acc.setdefault(day[:7], [0.0, 0, False, False])
+            a[0] += q
+            a[1] += 1
+            a[2] |= "P" in code
+            a[3] |= "e" in code
+        months = {}
+        for k, (tot, n, prov, est) in sorted(acc.items()):
+            months[k] = dict(cfs=round(tot / n, 4), days=n,
+                             of=calendar.monthrange(int(k[:4]), int(k[5:]))[1],
+                             provisional=prov, estimated=est)
+        return dict(site=site, first_day=min(days), last_day=max(days),
+                    months=months)
+    return _cached(f"flow_monthly_{site}.json", refresh, fetch)
+
+
+def fetch_monthly_rain(ghcn: str, refresh=False) -> dict:
+    """Monthly precipitation totals (inches) for one GHCN-Daily station via
+    RCC-ACIS. -> {"station", "months": {"YYYY-MM": inches | None}}.
+
+    ACIS sums the daily values itself and returns "M" when more than
+    MAX_MISSING_DAYS days of the month are missing, which becomes None here.
+    A trace ("T") is a real observation of almost nothing and becomes 0.
+    """
+    MAX_MISSING_DAYS = 3
+
+    def fetch():
+        res = json.loads(_get("https://data.rcc-acis.org/StnData", body={
+            "sid": ghcn, "sdate": "1899-01", "edate": "por",
+            "elems": [{"name": "pcpn", "interval": "mly", "duration": "mly",
+                       "reduce": "sum", "maxmissing": MAX_MISSING_DAYS}]}))
+        months = {}
+        for k, v in res["data"]:
+            months[k] = (None if v == "M" else 0.0 if v == "T"
+                         else float(v.rstrip("A")))
+        return dict(station=ghcn, name=res["meta"]["name"].title(),
+                    max_missing_days=MAX_MISSING_DAYS, months=months)
+    return _cached(f"rain_monthly_{ghcn}.json", refresh, fetch)
 
 
 def reservoir_shorelines(wb: dict) -> list[dict]:

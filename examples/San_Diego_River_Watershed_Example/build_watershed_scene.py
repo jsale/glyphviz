@@ -610,8 +610,60 @@ def verify_scene(node_path: Path, layout: Layout, lattice: tr.Lattice,
 # 7. MAIN
 # ---------------------------------------------------------------------------
 
-def main() -> int:
+@dataclass
+class Frame:
+    """Everything a scene laid over this frame needs: the map window, the
+    lon/lat -> world mapping, the DEM and the rendered lattice."""
+    window: bm.BBox
+    layout: Layout
+    dem: tr.Dem
+    lattice: tr.Lattice
+    map_path: Path | None
+
+
+def prepare_frame(out_dir: Path, refresh: bool = False, basemap: bool = True,
+                  cols: int = SURFACE_COLS, exag: float | None = None) -> Frame:
+    """Fetch the public data, the toned basemap (into out_dir/media) and the
+    DEM, and build the lattice. Later Atlas phases call this so their scenes
+    sit on exactly the same frame as this one."""
     global TERRAIN_EXAG
+    if exag is not None:
+        TERRAIN_EXAG = exag
+
+    print("Public data (cached under data/):")
+    huc = wd.fetch_huc10(refresh)
+    outer, _inner, area = wd.dissolve(huc)
+    for fetch in (wd.fetch_network, wd.fetch_gauges, wd.fetch_rain_stations,
+                  wd.fetch_places, wd.fetch_reservoirs):
+        fetch(refresh)
+    print(f"  watershed {area:,.1f} km², divide ring {len(max(outer, key=len))} vertices")
+
+    xs = [p[0] for ring in outer for p in ring]
+    ys = [p[1] for ring in outer for p in ring]
+    pw, ph = (max(xs) - min(xs)) * PAD_FRAC, (max(ys) - min(ys)) * PAD_FRAC
+    window = bm.BBox(min(xs) - pw, max(xs) + pw, min(ys) - ph, max(ys) + ph)
+
+    media = out_dir / "media"
+    map_path = None
+    if basemap:
+        media.mkdir(parents=True, exist_ok=True)
+        map_path = media / "01_watershed_terrain.png"
+        window = fetch_basemap(window, map_path, max(outer, key=len))
+
+    layout = make_layout(window)
+    print(f"  plate {2 * layout.half_w:.1f} x {2 * layout.half_h:.1f} world units, "
+          f"{layout.z_per_m * 1000:.3f} units/km vertical ({TERRAIN_EXAG:g}x)")
+
+    print(f"  DEM zoom {DEM_ZOOM} …")
+    dem = tr.fetch_dem(window, zoom=DEM_ZOOM)
+    lattice = tr.build_lattice(dem, window, cols=cols)
+    print(f"  lattice {lattice.cols}x{lattice.rows}, "
+          f"{lattice.heights.min():.0f}..{lattice.heights.max():.0f} m "
+          f"(DEM max {dem.heights.max():.0f} m)")
+    return Frame(window, layout, dem, lattice, map_path)
+
+
+def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out-dir", type=Path, default=HERE)
@@ -624,40 +676,11 @@ def main() -> int:
                     help="LON,LAT for a 'you are here' pin (never commit it)")
     args = ap.parse_args()
 
-    TERRAIN_EXAG = args.exag
     home = tuple(float(v) for v in args.home.split(",")) if args.home else None
-
-    print("Public data (cached under data/):")
-    huc = wd.fetch_huc10(args.refresh)
-    outer, _inner, area = wd.dissolve(huc)
-    for fetch in (wd.fetch_network, wd.fetch_gauges, wd.fetch_rain_stations,
-                  wd.fetch_places, wd.fetch_reservoirs):
-        fetch(args.refresh)
-    print(f"  watershed {area:,.1f} km², divide ring {len(max(outer, key=len))} vertices")
-
-    xs = [p[0] for ring in outer for p in ring]
-    ys = [p[1] for ring in outer for p in ring]
-    pw, ph = (max(xs) - min(xs)) * PAD_FRAC, (max(ys) - min(ys)) * PAD_FRAC
-    window = bm.BBox(min(xs) - pw, max(xs) + pw, min(ys) - ph, max(ys) + ph)
-
     out_dir = args.out_dir
-    media = out_dir / "media"
-    map_path = None
-    if not args.no_basemap:
-        media.mkdir(parents=True, exist_ok=True)
-        map_path = media / "01_watershed_terrain.png"
-        window = fetch_basemap(window, map_path, max(outer, key=len))
-
-    layout = make_layout(window)
-    print(f"  plate {2 * layout.half_w:.1f} x {2 * layout.half_h:.1f} world units, "
-          f"{layout.z_per_m * 1000:.3f} units/km vertical ({TERRAIN_EXAG:g}x)")
-
-    print(f"  DEM zoom {DEM_ZOOM} …")
-    dem = tr.fetch_dem(window, zoom=DEM_ZOOM)
-    lattice = tr.build_lattice(dem, window, cols=args.cols)
-    print(f"  lattice {lattice.cols}x{lattice.rows}, "
-          f"{lattice.heights.min():.0f}..{lattice.heights.max():.0f} m "
-          f"(DEM max {dem.heights.max():.0f} m)")
+    fr = prepare_frame(out_dir, args.refresh, not args.no_basemap, args.cols, args.exag)
+    window, layout, dem, lattice, map_path = (fr.window, fr.layout, fr.dem,
+                                              fr.lattice, fr.map_path)
 
     built = build(layout, lattice, dem, map_path, home)
     problems = validate(built.df)
