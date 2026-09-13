@@ -497,6 +497,75 @@ def fetch_monthly_rain(ghcn: str, refresh=False) -> dict:
     return _cached(f"rain_monthly_{ghcn}.json", refresh, fetch)
 
 
+def fetch_daily_flow(site: str, refresh=False) -> dict:
+    """A gauge's whole daily record: {"site", "first_day", "cfs": [...]}, one
+    entry per calendar day from first_day, None where the record has no value.
+    Stored as a flat list so the century of days caches compactly."""
+    def fetch():
+        import datetime as dt
+        txt = _get("https://waterservices.usgs.gov/nwis/dv/",
+                   {"format": "rdb", "sites": site, "parameterCd": "00060",
+                    "statCd": "00003", "startDT": "1900-01-01"}).decode()
+        lines = [l.split("\t") for l in txt.splitlines()
+                 if l and not l.startswith("#")]
+        head = lines[0]
+        vcol = next(i for i, h in enumerate(head) if h.endswith("_00060_00003"))
+        dcol = head.index("datetime")
+        got = {}
+        for row in lines[2:]:
+            try:
+                got[row[dcol]] = float(row[vcol])
+            except (ValueError, IndexError):
+                continue
+        first = dt.date.fromisoformat(min(got))
+        last = dt.date.fromisoformat(max(got))
+        n = (last - first).days + 1
+        vals = [got.get((first + dt.timedelta(days=i)).isoformat()) for i in range(n)]
+        return dict(site=site, first_day=first.isoformat(), cfs=vals)
+    return _cached(f"flow_daily_{site}.json", refresh, fetch)
+
+
+def fetch_daily_rain_field(bbox: tuple[float, float, float, float], sdate: str,
+                           edate: str, refresh=False) -> list[dict]:
+    """Every GHCN-Daily station ACIS has precipitation for inside *bbox*
+    (lon_min, lat_min, lon_max, lat_max) between *sdate* and *edate*.
+
+    -> [{"name", "sids", "lon", "lat", "elev_ft", "days": [[inches|None, flag]]}]
+    with one entry per day. Flags, kept rather than smoothed over:
+      ""   an ordinary daily total          "T"  trace, stored as 0.0
+      "M"  missing                          "S"  folded into a later "A" total
+      "A"  a total ACCUMULATED over this day and the "S" days before it
+    """
+    def fetch():
+        import re
+        res = json.loads(_get("https://data.rcc-acis.org/MultiStnData", body={
+            "bbox": ",".join(f"{v:g}" for v in bbox), "sdate": sdate, "edate": edate,
+            "elems": [{"name": "pcpn"}], "meta": "name,ll,elev,sids"}))
+        out = []
+        for r in res["data"]:
+            m = r["meta"]
+            if not m.get("ll"):
+                continue
+            days = []
+            for (raw,) in r["data"]:
+                raw = raw or "M"
+                if raw in ("M", "S"):
+                    days.append([None, raw])
+                elif raw == "T":
+                    days.append([0.0, "T"])
+                else:
+                    num = re.match(r"^[0-9.]+", raw)
+                    flag = re.sub(r"[0-9.]", "", raw)
+                    days.append([float(num.group()) if num else None,
+                                 flag if num else "M"])
+            out.append(dict(name=m["name"].title(), sids=m.get("sids", []),
+                            lon=m["ll"][0], lat=m["ll"][1], elev_ft=m.get("elev"),
+                            days=days))
+        return out
+    key = f"{sdate}_{edate}"
+    return _cached(f"rain_daily_field_{key}.json", refresh, fetch)
+
+
 def reservoir_shorelines(wb: dict) -> list[dict]:
     """-> [{name, area_km2, ring}] using each waterbody's largest outer ring."""
     out = []

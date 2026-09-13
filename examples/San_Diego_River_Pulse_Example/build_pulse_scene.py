@@ -273,6 +273,136 @@ class Built:
     checks: dict
 
 
+# ---------------------------------------------------------------------------
+# Shared layers — also used by the Atlas's storm scene
+# ---------------------------------------------------------------------------
+
+GAUGE_NAMES = {MAST: "Mast Rd, Santee", FASHION: "Fashion Valley",
+               LOS_COCHES: "Los Coches Creek nr Lakeside"}
+
+
+def rows_without_legend(base, title: str) -> tuple[Rows, int]:
+    """The Phase 1 rows minus its Strahler legend (the last seven rows; a
+    scene with time needs that space for its own legend), retitled.
+    -> (rows, World Grid id)."""
+    recs = base.df.to_dict("records")
+    assert recs[-7]["text"] == "Strahler stream order", recs[-7]["text"]
+    assert recs[-1]["text"].startswith("relief"), recs[-1]["text"]
+    R = Rows([{**r, "ch_input_id": 0} for r in recs[:-7]])
+    assert R.rows[0]["type"] == fm.NODE_WORLD
+    R.set(1, text=title)
+    grid_id = next(r["id"] for r in R.rows if r["type"] == fm.NODE_GRID)
+    return R, grid_id
+
+
+def _join(runs) -> list:
+    out: list = []
+    for s in sorted(runs, key=lambda s: s.drainage_km2):
+        pts = s.coords
+        if out and wd._key(out[-1]) == wd._key(pts[0]):
+            pts = pts[1:]
+        out.extend(pts)
+    return out
+
+
+def gauge_reaches(notes: list[str]) -> list[tuple[str, list, str]]:
+    """The stretch of channel each gauge measures, upstream -> downstream:
+    Mast Rd -> Fashion Valley, Fashion Valley -> the sea, and Los Coches Creek
+    from its gauge to the river. -> [(site, lon/lat coords, description)]."""
+    gauges = {g["site"]: g for g in wd.fetch_gauges()}
+    streams = wd.build_streams(wd.fetch_network())
+    main_coords = _join(s for s in streams if s.mainstem)
+    lc_coords = _join(s for s in streams if s.name.strip() == "Los Coches Creek")
+    i_mast, d_mast = nearest_index(main_coords, gauges[MAST]["lon"], gauges[MAST]["lat"])
+    i_fv, d_fv = nearest_index(main_coords, gauges[FASHION]["lon"], gauges[FASHION]["lat"])
+    i_lc, d_lc = nearest_index(lc_coords, gauges[LOS_COCHES]["lon"], gauges[LOS_COCHES]["lat"])
+    notes.append(f"gauge-to-channel distance: Mast Rd {d_mast:.0f} m, "
+                 f"Fashion Valley {d_fv:.0f} m, Los Coches {d_lc:.0f} m")
+    return [
+        (MAST, main_coords[i_mast:i_fv + 1], "Mast Rd -> Fashion Valley"),
+        (FASHION, main_coords[i_fv:], "Fashion Valley -> the sea"),
+        (LOS_COCHES, lc_coords[i_lc:], "Los Coches Creek, gauge -> the river"),
+    ]
+
+
+def pct_colors(pct: list) -> list[tuple[int, int, int]]:
+    """Ramp colour per frame; a gap carries the previous colour forward rather
+    than flashing black on the frame the glyph comes back (it is hidden
+    meanwhile anyway)."""
+    cols = [ramp(p) if p is not None else (0, 0, 0) for p in pct]
+    for f in range(1, len(cols)):
+        if pct[f] is None:
+            cols[f] = cols[f - 1]
+    return cols
+
+
+def add_flow_ribbon(R: Rows, ch: Channels, frame: fm.Frame, checks: dict, coords,
+                    values: list, cols: list, rest: int, text: str, link: str) -> int:
+    """A ribbon draped over *coords*: width <- log flow (the Plot parent's
+    bound ratio), colour <- *cols* (one channel shared by every vertex), hidden
+    where *values* is None. -> parent id."""
+    layout, lattice = frame.layout, frame.lattice
+    clear_m = RIBBON_CLEARANCE / layout.z_per_m
+    lons, lats = tr.simplify_polyline([p[0] for p in coords],
+                                      [p[1] for p in coords], fm.SIMPLIFY_M)
+    dl, dt, dh = tr.drape_polyline(lattice, lons, lats, clearance=clear_m)
+    wx, wy = layout.world_xy(dl, dt)
+    wz = dh * layout.z_per_m
+    ratio_t = [ribbon_ratio(v) if v is not None else DRY_PX / 20.0 for v in values]
+    hide_t = [0 if v is not None else 1 for v in values]
+    par_ch = ch.channel(ratio=ratio_t, hide=hide_t)
+    kid_ch = ch.channel(color_r=[c[0] for c in cols], color_g=[c[1] for c in cols],
+                        color_b=[c[2] for c in cols])
+    c_rest = cols[rest]
+    ax, ay = float(wx[0]), float(wy[0])
+    az = lattice.surface_height(dl[0], dt[0]) * layout.z_per_m
+    parent = R.add(type=NODE_GLYPH, parent_id=0, branch_level=0,
+                   geometry=GEO_POINT, topo=TOPO_PLOT, ratio=ratio_t[rest],
+                   hide=hide_t[rest], color_r=c_rest[0], color_g=c_rest[1],
+                   color_b=c_rest[2], color_a=0,
+                   translate_x=fm._r(ax), translate_y=fm._r(ay),
+                   translate_z=fm._r(az), ch_input_id=par_ch, text=text, link=link)
+    for k in range(len(dl)):
+        R.add(type=NODE_GLYPH, parent_id=parent, branch_level=1,
+              geometry=GEO_CUBE, scale_x=0.0, scale_y=0.0, scale_z=0.0,
+              translate_x=fm._r(wx[k] - ax), translate_y=fm._r(wy[k] - ay),
+              translate_z=fm._r(wz[k] - az),
+              color_r=c_rest[0], color_g=c_rest[1], color_b=c_rest[2],
+              ch_input_id=kid_ch)
+    checks["lines"].append((parent, dl, dt))
+    return parent
+
+
+def add_rain_column(R: Rows, ch: Channels, frame: fm.Frame, checks: dict, grid_id: int,
+                    lon: float, lat: float, values: list, cols: list, rest: int,
+                    text: str, units_per_inch: float = RAIN_UNITS_PER_INCH,
+                    geometry_t: list | None = None) -> int:
+    """A World Grid child standing on the rendered surface at lon/lat whose
+    height is *values* (inches) and colour *cols*, hidden where a value is
+    None. *geometry_t*, when given, is also bound (solid vs wire). -> id."""
+    layout, lattice = frame.layout, frame.lattice
+    gsz = layout.grid_scale_z
+    ground_km = lattice.surface_height(lon, lat) / 1000.0
+    half = [max((v or 0.0) * units_per_inch / 2.0, RAIN_MIN_HALF) for v in values]
+    tz = [round(ground_km + (RAIN_LIFT + h) / gsz, 6) for h in half]
+    hide_t = [0 if v is not None else 1 for v in values]
+    tracks = dict(scale_z=[round(h, 4) for h in half], translate_z=tz, hide=hide_t,
+                  color_r=[c[0] for c in cols], color_g=[c[1] for c in cols],
+                  color_b=[c[2] for c in cols])
+    if geometry_t is not None:
+        tracks["geometry"] = geometry_t
+    cch = ch.channel(**tracks)
+    nid = R.add(type=NODE_GLYPH, parent_id=grid_id, branch_level=1,
+                geometry=geometry_t[rest] if geometry_t else GEO_CYLINDER,
+                translate_x=fm._r(lon, 6), translate_y=fm._r(lat, 6),
+                translate_z=tz[rest], scale_x=RAIN_RADIUS, scale_y=RAIN_RADIUS,
+                scale_z=round(half[rest], 4), hide=hide_t[rest],
+                color_r=cols[rest][0], color_g=cols[rest][1], color_b=cols[rest][2],
+                ch_input_id=cch, segments_x=16, segments_y=4, text=text)
+    checks["columns"].append((nid, lon, lat, half, tz))
+    return nid
+
+
 def build(frame: fm.Frame, refresh: bool) -> Built:
     layout, lattice = frame.layout, frame.lattice
     base = fm.build(layout, lattice, frame.dem, frame.map_path, home=None)
@@ -280,15 +410,8 @@ def build(frame: fm.Frame, refresh: bool) -> Built:
     checks = base.checks
     checks["columns"] = []
 
-    # The Phase 1 Strahler legend is the last seven rows; this scene has its
-    # own legend in that space.
-    recs = base.df.to_dict("records")
-    assert recs[-7]["text"] == "Strahler stream order", recs[-7]["text"]
-    assert recs[-1]["text"].startswith("relief"), recs[-1]["text"]
-    R = Rows([{**r, "ch_input_id": 0} for r in recs[:-7]])
-    assert R.rows[0]["type"] == fm.NODE_WORLD
-    R.set(1, text="San Diego River Watershed Atlas · Phase 2 · The Pulse")
-    grid_id = next(r["id"] for r in R.rows if r["type"] == fm.NODE_GRID)
+    R, grid_id = rows_without_legend(base, "San Diego River Watershed Atlas · "
+                                           "Phase 2 · The Pulse")
 
     # -- Clock ----------------------------------------------------------------
     mast_raw = wd.fetch_monthly_flow(MAST, refresh)
@@ -320,114 +443,27 @@ def build(frame: fm.Frame, refresh: bool) -> Built:
     ch = Channels(n)
 
     # -- Flow ribbons ---------------------------------------------------------
-    gauges = {g["site"]: g for g in wd.fetch_gauges()}
-    streams = wd.build_streams(wd.fetch_network())
-    main = sorted((s for s in streams if s.mainstem), key=lambda s: s.drainage_km2)
-    main_coords: list = []
-    for s in main:
-        pts = s.coords
-        if main_coords and fm.wd._key(main_coords[-1]) == fm.wd._key(pts[0]):
-            pts = pts[1:]
-        main_coords.extend(pts)
-    lc_runs = sorted((s for s in streams if s.name.strip() == "Los Coches Creek"),
-                     key=lambda s: s.drainage_km2)
-    lc_coords: list = []
-    for s in lc_runs:
-        pts = s.coords
-        if lc_coords and fm.wd._key(lc_coords[-1]) == fm.wd._key(pts[0]):
-            pts = pts[1:]
-        lc_coords.extend(pts)
-
-    i_mast, d_mast = nearest_index(main_coords, gauges[MAST]["lon"], gauges[MAST]["lat"])
-    i_fv, d_fv = nearest_index(main_coords, gauges[FASHION]["lon"], gauges[FASHION]["lat"])
-    i_lc, d_lc = nearest_index(lc_coords, gauges[LOS_COCHES]["lon"], gauges[LOS_COCHES]["lat"])
-    notes.append(f"gauge-to-channel distance: Mast Rd {d_mast:.0f} m, "
-                 f"Fashion Valley {d_fv:.0f} m, Los Coches {d_lc:.0f} m")
-    reaches = [
-        (MAST, main_coords[i_mast:i_fv + 1],
-         "Mast Rd -> Fashion Valley"),
-        (FASHION, main_coords[i_fv:],
-         "Fashion Valley -> the sea"),
-        (LOS_COCHES, lc_coords[i_lc:],
-         "Los Coches Creek, gauge -> the river"),
-    ]
-    gauge_names = {MAST: "Mast Rd, Santee", FASHION: "Fashion Valley",
-                   LOS_COCHES: "Los Coches Creek nr Lakeside"}
-    clear_m = RIBBON_CLEARANCE / layout.z_per_m
-
-    for site, coords, what in reaches:
+    for site, coords, what in gauge_reaches(notes):
         se = flows[site]
-        lons, lats = tr.simplify_polyline([p[0] for p in coords],
-                                          [p[1] for p in coords], fm.SIMPLIFY_M)
-        dl, dt, dh = tr.drape_polyline(lattice, lons, lats, clearance=clear_m)
-        wx, wy = layout.world_xy(dl, dt)
-        wz = dh * layout.z_per_m
-        ratio_t = [ribbon_ratio(v) if v is not None else DRY_PX / 20.0
-                   for v in se.values]
-        hide_t = [0 if v is not None else 1 for v in se.values]
-        cols = [ramp(p) if p is not None else (0, 0, 0) for p in se.pct]
-        # Carry the colour through gaps rather than flashing black on the
-        # frame the ribbon comes back (it is hidden meanwhile anyway).
-        for f in range(1, n):
-            if se.pct[f] is None:
-                cols[f] = cols[f - 1]
-        par_ch = ch.channel(ratio=ratio_t, hide=hide_t)
-        kid_ch = ch.channel(color_r=[c[0] for c in cols],
-                            color_g=[c[1] for c in cols],
-                            color_b=[c[2] for c in cols])
-        c_rest = cols[rest]
-        ax, ay = float(wx[0]), float(wy[0])
-        az = lattice.surface_height(dl[0], dt[0]) * layout.z_per_m
+        add_flow_ribbon(
+            R, ch, frame, checks, coords, se.values, pct_colors(se.pct), rest,
+            text=(f"Flow ribbon · USGS {site} {GAUGE_NAMES[site]} · "
+                  f"{what} · width = monthly mean flow (log), "
+                  f"colour = wetter/drier than usual for the month"),
+            link=f"https://waterdata.usgs.gov/monitoring-location/{site}/")
         v0 = se.values[rest]
-        parent = R.add(type=NODE_GLYPH, parent_id=0, branch_level=0,
-                       geometry=GEO_POINT, topo=TOPO_PLOT, ratio=ratio_t[rest],
-                       hide=hide_t[rest], color_r=c_rest[0], color_g=c_rest[1],
-                       color_b=c_rest[2], color_a=0,
-                       translate_x=fm._r(ax), translate_y=fm._r(ay),
-                       translate_z=fm._r(az), ch_input_id=par_ch,
-                       text=(f"Flow ribbon · USGS {site} {gauge_names[site]} · "
-                             f"{what} · width = monthly mean flow (log), "
-                             f"colour = wetter/drier than usual for the month"),
-                       link=f"https://waterdata.usgs.gov/monitoring-location/{site}/")
-        for k in range(len(dl)):
-            R.add(type=NODE_GLYPH, parent_id=parent, branch_level=1,
-                  geometry=GEO_CUBE, scale_x=0.0, scale_y=0.0, scale_z=0.0,
-                  translate_x=fm._r(wx[k] - ax), translate_y=fm._r(wy[k] - ay),
-                  translate_z=fm._r(wz[k] - az),
-                  color_r=c_rest[0], color_g=c_rest[1], color_b=c_rest[2],
-                  ch_input_id=kid_ch)
-        checks["lines"].append((parent, dl, dt))
-        notes.append(f"ribbon {site} ({what}): {len(dl)} draped vertices, "
-                     f"at rest {v0 if v0 is None else round(v0, 1)} cfs")
+        notes.append(f"ribbon {site} ({what}): {len(checks['lines'][-1][1])} draped "
+                     f"vertices, at rest {v0 if v0 is None else round(v0, 1)} cfs")
 
     # -- Rain columns -----------------------------------------------------------
-    gsz = layout.grid_scale_z
     for st in wd.fetch_rain_stations():
         se = rains[st["ghcn"]]
-        ground_km = lattice.surface_height(st["lon"], st["lat"]) / 1000.0
-        half = [max((v or 0.0) * RAIN_UNITS_PER_INCH / 2.0, RAIN_MIN_HALF)
-                for v in se.values]
-        tz = [round(ground_km + (RAIN_LIFT + h) / gsz, 6) for h in half]
-        hide_t = [0 if v is not None else 1 for v in se.values]
-        cols = [ramp(p) if p is not None else (0, 0, 0) for p in se.pct]
-        for f in range(1, n):
-            if se.pct[f] is None:
-                cols[f] = cols[f - 1]
-        cch = ch.channel(scale_z=[round(h, 4) for h in half], translate_z=tz,
-                         hide=hide_t, color_r=[c[0] for c in cols],
-                         color_g=[c[1] for c in cols], color_b=[c[2] for c in cols])
-        nid = R.add(type=NODE_GLYPH, parent_id=grid_id, branch_level=1,
-                    geometry=GEO_CYLINDER, translate_x=fm._r(st["lon"], 6),
-                    translate_y=fm._r(st["lat"], 6), translate_z=tz[rest],
-                    scale_x=RAIN_RADIUS, scale_y=RAIN_RADIUS,
-                    scale_z=round(half[rest], 4), hide=hide_t[rest],
-                    color_r=cols[rest][0], color_g=cols[rest][1],
-                    color_b=cols[rest][2], ch_input_id=cch,
-                    segments_x=16, segments_y=4,
-                    text=(f"Monthly rainfall · NOAA GHCN {st['ghcn']} {st['name']} · "
-                          f"height = inches ({RAIN_UNITS_PER_INCH:g} world units per "
-                          f"inch), colour = wetter/drier than usual for the month"))
-        checks["columns"].append((nid, st["lon"], st["lat"], half, tz))
+        add_rain_column(
+            R, ch, frame, checks, grid_id, st["lon"], st["lat"], se.values,
+            pct_colors(se.pct), rest,
+            text=(f"Monthly rainfall · NOAA GHCN {st['ghcn']} {st['name']} · "
+                  f"height = inches ({RAIN_UNITS_PER_INCH:g} world units per "
+                  f"inch), colour = wetter/drier than usual for the month"))
 
     # -- The panel: two strips standing beyond the plate's east edge ----------
     # Lower, THE CENTURY: one point per water year, readable at a glance, with
