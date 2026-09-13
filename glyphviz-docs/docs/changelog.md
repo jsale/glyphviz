@@ -10,6 +10,12 @@ GlyphViz doesn't cut numbered releases yet — development moves in daily commit
     - **A panel** beside the watershed shows every water year since 1913, plus a scrolling ten-year monthly window with a running date.
 
     The record shows the dams calming the river, a flow record missing the wettest month on record, and a river that hasn't run dry since September 1968. Missing data is drawn as missing, never bridged or estimated.
+- Added **[The Storm Winter, 2004–05](examples/sd-river-storm-2005.md)**, which plays one of the wettest winters on record day by day. It was also the first big rain on the Cedar Fire's burn scar.
+    - **The rain field** is 18 rain gauges across the county, each drawing the day's rain as a column.
+    - **The river's ribbons** rise at its three gauges in answer.
+    - **The panel** shows the whole season, every rain burst followed by a spike in the river.
+
+    Rain totals that an observer read after several unattended days are drawn as wire columns, not spread across days nobody measured.
 
 ## 2026-09-12
 

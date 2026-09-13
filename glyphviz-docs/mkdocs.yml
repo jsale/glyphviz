@@ -95,6 +95,7 @@ nav:
       - San Diego River Watershed Atlas:
           - "The Watershed, Source to Sea": examples/sd-river-watershed.md
           - "The Pulse: A Century of the San Diego River": examples/sd-river-pulse.md
+          - "The Storm Winter, 2004–05": examples/sd-river-storm-2005.md
           - "Santa Ana Wind, December 2012": examples/santa-ana-wind.md
       - Audio & music:
           - "Bird Song Spectrogram Surface": examples/bird-song-surface.md

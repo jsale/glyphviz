@@ -109,6 +109,9 @@ MANIFEST = [
     # Static is January 1993, the resting pose the generator authors: the
     # highest combined flow among months when every gauge reported.
     ("sd-river-pulse", EX / "San_Diego_River_Pulse_Example", None),
+    # Static is 21 February 2005, the resting pose the generator authors: wet
+    # across the rain field and high on the river at once.
+    ("sd-river-storm-2005", EX / "San_Diego_River_Storm_Example", None),
 ]
 
 
@@ -185,6 +188,11 @@ CAMERA = {
     # two-strip panel (and its month/year readout) all fit.
     "sd-river-pulse": {"target": (70, -25, 120), "distance": 640,
                        "azimuth": 194, "elevation": 14},
+    # Close on the map, not the panel: this scene's story is the rain field
+    # standing over the county, and the panel reads better on its own page
+    # image than squeezed into a wide gallery frame.
+    "sd-river-storm-2005": {"target": (-40, -30, 10), "distance": 330,
+                            "azimuth": 215, "elevation": 35},
 }
 
 
