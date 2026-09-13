@@ -2,6 +2,15 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-09-13
+
+- Added **[The Pulse: A Century of the San Diego River](examples/sd-river-pulse.md)**, the second scene of the San Diego River Watershed Atlas. It plays the river month by month from May 1912 to August 2026, 1,372 frames in all.
+    - **Flow ribbons** over the reaches the three USGS gauges measure swell every winter and shrink every summer. Width shows the month's flow, and colour shows how it compares with the same month in other years.
+    - **Rain columns** rise over the four long-record rain stations.
+    - **A panel** beside the watershed shows every water year since 1913, plus a scrolling ten-year monthly window with a running date.
+
+    The record shows the dams calming the river, a flow record missing the wettest month on record, and a river that hasn't run dry since September 1968. Missing data is drawn as missing, never bridged or estimated.
+
 ## 2026-09-12
 
 - **New: the San Diego River Watershed Atlas**, a long-term project that builds one real place up in layers: its terrain and rivers, then the weather, water and fire that cross it. Its first two scenes are in the gallery.

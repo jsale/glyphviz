@@ -38,6 +38,7 @@ Scenes that look inside a language model while it reads: every feature it repres
 One watershed, built up in phases: its terrain and river network first, then the weather, water and fire that cross it, all on the same map.
 
 - **[The Watershed, Source to Sea](sd-river-watershed.md)** — 433 square miles of real relief, the whole river network by stream order, gauges and rain stations
+- **[The Pulse: A Century of the San Diego River](sd-river-pulse.md)** — river flow and mountain rain, month by month since 1912, with the whole century on a panel beside it
 - **[Santa Ana Wind, December 2012](santa-ana-wind.md)** — 130 weather stations every ten minutes for a month, as the wind swings offshore and the county dries out
 
 ## Audio & music

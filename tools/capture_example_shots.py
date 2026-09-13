@@ -106,6 +106,9 @@ MANIFEST = [
     # 15:50 -- the Santa Ana at its peak -- authored into the node CSV.
     ("santa-ana-wind", EX / "Santa_Ana_Wind_Example", None),
     ("sd-river-watershed", EX / "San_Diego_River_Watershed_Example", None),
+    # Static is January 1993, the resting pose the generator authors: the
+    # highest combined flow among months when every gauge reported.
+    ("sd-river-pulse", EX / "San_Diego_River_Pulse_Example", None),
 ]
 
 
@@ -178,7 +181,10 @@ CAMERA = {
     "santa-ana-wind": {"target": (-45, -15, 25), "distance": 400,
                        "azimuth": 225, "elevation": 28},
     "sd-river-watershed": {"target": (10, 20, 0), "distance": 430,
-                           "azimuth": 180, "elevation": 32},
+                           "azimuth": 180, "elevation": 32},    # Pulled back and swung south so the river mouth, the legend and the whole
+    # two-strip panel (and its month/year readout) all fit.
+    "sd-river-pulse": {"target": (70, -25, 120), "distance": 640,
+                       "azimuth": 194, "elevation": 14},
 }
 
 
