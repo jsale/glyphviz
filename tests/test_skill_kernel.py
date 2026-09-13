@@ -123,6 +123,11 @@ def test_gv_extents_runs_and_finds_planted_faults(tmp_path):
         "6,7,1,1,0,0,0,0,0,0,1,1,1,200,200,200,255,27,0,0,0.1,0,9999",
         # a small child near the hub's centre: completely swallowed
         "7,5,1,1,0.1,0,0,0,0,0,0.05,0.05,0.05,200,200,200,255,3,0,0,0.1,0,0",
+        # a Plot whose vertices are alpha 0: a reveal animation's rest state,
+        # exempt from the carrier fault
+        "8,5,0,0,-200,0,0,0,0,0,1,1,1,200,200,200,0,22,0,16,0.1,0,0",
+        "9,5,8,1,0,0,0,0,0,0,0,0,0,200,200,200,0,1,0,0,0.1,0,0",
+        "10,5,8,1,1,0,0,0,0,0,0,0,0,200,200,200,0,1,0,0,0.1,0,0",
     ]
     p = tmp_path / "faults_gv_node.csv"
     p.write_text(hdr + "\r\n" + "\r\n".join(rows) + "\r\n", encoding="utf-8", newline="")
@@ -137,6 +142,7 @@ def test_gv_extents_runs_and_finds_planted_faults(tmp_path):
     assert [n.id for n in r["degrees"]] == [4]
     assert [n.id for n in r["alpha_carriers"]] == [5]
     assert [n.id for n in r["dead_links"]] == [6]
+    assert r["dark_surfaces"] == []           # no textured Surface in this scene
 
     text = gx.report(r)
     assert "buried" not in text.lower() or "cannot be seen" in text
@@ -154,6 +160,7 @@ def test_gv_extents_is_quiet_on_curated_examples():
         hard = (len([b for b in r["buried"] if b[5] == "swallowed"])
                 + len(r["flung"]) + len(r["sheared"])
                 + len(r["alpha_carriers"]) + len(r["dead_links"])
+                + len(r["dark_surfaces"])
                 + len(r["aim_fan"]))
         if hard:
             noisy.append((s.name, hard))
@@ -428,3 +435,29 @@ def test_radial_spokes_example_is_the_known_good_scene():
     aimed = [a for a in r["aim"] if a[4]]
     assert len(aimed) == 30, f"expected 30 aimed rods, got {len(aimed)}"
     assert (CODE.parent / "examples" / "Radial_Spokes" / "aim_report.txt").exists()
+
+
+def test_gv_extents_flags_a_textured_surface_at_alpha_zero(tmp_path):
+    """A textured Surface is drawn with its PARENT's alpha, so color_a = 0 on
+    that parent makes the whole mesh invisible (measured through the real
+    renderer: 141,376 px at 255, 0 at 0). An untextured one uses its vertices'
+    colours instead, so the same alpha on its hub is harmless."""
+    hdr = ("id,type,parent_id,branch_level,translate_x,translate_y,translate_z,"
+           "rotate_x,rotate_y,rotate_z,scale_x,scale_y,scale_z,"
+           "color_r,color_g,color_b,color_a,geometry,hide,topo,ratio,texture_id")
+    rows = []
+    nid = 1
+    for hub_x, tex in ((0, 1), (100, 0)):
+        hub = nid
+        rows.append(f"{hub},5,0,0,{hub_x},0,0,0,0,0,1,1,1,255,255,255,0,22,0,17,0.1,{tex}")
+        nid += 1
+        for j in range(2):
+            for i in range(2):
+                rows.append(f"{nid},5,{hub},1,{i},{j},0,0,0,0,0,0,0,200,200,200,255,1,0,0,0.1,0")
+                nid += 1
+    p = tmp_path / "surf_gv_node.csv"
+    p.write_text(hdr + "\n" + "\n".join(rows) + "\n", encoding="utf-8")
+    gx = _load("gv_extents_surface", CODE / "gv_extents.py")
+    r = gx.analyse(str(p), 1.0)
+    assert [n.id for n in r["dark_surfaces"]] == [1]
+    assert "whole mesh is invisible" in gx.report(r)

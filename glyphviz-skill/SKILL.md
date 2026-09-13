@@ -229,7 +229,12 @@ id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rota
     it (rule 4). Separately, a **wireframe hull is a click shield** — the pick pass
     maps every wire id to its solid counterpart, so a wire sphere blocks selection
     of everything inside it. To outline a container the user can reach through, draw
-    it from Plot-topology (16) line children instead.
+    it from Plot-topology (16) line children instead. **Plot and Surface vertices
+    are the exception to all of this:** the line or mesh is drawn from them,
+    including their alpha, so `hide = 1` removes a vertex from it and `color_a = 0`
+    makes that part of it invisible. Author vertices at **scale 0** (solid
+    geometry) — a zero-size glyph is skipped, the overlay still draws — and keep a
+    textured Surface hub at `color_a = 255`.
 
 14. Labels default to **selected-only**: a fresh scene draws the label of whatever
     the user selects and nothing else. `T` toggles labels off and on; unchecking

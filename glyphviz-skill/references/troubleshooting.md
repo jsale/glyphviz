@@ -529,8 +529,10 @@ see through it.
 **Fix.** For a structural node that should not draw or pick, use `hide = 1` at
 uniform `scale 1`; its children are unaffected. For a container the user can
 reach through, draw the outline from Plot-topology (16) line children instead of
-a wire hull. The one place alpha 0 is correct is a Plot or Surface vertex, where
-`hide = 1` would drop the point from the overlay as well.
+a wire hull. For a **Plot or Surface vertex** neither works: `hide = 1` drops
+the point from the overlay, and alpha 0 makes the line or mesh transparent
+there. Author the vertex at `scale 0` instead — zero-size glyphs are skipped,
+and the overlay still draws through them.
 
 **Reference.** `SKILL.md` rule 13, `references/hyperglyph-design.md` §3.
 

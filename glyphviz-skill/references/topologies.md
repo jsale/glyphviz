@@ -277,6 +277,16 @@ assumed.
   the mesh or line. Do NOT use `hide = 1` (drops the vertex from the mesh) or
   `color_a = 0` (makes the mesh transparent). Point, wire geometries and
   textured nodes are not skipped.
+  **Draping a line (a river, a GPS track, a boundary) on a Surface:** place it
+  against the *mesh you generated*, not against your elevation source. A mesh
+  vertex that averages its cell fills valleys in, so a river at its true DEM
+  height runs **under** the drawn surface (measured: 94% of a real river's
+  vertices buried at a ~200 m lattice). Take each line vertex's height from the
+  quad it lies in — the **max of the two triangles** either diagonal would give,
+  since the renderer picks the diagonal — plus a small clearance, and add a line
+  vertex wherever the line crosses a lattice line or a quad diagonal; between
+  those points a straight chord cannot dip below the surface. Make the Plot
+  children scale 0 too, and keep their `color_a` at 255.
 - **Point Cloud (18)** — same math, but the children **replace** their glyphs
   with one batched `GL_POINTS` array. Plot and Surface *add* an overlay on top
   of the glyphs; a Point Cloud parent's children draw no glyphs at all. Use

@@ -88,10 +88,16 @@ Three things that look like carriers and are not, all seen in real sessions:
 | `scale = 0.001` | not hidden at all; it shrinks the entire subtree by a thousand |
 | a long thin rod | shears and distorts everything hung on it |
 
-The one exception to the alpha rule: a **Plot or Surface** overlay is drawn
-*from* its children, so an alpha-0 vertex — or an alpha-0 hub carrying the
-polyline — is the correct idiom there. `hide = 1` would drop the node from the
-overlay as well.
+**Plot and Surface vertices are a special case, and alpha is NOT the way to
+hide them.** The overlay is drawn *from* the children, taking each vertex's
+colour *including alpha*: an alpha-0 vertex makes that stretch of line or mesh
+invisible (useful for a Channels reveal, where alpha goes 0 → 255 and the trail
+draws itself), and `hide = 1` drops the vertex from the overlay altogether. To
+keep the line or mesh and lose the vertex's own glyph, author the vertex at
+**`scale_x = scale_y = scale_z = 0`** with a solid geometry — the renderer skips
+a zero-size glyph outright. A Plot *hub's* alpha is unused by its line, so an
+alpha-0 hub is harmless; a **textured Surface** hub is the opposite — its alpha
+is the whole mesh's alpha, so keep it at 255.
 
 **Second choice: counter-scale the child** so it renders round despite the
 parent, by dividing out the parent's per-axis scale. This is legitimate and

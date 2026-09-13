@@ -285,11 +285,15 @@ def analyse(path, base_scale=1.0):
     r["sheared"], r["degrees"] = sheared, degrees
     r["flung_considered"] = len(cand)
 
-    # alpha 0 is the correct way to hide a Plot/Surface vertex: hide = 1 would
-    # drop it from the polyline or mesh as well, so only flag it elsewhere.
-    # A Plot/Surface overlay is drawn from its children, so an alpha-0 vertex --
-    # or an alpha-0 hub carrying the polyline -- is the correct idiom there.
-    # hide = 1 would drop the node from the overlay as well.
+    # Plot and Surface overlays are exempt from the carrier check, but NOT
+    # because alpha 0 hides a vertex -- it does not. A Plot line and an
+    # untextured Surface mesh take each vertex's colour INCLUDING alpha, so an
+    # alpha-0 vertex makes that stretch of line or mesh invisible (measured in
+    # the app: a 30-vertex line drew 3,068 px at alpha 255 and 32 at alpha 0).
+    # That is exactly what a Channels reveal animation wants -- a trail that
+    # draws itself as its vertices' alpha goes 0 -> 255 -- so it is not a fault.
+    # To hide a vertex's own glyph and keep the overlay, author it at scale 0.
+    # A Plot hub's alpha is unused by the line, so an alpha-0 hub is harmless.
     OVERLAY = {16, 17}
     r["alpha_carriers"] = [
         n for n in nodes
@@ -297,6 +301,12 @@ def analyse(path, base_scale=1.0):
         and n.type not in NON_VISUAL_TYPES
         and n.topo not in OVERLAY
         and getattr(by_id.get(n.parent_id), "topo", None) not in OVERLAY]
+    # The one alpha-0 overlay case with no innocent reading: a TEXTURED Surface
+    # is drawn with its parent's alpha, so the whole mesh disappears.
+    r["dark_surfaces"] = [
+        n for n in nodes
+        if n.topo == 17 and n.color_a == 0 and not n.hide
+        and int(getattr(n, "texture_id", 0) or 0) > 0]
 
     ids = set(by_id)
     r["dead_links"] = [n for n in nodes if n.type == NODE_TYPE_LINK
@@ -607,6 +617,11 @@ def report(r, show_all=False):
           "nodes have color_a = 0 but are not hidden",
           lambda n: (f"id {n.id} -- alpha 0 still draws and still takes clicks; "
                      f"use hide = 1 for a carrier"))
+    block(r["dark_surfaces"],
+          "textured Surface has color_a = 0, so its whole mesh is invisible",
+          "textured Surfaces have color_a = 0, so their whole meshes are invisible",
+          lambda n: (f"id {n.id} -- a textured Surface is drawn with its parent's "
+                     f"alpha; set color_a = 255"))
     block(r["dead_links"],
           "link has an end that does not resolve, so it will not draw",
           "links have an end that does not resolve, so they will not draw",

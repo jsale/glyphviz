@@ -39,8 +39,9 @@ What it catches: children swallowed by their parent, children whose centre is
 inside their parent, children flung far outside their parent's layout (with a
 hint when the numbers look like degrees written into a Cartesian slot), glyphs
 that will shear because they are rotated under a stretched parent, `color_a = 0`
-nodes being used as carriers when they still draw and still take clicks, links
-with an end that does not resolve, spokes that were aimed by hand and all came
+nodes being used as carriers when they still draw and still take clicks, a
+textured Surface whose `color_a = 0` makes its whole mesh invisible, links with
+an end that does not resolve, spokes that were aimed by hand and all came
 out parallel, and anything whose proportions would change if a user switched on
 View > Enforce Minimum Glyph Size.
 
