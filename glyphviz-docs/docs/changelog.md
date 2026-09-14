@@ -2,6 +2,18 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-09-14
+
+- Added **[The Burn Record: San Diego County Wildfires, 1910–2025](examples/sd-fire-history.md)**, a Watershed Atlas scene widened to the whole county. It shows all 1,640 CAL FIRE fire perimeters since 1910 as **layers** on the county's terrain: every year a 1.5 km square burns, it gains a tile, coloured by twenty-year era.
+    - **Stacks** show how often the ground has burned and when. Half the county has burned at least once, and the most-burned ground, seven fires between 1929 and 2025, sits beside El Capitan Reservoir.
+    - **Playback** lands each year's tiles white-hot and cools them to their era, while that year's perimeters burn on the ground.
+    - **A ledger** behind the county shows acres burned per year by recorded cause, with 2003 and 2007 standing far above the rest.
+- Added **[After the Cedar Fire](examples/sd-cedar-runoff.md)**, which answers the Atlas's headline question: after a fire, does the same rain make a bigger river?
+    - **Mast Road can't answer it:** 85% of the Cedar Fire's burn in that gauge's basin lies above El Capitan and San Vicente dams.
+    - **So it compares two undammed creeks,** Sweetwater River near Descanso (78% burned) and Campo Creek (unburned). Every storm since 1960 is measured against what that storm normally produced before the fire.
+    - **The result:** Sweetwater's storms ran 2.17 times higher than expected for the first three winters after the fire, beyond anything in the pre-fire record, and were back to normal by 2012. Campo's didn't rise. The first storm on the burn scar, Christmas 2003, ran 46 times higher.
+- **Faster Channels scenes, with identical pictures.** Animated nodes whose channel only changes their colour or visibility are now drawn from a cached list per channel. A list is rebuilt only when that channel's values change, and never while playback is paused. Before, every animated node was redrawn one at a time on every frame. The Burn Record went from 81 ms to 11 ms a frame while viewing and from 59 ms to 22 ms while playing, and The Pulse from 17 ms to 12 ms while playing. See [Channels](reference/channels-animation.md) for how to get the most from it: bind nodes that change together to one shared channel.
+
 ## 2026-09-13
 
 - Added **[The Pulse: A Century of the San Diego River](examples/sd-river-pulse.md)**, the second scene of the San Diego River Watershed Atlas. It plays the river month by month from May 1912 to August 2026, 1,372 frames in all.

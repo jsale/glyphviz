@@ -115,6 +115,11 @@ MANIFEST = [
     # Static is 14 May 2014 11:00 PDT, the ten minutes with the most stations
     # in fire alert, with the now plane and its wind cones parked there.
     ("sd-fire-siege-2014", EX / "San_Diego_Fire_Siege_Example", None),
+    # Static is 2025, the end of the record: every tile in its era colour. The
+    # scene folder is gitignored; build_fire_history_scene.py regenerates it.
+    ("sd-fire-history", EX / "San_Diego_Fire_History_Example" / "Burn_Record", None),
+    # Static is the last month, September 2025: every storm on both slabs.
+    ("sd-cedar-runoff", EX / "San_Diego_Cedar_Fire_Runoff_Example", None),
 ]
 
 
@@ -199,6 +204,13 @@ CAMERA = {
     # The whole cube from the south-west, the legend above its east side.
     "sd-fire-siege-2014": {"target": (60, -30, 112), "distance": 640,
                            "azimuth": 215, "elevation": 18},
+    # From the south: the ledger stands behind the county, the legend over
+    # the Pacific on the left.
+    "sd-fire-history": {"target": (-10, 10, 10), "distance": 340,
+                        "azimuth": 270, "elevation": 36},
+    # From the south-west: the map in front, both storm slabs behind it.
+    "sd-cedar-runoff": {"target": (20, 110, 85), "distance": 560,
+                        "azimuth": 250, "elevation": 24},
 }
 
 

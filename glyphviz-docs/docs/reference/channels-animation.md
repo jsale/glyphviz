@@ -122,6 +122,16 @@ settings — changes what is drawn but never where anything sits. The
 distinction is what lets the playback fast path refresh only the subtrees that
 actually moved.
 
+It also decides how cheaply a bound node draws. Nodes bound only to
+appearance fields (colour, palette, visibility, mesh) are grouped by channel
+and kept in a cached draw list per group. A group's list is rebuilt only on
+frames where its channel's values actually change, and not at all while
+playback is paused. So **when many nodes should change together, give them one
+shared channel** rather than one channel each. For example, the
+[Burn Record](../examples/sd-fire-history.md) binds every tile of a year to
+that year's channel. Channels with fewer than 8 nodes, textured nodes, and
+anything bound to a transform field still draw node by node.
+
 ## Transport
 
 A Channels panel appears whenever a valid `ch-map`/`ch-tracks` pair loads —

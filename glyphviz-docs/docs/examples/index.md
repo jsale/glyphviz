@@ -41,6 +41,8 @@ One watershed, built up in phases: its terrain and river network first, then the
 - **[The Pulse: A Century of the San Diego River](sd-river-pulse.md)** — river flow and mountain rain, month by month since 1912, with the whole century on a panel beside it
 - **[The Storm Winter, 2004–05](sd-river-storm-2005.md)** — one of the wettest winters on record, day by day: 18 rain gauges across the county and the river answering each storm
 - **[The May 2014 Fire Siege](sd-fire-siege-2014.md)** — eight fires and a Santa Ana as a space-time cube: 128 weather stations, 2,654 fire alerts and every fire at its real place and moment
+- **[The Burn Record: San Diego County Wildfires, 1910–2025](sd-fire-history.md)** — every mapped fire since 1910, laid down as layers: ground that keeps burning rises into striped stacks, coloured by era
+- **[After the Cedar Fire](sd-cedar-runoff.md)** — every storm since 1960 on a burned creek and an unburned one, measured against what that storm normally gave: the first rain on the burn scar ran 46 times higher
 - **[Santa Ana Wind, December 2012](santa-ana-wind.md)** — 130 weather stations every ten minutes for a month, as the wind swings offshore and the county dries out
 
 ## Audio & music
