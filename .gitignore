@@ -72,6 +72,10 @@ examples/Global_Terrorism_Example/Org_Event_Network/
 # examples/Tropical_Cyclone_Example/build_cyclone_scenes.py
 examples/Tropical_Cyclone_Example/Global_Tracks/
 examples/Tropical_Cyclone_Example/Seasonal_Pulse/
+# The Burn Record (San Diego County fire history): the same — the 17 MB
+# scene ships as Burn_Record.zip; regenerate the folder (and the zip) with
+# examples/San_Diego_Fire_History_Example/build_fire_history_scene.py
+examples/San_Diego_Fire_History_Example/Burn_Record/
 # ...and never commit the ~330 MB raw archive that --download fetches; the
 # 3.9 MB data/ibtracs_tidy.csv.gz snapshot beside it is what rebuilds offline.
 examples/Tropical_Cyclone_Example/data/ibtracs.ALL.raw.csv
