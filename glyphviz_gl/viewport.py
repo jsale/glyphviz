@@ -361,6 +361,77 @@ class _SurfaceEntry:
     dl: int = 0
 
 
+# Smallest channel group worth a display list of its own. A group re-records
+# its list whenever its values change, and recording costs a little more than
+# drawing immediate, so a lone node whose colour changes every frame gains
+# nothing from being retained.
+APPEARANCE_GROUP_MIN = 8
+
+
+@dataclass
+class _AppearanceGroup:
+    """Channel-bound nodes whose channel only changes how they LOOK, retained
+    together (see Viewport._draw_appearance_groups).
+
+    The playback fast path already bakes the static bulk of a scene; before
+    this, every bound node was then drawn immediate on top of it EVERY FRAME,
+    whether or not the animation was playing and whether or not its values
+    had changed. Measured on the Burn Record fire-history scene: 4,960 tiles
+    bound to hide + colour cost ~60-80 ms a frame that way, and 8 ms with the
+    channel file unloaded.
+
+    A node bound only to non-transform fields never moves, so its draw stream
+    depends only on its appearance values — and every member of a group is
+    bound to the SAME channel, so the bound values are the same for all of
+    them and one representative's values stand for the whole group. `key` is
+    the stamp the list was recorded at: scene revision, assets revision and
+    show_hidden (what the static scene list is keyed on) plus that
+    representative's appearance values.
+    """
+    nodes: list
+    key: tuple | None = None
+    dl: int = 0
+
+
+def appearance_groups(dynamic_nodes: list, transform_ids: set[int],
+                      min_size: int = APPEARANCE_GROUP_MIN
+                      ) -> tuple[list, list[list]]:
+    """Split the Channels dynamic set into (drawn immediate, retained groups).
+
+    A node can be retained only if nothing it is bound to can move it — it is
+    not in `transform_ids`, which already includes every descendant of a
+    transform-bound node — and it has no static texture (VideoManager pauses
+    any video no draw call asks for each frame). Groups are keyed on the
+    channel id AND the palette pair, because palette resolution writes RGB
+    from (palette_id, color_index) per node: two members of one channel with
+    different static palette pairs would resolve to different colours, and a
+    single representative could not stand for both.
+
+    Both lists keep scene order.
+    """
+    from glyphviz_core.channel_engine import channel_id_of
+
+    immediate: list = []
+    by_key: dict[tuple, list] = {}
+    for n in dynamic_nodes:
+        ch = channel_id_of(n)
+        if (n.id in transform_ids or not ch or n.texture_id
+                or n.type in (NODE_TYPE_GRID, NODE_TYPE_LINK)):
+            immediate.append(n)
+            continue
+        by_key.setdefault((ch, n.palette_id, n.color_index), []).append(n)
+    groups = []
+    for members in by_key.values():
+        if len(members) >= min_size:
+            groups.append(members)
+        else:
+            immediate.extend(members)
+    if len(immediate) > 1:
+        order = {n.id: i for i, n in enumerate(dynamic_nodes)}
+        immediate.sort(key=lambda n: order[n.id])
+    return immediate, groups
+
+
 @dataclass
 class _PlotEntry:
     """One TOPO_PLOT parent's baked polyline (see
@@ -670,8 +741,14 @@ class Viewport(QOpenGLWidget):
         # Per-scene-revision caches derived from the id sets (row indices
         # shift and nodes may vanish whenever the scene actually changes):
         self._ch_dynamic_nodes: list[Node] = []     # dynamic nodes in scene order
+        self._ch_transform_nodes: list[Node] = []   # the transform subset, scene order
         self._ch_transform_rows: np.ndarray | None = None
         self._ch_cache_rev: tuple | None = None
+        # The dynamic set split for drawing: nodes that must draw immediate,
+        # and appearance-only channel groups retained in lists of their own
+        # (see appearance_groups / _draw_appearance_groups).
+        self._ch_immediate_nodes: list[Node] = []
+        self._ch_groups: list[_AppearanceGroup] = []
 
         self._geo = GeoRenderer()
         self._next_mesh_id = 1
@@ -812,8 +889,26 @@ class Viewport(QOpenGLWidget):
             return
         self._ch_dynamic_nodes = [n for n in self._scene.nodes
                                   if n.id in self._ch_dynamic_ids]
+        self._ch_transform_nodes = [n for n in self._ch_dynamic_nodes
+                                    if n.id in self._ch_transform_ids]
         self._ch_transform_rows = self._scene.rows_for_ids(self._ch_transform_ids)
+        self._release_appearance_groups()
+        immediate, groups = appearance_groups(self._ch_dynamic_nodes,
+                                              self._ch_transform_ids,
+                                              APPEARANCE_GROUP_MIN)
+        self._ch_immediate_nodes = immediate
+        self._ch_groups = [_AppearanceGroup(nodes=g) for g in groups]
         self._ch_cache_rev = rev
+
+    def _release_appearance_groups(self, delete_gl: bool = True):
+        """Drop every retained channel group's list — see _release_surface_dls.
+        The grouping itself is rebuilt by _ch_ensure_playback_cache."""
+        if delete_gl:
+            for g in self._ch_groups:
+                if g.dl:
+                    glDeleteLists(g.dl, 1)
+        for g in self._ch_groups:
+            g.dl, g.key = 0, None
 
     def register_node(self, node: Node):
         """Sync a node appended directly to self._scene.nodes into the scene's lookup cache."""
@@ -848,6 +943,7 @@ class Viewport(QOpenGLWidget):
         self._release_cloud_dls()
         self._release_surface_dls()
         self._release_plot_dls()
+        self._release_appearance_groups()
         self._assets_rev += 1     # new Scene restarts its revision counter — force a scene-list rebuild
         self._tag_text_cache.clear()
         # Any channel dynamic set belonged to the old scene; the caller
@@ -855,6 +951,9 @@ class Viewport(QOpenGLWidget):
         self._ch_dynamic_ids = set()
         self._ch_transform_ids = set()
         self._ch_dynamic_nodes = []
+        self._ch_transform_nodes = []
+        self._ch_immediate_nodes = []
+        self._ch_groups = []
         self._ch_transform_rows = None
         self._ch_cache_rev = None
         self._ch_dynamic_rev += 1
@@ -1357,14 +1456,16 @@ class Viewport(QOpenGLWidget):
         if cycles <= 0:
             return set()
         candidates = self._scene_scan().rate_nodes
-        if self._ch_dynamic_ids:
+        if self._ch_dynamic_ids and self._ch_transform_ids:
             # Channels playback can write rate fields through the
             # no-revision-bump fast path (refresh_rows), so the revision-keyed
             # scan can miss a channel-driven mover — always consider the
-            # dynamic set too.
+            # transform-bound set too. Only that subset: every *_rate field is
+            # in _TRANSFORM_FIELDS, so a node bound to colour or visibility
+            # alone cannot have gained a rate since the scan.
             self._ch_ensure_playback_cache()
             seen = {n.id for n in candidates}
-            candidates = candidates + [n for n in self._ch_dynamic_nodes
+            candidates = candidates + [n for n in self._ch_transform_nodes
                                        if n.id not in seen]
         moved: set[int] = set()
         for n in candidates:
@@ -1443,6 +1544,7 @@ class Viewport(QOpenGLWidget):
         self._release_cloud_dls(delete_gl=False)
         self._release_surface_dls(delete_gl=False)
         self._release_plot_dls(delete_gl=False)
+        self._release_appearance_groups(delete_gl=False)
         glClearColor(*_DEFAULT_BG, 1.0)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
@@ -1765,7 +1867,8 @@ class Viewport(QOpenGLWidget):
             # static in front of a dynamic node blends in bake order.)
             self._ch_ensure_playback_cache()
             self._draw_nodes_immediate(self._frustum_planes(mv, pr),
-                                       nodes=self._ch_dynamic_nodes)
+                                       nodes=self._ch_immediate_nodes)
+            self._draw_appearance_groups()
 
         self._draw_point_clouds()
         self._draw_selected_outlines()
@@ -1822,6 +1925,49 @@ class Viewport(QOpenGLWidget):
                     planes, M[0, 3], M[1, 3], M[2, 3], radius * 1.2):
                 continue
             self._draw_node(node, gl_matrix)
+
+    def _draw_appearance_groups(self):
+        """Draw the retained channel groups (see _AppearanceGroup): replay a
+        group's list while its representative's appearance values match the
+        ones it was recorded with, otherwise record it again.
+
+        During playback only the groups whose channel changed on this frame
+        re-record; while paused, or flying a loaded scene, nothing does. Lists
+        are recorded without frustum culling, like the static scene list, so
+        they stay valid from any camera angle.
+        """
+        base = (self._scene._revision, self._assets_rev, self.show_hidden)
+        for g in self._ch_groups:
+            rep = g.nodes[0]
+            if rep.texture_id:
+                # A channel switched the group onto a texture: videos need
+                # their draw asked for every frame (see appearance_groups).
+                self._draw_nodes_immediate(None, nodes=g.nodes)
+                continue
+            key = base + (rep.hide, rep.color_r, rep.color_g, rep.color_b,
+                          rep.color_a, rep.mesh_id)
+            if g.dl and g.key == key:
+                glCallList(g.dl)
+                continue
+            self._prewarm_ratio_lists(g.nodes)
+            if not g.dl:
+                g.dl = glGenLists(1)
+            glNewList(g.dl, GL_COMPILE)
+            self._draw_nodes_immediate(None, nodes=g.nodes)
+            glEndList()
+            g.key = key
+            glCallList(g.dl)
+
+    def _prewarm_ratio_lists(self, nodes):
+        """GeoRenderer.draw compiles per-ratio lists (torus, flat ring)
+        lazily, and glNewList must never nest inside a list being recorded —
+        so compile them before recording one."""
+        for node in nodes:
+            if node.geometry in RATIO_SHAPED_GEOMETRIES:
+                textured = (node.geometry not in _WIRE_IDS and node.texture_id
+                            and bool(self._tex_mgr.get_gl_name(node.texture_id)
+                                     or self._video_mgr.get_gl_name(node.texture_id)))
+                self._geo.ensure_ratio_list(node.geometry, bool(textured), node.ratio)
 
     def _compile_scene_dl(self, key, skip_ids: set[int] | None = None):
         """Bake the whole per-node draw loop into one display list —
@@ -2149,11 +2295,13 @@ class Viewport(QOpenGLWidget):
         """
         scan = self._scene_scan()
         clouds = scan.cloud_nodes
-        if self._ch_dynamic_ids:
+        if self._ch_dynamic_ids and self._ch_transform_ids:
+            # `topo` is a transform field, so only the transform-bound subset
+            # can have changed topology since the scan.
             self._ch_ensure_playback_cache()
-            dyn = self._ch_dynamic_ids
+            dyn = self._ch_transform_ids
             clouds = [n for n in clouds if n.id not in dyn]
-            clouds += [n for n in self._ch_dynamic_nodes if pc.is_cloud_parent(n)]
+            clouds += [n for n in self._ch_transform_nodes if pc.is_cloud_parent(n)]
         return clouds
 
     def _cloud_parent_ids(self) -> set[int]:
@@ -2161,7 +2309,7 @@ class Viewport(QOpenGLWidget):
         test in the draw, pick and tag loops. Returns the scan's own set
         untouched in the common case (no channel animation), so the loops pay
         nothing for a scene with no clouds."""
-        if not self._ch_dynamic_ids:
+        if not (self._ch_dynamic_ids and self._ch_transform_ids):
             return self._scene_scan().cloud_parent_ids
         return {n.id for n in self._cloud_nodes()}
 
@@ -2312,20 +2460,22 @@ class Viewport(QOpenGLWidget):
         link_nodes = scan.link_nodes
         plot_nodes = scan.plot_nodes
         surface_nodes = scan.surface_nodes
-        if self._ch_dynamic_ids:
+        if self._ch_dynamic_ids and self._ch_transform_ids:
             # Channels can animate `topo`, so a node may have entered or left
             # Plot/Surface since the scan was built — and the scan is keyed on
             # Scene._revision, which the playback fast path deliberately never
             # bumps (same reasoning as the rate-node union in
-            # _apply_rate_animation). Re-derive membership for the dynamic set
-            # only: drop every dynamic node from the cached lists, then re-add
-            # the ones whose topo currently says so. A type=7 link's topo is
+            # _apply_rate_animation). Re-derive membership for the transform-
+            # bound set only (`topo` is a transform field; a node bound to
+            # colour or visibility alone keeps the topology the scan saw):
+            # drop those nodes from the cached lists, then re-add the ones
+            # whose topo currently says so. A type=7 link's topo is
             # meaningless — it renders as a line, not a polyline parent.
             self._ch_ensure_playback_cache()
-            dyn = self._ch_dynamic_ids
+            dyn = self._ch_transform_ids
             plot_nodes = [n for n in plot_nodes if n.id not in dyn]
             surface_nodes = [n for n in surface_nodes if n.id not in dyn]
-            for n in self._ch_dynamic_nodes:
+            for n in self._ch_transform_nodes:
                 if n.type == NODE_TYPE_LINK:
                     continue
                 if n.topo == TOPO_PLOT:
