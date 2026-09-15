@@ -10,6 +10,43 @@ This is the first scene of the **AI Observatory**: GPT-2 small reading one sente
 
 [:material-download: Download this example (12 MB)](https://iluvdata.org/glyphviz/zips/AI_Observatory_GPT2_Example.zip){ .md-button }
 
+## How to read this scene
+
+You don't need a background in machine learning to follow this scene, but it does use a handful of new terms, and they are worth learning. Here is the whole idea in one paragraph:
+
+> GPT-2 doesn't store words. It stores *concepts*, thousands of them overlapping in the same numbers, and it revises which ones are active as it reads each word. This scene breaks that hidden state into named concepts and shows which ones light up, in what order, and which ones caused which, one word at a time.
+
+Two ways to picture it, depending on who you are showing it to:
+
+**As a spectrograph** (for scientists). At every layer, GPT-2's working memory is a single list of 768 numbers in which many meanings are *superposed*; there is no single neuron for "giving" or for "a person's name". A sparse autoencoder works like an assay: it separates that mixture into components drawn from a fixed dictionary of 24,576 candidate concepts, of which only a few dozen are present at any moment. Each ring is one such decomposition, and playing the animation runs the assay again for every word. You are watching a *time series of spectra, twelve stages deep*, as meaning is refined from the identity of the word at the bottom to a prediction at the top. The rods are the attribution: an estimate of how much each component at one stage drove a component at the next. Like any assay, this one has a recovery rate (see the caveats below).
+
+**As a twelve-station assembly line** (for a live demo). A sentence enters at the bottom and moves up through twelve stations. Each station reads everything written so far on a shared workpiece (the spine, called the *residual stream*) and adds its own notes before passing it up. The lit spheres are those notes, made readable. At layer 3 the model has noted *words related to providing solutions or relief*; by layer 6 that has sharpened into *the action of giving something to someone*; by layer 11 it is tracking *phrases that start with a person's name*. The rods are the handoffs. A rod whose label says it is *reaching back through attention* is the model going back to fetch a word from earlier in the sentence. The cycle repeats once per word, about a second each, and the glyph at the top announces what GPT-2 would say next and how sure it is: " Mary", 68%.
+
+### Trace a circuit yourself
+
+Interpretability researchers call this *tracing a circuit*, and GlyphViz lets you do it by hand:
+
+1. Drag the Channels slider to a token, or stop on the last one, *to*.
+2. Zoom in on a ring and click a large lit sphere. Read its label: what the feature is thought to mean, and the word it fired hardest on.
+3. Click a rod leaving that sphere and read its label: how much it contributed, and whether it reaches back to an earlier word.
+4. Follow the rod up to the sphere it feeds on the next layer, and repeat until you reach the prediction.
+
+### The terms worth learning
+
+| Term | What it means here |
+|---|---|
+| **Token** | The unit the model reads: roughly a word, sometimes a piece of one (" Dursley" is " D" + "urs" + "ley"). One cube in the prompt row. |
+| **Layer** | One of GPT-2's 12 processing stages. One ring. |
+| **Residual stream** | The shared running state every layer reads from and writes back to. The spine. |
+| **Superposition** | Many concepts encoded in the same numbers at once. It is why you can't simply look at one neuron. |
+| **Feature** | One concept in the learned dictionary. Every point on a ring is a feature: all 24,576 of that layer's, in the same place in every scene the Observatory makes. |
+| **Cluster** | A group of features with similar directions. The small markers just outside each ring. |
+| **Sparse autoencoder (SAE)** | The method that learns the dictionary and splits the state into a few active features. |
+| **Activation** | How strongly a feature is present right now. Sphere size. |
+| **Attribution** | An estimate of how much one feature caused another. The rods. |
+
+Two caveats are worth saying out loud before anyone asks: the dictionary is a *lens*, not the model (it misses part of what the model does, more at the top than the bottom), and the feature labels are *machine-written guesses*. Click a few and judge them for yourself. The full list is under [Honest caveats](#honest-caveats).
+
 ## What you see
 
 **The tower.** The thin vertical spine is the model's *residual stream*, the running total every layer reads from and writes back to. Each of GPT-2's 12 layers is a ring at its own height: layer 0 at the bottom, the prediction at the top.

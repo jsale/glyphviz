@@ -8,6 +8,41 @@ pipeline that built it, and more scenes, live in the repo's
 Open `AI_Observatory_GPT2_Example_gv_node.csv` (about 12 s to load) and press
 **Space** to play.
 
+## How to read this scene
+
+GPT-2 doesn't store words. It stores *concepts*, thousands of them
+overlapping in the same numbers, and it revises which ones are active as it
+reads each word. This scene breaks that hidden state into named concepts and
+shows which ones light up, in what order, and which ones caused which, one
+word at a time.
+
+Picture a twelve-station assembly line. The sentence enters at the bottom;
+each station (a layer, one ring) reads everything written so far on a shared
+workpiece (the spine, the *residual stream*) and adds its own notes. The lit
+spheres are those notes made readable: *providing solutions or relief* at
+layer 3, *the action of giving something to someone* by layer 6, *phrases
+that start with a person's name* at layer 11. The rods are the handoffs. The
+cycle repeats once per word, and the glyph at the top says what GPT-2 would
+say next and how sure it is.
+
+**Trace a circuit yourself:** stop on a token, click a large lit sphere and
+read its label, click a rod leaving it, follow the rod up to the next layer,
+and repeat until you reach the prediction.
+
+| Term | Here |
+|---|---|
+| token | the unit the model reads, roughly a word; one cube in the prompt row |
+| layer | one of 12 processing stages; one ring |
+| residual stream | the running state every layer reads and writes; the spine |
+| superposition | many concepts in the same numbers, so no single neuron means one thing |
+| feature | one concept in the learned dictionary; every point on a ring |
+| sparse autoencoder | the method that learns that dictionary |
+| activation | how strongly a feature is present now; sphere size |
+| attribution | an estimate of how much one feature caused another; the rods |
+
+The dictionary is a lens, not the model, and the labels are machine-written
+guesses: see the limits below.
+
 ## What you see
 
 - **The tower.** The thin spine is the residual stream. Each of the model's
