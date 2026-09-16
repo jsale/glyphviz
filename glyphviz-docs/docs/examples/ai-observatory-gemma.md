@@ -80,6 +80,9 @@ The rest (token, layer, residual stream, feature, sparse autoencoder, activation
 
 The same mapping as the GPT-2 scene, so the two can be compared by ear: as the pulse passes each layer, that layer sounds a note, as loud as its lit features fire, brighter the more features are active, and panned toward where on the ring the activity is. A chime marks the prediction. Gemma's 26 layers share GPT-2's twelve pentatonic pitches, D3 to E5, with neighboring layers sharing a note, so the top of both towers sounds the same.
 
+!!! tip "To watch it in slow motion"
+    The soundtrack drives the frames, so the FPS control has nothing to set. To study the tower slowly, move or rename `AI_Observatory_Gemma_Example_gv_audio.txt` and reopen the scene: playback returns to the FPS timer and any speed you like, without sound. Put it back for the audio. Dragging the Channels slider by hand works either way.
+
 ## More Gemma scenes
 
 Two companion scenes, each its own download rather than part of the examples set:

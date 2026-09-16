@@ -169,6 +169,15 @@ containing a path, relative to that folder, to an audio file
 playback position instead of the FPS timer, which disables. Render slowdowns
 then cost smoothness, never sync. Exactly one manifest per folder.
 
+!!! tip "Watching an audio-synced scene in slow motion"
+    Because the audio drives the frames, the FPS control has nothing to set:
+    the scene plays at the speed of its soundtrack. To study one slowly,
+    **move or rename the `_gv_audio.txt` manifest** (or the audio file) and
+    reopen the scene. Playback falls back to the FPS timer, and the whole
+    speed range is yours again — silently. Put the manifest back to get the
+    sound. Stepping the Channels slider by hand works either way, with or
+    without audio.
+
 ## Authoring checklist
 
 Nothing warns about a broken join — validate it yourself:

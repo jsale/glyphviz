@@ -103,6 +103,9 @@ The soundtrack is not music laid over the animation. It is generated from the sa
 
 A layer with nothing lit stays silent. Pitch is the one fixed design choice, so the ear can tell layers apart; everything else is data. That is why the sound changes as the animation plays: it is *reporting* what is changing.
 
+!!! tip "To watch it in slow motion"
+    The soundtrack drives the frames, so the FPS control has nothing to set. To study the tower slowly, move or rename `AI_Observatory_GPT2_Example_gv_audio.txt` and reopen the scene: playback returns to the FPS timer and any speed you like, without sound. Put it back for the audio. Dragging the Channels slider by hand works either way.
+
 You can hear the model at work. On *gave*, layers 2 through 4 lean only slightly right (pan +0.35 to +0.41), layers 5 and 6 sit dead centre, and the chime is middling — GPT-2 is split 37% " Mary" to 36% " them". On the final *to*, layers 2 through 6 swing hard to the right (pan +0.45 to +0.85), toward the column of giving-related features on that side of the tower, the upper layers get brighter as more features join in (118 active at layer 10), and the chime is noticeably louder — 68% sure.
 
 ## What the data says
