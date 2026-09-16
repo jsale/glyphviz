@@ -38,7 +38,7 @@ import profiles
 HERE = Path(__file__).resolve().parent
 CACHE = HERE / "cache"
 
-GEO_CUBE, GEO_SPHERE, GEO_TORUS = 1, 3, 7
+GEO_CUBE, GEO_SPHERE, GEO_TORUS, GEO_CONE = 1, 3, 7, 5
 GEO_TETRA, GEO_ICOSA, GEO_CYLINDER, GEO_POINT = 13, 15, 19, 22
 TOPO_NONE, TOPO_PLOT, TOPO_CLOUD = 0, 16, 18
 # Reading a feature's decoder direction straight through the unembedding
@@ -50,6 +50,14 @@ _PLACEHOLDER = {"This is an explanation text!"}
 CONTRAST_MIN = 0.25
 RING_RGBA = (90, 100, 140, 70)
 BLIND_RGBA = (235, 70, 55, 220)
+# Attention heads. Idle grey when a head is doing nothing to the prediction;
+# orange when it pushes the predicted token up, blue when it pushes it down --
+# the attribution rods' convention, because it is the same quantity.
+HEAD_IDLE_RGBA = (105, 115, 145, 190)
+HEAD_UP_RGBA = (255, 175, 70, 255)
+HEAD_DOWN_RGBA = (80, 170, 255, 255)
+ATTEND_RGBA = (190, 140, 255, 205)     # attention links: looking, not causing
+HEAD_Z = 5.0                           # head ring sits this far below its layer ring
 
 _STOP = set("""
 a an the of to in on for and or with that this from into which these those such other
@@ -254,6 +262,22 @@ def build(args):
     rise = int(F * 0.62)
     arrive_off = [round(L * rise / (N_LAYERS - 1)) for L in range(N_LAYERS)]
     fidelity = acts["fidelity"] if prof.encode_fidelity and "fidelity" in acts.files else None
+    heads = run.get("heads") if "head_dla" in acts.files else None
+    head_dla = acts["head_dla"] if heads else None
+    head_bos = acts["head_bos"] if heads else None
+    if heads:
+        # Most heads do nothing to any one prediction (on the IOI prompt the
+        # 95th percentile is 0.19 against a maximum of 3.16), so normalise on
+        # the few that do and let the rest sit at their idle size.
+        head_norm = max(float(np.percentile(np.abs(head_dla[:, 1:]), 99.5)), 1e-6)
+        head_peak = {(p["layer"], p["head"]): p for p in heads["peaks"]}
+        # Pin the two strongest heads, not just the strongest: at the last
+        # token of the IOI prompt those are L9.H9 (+3.03, toward ' Mary') and
+        # L10.H7 (-3.16, against it), and the pair IS the story. One pin would
+        # show only the head fighting the answer.
+        head_top1 = {t: set(np.argsort(-np.abs(head_dla[:, t]))[:2].tolist())
+                     for t in range(head_dla.shape[1])}
+    head_ids = {}
     pred_off = int(F * 0.78)
 
     def window(t):
@@ -411,6 +435,62 @@ def build(args):
                           f"'{show_token(tokens[last])}'), turning red and thicker as it misses more. "
                           f"Red means the features on this ring are not the whole story")
 
+        # attention heads: an inner ring inside the feature ring. Attention is
+        # the only way information moves between tokens, so the heads sit on
+        # the inside of the layer and reach out to the prompt row.
+        if heads:
+            n_h = heads["n_heads"]
+            # Slung below the layer's own ring: it keeps the head labels out
+            # of the feature labels at the same height, and reads as what it
+            # is -- the fetching that happens before the thinking.
+            rows.add(parent_id=hub, branch_level=2, geometry=GEO_TORUS, scale=args.head_radius,
+                     pos=(0, 0, -HEAD_Z), ratio=0.004, rgba=(120, 100, 160, 60),
+                     text=f"Layer {L} attention ring: its {n_h} heads")
+            for H in range(n_h):
+                index = L * n_h + H
+                d = head_dla[index]
+                strength = np.clip(np.abs(d) / head_norm, 0, 1.4) ** 0.5
+                scale_track = np.zeros(frames)
+                text_track = np.zeros(frames)
+                rgb_tracks = {k: np.zeros(frames) for k in ("color_r", "color_g", "color_b")}
+                prev = None
+                for t in readable:
+                    s0, s1 = window(t)
+                    arr = s0 + arrive_off[L]
+                    u = float(strength[t])
+                    target = HEAD_UP_RGBA if d[t] >= 0 else HEAD_DOWN_RGBA
+                    now = [HEAD_IDLE_RGBA[c] + (target[c] - HEAD_IDLE_RGBA[c]) * u for c in range(3)]
+                    now.append(0.5 + 2.1 * u)
+                    if prev is None:
+                        prev = now
+                    for i, key in enumerate(("color_r", "color_g", "color_b")):
+                        rgb_tracks[key][s0:arr] = round(prev[i])
+                        rgb_tracks[key][arr:s1] = round(now[i])
+                    scale_track[s0:arr] = prev[3]
+                    scale_track[arr:s1] = now[3]
+                    if index in head_top1[t]:
+                        text_track[arr:s1] = 1
+                    prev = now
+                peak = head_peak[(L, H)]
+                role = profiles.head_role(prof.key, L, H)
+                role_text = (f" · published role: {role} ({profiles.HEAD_ROLE_CITATION})"
+                             if role else "")
+                looked = (f", while attending '{show_token(tokens[peak['src']])}' {peak['weight']:.2f}"
+                          if peak["src"] else "")
+                head_ids[(L, H)] = rows.add(
+                    parent_id=hub, branch_level=2, geometry=GEO_CONE,
+                    pos=(round(args.head_radius * math.cos(2 * math.pi * H / n_h), 3),
+                         round(args.head_radius * math.sin(2 * math.pi * H / n_h), 3), -HEAD_Z),
+                    scale=round(float(prev[3]), 3), rgba=(*[round(v) for v in prev[:3]], 255),
+                    show_text=1 if index in head_top1[last] else 0,
+                    ch_input_id=ch.channel([("scale_x", scale_track), ("scale_y", scale_track),
+                                            ("scale_z", scale_track), ("show_text", text_track)]
+                                           + list(rgb_tracks.items())),
+                    text=clean(f"L{L} H{H}: one of layer {L}'s {n_h} attention heads. Strongest on "
+                               f"'{show_token(tokens[peak['token']])}', where it moved the prediction "
+                               f"by {peak['dla']:+.2f}{looked} and parked {peak['bos']:.0%} of its "
+                               f"attention on the start token{role_text}", 240))
+
         # every feature, as a point at its home position
         cloud = rows.add(parent_id=hub, branch_level=2, geometry=GEO_POINT, topo=TOPO_CLOUD,
                          ratio=args.point_ratio, rgba=(40, 40, 60, 255),
@@ -545,6 +625,30 @@ def build(args):
         link_count += 1
     print(f"  links: {link_count}")
 
+    # --- Attention links: head -> the token it looked at ----------------------
+    if heads:
+        grouped_attn = defaultdict(list)
+        for a in heads["attends"]:
+            src = head_ids.get((a["layer"], a["head"]))
+            dst = token_ids.get(a["src"])
+            if src is not None and dst is not None:
+                grouped_attn[(src, dst)].append(a)
+        for (src, dst), records in grouped_attn.items():
+            hide = np.ones(frames)
+            for a in records:
+                s0, s1 = window(a["token"])
+                hide[s0 + arrive_off[a["layer"]]:s1] = 0
+            best = max(records, key=lambda a: a["weight"])
+            at_last = [a for a in records if a["token"] == last]
+            rows.add(type=7, parent_id=src, child_id=dst, branch_level=3, geometry=GEO_CYLINDER,
+                     ratio=round(0.02 + 0.16 * best["weight"], 3), rgba=ATTEND_RGBA,
+                     hide=0 if at_last else 1, ch_input_id=ch.channel([("hide", hide)]),
+                     text=clean(f"Attention: at '{show_token(tokens[best['token']])}', head "
+                                f"L{best['layer']} H{best['head']} put {best['weight']:.0%} of its "
+                                f"attention on '{show_token(tokens[best['src']])}' and moved the "
+                                f"prediction by {best['dla']:+.2f}; on {len(records)} token(s)", 230))
+        print(f"  attention links: {len(grouped_attn)}")
+
     # --- Write node CSV ------------------------------------------------------
     small = pd.DataFrame(rows.rows)
     frame = pd.concat([small] + cloud_frames, ignore_index=True)
@@ -619,6 +723,8 @@ def main():
     ap.add_argument("--name", default="AI_Observatory_GPT2")
     ap.add_argument("--out", default=None)
     ap.add_argument("--radius", type=float, default=60.0)
+    ap.add_argument("--head-radius", type=float, default=25.0,
+                    help="radius of the attention-head ring, inside the feature ring")
     ap.add_argument("--layer-gap", type=float, default=None, help="default: the model profile's")
     ap.add_argument("--token-gap", type=float, default=5.0,
                     help="world units between one token label's end and the next token")

@@ -49,6 +49,10 @@ class Profile:
     # scenes rebuild byte-identical; on for Gemma, where base-model SAEs read
     # an instruction-tuned model and go blind on chat-template tokens.
     encode_fidelity: bool
+    # Attention heads as glyphs of their own: an inner ring per layer. Off for
+    # Gemma until grouped-query attention is checked (8 query heads share 4
+    # key/value heads there, so "one head" means something different).
+    show_heads: bool
     # Each layer's strongest feature pins its label as the pulse passes. Tag
     # labels are fixed-pixel, so a deep tower pins only every Nth layer
     # (counting down from the top, which always pins) to keep them apart.
@@ -65,7 +69,8 @@ GPT2_SMALL = Profile(
     np_export="gpt2-small_{layer}-res-jb.json", np_api="gpt2-small/{layer}-res-jb",
     processed_weights=True, atlas_name="gpt2-small-res-jb", vocab_name="gpt2_vocab.json",
     runs_subdir="", scene_prefix="AI_Observatory_GPT2", promote_from_layer=8,
-    layer_gap=14.0, frames_per_token=36, bos_text="<|endoftext|>", encode_fidelity=False)
+    layer_gap=14.0, frames_per_token=36, bos_text="<|endoftext|>", encode_fidelity=False,
+    show_heads=True)
 
 GEMMA_2_2B_IT = Profile(
     key="gemma-2-2b-it", tl_name="gemma-2-2b-it", display="Gemma-2-2B-it", short="Gemma",
@@ -78,10 +83,37 @@ GEMMA_2_2B_IT = Profile(
     processed_weights=False, atlas_name="gemma-2-2b-it_gemma-scope-2b-pt-res-16k",
     vocab_name="gemma2_vocab.json", runs_subdir="gemma-2-2b-it",
     scene_prefix="AI_Observatory_Gemma", promote_from_layer=17, layer_gap=14.0,
-    frames_per_token=48, bos_text="<bos>", encode_fidelity=True, pin_label_stride=2,
+    frames_per_token=48, bos_text="<bos>", encode_fidelity=True, show_heads=False,
+    pin_label_stride=2,
     chat_template="<start_of_turn>user\n{message}<end_of_turn>\n<start_of_turn>model\n")
 
 PROFILES = {p.key: p for p in (GPT2_SMALL, GEMMA_2_2B_IT)}
+
+# Published roles for the heads of GPT-2 small's indirect-object circuit, from
+# Wang et al. 2022, "Interpretability in the Wild" (arXiv 2211.00593). These
+# name what researchers found the head doing on sentences of the Mary-and-John
+# kind; a scene states them as a citation beside its OWN measurement of what
+# the head did on its prompt, never instead of it. Checked against our
+# extraction on the IOI prompt (name movers +2.11/+2.10/+0.82 toward ' Mary',
+# negative name movers -2.28/-0.84, L0.H1 attending the first ' John' 0.52
+# from the second, L4.H11 the previous token at 1.00, L5.H5 the token after
+# the earlier ' John' at 0.92).
+HEAD_ROLES = {
+    "gpt2-small": {
+        (9, 9): "name mover", (9, 6): "name mover", (10, 0): "name mover",
+        (10, 7): "negative name mover", (11, 10): "negative name mover",
+        (7, 3): "S-inhibition", (7, 9): "S-inhibition",
+        (8, 6): "S-inhibition", (8, 10): "S-inhibition",
+        (5, 5): "induction", (6, 9): "induction",
+        (0, 1): "duplicate token", (0, 10): "duplicate token", (3, 0): "duplicate token",
+        (2, 2): "previous token", (4, 11): "previous token",
+    },
+}
+HEAD_ROLE_CITATION = "Wang et al. 2022"
+
+
+def head_role(profile_key: str, layer: int, head: int) -> str:
+    return HEAD_ROLES.get(profile_key, {}).get((layer, head), "")
 
 
 def get(key: str) -> Profile:

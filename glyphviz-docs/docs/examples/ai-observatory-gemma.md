@@ -98,6 +98,7 @@ On that second one, Gemma is more certain than GPT-2 small, " Mary" at 75% again
 - **A contrast shows what differs from one control, not a complete cause.** A different twin would pin somewhat different features. The one used here shares " email", " someone" and " password" with the phishing request, so those words alone can't explain the difference.
 - **Attribution rods** are gradient × activation between adjacent layers, a per-prompt linear approximation pruned to the strongest few rods per target. They are not the full attribution graphs that tools like circuit-tracer compute.
 - **The scene ends where the reply begins.** It shows Gemma deciding to start with "I", not the refusal it goes on to write.
+- **No attention heads yet.** The [GPT-2 scene](ai-observatory-gpt2.md#the-attention-heads-how-information-moves) draws its 144 heads as objects of their own; this one doesn't. Gemma-2 shares each key/value head between several query heads, so "one head" needs a decision this scene hasn't made.
 - **Gemma-2-2B-it is a small 2024 model.** Its refusals are simple; larger assistants refuse in subtler ways.
 
 ## Make your own

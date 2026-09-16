@@ -329,6 +329,78 @@ def attribution_edges(profile, model, saes, tokens, acts, targets_per_token, sou
     return edges
 
 
+def head_effects(profile, model, tokens, top_tokens, heads_per_token, min_attn, sources_per_head):
+    """What every attention head did, per token.
+
+    A head is the only way information moves between positions: it attends to
+    earlier tokens (weights summing to 1) and writes a vector into the residual
+    stream. So each one gets two measurements:
+
+      dla [heads, T]  direct logit attribution -- the head's own output at this
+                      token, read through the final LayerNorm and the
+                      unembedding, toward the token the model actually predicts
+                      (centred on the mean logit, the convention the
+                      feature->logit edges already use). Positive pushes the
+                      prediction up, negative pushes it down.
+      bos [heads, T]  the share parked on the start token. Attention has to sum
+                      to 1, so a head with nothing to fetch dumps it there
+                      (measured on the IOI prompt: 64 of 144 heads put over half
+                      their attention there). Those are not "looking" and the
+                      scene drops them.
+
+    Plus, for the heads that matter most at each token, where they looked.
+    """
+    n_layers, n_heads = model.cfg.n_layers, model.cfg.n_heads
+    model.set_use_attn_result(True)
+    want = ("hook_result", "hook_pattern")
+    with torch.no_grad():
+        # ln_final.hook_scale too: apply_ln_to_stack reads it to put a head's
+        # output on the same scale the unembedding sees.
+        _logits, cache = model.run_with_cache(
+            tokens, names_filter=lambda name: (name.endswith(want)
+                                               or name == "ln_final.hook_scale"))
+        t_len = tokens.shape[1]
+        stack = torch.stack([cache[f"blocks.{l}.attn.hook_result"][0, :, h]
+                             for l in range(n_layers) for h in range(n_heads)])   # [heads, T, d]
+        w_u = unembed(model, profile)
+        dla = np.zeros((stack.shape[0], t_len), dtype=np.float32)
+        for t in range(1, t_len):
+            # scaled by the same LayerNorm the model applies before unembedding
+            scaled = cache.apply_ln_to_stack(stack[:, t][:, None], layer=-1, pos_slice=t)[:, 0]
+            direction = w_u[:, top_tokens[t]].float() - w_u.float().mean(-1)
+            dla[:, t] = (scaled.float() @ direction).cpu().numpy()
+        pattern = torch.stack([cache[f"blocks.{l}.attn.hook_pattern"][0, h]
+                               for l in range(n_layers) for h in range(n_heads)])  # [heads, T, T]
+        bos = pattern[:, :, 0].float().cpu().numpy()
+    model.set_use_attn_result(False)
+
+    def sources(index, t, k):
+        w = pattern[index, t].clone()
+        w[0] = 0                       # the start-token sink is not looking
+        top = w.topk(min(k, w.shape[0]))
+        return [(int(j), float(v)) for v, j in zip(top.values.tolist(), top.indices.tolist())
+                if v >= min_attn and j < t]
+
+    attends, peaks = [], []
+    for t in range(1, t_len):
+        order = np.argsort(-np.abs(dla[:, t]))[:heads_per_token]
+        for index in order:
+            for src, weight in sources(int(index), t, sources_per_head):
+                attends.append(dict(token=t, layer=int(index) // n_heads,
+                                    head=int(index) % n_heads, src=src,
+                                    weight=round(weight, 3), dla=float(dla[index, t])))
+    for index in range(dla.shape[0]):
+        t = int(np.argmax(np.abs(dla[index, 1:])) + 1)
+        src = sources(index, t, 1)
+        peaks.append(dict(layer=index // n_heads, head=index % n_heads, token=t,
+                          dla=float(dla[index, t]), bos=float(bos[index, t]),
+                          src=src[0][0] if src else None,
+                          weight=src[0][1] if src else 0.0))
+    print(f"heads: {dla.shape[0]} heads, {len(attends)} attention links, "
+          f"strongest |effect| {np.abs(dla).max():.2f}")
+    return dict(n_heads=n_heads, attends=attends, peaks=peaks), dla, bos
+
+
 def contrast_features(profile, model, saes, tokens, acts, message, chat, per_token):
     """Run a control prompt and compare feature activations on the tokens both
     prompts END with (for chat prompts, at least the template that hands the
@@ -445,6 +517,12 @@ def run_prompt(profile, model, saes, message, args, device):
         shown.add((e["src_layer"], e["src_feature"]))
         if e["dst_kind"] == "feat":
             shown.add((e["dst_layer"], e["dst_index"]))
+    heads = head_dla = head_bos = None
+    if profile.show_heads and not args.no_heads:
+        heads, head_dla, head_bos = head_effects(
+            profile, model, tokens, [int(probs[t].argmax()) for t in range(t_len)],
+            args.heads_per_token, args.head_min_attn, args.sources_per_head)
+
     contrast = None
     if args.contrast:
         contrast = contrast_features(profile, model, saes, tokens, acts, args.contrast, chat,
@@ -475,14 +553,16 @@ def run_prompt(profile, model, saes, message, args, device):
         d = torch.nn.functional.normalize(saes[l].W_dec[j].detach().float(), dim=0)
         promotes[f"{l}_{j}"] = [model.to_string(int(i)) for i in (d @ w_u).topk(3).indices.tolist()]
 
+    extra = {} if head_dla is None else dict(head_dla=head_dla, head_bos=head_bos)
     np.savez_compressed(out_dir / "acts.npz", act_matrix=act_matrix,
                         shown=np.array(shown, dtype=np.int32),
-                        layer_totals=layer_totals, layer_l0=layer_l0, fidelity=fidelity)
+                        layer_totals=layer_totals, layer_l0=layer_l0, fidelity=fidelity,
+                        **extra)
     fid = fidelity[:, 1:]
     print("lens fidelity by layer (mean over tokens, BOS excluded): "
           + " ".join(f"{v:.2f}" for v in fid.mean(1)))
     run = dict(prompt=prompt, slug=slug, model=profile.key, sae_release=profile.sae_release,
-               chat=chat, message=message, contrast=contrast,
+               chat=chat, message=message, contrast=contrast, heads=heads,
                str_tokens=str_toks, predictions=preds, edges=edges,
                layer_p99=layer_p99, explanations=explanations, promotes=promotes,
                settings=dict(display_per_token=args.display_per_token,
@@ -505,6 +585,13 @@ def main():
                          "harmful request); on those shared tokens the scene pins the features "
                          "that differ most from it")
     ap.add_argument("--contrast-per-token", type=int, default=3)
+    ap.add_argument("--no-heads", action="store_true",
+                    help="skip attention heads even when the profile draws them")
+    ap.add_argument("--heads-per-token", type=int, default=6,
+                    help="heads per token that get attention links (by |effect on the prediction|)")
+    ap.add_argument("--sources-per-head", type=int, default=2)
+    ap.add_argument("--head-min-attn", type=float, default=0.08,
+                    help="drop an attention link below this weight")
     ap.add_argument("--slug", default=None)
     ap.add_argument("--clusters", type=int, default=64)
     ap.add_argument("--rebuild-atlas", action="store_true")

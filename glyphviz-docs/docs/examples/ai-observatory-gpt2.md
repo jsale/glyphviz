@@ -31,6 +31,31 @@ Interpretability researchers call this *tracing a circuit*, and GlyphViz lets yo
 3. Click a rod leaving that sphere and read its label: how much it contributed, and whether it reaches back to an earlier word.
 4. Follow the rod up to the sphere it feeds on the next layer, and repeat until you reach the prediction.
 
+### The attention heads: how information moves
+
+Each layer has two halves, and the rings show both. The **features** are what the layer *thinks* about the word in front of it. The **attention heads** are how it *fetches* anything from earlier words — the only way information moves between positions at all. GPT-2 small has 12 heads per layer, 144 in total, and they sit as small cones on an inner ring just below each layer's feature ring: fetching on the inside, thinking on the outside.
+
+Each head does two things at every word, and the scene shows both:
+
+- **Where it looked.** A violet link runs from the head to the word in the prompt row it is attending to. Thickness is the weight.
+- **What that did.** The cone's size is how strongly the head's own output pushes the word the model is about to say; **orange** pushes it up, **blue** pushes it down, the same convention as the attribution rods. A head doing nothing to this prediction stays small and grey.
+
+On the final word, *to*, the scene shows a tug of war, which is the real mechanism behind " Mary":
+
+| Head | What it looks at | Effect on " Mary" |
+|---|---|---|
+| **L9.H9** | " Mary", weight 0.67 | **+3.03**, toward the answer |
+| **L9.H6** | " Mary", weight 0.67 | **+2.75** |
+| **L10.H7** | " Mary", weight 0.82 | **−3.16**, *against* the answer |
+| **L11.H10** | " Mary", weight 0.53 | **−1.95**, against |
+
+Four heads all stare at the same word and disagree about what to do with it. GPT-2 writes the answer and then partly takes it back; what survives is the 68% you see at the top. The two strongest heads at each word pin their labels as the animation plays, so you can watch which heads take over from word to word: at *gave*, L9.H9 is already fetching " Mary".
+
+Researchers named these heads in 2022, and the scene carries those names as citations beside its own measurements: **name movers** (L9.H9, L9.H6, L10.H0) copy the right name forward, **negative name movers** (L10.H7, L11.H10) push back, **duplicate-token heads** notice a name has appeared twice (L0.H1, from the second "John", puts 0.52 on the first), **previous-token heads** look one word back (L4.H11, at 1.00), and **induction heads** find what followed the earlier copy (L5.H5 puts 0.92 on "went").
+
+!!! note "Why so many heads look idle"
+    Attention weights must add to 1, so a head with nothing to fetch parks on the invisible start token instead. On this prompt 64 of the 144 heads put more than half their attention there, averaging 0.44. That is not looking, so the scene drops those links and says so in each head's label.
+
 ### The terms worth learning
 
 | Term | What it means here |
@@ -44,6 +69,8 @@ Interpretability researchers call this *tracing a circuit*, and GlyphViz lets yo
 | **Sparse autoencoder (SAE)** | The method that learns the dictionary and splits the state into a few active features. |
 | **Activation** | How strongly a feature is present right now. Sphere size. |
 | **Attribution** | An estimate of how much one feature caused another. The rods. |
+| **Attention head** | One of 12 per layer that fetch information from earlier words. The cones on the inner ring. |
+| **Attention weight** | How much of a head's attention one earlier word receives; all its weights add to 1. The violet links. |
 
 Two caveats are worth saying out loud before anyone asks: the dictionary is a *lens*, not the model (it misses part of what the model does, more at the top than the bottom), and the feature labels are *machine-written guesses*. Click a few and judge them for yourself. The full list is under [Honest caveats](#honest-caveats).
 
@@ -56,6 +83,8 @@ Two caveats are worth saying out loud before anyone asks: the dictionary is a *l
 **Lit features.** The strongest features at each token become spheres at their home positions, sized by how strongly they fire. The strongest on each layer pins its label.
 
 **Attribution rods.** Which features drove which: from each layer to the next, and from the last layer into the prediction. **Orange** pushes the target up, **blue** pushes it down, and thickness is the share of the target's total attribution the rod carries. A rod that reaches back to an earlier word is the model *attending* to it.
+
+**Attention heads.** Twelve cones on a smaller ring just below each layer's, one per head: size is its effect on the prediction, colour its direction, and a violet link shows the word it is looking at. See [The attention heads](#the-attention-heads-how-information-moves).
 
 **The prompt** runs along the front, one cube per token. When the animation is stopped, the scene shows the last token, *to*, where the answer is decided.
 
@@ -82,7 +111,7 @@ You can hear the model at work. On *gave*, layers 2 through 4 lean only slightly
 
 **Near the top, names take over.** Layer 11's strongest feature is *phrases that start with a person's name*, and rods from the final layers run into the prediction.
 
-**Stated plainly: this is not the full circuit.** Researchers have mapped how GPT-2 small solves exactly this kind of sentence ([Wang et al., 2022, "Interpretability in the Wild"](https://arxiv.org/abs/2211.00593)), and much of that work happens in attention heads that copy the right name forward from earlier in the sentence. The scene shows those through rods that reach back to earlier words, but it does not draw attention heads as objects of their own — yet.
+**The heads are where the answer is actually moved.** Researchers mapped how GPT-2 small solves exactly this kind of sentence ([Wang et al., 2022, "Interpretability in the Wild"](https://arxiv.org/abs/2211.00593)), and found the work done by attention heads copying the right name forward. Those heads are now in the scene as objects of their own, and their measured behaviour matches: the name movers L9.H9 and L9.H6 read " Mary" and push it, while L10.H7 reads the same word and pushes back.
 
 ## Structure
 
@@ -94,18 +123,23 @@ GPT-2 small (root)
 │  ├─ feature cloud       Point Cloud topology
 │  │  └─ feature ×24,576  every SAE feature, at its home position
 │  ├─ cluster marker ×64  meaning cluster: size, common themes
+│  ├─ attention ring       faint torus, radius 25, 5 units below the layer
+│  ├─ attention head ×12   cone: size = effect on the prediction, colour = sign
 │  └─ lit feature ×~90    sphere at the same position, size = activation
 ├─ prompt row             Plot topology, one cube per token
 ├─ output                 one prediction per token, shown in turn
-└─ attribution rod ×2,137 cylinder links between lit features
+├─ attribution rod ×2,137 cylinder links between lit features
+└─ attention link ×79     head → the word it is looking at
 ```
 
-298,965 nodes. Channels drives the animation: 1,350 channels over 504 frames, synced to a 17-second audio track through the scene's audio manifest, so the notes land exactly on the frames their layers light.
+299,200 nodes. Channels drives the animation: 1,506 channels over 504 frames, synced to a 17-second audio track through the scene's audio manifest, so the notes land exactly on the frames their layers light.
 
 ## Honest caveats
 
 - **The autoencoders are a lens, not the model.** They reconstruct 99.7% of the residual stream's variance at layer 0, falling steadily to 78% at layers 10–11. What they miss is not in the scene.
 - **Feature explanations are automated guesses**, written by language models looking at examples of where each feature fires. Many are good; some are vague or wrong.
+- **A head's size is its *direct* effect only.** It measures what the head's own output does to the prediction when read straight through to the output, which is the standard measure, but it misses what a head does by feeding *other* heads and layers downstream. The S-inhibition heads are the clear case here: they barely register on their own (+0.05 to +0.41) while the published work shows them steering the name movers.
+- **The head role names are citations, not measurements.** "Name mover" and the rest come from Wang et al. 2022; each head's label states them alongside what that head actually did on this prompt, which is the part measured here.
 - **Attribution rods are an approximation**: gradient × activation between adjacent layers, holding each autoencoder's reconstruction error fixed, and pruned to the strongest few rods per target. They show a per-prompt, linear picture of influence, not a proof of mechanism.
 - **The ring layout is one projection of 768 dimensions.** Distance around a ring is suggestive, not a measurement.
 - **GPT-2 small is a small, 2019 base model.** It is the right model to build the instrument on, and nothing in it resembles the behaviour of the chat assistants people worry about.

@@ -39,6 +39,8 @@ and repeat until you reach the prediction.
 | sparse autoencoder | the method that learns that dictionary |
 | activation | how strongly a feature is present now; sphere size |
 | attribution | an estimate of how much one feature caused another; the rods |
+| attention head | one of 12 per layer that fetch from earlier words; the cones |
+| attention weight | how much of a head's attention one earlier word gets; the violet links |
 
 The dictionary is a lens, not the model, and the labels are machine-written
 guesses: see the limits below.
@@ -58,6 +60,14 @@ guesses: see the limits below.
 - **Attribution rods.** Which features drove which, layer to layer, and from
   the last layer to the prediction. Orange pushes the target up, blue pushes
   it down; thickness is the share of the target's attribution.
+- **Attention heads.** Twelve cones on a smaller ring just below each layer's
+  ring: the heads, which are how information moves between words at all. Size
+  is how strongly that head pushes the word the model is about to say, orange
+  toward it and blue against, and a violet link shows the word it is looking
+  at. On the last token, L9.H9 and L9.H6 read " Mary" and push it (+3.03,
+  +2.75) while L10.H7 reads the same word and pushes back (−3.16). A head with
+  nothing to fetch parks its attention on the invisible start token (64 of 144
+  do here), and those links are dropped.
 - **The prompt** runs along the front, one cube per token.
 
 Stopped, the scene shows the last token, "to", where the answer is decided.
@@ -89,6 +99,12 @@ tell layers apart; everything else is data.
   approximation, pruned to the strongest few edges per target.
 - The ring layout is one projection of 768 dimensions; distance around a ring
   is suggestive, not a measurement.
+- A head's size is its *direct* effect on the prediction only: what its own
+  output does read straight through to the output. It misses what a head does
+  by feeding other heads downstream, which is most of what the S-inhibition
+  heads (L7.H3, L7.H9, L8.H6, L8.H10) do here.
+- Head role names ("name mover" and the rest) are citations to Wang et al.
+  2022, stated beside this scene's own measurement, not derived from it.
 
 ## Sources
 
