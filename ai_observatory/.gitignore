@@ -1,4 +1,10 @@
 # Downloaded model data, Neuronpedia exports, atlases and per-prompt runs:
-# all regenerable by extract_gpt2.py.
+# all regenerable by extract.py.
 cache/
 __pycache__/
+
+# Built scenes. A GPT-2 node CSV is ~45 MB and a Gemma one ~70 MB, they are
+# regenerable from a prompt, and the two that belong in the gallery live in
+# examples/ instead. Published one zip per scene by zip_scenes.py; the gallery
+# pages link to those. Keep them out of the repo unless that changes.
+scenes/

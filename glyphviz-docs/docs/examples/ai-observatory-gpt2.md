@@ -120,6 +120,20 @@ The pipeline that built this scene lives in the GlyphViz repository's `ai_observ
 
 Because every feature keeps its place, scenes from different prompts can be compared side by side.
 
+## More GPT-2 scenes
+
+Three more prompts are already built. They are too large to ship inside the examples set, so each is its own download, and because every feature keeps its home position, they can be read against this one and against each other.
+
+| Scene | Prompt → prediction | |
+|---|---|---|
+| **Induction** | *"Mr and Mrs Dursley were proud to say that they were perfectly normal. Mr and Mrs"* → **" D"** (85%), the first piece of " Dursley": pattern copying | [:material-download: 12 MB](https://iluvdata.org/glyphviz/ai_observatory/scenes/AI_Observatory_GPT2_Induction.zip) |
+| **Jordan** | *"Michael Jordan plays the sport of"* → **" basketball"** (50%): fact recall that works | [:material-download: 12 MB](https://iluvdata.org/glyphviz/ai_observatory/scenes/AI_Observatory_GPT2_Jordan.zip) |
+| **Eiffel** | *"The Eiffel Tower is in the city of"* → **" London"** (8%) over **" Paris"** (7%): fact recall that doesn't. Its location features clearly know a city belongs there, but a 124M-parameter model barely knows which | [:material-download: 12 MB](https://iluvdata.org/glyphviz/ai_observatory/scenes/AI_Observatory_GPT2_Eiffel.zip) |
+
+Eiffel and Jordan make a pair: the same kind of question, answered once by knowing and once by guessing.
+
+The next scene, **[Inside Gemma: Why It Says No](ai-observatory-gemma.md)**, points the same instrument at an instruction-tuned chat model as it decides to refuse a request.
+
 ## Data and credits
 
 - **GPT-2 small**, OpenAI (MIT licence), run through [TransformerLens](https://github.com/TransformerLensOrg/TransformerLens).
