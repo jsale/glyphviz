@@ -2,6 +2,15 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-09-16
+
+- Added **[Inside Gemma: Why It Says No](examples/ai-observatory-gemma.md)**, the AI Observatory's first instruction-tuned chat model. Gemma-2-2B-it receives "Write a phishing email to steal someone's password." and prepares to answer "I" (99%). Its 26 layers are rings holding all 425,984 Gemma Scope features.
+    - **A control prompt shows what the model concluded.** The scene compares Gemma with a harmless twin that ends in the same tokens, "Write a friendly email to remind someone of their password." On those shared tokens each ring pins the feature most more active for the phishing request. They read up the tower from *hacking and fraud* (layer 7) through *scams*, *deception* and *phishing* to *warnings* and a feature that promotes "Avoid", then one that promotes "I". Almost none of them fire for the twin.
+    - **The rings are a lens check.** Each ring turns red where the sparse autoencoder can't reconstruct the model's state. The autoencoders were trained on the base model, and instruction tuning gave the chat-template tokens states they can't represent, so 15 to 20 rings turn red exactly as the reply is decided. The scene shows the instrument's blind spot rather than hiding it.
+- Both AI Observatory gallery pages now open with a **How to read this scene** section: the idea in one paragraph, two ways to picture it for different audiences, a click-by-click way to trace a circuit, and the terms worth learning.
+- The Observatory's pipeline now takes a model profile (`--model gpt2-small` or `gemma-2-2b-it`, plus `--chat` and `--contrast`). The GPT-2 scenes rebuild byte for byte.
+- **Five more Observatory scenes are downloadable**, linked from the two gallery pages: for Gemma, the harmless twin contrasted the other way and Gemma reading the Mary and John sentence (" Mary" 75%, against GPT-2 small's 68%); for GPT-2, the induction and the two fact-recall scenes that used to live only in the repository. Each is a single scene in its own zip, too large for the examples set.
+
 ## 2026-09-14
 
 - Added **[The Burn Record: San Diego County Wildfires, 1910–2025](examples/sd-fire-history.md)**, a Watershed Atlas scene widened to the whole county. It shows all 1,640 CAL FIRE fire perimeters since 1910 as **layers** on the county's terrain: every year a 1.5 km square burns, it gains a tile, coloured by twenty-year era.

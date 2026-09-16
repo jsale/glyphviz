@@ -92,6 +92,7 @@ nav:
           - "The Armillary World": examples/armillary-world.md
       - AI Observatory:
           - "Inside GPT-2: Mary and John": examples/ai-observatory-gpt2.md
+          - "Inside Gemma: Why It Says No": examples/ai-observatory-gemma.md
       - San Diego River Watershed Atlas:
           - "The Watershed, Source to Sea": examples/sd-river-watershed.md
           - "The Pulse: A Century of the San Diego River": examples/sd-river-pulse.md

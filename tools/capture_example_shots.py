@@ -102,6 +102,8 @@ MANIFEST = [
     # Static (Channels stopped) is the scene's last token -- the answer -- so
     # frame 0 is the right hero, unlike most animated scenes.
     ("ai-observatory-gpt2", EX / "AI_Observatory_GPT2_Example", None),
+    # Same: static is the newline after "model", where Gemma decides to say "I".
+    ("ai-observatory-gemma", EX / "AI_Observatory_Gemma_Example", None),
     # Static (Channels stopped) is the month's signature frame, 19 Dec 2012
     # 15:50 -- the Santa Ana at its peak -- authored into the node CSV.
     ("santa-ana-wind", EX / "Santa_Ana_Wind_Example", None),
@@ -185,6 +187,11 @@ CAMERA = {
     # 450 kept the tokens apart but cropped the answer; 540 is the compromise.
     "ai-observatory-gpt2": {"target": (55, -30, 100), "distance": 540,
                             "azimuth": -90, "elevation": 10},
+    # Gemma's tower is 26 rings (364 units), too tall to show whole with
+    # readable labels in this window. The story is the contrast labels from
+    # layer 7 up, so frame those and the prediction; the prompt row drops out.
+    "ai-observatory-gemma": {"target": (260, -30, 420), "distance": 600,
+                             "azimuth": -90, "elevation": 10},
     # From over the Pacific looking up the valley: the mouth in the foreground,
     # the mountains behind, the Strahler legend in the empty space to the north.
     # From over the coast looking inland: the humidity legend on the left, the

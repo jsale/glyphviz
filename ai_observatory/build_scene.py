@@ -1,4 +1,4 @@
-"""AI Observatory, stage B: turn an extracted GPT-2 run into a GlyphViz scene.
+"""AI Observatory, stage B: turn an extracted run into a GlyphViz scene.
 
 Runs in the ordinary `glyphviz` env (numpy + pandas only; no torch). Reads
 cache/atlas_*.npz, cache/runs/<slug>/, and cache/neuronpedia_exports/, and
@@ -13,7 +13,9 @@ Layout (world units, Global Scale 1):
   * features active on this prompt are promoted to glyphs at the same spot
   * attribution edges are cylinder links; the prompt runs along the front
   * Channels time = reading the prompt token by token: for each token a pulse
-    climbs the tower (layer 0 .. 11), then the prediction lights up
+    climbs the tower (layer 0 to the top), then the prediction lights up
+  * (profiles with encode_fidelity) each layer ring shows how much of the
+    current token's state its SAE reconstructs: red and thick where it is blind
 The static scene (Channels stopped) shows the LAST token -- the answer.
 """
 
@@ -31,18 +33,23 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import profiles
+
 HERE = Path(__file__).resolve().parent
 CACHE = HERE / "cache"
-RELEASE = "gpt2-small-res-jb"
-N_LAYERS = 12
 
 GEO_CUBE, GEO_SPHERE, GEO_TORUS = 1, 3, 7
 GEO_TETRA, GEO_ICOSA, GEO_CYLINDER, GEO_POINT = 13, 15, 19, 22
 TOPO_NONE, TOPO_PLOT, TOPO_CLOUD = 0, 16, 18
 # Reading a feature's decoder direction straight through the unembedding
 # ("promotes 'Mary'") only means something near the output; in early layers it
-# returns junk tokens ('asty', 'ggles'), so labels carry it from here up only.
-PROMOTE_FROM_LAYER = 8
+# returns junk tokens ('asty', 'ggles'), so labels carry it only from each
+# profile's promote_from_layer up.
+# Neuronpedia's exports carry the odd stub record instead of a real explanation.
+_PLACEHOLDER = {"This is an explanation text!"}
+CONTRAST_MIN = 0.25
+RING_RGBA = (90, 100, 140, 70)
+BLIND_RGBA = (235, 70, 55, 220)
 
 _STOP = set("""
 a an the of to in on for and or with that this from into which these those such other
@@ -86,17 +93,17 @@ def show_token(tok):
     return t.strip() if t.strip() else ("␣" if t else "∅")
 
 
-def load_explanations():
+def load_explanations(profile):
     out = {}
     folder = CACHE / "neuronpedia_exports"
-    for layer in range(N_LAYERS):
-        path = folder / f"gpt2-small_{layer}-res-jb.json"
+    for layer in range(profile.n_layers):
+        path = folder / profile.np_export.format(layer=layer)
         if not path.exists():
             continue
         for rec in json.loads(path.read_text(encoding="utf-8")):
             key = (layer, int(rec["index"]))
             desc = clean(rec.get("description") or "")
-            if desc and key not in out:
+            if desc and desc not in _PLACEHOLDER and key not in out:
                 out[key] = desc
     return out
 
@@ -223,25 +230,30 @@ def sonify(events, duration, path_wav, sr=44100):
 # --------------------------------------------------------------------------
 
 def build(args):
-    run_dir = CACHE / "runs" / args.slug
+    prof = profiles.get(args.model)
+    N_LAYERS = prof.n_layers
+    run_dir = (CACHE / "runs" / prof.runs_subdir / args.slug if prof.runs_subdir
+               else CACHE / "runs" / args.slug)
     run = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
     acts = np.load(run_dir / "acts.npz")
-    atlas = np.load(CACHE / f"atlas_{RELEASE}.npz")
-    vocab = json.loads((CACHE / "gpt2_vocab.json").read_text(encoding="utf-8"))
-    expl = load_explanations()
+    atlas = np.load(CACHE / f"atlas_{prof.atlas_name}.npz")
+    vocab = json.loads((CACHE / prof.vocab_name).read_text(encoding="utf-8"))
+    expl = load_explanations(prof)
     print(f"explanations loaded for {len(expl)} features")
 
     k_clusters = int(atlas["k_clusters"])
-    R, GAP = args.radius, args.layer_gap
+    R = args.radius
+    GAP = args.layer_gap if args.layer_gap is not None else prof.layer_gap
     BAND_H, BAND_R = 2.4, 2.0
     tokens = run["str_tokens"]
     T = len(tokens)
     readable = list(range(1, T))                  # BOS is never shown
     last = readable[-1]
-    F = args.frames_per_token
+    F = args.frames_per_token if args.frames_per_token is not None else prof.frames_per_token
     frames = F * len(readable)
     rise = int(F * 0.62)
     arrive_off = [round(L * rise / (N_LAYERS - 1)) for L in range(N_LAYERS)]
+    fidelity = acts["fidelity"] if prof.encode_fidelity and "fidelity" in acts.files else None
     pred_off = int(F * 0.78)
 
     def window(t):
@@ -262,9 +274,36 @@ def build(args):
     # --- World + root -----------------------------------------------------
     rows.add(type=0, geometry=0, rgba=(5, 7, 14, 255), text="World", tag_font_size=12)
     prompt_text = run["prompt"]
+    if run.get("chat"):
+        root_text = (f"{prof.display} ({prof.size_text}) answering the chat message "
+                     f"\"{run['message']}\", at the moment it starts its reply")
+    else:
+        root_text = f"{prof.display} ({prof.size_text}) reading: \"{prompt_text}\""
+    # A control prompt ending in the same tokens: on those tokens each pinned
+    # label is the feature most MORE active here than in the control.
+    contrast = run.get("contrast")
+    contrast_pin, contrast_best, contrast_tokens = {}, {}, set()
+    if contrast:
+        for c in contrast["features"]:
+            # Below a quarter of the layer's typical strong activation a
+            # difference is noise (measured: identical template tokens differ
+            # by <= 0.11 x p99 in Gemma's layers 0-6, then 0.27-0.77 from layer
+            # 7). Such a layer pins nothing on the shared tokens: the silence
+            # says the two prompts still look alike there.
+            if c["diff"] < CONTRAST_MIN * run["layer_p99"][c["layer"]]:
+                continue
+            key = (c["layer"], c["token"])
+            if key not in contrast_pin or c["diff"] > contrast_pin[key][1]:
+                contrast_pin[key] = (c["feature"], c["diff"])
+            if (c["layer"], c["feature"]) not in contrast_best or c["diff"] > contrast_best[(c["layer"], c["feature"])]["diff"]:
+                contrast_best[(c["layer"], c["feature"])] = c
+            contrast_tokens.add(c["token"])
+        tok0, p0 = contrast["predictions"][0]
+        root_text += (f". Compared with the control \"{contrast['message']}\", which {prof.short} "
+                      f"answers starting '{show_token(tok0)}' ({p0:.0%}): on the {contrast['shared_tokens']} "
+                      f"tokens both end with, the pinned labels are what differs")
     root = rows.add(geometry=GEO_SPHERE, scale=1.6, rgba=(170, 180, 210, 255),
-                    text=clean(f"GPT-2 small (124M parameters, 12 layers) reading: \"{prompt_text}\"", 200),
-                    show_text=1)
+                    text=clean(root_text, 400 if contrast else 200), show_text=1)
     top_z = GAP * (N_LAYERS + 1)
     rows.add(parent_id=root, branch_level=1, geometry=GEO_CYLINDER,
              pos=(0, 0, top_z / 2), scale=(0.22, 0.22, top_z / 2), rgba=(120, 135, 175, 90),
@@ -302,7 +341,7 @@ def build(args):
     # --- Output: one prediction node per token, shown in its window ----------
     out_hub = rows.add(parent_id=root, branch_level=1, geometry=GEO_SPHERE, scale=1.2,
                        pos=(0, 0, top_z), rgba=(255, 215, 120, 255),
-                       text="Output: GPT-2's prediction of the next token")
+                       text=f"Output: {prof.short}'s prediction of the next token")
     pred_ids = {}
     for t in readable:
         s0, s1 = window(t)
@@ -311,10 +350,15 @@ def build(args):
         preds = run["predictions"][t]
         so_far = "".join(tokens[1:t + 1])
         guess = " · ".join(f"'{show_token(tok)}' {p:.0%}" for tok, p in preds[:3])
+        lens = ""
+        if fidelity is not None:
+            weakest = int(np.argmin(fidelity[:, t]))
+            lens = f" · lens weakest at layer {weakest}: {fidelity[weakest, t]:.0%} of the state captured"
         pred_ids[t] = rows.add(parent_id=out_hub, branch_level=2, geometry=GEO_ICOSA,
                                pos=(0, 0, 5), scale=2.4, rgba=(255, 200, 80, 255),
                                hide=0 if t == last else 1, show_text=1,
-                               text=clean(f"After \"…{so_far[-40:]}\" GPT-2 predicts {guess}", 180),
+                               text=clean(f"After \"…{so_far[-40:]}\" {prof.short} predicts {guess}{lens}",
+                                          180 + len(lens)),
                                ch_input_id=ch.channel([("hide", hide)]))
 
     # --- Layers ------------------------------------------------------------
@@ -338,11 +382,34 @@ def build(args):
         shade = 110 + int(100 * L / (N_LAYERS - 1))
         hub = rows.add(parent_id=root, branch_level=1, geometry=GEO_SPHERE, scale=1.1,
                        pos=(0, 0, z), rgba=(shade, shade, 255, 255),
-                       text=f"Layer {L}: the residual stream entering block {L}, read through "
-                            f"24,576 sparse-autoencoder features in {k_clusters} meaning clusters",
+                       text=f"Layer {L}: {prof.stage_text.format(layer=L)}, read through "
+                            f"{n:,} sparse-autoencoder features in {k_clusters} meaning clusters",
                        show_text=1 if L in (0, N_LAYERS - 1) else 0)
-        rows.add(parent_id=hub, branch_level=2, geometry=GEO_TORUS, scale=R, ratio=0.004,
-                 rgba=(90, 100, 140, 70), text=f"Layer {L} ring")
+        if fidelity is None:
+            rows.add(parent_id=hub, branch_level=2, geometry=GEO_TORUS, scale=R, ratio=0.004,
+                     rgba=RING_RGBA, text=f"Layer {L} ring")
+        else:
+            # The lens check. blind = 0 while the SAE reconstructs >= 80% of the
+            # token's squared norm, 1 at <= 30%; the ring reddens and thickens.
+            blind = np.clip((0.8 - fidelity[L]) / 0.5, 0, 1)
+            tracks = {k: np.zeros(frames) for k in ("color_r", "color_g", "color_b", "color_a", "ratio")}
+            prev = None
+            for t in readable:
+                s0, s1 = window(t)
+                arr = s0 + arrive_off[L]
+                b = float(blind[t])
+                now = [round(RING_RGBA[c] + (BLIND_RGBA[c] - RING_RGBA[c]) * b) for c in range(4)]
+                now.append(round(0.004 + 0.016 * b, 3))   # tracks are stored at 3 dp
+                for i, key in enumerate(("color_r", "color_g", "color_b", "color_a", "ratio")):
+                    tracks[key][s0:arr] = now[i] if prev is None else prev[i]
+                    tracks[key][arr:s1] = now[i]
+                prev = now
+            rows.add(parent_id=hub, branch_level=2, geometry=GEO_TORUS, scale=R, ratio=prev[4],
+                     rgba=tuple(prev[:4]), ch_input_id=ch.channel(list(tracks.items())),
+                     text=f"Layer {L} ring, and the lens check: blue-grey while the sparse autoencoder "
+                          f"reconstructs most of this token's state here ({fidelity[L, last]:.0%} on "
+                          f"'{show_token(tokens[last])}'), turning red and thicker as it misses more. "
+                          f"Red means the features on this ring are not the whole story")
 
         # every feature, as a point at its home position
         cloud = rows.add(parent_id=hub, branch_level=2, geometry=GEO_POINT, topo=TOPO_CLOUD,
@@ -377,7 +444,7 @@ def build(args):
                 continue
             th = [w for w in themes(expl.get((L, int(i)), "") for i in members)]
             promo = ""
-            if L >= PROMOTE_FROM_LAYER:
+            if L >= prof.promote_from_layer:
                 promo = " · direction promotes " + ", ".join(
                     f"'{show_token(vocab[int(t)])}'" for t in ctop[c][:4])
             crgb = hsv_to_rgb(np.array([centre[c] / (2 * math.pi)]), 0.7, 1.0)[0]
@@ -402,6 +469,11 @@ def build(args):
                     state[t] = 0.22
             top1 = {t for t in readable if a[t] > 0 and
                     a[t] >= max(act_m[ri][t] for ri, _ in shown_by_layer[L])}
+            if contrast:
+                top1 = {t for t in top1 if t not in contrast_tokens}
+                top1 |= {t for t in contrast_tokens if contrast_pin.get((L, t), (None,))[0] == j}
+            if (N_LAYERS - 1 - L) % prof.pin_label_stride:
+                top1 = set()
             scale_track = np.zeros(frames)
             text_track = np.zeros(frames)
             prev = 0.0
@@ -416,12 +488,17 @@ def build(args):
             peak_t = int(np.argmax(a[1:]) + 1)
             e = expl.get((L, j), "no explanation")
             promo = ""
-            if L >= PROMOTE_FROM_LAYER:
+            if L >= prof.promote_from_layer:
                 promo = " · promotes " + ", ".join(
                     f"'{show_token(p)}'" for p in run["promotes"].get(f"{L}_{j}", []))
             rgb1 = hsv_to_rgb(np.array([angle[j] / (2 * math.pi)]), 0.8, 1.0)[0]
             cid = ch.channel([("scale_x", scale_track), ("scale_y", scale_track),
                               ("scale_z", scale_track), ("show_text", text_track)])
+            vs = ""
+            c = contrast_best.get((L, j))
+            if c:
+                vs = (f" · vs. the control: {c['act']:.0f} here, {c['act_other']:.0f} there, "
+                      f"on '{show_token(tokens[c['token']])}'")
             feat_node[(L, j)] = rows.add(
                 parent_id=hub, branch_level=2, geometry=GEO_SPHERE,
                 pos=(round(float(r[j] * math.cos(angle[j])), 3),
@@ -429,7 +506,7 @@ def build(args):
                 scale=float(state[last]), rgba=(*rgb1, 255),
                 show_text=1 if last in top1 else 0, ch_input_id=cid,
                 text=clean(f"L{L} #{j}: {e}{promo} · peak {a[peak_t]:.1f} on "
-                           f"'{show_token(tokens[peak_t])}'", 220))
+                           f"'{show_token(tokens[peak_t])}'{vs}", 220 + len(vs)))
         print(f"  layer {L}: {n} points, {len(shown_by_layer[L])} active glyphs")
 
     # --- Attribution edges ---------------------------------------------------
@@ -509,7 +586,11 @@ def build(args):
                 tot, pan = energy[(L, t)]
                 if tot <= 0:
                     continue
-                freq = 146.83 * 2 ** ((12 * (L // 5) + semis[L % 5]) / 12)
+                # The same twelve pentatonic pitches, D3 to E5, whatever the depth:
+                # a 26-layer model spreads its layers over them, so the top of
+                # every tower sounds the same note (for 12 layers, step == L).
+                step = round(L * 11 / (N_LAYERS - 1))
+                freq = 146.83 * 2 ** ((12 * (step // 5) + semis[step % 5]) / 12)
                 l0 = float(layer_l0[L][t])
                 events.append(dict(time=(s0 + arrive_off[L]) / fps, freq=freq,
                                    amp=0.25 * math.sqrt(tot / emax),
@@ -534,10 +615,11 @@ def build(args):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("slug")
+    ap.add_argument("--model", default="gpt2-small", choices=sorted(profiles.PROFILES))
     ap.add_argument("--name", default="AI_Observatory_GPT2")
     ap.add_argument("--out", default=None)
     ap.add_argument("--radius", type=float, default=60.0)
-    ap.add_argument("--layer-gap", type=float, default=14.0)
+    ap.add_argument("--layer-gap", type=float, default=None, help="default: the model profile's")
     ap.add_argument("--token-gap", type=float, default=5.0,
                     help="world units between one token label's end and the next token")
     # Measured off a render: an 11 pt label character is ~8 px, which is
@@ -545,7 +627,7 @@ def main():
     # so 6.0 reads from the ~650-unit distance that frames the whole tower.
     ap.add_argument("--char-width", type=float, default=6.0,
                     help="world units per label character; labels stay separate out to ~109x this distance")
-    ap.add_argument("--frames-per-token", type=int, default=36)
+    ap.add_argument("--frames-per-token", type=int, default=None, help="default: the model profile's")
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--point-ratio", type=float, default=0.1)
     ap.add_argument("--no-audio", action="store_true")

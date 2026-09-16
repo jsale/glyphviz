@@ -32,6 +32,7 @@ Scenes that are a *place* rather than a dataset — built to be flown through an
 Scenes that look inside a language model while it reads: every feature it represents, placed by meaning, lit up token by token, with sound.
 
 - **[Inside GPT-2: Mary and John](ai-observatory-gpt2.md)** — watch GPT-2 small work out who gets the drink
+- **[Inside Gemma: Why It Says No](ai-observatory-gemma.md)** — a chat model recognizes a phishing request as fraud and turns toward "I cannot", compared token by token with a harmless twin
 
 ## San Diego River Watershed Atlas
 

@@ -111,6 +111,20 @@ sycophancy-like features actually exist. Batch thousands of prompts; build a
 corpus-level feature atlas (co-activation graph laid out with
 `forceatlas2_3d`); one atlas shared by every prompt's scene.
 
+*Status 2026-09-15, step 2a done:* Gemma-2-2B-it with Gemma Scope residual
+SAEs, on the laptop after all (bf16 model, 16 GB GPU is enough). Same tower
+as GPT-2 via a model profile (`profiles.py`), plus two things GPT-2 didn't
+need: a per-token **lens check** on the rings, because base-model SAEs go
+blind on instruction-tuned chat-template tokens, and **contrast pinning**
+against a control prompt, because raw activation and even
+gradient-to-logit pinning both surfaced only generic template features on
+a refusal. Scenes: Refusal (gallery), Reminder (its twin), IOI.
+*Next, step 2b:* circuit-tracer attribution graphs. Needs its own env
+(`transformers<=4.57.3`, `huggingface_hub<1.0`, which conflicts with this
+one). Its transcoders are a different dictionary from the residual SAEs, have
+no Neuronpedia bulk labels (per-feature API only), and attribute one target
+at a time, so a per-token animation is one graph per token.
+
 **Phase 3: a supercomputer.** Pythia checkpoints with an SAE trained per
 checkpoint: watch a concept be born over training. Two towers side by side
 to compare models. 9B/27B models with million-width SAEs. The heavy job is

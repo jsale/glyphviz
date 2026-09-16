@@ -118,7 +118,7 @@ The pipeline that built this scene lives in the GlyphViz repository's `ai_observ
 .\ai_observatory\make_scene.ps1 "Michael Jordan plays the sport of" Jordan
 ```
 
-Three more scenes are already there: a pattern-copying sentence (*"Mr and Mrs Dursley … Mr and Mrs"* → " D", the first piece of " Dursley"), and a pair of fact-recall prompts GPT-2 small answers once with confidence (*basketball*, 50%) and once by guessing (*London* 8% over *Paris* 7%). Because every feature keeps its place, scenes from different prompts can be compared side by side.
+Because every feature keeps its place, scenes from different prompts can be compared side by side.
 
 ## Data and credits
 
