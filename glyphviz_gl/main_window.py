@@ -2102,6 +2102,17 @@ class MainWindow(QMainWindow):
             if auto_tex.is_dir():
                 self._apply_texture_folder(auto_tex, silent=True)
                 msg += f" | textures: {self._viewport.texture_count} from …/media/"
+            # ...and imported models from a meshes/ folder, on the same rule:
+            # mesh_id is the file's 1-based position in the sorted folder, so
+            # a scene that uses GEO_MESH reopens with its shapes intact
+            # instead of needing them hand-imported in exactly the right order.
+            auto_mesh = Path(path).parent / "meshes"
+            if auto_mesh.is_dir():
+                ids = self._viewport.load_mesh_folder(auto_mesh)
+                for mesh_id in ids:
+                    self._add_mesh_combo_entry(mesh_id)
+                if ids:
+                    msg += f" | meshes: {len(ids)} from …/meshes/"
             ch_msg = self._ch_load_from_csv(path)
             if ch_msg:
                 msg += f" | {ch_msg}"

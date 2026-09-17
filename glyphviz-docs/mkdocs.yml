@@ -163,6 +163,7 @@ nav:
       - Node Panel: reference/node-panel.md
       - Immersive VR: reference/immersive-vr.md
       - Geometries: reference/geometries.md
+      - Imported Meshes: reference/imported-meshes.md
       - Topologies: reference/topologies.md
       - Point Cloud Import: reference/point-cloud-import.md
       - Channels Animation: reference/channels-animation.md

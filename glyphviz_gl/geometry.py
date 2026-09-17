@@ -852,6 +852,7 @@ class GeoRenderer:
         self._tex_lists: dict[int, int] = {}
         self._ratio_lists: dict[tuple, int] = {}   # (geo_id, textured, rounded ratio) -> display list
         self._mesh_lists: dict[int, int] = {}   # mesh_id -> display list
+        self._mesh_uv: dict[int, bool] = {}     # mesh_id -> list carries texture coords
         self._ready = False
 
     def setup(self):
@@ -960,22 +961,37 @@ class GeoRenderer:
     def register_mesh(self, mesh_id: int, mesh: MeshData) -> None:
         """Compile *mesh* (already normalized to radius ~1 by mesh_loader)
         into a display list addressable by mesh_id. Must be called with an
-        active GL context. Replaces any previous list for the same id."""
+        active GL context. Replaces any previous list for the same id.
+
+        A mesh that carries UVs gets its texture coordinates baked into the
+        same list rather than a separate textured variant: glTexCoord2f is
+        simply ignored while GL_TEXTURE_2D is disabled, so one list serves
+        both the untextured and textured draw. (The built-in geometries need
+        the _lists/_tex_lists pair because their textured forms differ in
+        tessellation, not just in having coordinates.)"""
         old = self._mesh_lists.pop(mesh_id, None)
         if old:
             glDeleteLists(old, 1)
+        uvs = mesh.uvs
         dl = glGenLists(1)
         glNewList(dl, GL_COMPILE)
+        # Normals come from the mesh per CORNER when the import worked out
+        # its creases (mesh_loader._crease_normals), so a cube's corners stay
+        # square instead of shading like a beach ball; `normal_for` falls back
+        # to the smoothed per-vertex normal when it didn't.
         glBegin(GL_TRIANGLES)
-        for face in mesh.faces:
-            for vi in face:
-                n = mesh.normals[vi]
+        for fi, face in enumerate(mesh.faces):
+            for k, vi in enumerate(face):
+                n = mesh.normal_for(fi, k, vi)
                 v = mesh.vertices[vi]
                 glNormal3f(float(n[0]), float(n[1]), float(n[2]))
+                if uvs is not None:
+                    glTexCoord2f(float(uvs[vi][0]), float(uvs[vi][1]))
                 glVertex3f(float(v[0]), float(v[1]), float(v[2]))
         glEnd()
         glEndList()
         self._mesh_lists[mesh_id] = dl
+        self._mesh_uv[mesh_id] = uvs is not None
 
     def ensure_ratio_list(self, geo_id: int, textured: bool, ratio: float) -> int:
         """Return (compiling on first use) the display list for one of the
@@ -1031,10 +1047,21 @@ class GeoRenderer:
                 # shapes' outward-CCW winding convention (see _outward_tri
                 # above), so skip the back-face cull that relies on it.
                 glDisable(GL_CULL_FACE)
+                # Only a mesh whose file carried UVs can be textured: with no
+                # coordinates every vertex would inherit whatever texcoord was
+                # current, smearing one texel over the whole model -- visibly
+                # worse than the flat node color, so leave that mesh untextured.
+                mesh_tex = gl_tex_name > 0 and self._mesh_uv.get(mesh_id, False)
+                if mesh_tex:
+                    glEnable(GL_TEXTURE_2D)
+                    glBindTexture(GL_TEXTURE_2D, gl_tex_name)
                 glPushMatrix()
                 glScalef(rx, ry, rz)
                 glCallList(dl)
                 glPopMatrix()
+                if mesh_tex:
+                    glBindTexture(GL_TEXTURE_2D, 0)
+                    glDisable(GL_TEXTURE_2D)
                 glEnable(GL_CULL_FACE)
                 return
             geo_id = GEO_SPHERE   # no mesh loaded yet — fall back like other unknown ids

@@ -112,6 +112,14 @@ def _build_viewport(csv_path, base_scale, show_grid, show_axes, show_tags,
              else Path(csv_path).resolve().parent / "media")
     textures = vp.load_texture_folder(media) if media.is_dir() else 0
 
+    # Imported models, on the same folder convention the app uses when it
+    # opens a scene (MainWindow._load_csv_path). Without this a GEO_MESH scene
+    # renders every model as the sphere fallback -- and, exactly like the
+    # untextured case above, says nothing about it.
+    meshes = Path(csv_path).resolve().parent / "meshes"
+    if meshes.is_dir():
+        vp.load_mesh_folder(meshes)
+
     vp.set_nodes(nodes)   # auto-frames the camera from the scene's bounding box
     return vp, nodes, textures, media
 

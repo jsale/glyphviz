@@ -29,7 +29,10 @@ from glyphviz_core.topology import (
     linear_placement_axes,
 )
 from glyphviz_core import point_cloud as pc
-from glyphviz_core.mesh_loader import load_mesh_file as _load_mesh_data
+from glyphviz_core.mesh_loader import (
+    SUPPORTED_EXTENSIONS as MESH_EXTENSIONS,
+    load_mesh_file as _load_mesh_data,
+)
 
 from glyphviz_core.geometry_data import (
     GEO_LINE_PRISM, GEO_POINT, RATIO_SHAPED_GEOMETRIES, _WIRE_IDS,
@@ -1374,6 +1377,60 @@ class Viewport(QOpenGLWidget):
         self._assets_rev += 1   # baked glCallList references resolve by id — rebake
         self.update()
         return mesh_id
+
+    def load_mesh_folder(self, folder) -> list[int]:
+        """Import every mesh file in *folder*, sorted alphanumerically, as
+        mesh_ids 1..N. Returns the ids actually loaded, in order.
+
+        This is the mesh counterpart of TextureManager.load_folder, and uses
+        deliberately the same rule: **id is the 1-based position in the sorted
+        file list**, so a scene's `mesh_id` column means the same thing on
+        every machine and after every reopen. Before this existed, a mesh_id
+        only meant "the Nth file imported by hand this session", which made a
+        mesh scene unshippable -- the CSV named shapes the recipient had no way
+        to resolve. A scene folder now carries its models in meshes/ exactly as
+        it carries its images in media/.
+
+        Unlike load_folder's texture reset, already-imported meshes are not
+        released: a hand-imported mesh keeps its id (load_mesh_file dedupes on
+        resolved path), and ids past N are left alone for further imports.
+        Files that fail to parse are skipped, so one bad model can't cost the
+        scene the rest of its shapes -- but the id numbering still counts them,
+        or every later mesh would silently shift by one."""
+        folder = Path(folder)
+        if not folder.is_dir():
+            return []
+        # Sorted by NAME as a plain string, deliberately, and not by Path:
+        # pathlib compares paths case-INSENSITIVELY on Windows and
+        # case-sensitively elsewhere, so `sorted(folder.iterdir())` hands out
+        # different mesh_ids on Windows and Linux for the same folder. A
+        # scene's ids have to mean the same thing on every machine, so this
+        # pins the case-sensitive order that GlyphViz Web also follows.
+        # (media/ -> texture_id still sorts Paths, and is left alone: changing
+        # it would renumber textures in scenes that already ship.)
+        files = sorted(
+            (q for q in folder.iterdir()
+             if q.is_file() and q.suffix.lower() in MESH_EXTENSIONS),
+            key=lambda q: q.name,
+        )
+        loaded: list[int] = []
+        for idx, path in enumerate(files):
+            mesh_id = idx + 1
+            try:
+                data = _load_mesh_data(str(path))
+            except Exception:
+                continue
+            self.makeCurrent()
+            self._geo.setup()
+            self._geo.register_mesh(mesh_id, data)
+            self._mesh_names[mesh_id] = data.name
+            self._mesh_paths[str(path.resolve())] = mesh_id
+            self._next_mesh_id = max(self._next_mesh_id, mesh_id + 1)
+            loaded.append(mesh_id)
+        if loaded:
+            self._assets_rev += 1   # baked glCallList references resolve by id — rebake
+            self.update()
+        return loaded
 
     def mesh_name(self, mesh_id: int) -> str:
         return self._mesh_names.get(mesh_id, "")

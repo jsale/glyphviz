@@ -53,7 +53,11 @@ you spend media slots on it:
 - Every **wireframe** variant: 0, 2, 4, 6, 8, 10, 12, 14, 17, 18, 20, 34.
 - Point 22 — a fixed-pixel `GL_POINTS` sprite drawn outside the display-list
   system, so it has no surface to map onto.
-- Mesh 23 — imported meshes render in their node color only.
+- Mesh 23 — **only when the mesh file carries no texture coordinates.** A
+  mesh imported with UVs is textured like any other geometry; one without
+  them is deliberately left flat, because every vertex would otherwise
+  sample the same texel and smear it over the whole model. If a mesh you
+  expected to texture renders flat, re-export it with UVs.
 - Line 27 — the plain Link connector (use Prism 28 if you need a texture).
 
 The three flat markers reuse the Grid's own `[-1,1]²  →  [0,1]²` mapping, so an

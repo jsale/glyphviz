@@ -307,14 +307,24 @@ def test_the_94_column_dialect_is_still_available(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# The shipped example scenes
+# Every scene in the repository
 #
 # Replaces the old single-file guard in test_tag_font_size.py, which only ever
 # audited sorted(examples)[0] -- any new scene sorting earlier silently took
 # over the slot and the previous file stopped being checked.
+#
+# mesh_creation_lab/ is swept alongside examples/ even though it is not part of
+# the shipped collection: the property being guarded (a save/reload cycle is
+# column-stable) is a property of the WRITER, and a lab scene exercises it just
+# as well as a gallery one. It is included only when present, so deleting or
+# restructuring the lab cannot fail the suite.
 # ---------------------------------------------------------------------------
 
-EXAMPLE_SCENES = sorted(Path('examples').rglob('*gv_node*.csv'))
+SCENE_ROOTS = [Path('examples'), Path('mesh_creation_lab')]
+EXAMPLE_SCENES = sorted(
+    p for root in SCENE_ROOTS if root.is_dir()
+    for p in root.rglob('*gv_node*.csv')
+)
 
 # Scenes chosen to cover the features that add columns: World Grid extents,
 # links, channel bindings, labels, rate animation and topo_scale. These get
