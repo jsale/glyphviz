@@ -95,6 +95,80 @@ nodes. The jet in `mesh_creation_lab/Jet/` is six meshes — airframe,
 radome, canopy, intakes, exhaust, stores — which is also what lets the canopy
 be translucent (`color_a`) while the airframe beside it is opaque.
 
+### Importing a model that already has materials
+
+A model you download is usually one file carrying a dozen materials and their
+textures. **Meshes › Import Model with Materials…** does that split for you:
+
+* the model's `usemtl` groups become **one node per material**, each with its
+  own mesh and its own `texture_id`;
+* they hang off a **hidden rig node** carrying the model's position, rotation
+  and size — move or scale the rig and the whole model follows;
+* the parts are written into the scene's `meshes/` folder and each material's
+  `map_Kd` image into `media/`, so the result reopens and ships like any
+  other scene.
+
+Ordinary **Import Mesh File…** is unchanged and still brings a model in as the
+single shape it always did. The two answer different questions — *give me this
+shape* versus *give me this model*.
+
+Three things worth knowing:
+
+* **Up axis.** Most tools export Y-up and GlyphViz is Z-up, so the rig is
+  created with `rotate_x = 90`. If a model arrives lying on its side, that one
+  field is what to change — no vertex is involved.
+* **Each part is scaled, not resized.** A part's `scale_x/y/z` is its own
+  extent within the whole model. Setting them all to 1 makes every part the
+  same size — a cockpit as large as the hull around it.
+* **Textures are found through the `.mtl`.** Parts whose material names no
+  `map_Kd` arrive with a flat colour, and the status bar says how many.
+
+!!! warning "When a model is drawn more than once"
+    The same export habit that loses textures also tends to write the model
+    out **several times over**. A Maya scene carrying both an object-level
+    material and per-face-set materials exports *both* assignments, so the OBJ
+    ships two or more fully overlapping copies of itself — each with its own
+    vertex indices, so nothing in the file marks them as duplicates.
+
+    On screen that is unmistakable once you know it: the surface **flickers
+    between two textures in a dense rib pattern** (z-fighting), and the copy
+    that covers the whole model hides the correctly-textured one under a
+    single wrong image. Lift one part out of the way and a second, complete
+    ship is sitting underneath.
+
+    GlyphViz removes those on import — each distinct surface is kept once,
+    from the material with the **fewest faces**, on the reasoning that a
+    narrow assignment is the specific intent and the catch-all is the leftover.
+    Anything a broad material covers *alone* it still keeps, so no geometry is
+    lost. The count is always reported.
+
+    The cargo ship this was found on shipped **87,128 triangles for 24,830 of
+    actual surface** — 3.5 copies. Its catch-all material kept exactly the
+    3,340 engine triangles no per-material assignment claimed. Pass
+    `--keep-overlaps` to `tools/model_to_scene.py` to import a file as
+    authored.
+
+!!! warning "When an `.mtl` has lost its textures"
+    V-Ray, Arnold and Redshift keep their shading in a node graph the `.mtl`
+    format cannot express. Exporting to OBJ from such a scene routinely writes
+    an `.mtl` with **no `map_Kd` at all and `Kd 0 0 0` on every material** —
+    the model is fine, only the material file is lossy. GlyphViz treats an
+    all-black `Kd` as "no colour given" and uses neutral grey, rather than
+    importing a silhouette.
+
+    To recover the real assignment you need a second source. The command-line
+    `tools/model_to_scene.py` takes one:
+
+    ```
+    python tools/model_to_scene.py MODEL.obj --out SCENE_DIR \
+        --textures "path/to/textures" --maya-scene MODEL_Scene.ma
+    ```
+
+    `--maya-scene` reads the Maya graph directly, which is authoritative;
+    `--textures` alone falls back to matching material names against texture
+    file names, which is a good guess and reported as one. Add `--dry-run` to
+    see the match before anything is written.
+
 ### Textures
 
 A mesh whose file carries **texture coordinates** can wear a `texture_id` from

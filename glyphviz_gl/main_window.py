@@ -40,6 +40,7 @@ from glyphviz_core.channel_engine import (
     channel_attrs, channel_id_of, set_channel_id,
 )
 from glyphviz_core import point_cloud_loader as pcl
+from glyphviz_core import mesh_loader, model_import
 from glyphviz_core.drop_router import (
     ACTION_MERGE_CSV, ACTION_MESH, ACTION_OPEN_CSV, ACTION_PDB,
     ACTION_POINT_CLOUD, ACTION_TEXTURES,
@@ -422,6 +423,16 @@ class MainWindow(QMainWindow):
             "Applies to the selected node, or creates a new root node if none is selected."
         )
         import_mesh_act.triggered.connect(self._import_mesh_file)
+
+        import_model_act = mesh_menu.addAction("Import Model with &Materials…")
+        import_model_act.setToolTip(
+            "Import a multi-material model (OBJ + MTL) as a small hierarchy:\n"
+            "a hidden rig node holding the model's position and size, with one\n"
+            "visible child per material wearing its own mesh and texture.\n"
+            "Parts and images are written into the scene's meshes/ and media/\n"
+            "folders, so the result reopens and ships intact."
+        )
+        import_model_act.triggered.connect(self._import_model_with_materials)
 
         import_cloud_act = mesh_menu.addAction("Import &Point Cloud…")
         import_cloud_act.setToolTip(
@@ -2521,6 +2532,137 @@ class MainWindow(QMainWindow):
         if not path:
             return
         self._load_mesh_path(path)
+
+    def _import_model_with_materials(self):
+        """Meshes > Import Model with Materials…: split a multi-material model
+        into one node per material.
+
+        Deliberately a SEPARATE action rather than a change to Import Mesh
+        File, which still brings any model in as the single shape it always
+        did. The two answer different questions — "give me this shape" versus
+        "give me this model" — and a scene built on the first would be
+        rewritten under its author by folding them together.
+        """
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Import Model with Materials", str(Path.home()),
+            "Model Files (*.obj *.stl *.ply *.glb *.gltf)",
+        )
+        if not path:
+            return
+        self._load_model_parts(path)
+
+    def _model_asset_folder(self, model_path: Path) -> Path | None:
+        """Where this import should write its meshes/ and media/ folders.
+
+        A scene's models and images are resolved by POSITION in the folders
+        beside its CSV, so an import has to put them there or the scene cannot
+        reopen. With a scene open that folder is known; without one there is
+        nothing to be beside, so ask — defaulting to the model's own folder,
+        which is where the user most often wants the scene to end up.
+        """
+        if self._current_path:
+            return Path(self._current_path).parent
+        folder = QFileDialog.getExistingDirectory(
+            self, "Folder for this model's scene (meshes/ and media/ go here)",
+            str(model_path.parent),
+        )
+        return Path(folder) if folder else None
+
+    def _load_model_parts(self, path: str) -> bool:
+        """Import *path* as a rig node plus one node per material.
+
+        Reached from the menu action only: dropping a model still does the
+        single-shape import it has always done, since a drop carries no way to
+        say which of the two was meant and changing it would rewrite the
+        gesture under everyone using it.
+
+        Falls back to the single-shape import (and says so) when the model has
+        no material split to exploit.
+        """
+        model = Path(path)
+        try:
+            parts = mesh_loader.load_mesh_parts(str(model))
+        except Exception as exc:
+            self.statusBar().showMessage(f"Model import failed: {exc}")
+            return False
+        if not parts:
+            self.statusBar().showMessage(
+                f"{model.name} has no material split — importing as one shape.")
+            return self._load_mesh_path(path)
+
+        scene_dir = self._model_asset_folder(model)
+        if scene_dir is None:
+            return False
+        mesh_dir, media_dir = scene_dir / 'meshes', scene_dir / 'media'
+
+        # Textures are looked for beside the model, which is where a model
+        # download puts them. A .mtl naming its maps outright is used first;
+        # this pool only feeds the name-matching fallback.
+        textures = model_import.index_textures(model.parent)
+        plan = model_import.plan_model(parts, model, textures)
+
+        # ids are folder POSITIONS, so adding files renumbers whatever sorted
+        # after them. Snapshot both folders, write, then carry every existing
+        # node across by file name.
+        mesh_before = model_import.folder_ids(mesh_dir)
+        tex_before = model_import.folder_ids(media_dir, model_import.IMAGE_EXTS)
+        try:
+            model_import.write_assets(
+                plan, mesh_dir, media_dir,
+                prefix=model_import.safe_name(model.stem) + '_')
+        except OSError as exc:
+            self.statusBar().showMessage(f"Could not write model assets: {exc}")
+            return False
+        mesh_after = model_import.folder_ids(mesh_dir)
+        tex_after = model_import.folder_ids(media_dir, model_import.IMAGE_EXTS)
+
+        shifted = (model_import.remap_ids(self.nodes, mesh_before, mesh_after, 'mesh_id')
+                   + model_import.remap_ids(self.nodes, tex_before, tex_after, 'texture_id'))
+
+        # An import is a manual edit of the in-memory scene; leaving Watch and
+        # Reload armed would silently throw it away on the next disk change.
+        if self._watch_act.isChecked():
+            self._watch_act.setChecked(False)
+            self._toggle_watch_reload(False)
+
+        next_x, next_y = self._next_root_pos()
+        nodes = model_import.build_nodes(
+            plan,
+            first_id=max((n.id for n in self.nodes), default=0) + 1,
+            mesh_ids=mesh_after, texture_ids=tex_after,
+            position=(next_x, next_y, self._placement_z(is_child=False)),
+            label=model.stem,
+        )
+
+        for mesh_id in self._viewport.load_mesh_folder(mesh_dir):
+            self._add_mesh_combo_entry(mesh_id)
+        self._apply_texture_folder(media_dir, silent=True)
+
+        for n in nodes:
+            self.nodes.append(n)
+        self._viewport.register_nodes(nodes)
+        self._table.set_nodes(self.nodes)
+        self._update_stats()
+        self._update_sel_values()
+        self._table.select_by_ids({nodes[0].id})
+        self._viewport.focus_on_node(nodes[0])
+
+        msg = (f"Imported {model.name}: {len(plan.parts)} parts, "
+               f"{plan.textured} textured, {len(plan.images)} images "
+               f"— assets in …/{scene_dir.name}/meshes|media.")
+        if shifted:
+            msg += f" Re-pointed {shifted} existing node ids."
+        if plan.textured < len(plan.parts):
+            msg += (f" {len(plan.parts) - plan.textured} parts had no texture "
+                    f"the .mtl could name.")
+        dropped = sum(p.dropped_faces for p in parts)
+        if dropped:
+            # Never silent: a large number here is a fact about the FILE (it
+            # ships overlapping copies of itself), not about the import.
+            msg += (f" Removed {dropped:,} overlapping duplicate triangles "
+                    f"the model drew more than once.")
+        self.statusBar().showMessage(msg)
+        return True
 
     def _import_point_cloud(self):
         """Meshes > Import Point Cloud…: bring a LIDAR/scan file into the
