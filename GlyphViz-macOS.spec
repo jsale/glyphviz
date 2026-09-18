@@ -55,6 +55,12 @@ a = Analysis(
         'OpenGL.arrays.numbers',
         # Imported conditionally at runtime in video_manager.py / audio_player.py.
         'PySide6.QtMultimedia',
+        # Mesh import — trimesh imports networkx inside a try/except and
+        # substitutes an ExceptionWrapper on failure, so a missing install
+        # surfaces only when a model with inconsistent face winding is
+        # imported, as ModuleNotFoundError from deep inside the load. Named
+        # here because that guarded import is easy for a static scan to miss.
+        'networkx',
     ],
     hookspath=[],
     hooksconfig={},
