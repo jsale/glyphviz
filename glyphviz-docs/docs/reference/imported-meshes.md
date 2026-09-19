@@ -11,7 +11,7 @@ Supported files: **OBJ, STL, PLY, glTF/GLB**.
 
 ## Getting a mesh into a scene
 
-Three routes, all equivalent:
+Three routes bring a mesh in as **one shape**:
 
 * **Meshes > Import Mesh File…** — loads one file and assigns it to the
   selection (or creates a node for it if nothing is selected).
@@ -19,6 +19,12 @@ Three routes, all equivalent:
 * **A `meshes/` folder beside the node CSV** — loaded automatically when the
   scene opens. This is the one to use for a scene you intend to keep or share;
   see [Scene folders](#scene-folders-meshes-and-media) below.
+
+A fourth brings a **whole model** in, split across several nodes:
+
+* **Meshes > Import Model with Materials…** — for a downloaded model that
+  came with an `.mtl` and texture images. See
+  [Importing a model that already has materials](#importing-a-model-that-already-has-materials).
 
 Each imported mesh gets its own entry in the Geometry dropdowns —
 `Mesh 1: hull`, `Mesh 2: greebles`, … — and picking one sets both `geometry`
@@ -83,10 +89,16 @@ seam does not put a shading stripe down an otherwise smooth surface.
 
 ## Colour, texture and materials
 
-**A node paints its mesh in one flat colour.** A mesh file's own materials —
-its `.mtl`, its embedded glTF textures, its per-vertex colours — are
-deliberately ignored. In GlyphViz the appearance belongs to the *node*, so the
-same model can be re-skinned per instance without touching the file.
+**A node paints its mesh in one flat colour.** Once a mesh is in the scene, its
+file's own materials — the `.mtl`, embedded glTF textures, per-vertex colours —
+no longer have any say. In GlyphViz the appearance belongs to the *node*, so
+the same model can be re-skinned per instance without touching the file.
+
+A material file is read at exactly one moment: **import**, and only by
+[Import Model with Materials…](#importing-a-model-that-already-has-materials),
+which uses it to decide the colour and texture each part's node starts with.
+After that the nodes carry the appearance and the `.mtl` is not consulted
+again — it is not a live link, and editing it later changes nothing.
 
 ### One colour per mesh means several meshes per model
 
