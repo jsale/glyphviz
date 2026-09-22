@@ -108,6 +108,7 @@ nav:
           - "Four Instruments in C Major": examples/audio-four-instruments.md
           - "Moby — Go": examples/audio-moby-go.md
           - "Violin in A Major": examples/audio-violin-a-major.md
+          - "Warm Winter: One Glyph per Instrument": examples/audio-warm-winter.md
       - Maps & terrain:
           - "Cowles Mountain Terrain": examples/surface-cowles.md
           - "Multi-Hike Ghost Race": examples/multi-hike-race.md

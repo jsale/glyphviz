@@ -2,6 +2,15 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-09-20
+
+- **[Warm Winter: One Glyph per Instrument](examples/audio-warm-winter.md) joined the Examples Gallery**, with its own page, screenshot and download. The scene itself shipped on 4 September; this is the write-up, and it goes in beside [Cat Scan Synesthesia](examples/audio-cat-scan-synesthesia.md) rather than replacing it — the two solve the same problem from opposite ends, one from a multitrack session and one from a finished stereo mix.
+- **Two changes to the scene, both about size.**
+    - **Track 2's grid of orbs was opened out to three times its spacing**, so its spheres stop crowding each other now that every glyph is larger.
+    - **The scene is now sized for playback rather than for its rest state.** Every root is written at its own *peak* loudness, which is a state the piece never actually reaches — the seven tracks peak at different times, and a dormant glyph sits at 38% of it. Pressing Play therefore used to shrink the whole column. The scene is now scaled so that a glyph reads correctly **while its instrument is playing**; the file opens about 1.4× larger than a typical playing frame, and the climax comes back up to roughly the size it opened at.
+- **The example now opens correct at GlyphViz's own Global Scale of 1.0.** Nothing in a node CSV records which Global Scale a scene was authored against, and this one was tuned at 3.0, so the generator bakes that setting into the numbers instead of shipping a file that needs a slider moved by hand. Worth knowing if you do the same to a scene of your own: Global Scale is **not** a uniform zoom — besides making every glyph larger, it is the parent-radius term in each topology's placement formula, so a Sphere shell spreads by less than it grows while a Plane blanket does not spread at all.
+- `tools/capture_example_shots.py` can now scrub to a Channels frame before grabbing, for an animated scene whose hero image is a moment of the music rather than its resting pose.
+
 ## 2026-09-18
 
 - **A model with several materials now imports as several nodes.** A downloaded OBJ is usually one file carrying a dozen materials, each with its own texture, and GlyphViz could only ever bring it in as a single shape wearing a single image. **Meshes › Import Model with Materials…** splits it instead: a hidden rig node holds the model's position, rotation and size, and one visible child per material wears its own mesh and its own texture. The parts and their images are written into the scene's `meshes/` and `media/` folders, so the result reopens and ships like any other scene. See [Imported Meshes](reference/imported-meshes.md).

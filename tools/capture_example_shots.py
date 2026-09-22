@@ -49,6 +49,12 @@ MANIFEST = [
     ("audio-moby-go", EX / "Audio_Animation_Example" / "Moby_Go_Example", None),
     ("audio-violin-a-major",
      EX / "Audio_Animation_Example" / "Violin_A_Major_Example", None),
+    # Unlike the scenes below whose static pose IS the hero, this one opens on
+    # every root at its own peak presence — a state the playback never reaches,
+    # under the near-black sky the piece starts at. Its hero is a frame, not
+    # the rest state: see FRAME.
+    ("audio-warm-winter",
+     EX / "Audio_Animation_Example" / "Warm_Winter_Synesthesia_Example", None),
     ("surface-cowles", EX / "Surface_Example", None),
     ("multi-hike-race", EX / "Multi_Hike_Race_Example", None),
     ("sd-seismicity", EX / "SD_Seismicity_Example", None),
@@ -124,6 +130,17 @@ MANIFEST = [
     ("sd-cedar-runoff", EX / "San_Diego_Cedar_Fire_Runoff_Example", None),
 ]
 
+
+# Channels frame to scrub to before grabbing, for a scene whose story is a
+# moment of its animation rather than its rest state. Applied after the load
+# (and so after auto-framing, which fits the rest state — use a CAMERA zoom if
+# the frame is smaller). Loading a scene folder brings its ch-map/ch-tracks
+# along exactly as it does for a user, so this is just the transport slider.
+FRAME = {
+    # 1:53 at 30 fps — the climax the whole piece is built around, all seven
+    # instruments in, and the sky at its warmest.
+    "audio-warm-winter": 3390,
+}
 
 # Auto-framing fits the bounding box of everything in the scene, title and
 # legend nodes included, so a scene whose caption floats off to one side gets
@@ -215,6 +232,12 @@ CAMERA = {
     # the Pacific on the left.
     "sd-fire-history": {"target": (-10, 10, 10), "distance": 340,
                         "azimuth": 270, "elevation": 36},
+    # Warm Winter: a seven-glyph totem on one vertical axis, 106 units tall at
+    # the climax, in a wide frame. Aim at the middle of the column and stand
+    # low, so the stack fills the height and track 1's pale floor still reads
+    # underneath it.
+    "audio-warm-winter": {"target": (0, 0, 14), "distance": 165,
+                          "azimuth": 35, "elevation": 7},
     # From the south-west: the map in front, both storm slabs behind it.
     "sd-cedar-runoff": {"target": (20, 110, 85), "distance": 560,
                         "azimuth": 250, "elevation": 24},
@@ -274,6 +297,14 @@ def main() -> int:
                     cap.vp._cam_distance *= cam.get("zoom", 1.0)
                 cap.vp.update()
                 pump(0.1)
+            if slug in FRAME:
+                if cap.win._ch_engine is None:
+                    print(f"  !! {slug}: no channel file loaded, cannot scrub")
+                    failed.append(slug)
+                    continue
+                cap.win._ch_frame = FRAME[slug]
+                cap.win._ch_apply_and_show_frame(FRAME[slug])
+                pump(0.2)
             cap.viewport_png(OUT_DIR / f"{slug}.png")
             print(f"  ok {slug}  ({path.name})")
     finally:

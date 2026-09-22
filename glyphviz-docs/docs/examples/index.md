@@ -54,6 +54,7 @@ One watershed, built up in phases: its terrain and river network first, then the
 - **[Four Instruments in C Major](audio-four-instruments.md)** — four instruments, one spectral array
 - **[Moby — Go](audio-moby-go.md)** — the spectral array driven by a dance classic
 - **[Violin in A Major](audio-violin-a-major.md)** — a solo violin's harmonics made visible
+- **[Warm Winter: One Glyph per Instrument](audio-warm-winter.md)** — a seven-track session read one instrument at a time, as a column that blooms with the music
 
 ## Maps & terrain
 
