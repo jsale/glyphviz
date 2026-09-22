@@ -46,7 +46,15 @@ A perfectly nested set — ~17.4 s of stagger on each side, the climax centred a
   always matches the sky.
 
 Open the file without playing and every glyph is at full size under the night
-sky — that is the rest state the Stop button restores.
+sky — that is the rest state the Stop button restores. "Full size" here means
+each root at its own **peak** presence, all seven at once, which is a state the
+playback never reaches: the tracks peak at different times, and a dormant glyph
+sits at 38% of it. So the file opens about 1.4× larger than a typical playing
+frame, and that is deliberate — the scene is sized so that a glyph reads
+correctly **while its instrument is playing** (measured: a glyph holds 0.70 of
+its written peak while playing), rather than so that the rest state does. Press
+Play and the column settles to the size it was tuned at; the climax comes back
+up to roughly the opened size.
 
 The glyphs grow into each other once the music is running, and that is the
 point rather than a defect: the first pass spread them along an arc wide enough
@@ -55,10 +63,45 @@ some overlap when the animation plays, but that's the way music is. The
 instruments are not isolated from each other in the audio, they are all
 overlapping."* The column is what he sees in his synesthesia image.
 
-Track 1 also carries a `topo_scale` of 8.91, set on the Properties panel's Topo
-Scale slider. Plane topology reads all three translate axes as distances, so it
-spreads that glyph's 4×3 blanket about nine times wider — the pad that holds
-the whole song becomes the floor the column stands on. No other track scales.
+Tracks 1 and 2 carry a `topo_scale`, set on the Properties panel's Topo Scale
+slider — 8.91 and 3.0 respectively. Plane topology reads all three translate
+axes as distances, so track 1's spreads that glyph's 4×3 blanket about nine
+times wider — the pad that holds the whole song becomes the floor the column
+stands on — and track 2's opens its grid of orbs out to three times, which is
+what keeps them from crowding once every sphere has grown. No other track
+scales.
+
+## Global Scale is baked into the file
+
+Nothing in a node CSV records which Global Scale a scene was authored against,
+and this one is tuned at **3.0** rather than the app's 1.0 default. Rather than
+ship a file that only looks right after a slider is moved by hand, the
+generator bakes that setting into the numbers, so the example opens correct at
+GlyphViz's own default.
+
+Global Scale does two things, and it is the second that makes this more than a
+size multiplier: every glyph renders that many times larger, *and* it is the
+parent-radius term in every topology's placement formula — a Sphere parent puts
+a child at `Global Scale + translate_z`, a Pin at `Global Scale + translate_x`
+up the spike. A purely Cartesian parent (Plane, None) has no such term, so its
+children do not move at all. Global Scale 3.0 is therefore *not* a uniform 3×
+zoom: the seven root positions stay where they are, a Plane blanket keeps its
+spacing while its glyphs triple, and a Sphere shell spreads by rather less than
+it grows.
+
+The exact equivalent, written at Global Scale 1.0, is to multiply each glyph
+root's `scale` by 3 — every scale below it is a ratio to its parent's, so one
+multiplication at the root carries the whole glyph — and to divide every node's
+`topo_scale` by 3, which scales down precisely the translate axes a topology
+reads as a distance and leaves every angle alone. Verified node-for-node
+against the engine: the baked file at 1.0 reproduces the unbaked one at 3.0 to
+1e-9 in both world position and draw matrix, for all 5,006 nodes, static and
+mid-playback.
+
+One consequence worth knowing before tuning this scene again: the Topo Scale
+the Properties panel shows for a root is a third of the number set on the
+slider — track 1 reads `2.9708`, not `8.9125`. Put Global Scale back to 1.0
+first, or the bake compounds.
 
 ## Why the frequency windows differ per track
 
@@ -103,12 +146,10 @@ world's arc — is derived from the audio and the tables at the top of
 `generate_warm_winter_synesthesia.py`. Its module docstring is the full design
 note.
 
-The committed node CSV is the one Jeff saved out of the app, so it differs from
-a fresh run in three harmless ways: it is in the 94-column save format the app
-wrote at the time (GlyphViz has saved the compact dialect since 2026-09-07, so
-re-saving it now would shrink it); the seven roots sit within half a unit of
-`x = y = 0` rather than exactly on it (they were dragged, not typed); and the
-branch-2/3 rows carry the `rotate_z` and `translate_x` the rate channels had
-accumulated at the moment of the save — the "glyph remembers the song" effect,
-which on periodic axes is a uniform phase offset per band and nothing more.
-Every design field matches the generator exactly.
+The committed files are a straight run of the script — no hand edits, so
+re-running it reproduces them. (Until 2026-09-20 the committed node CSV was one
+Jeff had saved out of the app instead; that copy carried the `rotate_z` and
+`translate_x` its rate channels had accumulated at the moment of the save — the
+"glyph remembers the song" effect — plus sub-unit drift on the seven roots, and
+cost 809 KB against this file's 585 KB. Worth knowing if you save an animated
+scene mid-playback: the app bakes the accumulated rates into the file.)

@@ -72,9 +72,15 @@ saturation climbs track by track into gold, orange, scarlet and magenta for
 4-7 — warm.  Branch 2 is always Sphere topology, so the leaf clusters stay
 compact orbs whatever the trunk is doing.
 
-Track 1 additionally carries a topo_scale (see TRACK_STYLES), which spreads its
-blanket ~9x wide into the floor the whole column stands on.  Nothing is pinned:
-every node carries a label in the tag CSV, and T shows the ones you select.
+Tracks 1 and 2 additionally carry a topo_scale (see TRACK_STYLES): track 1's
+spreads its blanket ~9x wide into the floor the whole column stands on, and
+track 2's opens its grid of orbs out to 3x so the spheres stop crowding each
+other.  Nothing is pinned: every node carries a label in the tag CSV, and T
+shows the ones you select.
+
+The whole scene is written with the app's Global Scale baked in at 3.0, so it
+opens correct at GlyphViz's own default of 1.0 — see GLOBAL_SCALE, which is
+also the note to read before tuning this scene in the app again.
 
 Per-track frequency windows
 ---------------------------
@@ -116,8 +122,12 @@ Channel animation (4 tracks per band, 1 per glyph, 5 for the world)
                                children never fly off — loud passages just
                                orbit faster.
               rotate_rate_z <- same spin signal as branch 2
-  master root scale_x/y/z   <- that track's presence: 38% dormant -> 100% while
-                               the instrument plays
+  master root scale_x/y/z   <- that track's presence: 38% dormant -> 100% at
+                               that track's own loudest moment.  The file is
+                               written at that 100%, which is why it opens
+                               LARGER than any frame of the playback; the scene
+                               is sized so a PLAYING glyph is the right size —
+                               see PLAYBACK_FIT.
   world row   color_r/g/b   <- the sky, from the seven presences combined
               fog_start/end <- the mist, opening and closing with it
 
@@ -178,6 +188,90 @@ FPS      = 30.0
 # absolute values.  Cat Scan settled at 4.0; 3.0 here because seven glyphs
 # share one scene and each still has to stay recognizable at its peak.
 EXAGGERATION = 3.0
+
+# Global Scale, baked in
+# ----------------------
+# Jeff tunes this scene with the app's Global Scale slider at 3.0, not at its
+# 1.0 default, and nothing in a node CSV records which setting a scene was
+# authored against.  Rather than ship a file that only looks right with a
+# slider moved by hand, the generator bakes that setting into the numbers, so
+# the example opens correct at GlyphViz's own default.
+#
+# Global Scale (glyphviz_core/scene.py's base_scale) does exactly two things,
+# and it is the SECOND one that makes this more than a size multiplier:
+#
+#   1. every glyph renders base_scale times larger (scale x base_scale, once
+#      per node, in the draw matrix only);
+#   2. it IS the parent radius term in every topology's placement formula —
+#      a Sphere parent puts a child at (base_scale + translate_z), a Pin at
+#      (base_scale + translate_x) up the spike, a Rod's length scales with it.
+#      Purely Cartesian parents (Plane, None) have no such term at all.
+#
+# So Global Scale 3.0 is NOT a uniform 3x zoom: glyphs grow 3x while a Plane
+# parent's children stay exactly where they were, and the seven root positions
+# (a root's translate IS its world position) do not move either.  That change
+# of proportion is the thing being preserved here.
+#
+# The exact equivalent, at base_scale = 1, is:
+#
+#   * multiply each ROOT's scale by GLOBAL_SCALE.  Every scale in this scene is
+#     a ratio to its parent's (a band root is w_root / root_scale of its root,
+#     and so on down), so one multiplication at the root makes every node in
+#     the glyph render GLOBAL_SCALE times larger — exactly what base_scale did.
+#   * divide every node's topo_scale by GLOBAL_SCALE.  Node.topo_scale
+#     multiplies precisely the translate axes a topology reads as a DISTANCE
+#     (LINEAR_AXES below), and dividing those by S is what turns f(t; S) into
+#     S * f(t; 1) for every one of the offset formulas:
+#         Sphere  (S + tz) . dir      -> S . (1 + tz/S) . dir
+#         Pin     (ty, tz, S + tx)    -> S . (ty/S, tz/S, 1 + tx/S)
+#         Spiral  (S + tz), tx.S/360  -> S . (1 + tz/S), tx/360
+#         Rod     tx/180 . 2 . S . H  -> S . tx/180 . 2 . H
+#         Plane   (tx, ty, tz)        -> S . (tx/S, ty/S, tz/S)
+#     while angular axes (longitude, latitude, sweep) are left alone, as they
+#     must be.  The root's scale, now S times larger, supplies the S outside.
+#
+# Dividing topo_scale rather than the translate values is also what keeps the
+# CHANNEL-driven translates right for free: the altitude pops in build_tracks
+# are written into translate axes that topo_scale multiplies at placement time,
+# so they scale with everything else and the animation needs no change.
+#
+# Verified node-for-node against the real engine: the baked scene at
+# base_scale = 1 reproduces the unbaked scene at base_scale = 3 to 1e-9 in both
+# world position and draw matrix, for all 5,006 nodes.
+#
+# Consequence worth knowing: the Topo Scale the Properties panel now shows for
+# a root is a THIRD of the number set on the slider (Track 1 reads 2.9708, not
+# 8.9125).  The file is authored for Global Scale 1.0 — put the slider back
+# there before tuning this scene again, or the bake compounds.
+GLOBAL_SCALE = 3.0
+
+# Sized for playback, not for the file's rest state
+# --------------------------------------------------
+# Every root is written at its own PEAK presence, because that is what the
+# presence channel's top of range means — and that is a state PLAYBACK NEVER
+# REACHES, since the seven tracks peak at different times.  A dormant glyph
+# plays at PRESENCE_REST (38%) of it, and at frame 0 all seven are dormant, so
+# pressing Play collapsed the scene to 62% of the size it opened at (Jeff's
+# 2026-09-20 report: "when I click Play, they shrink back down to 1/3 their
+# size").  Measured over the whole piece, a glyph holds 0.70 of its written
+# peak while its own instrument is actually playing.
+#
+# So the scene is restated at the size a PLAYING glyph has: what you tune in
+# the app is then what you watch, and the file's own rest state is the outlier
+# rather than the reference.  The file therefore opens ~1.4x larger than a
+# playing frame, and Stop restores that larger look.
+#
+# This is a multiplier on the ROOT scales only.  A root's scale carries its
+# whole glyph — its own drawn size, and, through world_basis, every
+# descendant's position and size — so multiplying it is a uniform zoom of that
+# glyph with every internal proportion untouched.  Raising GLOBAL_SCALE would
+# NOT do this: that divides topo_scale too, which grows the glyphs without
+# growing their spread and packs the children tighter.  Dividing Z_RISE by the
+# same factor is the exact equivalent (only the glyph-to-column ratio matters,
+# the rest is camera distance); the roots carry it instead, because the column
+# spacing is Jeff's own design and this is not a re-spacing.
+PLAYING_FRACTION = 0.70   # measured; see build_tracks
+PLAYBACK_FIT = 1.0 / PLAYING_FRACTION
 
 # geometry ids — glyphviz_core/geometry_data.py
 GEO_CUBE, GEO_SPHERE_WIRE, GEO_SPHERE   = 1, 2, 3
@@ -306,17 +400,20 @@ class TrackStyle:
 #                                                                     scale scale scale   hue   sat   val
 TRACK_STYLES = [
     TrackStyle("Track 1", TOPO_PLANE,  TOPO_PLANE,  GEO_RING_WIRE,     2.5, 1.00, 8.912509381, 0.550, 0.28, 0.93),
-    TrackStyle("Track 2", TOPO_PLANE,  TOPO_SPHERE, GEO_RING_WIRE,     2.5, 1.00, 1.000000000, 0.680, 0.34, 0.90),
+    TrackStyle("Track 2", TOPO_PLANE,  TOPO_SPHERE, GEO_RING_WIRE,     2.5, 1.00, 3.000000000, 0.680, 0.34, 0.90),
     TrackStyle("Track 3", TOPO_SPHERE, TOPO_SPHERE, GEO_SPHERE_WIRE,   2.5, 1.00, 1.000000000, 0.800, 0.40, 0.92),
     TrackStyle("Track 4", TOPO_SPIRAL, TOPO_SPIRAL, GEO_TORUS_WIRE,    2.5, 1.00, 1.000000000, 0.125, 0.74, 1.00),
     TrackStyle("Track 5", TOPO_PLANE,  TOPO_ROD,    GEO_RING_WIRE,     2.5, 1.00, 1.000000000, 0.070, 0.86, 1.00),
     TrackStyle("Track 6", TOPO_ROD,    TOPO_ZROD,   GEO_CYLINDER_WIRE, 1.9, 1.30, 1.000000000, 0.010, 0.93, 1.00),
     TrackStyle("Track 7", TOPO_PIN,    TOPO_PIN,    GEO_PIN_WIRE,      9.0, 1.30, 1.000000000, 0.905, 1.00, 1.00),
 ]
-# Track 1's topo_scale is Jeff's, set on the Topo Scale log slider in the
-# Properties panel and read back out of his saved scene.  Plane reads all three
-# translate axes as distances, so it spreads that glyph's 4x3 blanket ~9x wide
-# — the pad that holds the whole song becomes the floor the column stands on.
+# The two topo_scales are Jeff's, set on the Topo Scale log slider in the
+# Properties panel.  Plane reads all three translate axes as distances, so
+# track 1's spreads that glyph's 4x3 blanket ~9x wide — the pad that holds the
+# whole song becomes the floor the column stands on — and track 2's opens its
+# grid of orbs out to 3x, which is what stops them crowding once Global Scale
+# has grown every sphere.  These are the numbers AS SET ON THE SLIDER; each is
+# divided by GLOBAL_SCALE on its way into the file.
 HUE_SPREAD = 0.045    # hue slide from the glyph's lowest band to its highest
 
 TOPO_LABELS = {TOPO_PLANE: "Plane", TOPO_SPHERE: "Sphere", TOPO_SPIRAL: "Spiral",
@@ -485,6 +582,31 @@ def band_root_world(style: TrackStyle, i: int) -> float:
             ) * style.band_scale
 
 
+def root_scale_written(style: TrackStyle) -> float:
+    """The scale a glyph root is actually written with.
+
+    style.root_scale stays the scene's design number — "this root is one
+    root-local unit, and its world radius" — because every scale below it is a
+    ratio measured against it (band roots divide by it, and the presence
+    channel is expressed in it).  Both whole-scene multipliers are applied
+    here, at the one node per glyph where multiplying makes the whole glyph
+    render larger without touching a single ratio: the Global Scale bake
+    (GLOBAL_SCALE) and the playback fit (PLAYBACK_FIT).
+    """
+    return style.root_scale * GLOBAL_SCALE * PLAYBACK_FIT
+
+
+def linear_scaled(topo: int, t: tuple[float, float, float], k: float
+                  ) -> tuple[float, float, float]:
+    """Multiply only the axes *topo* reads as a distance, leaving angles alone
+    — what a parent's Node.topo_scale does at placement time.  Mirrors
+    glyphviz_core/topology.py's scale_linear_axes; see LINEAR_AXES."""
+    ax, ay, az = LINEAR_AXES[topo]
+    return (t[0] * k if ax else t[0],
+            t[1] * k if ay else t[1],
+            t[2] * k if az else t[2])
+
+
 def band_colors(style: TrackStyle, i: int) -> tuple[tuple[int, int, int], ...]:
     """(branch1, branch2, branch3) RGB for band i of this track: the track's own
     hue slides slightly with frequency, value deepens toward the core and
@@ -593,19 +715,24 @@ def glyph_extent(style: TrackStyle) -> tuple[float, float, float]:
     Nothing is placed from this any more (the glyphs stack on one axis); it is
     the generator's own report of how much room each glyph asks for, which is
     the number to look at when a topology or a topo_scale changes.
+
+    Reported in the units the file is written in, i.e. with the Global Scale
+    bake applied: sizes carry GLOBAL_SCALE, the linear placement axes carry its
+    reciprocal (see GLOBAL_SCALE).  Compare these numbers against Z_RISE, which
+    the bake does NOT touch — a root's translate is its world position.
     """
     alt_attr, _rest = ALT_AXIS[style.topo1]
-    ax_lin, ay_lin, az_lin = LINEAR_AXES[style.topo0]
+    root_s = root_scale_written(style)
+    k1 = style.topo_scale / GLOBAL_SCALE      # the root's written topo_scale
+    k2 = 1.0 / GLOBAL_SCALE                   # every band root's
     radial, z_lo, z_hi = 0.0, 0.0, 0.0
-    for i, (tx, ty, tz) in enumerate(level1(style.topo0, N_BANDS)):
+    for i, off1 in enumerate(level1(style.topo0, N_BANDS)):
         z = zone_of_band(i)
         swell = 1.0 + LAYOUT_SWELL_FRACTION * EXAGGERATION * z.scale_gain
-        k = style.topo_scale        # only the axes this topology reads as a distance
-        cx, cy, cz = (c * style.root_scale for c in topo_offset(
-            style.topo0, tx * k if ax_lin else tx, ty * k if ay_lin else ty,
-            tz * k if az_lin else tz))
+        cx, cy, cz = (c * root_s for c in topo_offset(
+            style.topo0, *linear_scaled(style.topo0, off1, k1)))
 
-        w_root = band_root_world(style, i) * swell
+        w_root = band_root_world(style, i) * GLOBAL_SCALE * swell
         pop = LAYOUT_SWELL_FRACTION * EXAGGERATION * z.alt_peak
         d_xy = d_z = 0.0
         for (ax, ay, az) in level2(style.topo1, z.n2, z.l2_lat):
@@ -613,10 +740,11 @@ def glyph_extent(style: TrackStyle) -> tuple[float, float, float]:
                 ax += pop
             else:
                 az += pop
-            ox, oy, oz = topo_offset(style.topo1, ax, ay, az)
+            ox, oy, oz = topo_offset(
+                style.topo1, *linear_scaled(style.topo1, (ax, ay, az), k2))
             d_xy = max(d_xy, math.hypot(ox, oy))
             d_z = max(d_z, abs(oz))
-        tips = (z.l2_world + 2.0 * z.l3_world) * swell
+        tips = (z.l2_world + 2.0 * z.l3_world) * GLOBAL_SCALE * swell
         radial = max(radial, math.hypot(cx, cy) + w_root * d_xy + tips)
         z_lo = min(z_lo, cz - w_root * d_z - tips)
         z_hi = max(z_hi, cz + w_root * d_z + tips)
@@ -663,7 +791,12 @@ def _row(node_id, parent_id, level, t, scale, color, alpha, geometry, topo,
         "scale_z": round(scale, 5),
         "color_r": int(r), "color_g": int(g), "color_b": int(b), "color_a": alpha,
         "geometry": geometry, "hide": 0, "topo": topo,
-        "topo_scale": round(topo_scale, 9), "ratio": ratio,
+        # topo_scale carries the Global Scale bake for the whole file — see
+        # GLOBAL_SCALE.  A node's own value is "how far one translate unit
+        # reaches on the axes my topology reads as a distance", and a parent
+        # radius that just grew GLOBAL_SCALE times over is exactly what makes
+        # one unit reach GLOBAL_SCALE times less far.
+        "topo_scale": round(topo_scale / GLOBAL_SCALE, 9), "ratio": ratio,
         "ch_input_id": ch_input_id,
         "fog_enabled": fog_on, "fog_start": fog_a, "fog_end": fog_b,
     }
@@ -691,7 +824,7 @@ def build_nodes(windows) -> tuple[list[dict], list[dict]]:
         next_id += 1
         root_rgb = tuple(int(c * 255) for c in colorsys.hsv_to_rgb(
             style.hue, style.sat * 0.6, style.val * 0.55))
-        rows.append(_row(root_id, 0, 0, positions[t], style.root_scale, root_rgb,
+        rows.append(_row(root_id, 0, 0, positions[t], root_scale_written(style), root_rgb,
                          70, style.root_geo, style.topo0, 0.1,
                          base_ch + CH_PER_GLYPH, topo_scale=style.topo_scale))
         tags.append({"id": len(tags), "table_id": 0, "record_id": root_id,
@@ -790,7 +923,7 @@ def build_tracks(per_track_bands: list[np.ndarray]) -> tuple[np.ndarray, float]:
             loud = loud / loud.max()
         presence = envelope(loud, FPS, PRESENCE_TAU)
         presences.append(presence)
-        out[:, base_tr + TRK_PER_GLYPH - 1] = style.root_scale * (
+        out[:, base_tr + TRK_PER_GLYPH - 1] = root_scale_written(style) * (
             PRESENCE_REST + (1.0 - PRESENCE_REST) * presence)
 
     # --- the world: dark -> pale at the peak -> a settled middle ------------
