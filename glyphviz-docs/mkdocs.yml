@@ -93,6 +93,8 @@ nav:
       - AI Observatory:
           - "Inside GPT-2: Mary and John": examples/ai-observatory-gpt2.md
           - "Inside Gemma: Why It Says No": examples/ai-observatory-gemma.md
+      - The making of GlyphViz:
+          - "Building GlyphViz: Every Session": examples/building-glyphviz.md
       - San Diego River Watershed Atlas:
           - "The Watershed, Source to Sea": examples/sd-river-watershed.md
           - "The Pulse: A Century of the San Diego River": examples/sd-river-pulse.md

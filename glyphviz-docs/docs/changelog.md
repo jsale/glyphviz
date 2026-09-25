@@ -2,6 +2,10 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-09-25
+
+- **[Building GlyphViz: Every Session](examples/building-glyphviz.md) joined the Examples Gallery**, in a new *The making of GlyphViz* section. It draws all 222 sessions that built GlyphViz and GlyphViz Web — 1,034 prompts, almost 29,000 tool calls and 381 commits, read back from Claude Code's own transcripts — as one helical column per session, with the two projects side by side on a shared calendar. A second, five-column scene shows one typical session of each kind, and is the easier place to learn to read a column. Both download as their own zips.
+
 ## 2026-09-20
 
 - **[Warm Winter: One Glyph per Instrument](examples/audio-warm-winter.md) joined the Examples Gallery**, with its own page, screenshot and download. The scene itself shipped on 4 September; this is the write-up, and it goes in beside [Cat Scan Synesthesia](examples/audio-cat-scan-synesthesia.md) rather than replacing it — the two solve the same problem from opposite ends, one from a multitrack session and one from a finished stereo mix.

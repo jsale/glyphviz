@@ -34,6 +34,12 @@ Scenes that look inside a language model while it reads: every feature it repres
 - **[Inside GPT-2: Mary and John](ai-observatory-gpt2.md)** — watch GPT-2 small work out who gets the drink
 - **[Inside Gemma: Why It Says No](ai-observatory-gemma.md)** — a chat model recognizes a phishing request as fraud and turns toward "I cannot", compared token by token with a harmless twin
 
+## The making of GlyphViz
+
+GlyphViz was built by Jeff Sale working with Claude Code, Anthropic's AI coding assistant. This scene is that collaboration's own record.
+
+- **[Building GlyphViz: Every Session](building-glyphviz.md)** — all 222 working sessions that built the desktop app and GlyphViz Web, one helical column each: every prompt, every stretch of thinking, every tool call and commit
+
 ## San Diego River Watershed Atlas
 
 One watershed, built up in phases: its terrain and river network first, then the weather, water and fire that cross it, all on the same map.
