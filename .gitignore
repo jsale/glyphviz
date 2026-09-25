@@ -76,6 +76,10 @@ examples/Tropical_Cyclone_Example/Seasonal_Pulse/
 # scene ships as Burn_Record.zip; regenerate the folder (and the zip) with
 # examples/San_Diego_Fire_History_Example/build_fire_history_scene.py
 examples/San_Diego_Fire_History_Example/Burn_Record/
+# Building GlyphViz: the same — the 6 MB scene ships as Building_GlyphViz_Scene.zip.
+# It is built outside the repo (session_lab/, untracked: its private build holds
+# unscrubbed paths) with build_corpus_scene.py --public, then copied here.
+examples/Building_GlyphViz_Example/building_glyphviz_gv_node.csv
 # ...and never commit the ~330 MB raw archive that --download fetches; the
 # 3.9 MB data/ibtracs_tidy.csv.gz snapshot beside it is what rebuilds offline.
 examples/Tropical_Cyclone_Example/data/ibtracs.ALL.raw.csv

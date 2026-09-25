@@ -128,6 +128,12 @@ MANIFEST = [
     ("sd-fire-history", EX / "San_Diego_Fire_History_Example" / "Burn_Record", None),
     # Static is the last month, September 2025: every storm on both slabs.
     ("sd-cedar-runoff", EX / "San_Diego_Cedar_Fire_Runoff_Example", None),
+    # Building GlyphViz: one scene, three views of it, plus the five medoids.
+    ("building-glyphviz", EX / "Building_GlyphViz_Example", None),
+    ("building-glyphviz-gap", EX / "Building_GlyphViz_Example", None),
+    ("building-glyphviz-spiral", EX / "Building_GlyphViz_Example", None),
+    ("building-glyphviz-archetypes",
+     EX / "Building_GlyphViz_Example" / "Five_Archetypes", None),
 ]
 
 
@@ -241,6 +247,20 @@ CAMERA = {
     # From the south-west: the map in front, both storm slabs behind it.
     "sd-cedar-runoff": {"target": (20, 110, 85), "distance": 560,
                         "azimuth": 250, "elevation": 24},
+    # Building GlyphViz. Azimuth 270, never 90: at 90 the web bank renders on
+    # the LEFT, backwards against the lane order and the projects' start order.
+    # Down the avenue from the June end: both banks run away up the calendar.
+    "building-glyphviz": {"target": (0, 120, 10), "distance": 230,
+                          "azimuth": 270, "elevation": 20},
+    # Standing in the 30-unit gap: desktop rising left, web right.
+    "building-glyphviz-gap": {"target": (0, 150, 9), "distance": 60,
+                              "azimuth": 270, "elevation": 10},
+    # Straight down 2026-06-22 "Add audio support", the tallest column:
+    # thinking collects in the middle, tool calls ring the outside.
+    "building-glyphviz-spiral": {"target": (-49.4, 48.0, 27), "distance": 34,
+                                 "azimuth": 0, "elevation": 89},
+    "building-glyphviz-archetypes": {"target": (0, 0, 9), "distance": 58,
+                                     "azimuth": 92, "elevation": 10},
 }
 
 
