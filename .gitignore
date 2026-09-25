@@ -100,3 +100,6 @@ glyphviz-skill/*.zip
 # X archive arrives in anyway); the unpacked 3.4 + 4.2 MB tweets.js stay local.
 # Rebuild either with twitter_lab/v2_to_archive.py — see the folder's README.
 twitter_lab/demo_archives/TUT_demo_*/
+
+# Lesson-video renders (MP4/WAV/stills/TTS cache) -- regenerate with video_lessons/render_lesson.py
+video_lessons/out/
