@@ -6,6 +6,7 @@ GlyphViz doesn't cut numbered releases yet — development moves in daily commit
 
 - **[City Climate Rings](examples/city-climate-rings.md) joined the Examples Gallery**, under *Maps & terrain*. Thirty-one cities sit on a globe, each wearing a clock face of its twelve months: beads coloured by mean temperature, a bar from the average low to the average high, and a rainfall column. Mumbai's monsoon, Singapore's unchanging year, Yakutsk's 57 °C swing and the seasons flipping across the equator all read at a glance. The data is NASA POWER's daily record for 2001–2020, averaged by month.
 - **It is also a worked example of the workflow for your own data.** The folder ships the flat spreadsheet it started from, the plain-words prompt, and the generator Claude wrote from it with the Claude Skill, which checks its geometry through GlyphViz's own engine before writing a file.
+- **Both AI Observatory pages now carry a narrated video**, about three minutes each: [Inside GPT-2](examples/ai-observatory-gpt2.md#watch-it-explained) and [Inside Gemma](examples/ai-observatory-gemma.md#watch-it-explained). They are rendered straight from GlyphViz, and each includes a stretch of the scene playing with its own soundtrack.
 - `tools/capture_example_shots.py` can now turn a scene's globe so a chosen latitude and longitude sit on top, for close-ups whose rings face the camera.
 
 ## 2026-09-25

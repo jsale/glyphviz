@@ -10,6 +10,12 @@ This is the second scene of the **AI Observatory**, and the first with an instru
 
 [:material-download: Download this example (18 MB)](https://iluvdata.org/glyphviz/zips/AI_Observatory_Gemma_Example.zip){ .md-button }
 
+## Watch it explained
+
+A three-minute narrated tour of this scene, rendered from GlyphViz itself: the chat template, the harmless twin, the chain of features from *fraud* to *avoid* to "I", the lens check on the rings, and the end of the message played through Gemma with its own sound.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/ai_observatory_gemma.mp4"></video>
+
 If you haven't yet, start with **[Inside GPT-2: Mary and John](ai-observatory-gpt2.md)**. It introduces the tower, the features and the terms this page builds on, with a simpler model and a simpler sentence.
 
 ## How to read this scene

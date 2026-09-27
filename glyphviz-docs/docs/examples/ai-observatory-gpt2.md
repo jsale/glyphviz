@@ -10,6 +10,12 @@ This is the first scene of the **AI Observatory**: GPT-2 small reading one sente
 
 [:material-download: Download this example (12 MB)](https://iluvdata.org/glyphviz/zips/AI_Observatory_GPT2_Example.zip){ .md-button }
 
+## Watch it explained
+
+A three-minute narrated tour of this scene, rendered from GlyphViz itself: the prompt, the tower, the features tracking *giving*, the attention heads' tug of war over " Mary", and the whole sentence played through the model with its own sound.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/ai_observatory_gpt2.mp4"></video>
+
 ## How to read this scene
 
 You don't need a background in machine learning to follow this scene, but it does use a handful of new terms, and they are worth learning. Here is the whole idea in one paragraph:
