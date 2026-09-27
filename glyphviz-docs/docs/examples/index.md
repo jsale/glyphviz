@@ -4,7 +4,7 @@ Every scene below ships in the GlyphViz examples set — download it once and ev
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~269 MB download, ~488 MB extracted*
+*~354 MB download, ~756 MB extracted*
 
 You can also take just one. Every page below has its own download button, and the examples that hold several scenes offer one zip per scene — most are a few megabytes. Each single-example zip contains that scene's files at its top level: extract it and you have one self-contained folder, or drag the zip onto the GlyphViz window and it extracts beside itself and loads.
 
