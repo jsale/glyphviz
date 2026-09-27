@@ -124,6 +124,14 @@ class Shot:
     # ((u, frame), ...) pairs to play piecewise, e.g. arrive and then hold.
     ch_span: tuple | None = None
     card: Callable | None = None      # f(overlay, draw, u): a custom full-frame card
+    # Play a stretch of the scene's OWN soundtrack, in sync with its Channels
+    # animation, once the narration line has finished:
+    #   dict(path=<audio file>, frames=(f0, f1), fps=30, gain=1.0)
+    # The animation holds on f0 while the line is spoken, then plays f0 -> f1
+    # at the scene's frame rate while the audio from f0/fps to f1/fps plays
+    # under it, exactly as the app pairs them through an audio manifest. The
+    # shot is lengthened to fit.
+    soundtrack: dict | None = None
     min_dur: float = 0.0
     tail: float = 0.45                # silence after the narration, seconds
 
@@ -508,6 +516,33 @@ class Overlay:
             y += 50 * s
 
 
+def text_card(title, lines, color=TEAL, mono=True, sub=None, footer=None):
+    """A full-frame text card for Shot.card: a heading, an optional
+    subheading, a boxed block of lines, and an optional footer."""
+    def draw(ov, d, u):
+        a = min(1.0, u / 0.06, (1 - u) / 0.06)
+        if a <= 0:
+            return
+        s = ov.s
+        d.rectangle((0, 0, ov.w, ov.h), fill=(*BG, int(215 * a)))
+        x, y = ov.w * 0.09, ov.h * 0.14
+        d.text((x, y), title, font=ov.f_head, fill=(*color, int(255 * a)))
+        if sub:
+            d.text((x, y + 30 * s), sub, font=ov.f_note, fill=(180, 186, 210, int(230 * a)))
+        y += 76 * s
+        font = ov.f_mono if mono else ov.f_bullet
+        lh = (29 if mono else 40) * s
+        w = max(d.textlength(l, font=font) for l in lines) + 34 * s
+        ov._box(d, (x - 16 * s, y - 12 * s, x - 16 * s + w, y + lh * len(lines) + 8 * s),
+                fill=(8, 8, 16, int(225 * a)), outline=(*color, int(255 * a)))
+        for i, l in enumerate(lines):
+            d.text((x, y + i * lh), l, font=font, fill=(*CHALK, int(245 * a)))
+        if footer:
+            d.text((x, y + lh * len(lines) + 26 * s), footer, font=ov.f_note,
+                   fill=(180, 186, 210, int(230 * a)))
+    return draw
+
+
 def _fade(u, start, end, dur_s, shot_len):
     """0..1 envelope that fades over ~0.35 s at each end of [start, end]."""
     if u < start or u > end:
@@ -524,6 +559,10 @@ class ShotTiming:
     dur: float
     audio: Path | None
     speech: float
+    sound_at: float | None = None     # absolute start of the shot's soundtrack
+
+
+SOUND_GAP = 0.5      # seconds between the narration ending and a soundtrack
 
 
 def plan_timing(lesson: Lesson, clips: list, lead_in=0.35) -> list[ShotTiming]:
@@ -531,9 +570,25 @@ def plan_timing(lesson: Lesson, clips: list, lead_in=0.35) -> list[ShotTiming]:
     out = []
     for shot, (path, speech) in zip(lesson.shots, clips):
         dur = max(lead_in + speech + shot.tail, shot.min_dur)
-        out.append(ShotTiming(t, dur, path, speech))
+        sound_at = None
+        if shot.soundtrack:
+            st = shot.soundtrack
+            f0, f1 = st["frames"]
+            at = lead_in + speech + SOUND_GAP
+            sound_at = t + at
+            dur = max(dur, at + (f1 - f0) / st.get("fps", 30) + 1.2)
+        out.append(ShotTiming(t, dur, path, speech, sound_at))
         t += dur
     return out
+
+
+def soundtrack_frame(shot: Shot, tm: ShotTiming, t: float) -> float:
+    """The animation frame at video time t in a soundtrack shot."""
+    st = shot.soundtrack
+    f0, f1 = st["frames"]
+    if t <= tm.sound_at:
+        return float(f0)
+    return min(float(f1), f0 + (t - tm.sound_at) * st.get("fps", 30))
 
 
 def grab_rgb(vp, w, h) -> np.ndarray:
@@ -697,7 +752,9 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
                     else:
                         setattr(vp, k, v)
                 vp.tags_touch()
-        if shot.ch_span and lesson.win is not None:
+        if shot.soundtrack and lesson.win is not None:
+            lesson.show_ch_frame(soundtrack_frame(shot, tm, t))
+        elif shot.ch_span and lesson.win is not None:
             lesson.show_ch_frame(span_frame(shot.ch_span, u))
         elif lesson.ch_rate and lesson.win is not None:
             # The animation clock runs on VIDEO time, not the app's QTimer, so
@@ -749,7 +806,10 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
             if shot.summary:
                 ov.summary(dc, lesson.title, shot.summary, min(1.0, u / 0.12))
             img = Image.alpha_composite(img, card)
-        if burn_captions and not (shot.title and u < 0.5):
+        # A soundtrack plays after the line is spoken; its caption clears
+        # then, so the picture is unobstructed while the scene is heard.
+        spoken = not (shot.soundtrack and t >= tm.sound_at)
+        if burn_captions and spoken and not (shot.title and u < 0.5):
             cap = Image.new("RGBA", img.size, (0, 0, 0, 0))
             ov.caption(ImageDraw.Draw(cap, "RGBA"), shot.say)
             img = Image.alpha_composite(img, cap)

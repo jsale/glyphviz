@@ -15,6 +15,14 @@ Output goes to `video_lessons/out/<lesson>/` (gitignored): `<lesson>.mp4`,
 `<lesson>.srt`, `<lesson>.narration.wav`, `scene/<lesson>_gv_node.csv`.
 A ~40 s lesson renders in about 30 s.
 
+The masters are large (CRF 18: a dense scene runs 250-450 MB). For a docs
+page, re-encode into the web root's `glyphviz/videos/`, which the gallery
+pages embed from `https://iluvdata.org/glyphviz/videos/<lesson>.mp4`:
+
+```powershell
+ffmpeg -i out/<lesson>/<lesson>.mp4 -c:v libx264 -preset slow -crf 26 -maxrate 3500k -bufsize 7000k -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart $env:GLYPHVIZ_WEB_ROOT/glyphviz/videos/<lesson>.mp4
+```
+
 The MP4s are **assets for the docs site**. Only this folder's source is
 committed; any video can be rebuilt from it with one command, which also
 means every video can be re-rendered after a UI or rendering change.
@@ -32,8 +40,10 @@ means every video can be re-rendered after a UI or rendering change.
 | `channels_hike_race` | Channels 2/3: GPS data, the Multi-Hike Ghost Race | ~97 s |
 | `channels_river_pulse` | Channels 3/3: at scale, The Pulse (70,809 nodes) | ~103 s |
 | `climate_rings` | **workflow**: a spreadsheet, a prompt, a drop: City Climate Rings | ~106 s |
+| `ai_observatory_gpt2` | **example explainer**: Inside GPT-2, with the scene's own sound | ~183 s |
+| `ai_observatory_gemma` | **example explainer**: Inside Gemma, the lens check, its sound | ~191 s |
 
-All nine are narrated in `af_heart`, Jeff's pick of the Kokoro voices.
+All eleven are narrated in `af_heart`, Jeff's pick of the Kokoro voices.
 
 ## Example explainers
 
@@ -131,6 +141,15 @@ clock driven by **video time**, not the app's QTimer, through the same
 | `ch_frame` | jump the animation to this frame at the shot's start |
 | `ch_span` | play frame A -> B across the shot, or `((u, frame), ...)` to arrive and hold; chain shots A->B, B->C so playback never skips |
 | `card` | `f(overlay, draw, u)`: a custom full-frame card (tables, prompts) |
+| `soundtrack` | `dict(path, frames=(f0, f1), fps=30, gain=1.0)`: after the line is spoken, play f0 -> f1 with the scene's own audio under it |
+
+A `soundtrack` shot is for scenes that ship an audio manifest (the AI
+Observatory towers, Warm Winter). The animation holds on f0 while the line
+is spoken, then plays at the scene's frame rate while that stretch of its
+audio plays, exactly as the app pairs them. The caption clears when the
+sound starts, and the shot lengthens to fit. `render_lesson` mixes the
+stereo scene audio under the mono narration (`narrate.build_bed`); a
+gain of about 0.55 keeps a sonification level with the voice.
 
 `Lesson(prepare=...)` runs before rendering, e.g. to write a lesson's own copy
 of a scene into `out/` (`channels_sine` adds pulse, colour and ripple channels

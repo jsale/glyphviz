@@ -133,6 +133,41 @@ def build_track(timing, total: float, out_path: Path, lead_in=0.35) -> Path:
     return out_path
 
 
+BED_HZ = 48000
+
+
+def build_bed(shots, timing, total: float, out_path: Path, ffmpeg: str) -> Path | None:
+    """A stereo track holding every shot's `soundtrack` stretch at its
+    `sound_at` time, or None when no shot has one. The scene audio is decoded
+    with ffmpeg (it is usually .m4a) and kept stereo, since a sonification's
+    pan is data."""
+    import numpy as np
+    jobs = [(s, tm) for s, tm in zip(shots, timing) if s.soundtrack]
+    if not jobs:
+        return None
+    buf = np.zeros((int(round(total * BED_HZ)), 2), np.float32)
+    for shot, tm in jobs:
+        st = shot.soundtrack
+        fps = st.get("fps", 30)
+        f0, f1 = st["frames"]
+        raw = subprocess.run(
+            [ffmpeg, "-loglevel", "error", "-ss", f"{f0 / fps:.4f}",
+             "-t", f"{(f1 - f0) / fps + 1.0:.4f}", "-i", str(st["path"]),
+             "-f", "s16le", "-ac", "2", "-ar", str(BED_HZ), "-"],
+            check=True, capture_output=True).stdout
+        pcm = np.frombuffer(raw, np.int16).reshape(-1, 2).astype(np.float32)
+        pcm *= st.get("gain", 1.0)
+        at = int(round(tm.sound_at * BED_HZ))
+        end = min(len(buf), at + len(pcm))
+        buf[at:end] += pcm[: end - at]
+    with wave.open(str(out_path), "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(2)
+        w.setframerate(BED_HZ)
+        w.writeframes(np.clip(buf, -32768, 32767).astype(np.int16).tobytes())
+    return out_path
+
+
 def _ts(t: float) -> str:
     ms = int(round(t * 1000))
     h, ms = divmod(ms, 3600_000)

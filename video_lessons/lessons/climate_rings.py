@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 from glyphviz_core.node import ROTATION_MODE_EULER_XYZ
-from lessonkit import (Callout, Key, Lesson, Shot, AMBER, BG, CHALK, CORAL,
+from lessonkit import (Callout, Key, Lesson, Shot, text_card, AMBER, BG, CHALK, CORAL,
                        TEAL, ease)
 from lessons._common import world
 
@@ -71,31 +71,6 @@ def turn(a, b, u0=0.08, u1=0.72):
 
 def close(u, az=0.0, el=38.0, dist=64.0):
     return Key(u, az=az, el=el, dist=dist, target=TOP)
-
-
-def text_card(title, lines, color=TEAL, mono=True, sub=None, footer=None):
-    def draw(ov, d, u):
-        a = min(1.0, u / 0.06, (1 - u) / 0.06)
-        if a <= 0:
-            return
-        s = ov.s
-        d.rectangle((0, 0, ov.w, ov.h), fill=(*BG, int(215 * a)))
-        x, y = ov.w * 0.09, ov.h * 0.14
-        d.text((x, y), title, font=ov.f_head, fill=(*color, int(255 * a)))
-        if sub:
-            d.text((x, y + 30 * s), sub, font=ov.f_note, fill=(180, 186, 210, int(230 * a)))
-        y += 76 * s
-        font = ov.f_mono if mono else ov.f_bullet
-        lh = (29 if mono else 40) * s
-        w = max(d.textlength(l, font=font) for l in lines) + 34 * s
-        ov._box(d, (x - 16 * s, y - 12 * s, x - 16 * s + w, y + lh * len(lines) + 8 * s),
-                fill=(8, 8, 16, int(225 * a)), outline=(*color, int(255 * a)))
-        for i, l in enumerate(lines):
-            d.text((x, y + i * lh), l, font=font, fill=(*CHALK, int(245 * a)))
-        if footer:
-            d.text((x, y + lh * len(lines) + 26 * s), footer, font=ov.f_note,
-                   fill=(180, 186, 210, int(230 * a)))
-    return draw
 
 
 def build() -> Lesson:

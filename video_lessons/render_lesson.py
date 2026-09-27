@@ -100,9 +100,22 @@ def main() -> int:
         if not args.stills_only:
             wav = narrate.build_track(res["timing"], res["total"],
                                       out_dir / f"{lesson.name}.narration.wav")
+            bed = narrate.build_bed(lesson.shots, res["timing"], res["total"],
+                                    out_dir / f"{lesson.name}.soundtrack.wav",
+                                    lessonkit.FFMPEG)
+            if bed is None:
+                inputs, mix = ["-i", str(wav)], []
+            else:
+                # Narration (mono, centred) over the scene's own stereo audio.
+                # normalize=0: amix would otherwise halve both.
+                inputs = ["-i", str(wav), "-i", str(bed)]
+                mix = ["-filter_complex",
+                       "[1:a]aresample=48000,pan=stereo|c0=c0|c1=c0[n];"
+                       "[n][2:a]amix=inputs=2:duration=first:normalize=0[a]",
+                       "-map", "0:v", "-map", "[a]"]
             subprocess.run(
                 [lessonkit.FFMPEG, "-y", "-loglevel", "error",
-                 "-i", str(res["silent"]), "-i", str(wav),
+                 "-i", str(res["silent"]), *inputs, *mix,
                  "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
                  "-movflags", "+faststart", str(res["mp4"])], check=True)
             res["silent"].unlink(missing_ok=True)
