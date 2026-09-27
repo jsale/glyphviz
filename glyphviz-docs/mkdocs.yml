@@ -119,6 +119,7 @@ nav:
           - "Tropical Cyclones": examples/tropical-cyclones.md
           - "Earth's Magnetic Field": examples/geomagnetic-field.md
           - "The Wind Rose as a Hyperglyph": examples/wind-rose.md
+          - "City Climate Rings": examples/city-climate-rings.md
       - Orbital traffic:
           - "Orbital Traffic — Live Sky": examples/orbital-live-sky.md
           - "Orbital Traffic — One Orbit": examples/orbital-one-orbit.md

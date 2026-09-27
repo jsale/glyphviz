@@ -129,6 +129,11 @@ MANIFEST = [
     # Static is the last month, September 2025: every storm on both slabs.
     ("sd-cedar-runoff", EX / "San_Diego_Cedar_Fire_Runoff_Example", None),
     # Building GlyphViz: one scene, three views of it, plus the five medoids.
+    # City Climate Rings: the whole globe, then two cities turned to the top
+    # of it (see "globe_to" in CAMERA) so their bars stand upright.
+    ("city-climate-rings", EX / "City_Climate_Rings_Example", None),
+    ("city-climate-rings-mumbai", EX / "City_Climate_Rings_Example", None),
+    ("city-climate-rings-moscow", EX / "City_Climate_Rings_Example", None),
     ("building-glyphviz", EX / "Building_GlyphViz_Example", None),
     ("building-glyphviz-gap", EX / "Building_GlyphViz_Example", None),
     ("building-glyphviz-spiral", EX / "Building_GlyphViz_Example", None),
@@ -250,6 +255,19 @@ CAMERA = {
     # Building GlyphViz. Azimuth 270, never 90: at 90 the web bank renders on
     # the LEFT, backwards against the lane order and the projects' start order.
     # Down the avenue from the June end: both banks run away up the calendar.
+    # "globe_to": (lat, lon) turns the scene's World Grid (Euler XYZ
+    # (0, -(90 - lat), -lon), measured through the engine) so that point is on
+    # top of the globe. The orbit camera's up is always world +Z, so this is
+    # the only way to show a ring on a globe with its bars standing upright;
+    # from azimuth 0 it reads north up, east right.
+    "city-climate-rings": {"origin": True, "distance": 520,
+                           "azimuth": 55, "elevation": 22},
+    "city-climate-rings-mumbai": {"globe_to": (19.08, 72.88),
+                                  "target": (0, 0, 184), "distance": 66,
+                                  "azimuth": -6, "elevation": 28},
+    "city-climate-rings-moscow": {"globe_to": (55.76, 37.62),
+                                  "target": (0, 0, 180), "distance": 58,
+                                  "azimuth": 8, "elevation": 34},
     "building-glyphviz": {"target": (0, 120, 10), "distance": 230,
                           "azimuth": 270, "elevation": 20},
     # Standing in the 30-unit gap: desktop rising left, web right.
@@ -303,6 +321,14 @@ def main() -> int:
             pump(0.4)   # texture uploads / first frame of a big scene
             if slug in CAMERA:
                 cam = CAMERA[slug]
+                if "globe_to" in cam:
+                    from glyphviz_core.node import ROTATION_MODE_EULER_XYZ
+                    lat, lon = cam["globe_to"]
+                    grid = next(n for n in cap.win.nodes if n.type == 6)
+                    grid.rotation_mode = ROTATION_MODE_EULER_XYZ
+                    grid.rotate_x, grid.rotate_y, grid.rotate_z = (
+                        0.0, -(90.0 - lat), -lon)
+                    cap.vp.scene_invalidate()
                 if cam.get("origin"):
                     cap.vp._cam_target = [0.0, 0.0, 0.0]
                 elif "target" in cam:

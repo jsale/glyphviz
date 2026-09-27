@@ -71,6 +71,7 @@ One watershed, built up in phases: its terrain and river network first, then the
 - **[Tropical Cyclones](tropical-cyclones.md)** — 184 years of storms, wind speed as height
 - **[Earth's Magnetic Field](geomagnetic-field.md)** — four centuries of secular variation
 - **[The Wind Rose as a Hyperglyph](wind-rose.md)** — the standard chart, nested three levels deep
+- **[City Climate Rings](city-climate-rings.md)** — a year of climate for 31 cities, a clock face of months around each one, built from a spreadsheet with the Claude Skill
 
 ## Orbital traffic
 

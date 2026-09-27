@@ -2,6 +2,12 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-09-27
+
+- **[City Climate Rings](examples/city-climate-rings.md) joined the Examples Gallery**, under *Maps & terrain*. Thirty-one cities sit on a globe, each wearing a clock face of its twelve months: beads coloured by mean temperature, a bar from the average low to the average high, and a rainfall column. Mumbai's monsoon, Singapore's unchanging year, Yakutsk's 57 °C swing and the seasons flipping across the equator all read at a glance. The data is NASA POWER's daily record for 2001–2020, averaged by month.
+- **It is also a worked example of the workflow for your own data.** The folder ships the flat spreadsheet it started from, the plain-words prompt, and the generator Claude wrote from it with the Claude Skill, which checks its geometry through GlyphViz's own engine before writing a file.
+- `tools/capture_example_shots.py` can now turn a scene's globe so a chosen latitude and longitude sit on top, for close-ups whose rings face the camera.
+
 ## 2026-09-25
 
 - **[Building GlyphViz: Every Session](examples/building-glyphviz.md) joined the Examples Gallery**, in a new *The making of GlyphViz* section. It draws all 222 sessions that built GlyphViz and GlyphViz Web — 1,034 prompts, almost 29,000 tool calls and 381 commits, read back from Claude Code's own transcripts — as one helical column per session, with the two projects side by side on a shared calendar. A second, five-column scene shows one typical session of each kind, and is the easier place to learn to read a column. Both download as their own zips.
