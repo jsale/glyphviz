@@ -1,0 +1,373 @@
+city,country,lat,lon,month,high_c,low_c,mean_c,precip_mm
+San Diego,USA,32.72,-117.16,Jan,18.0,8.7,12.4,41
+San Diego,USA,32.72,-117.16,Feb,18.0,8.7,12.5,55
+San Diego,USA,32.72,-117.16,Mar,19.7,9.6,13.8,29
+San Diego,USA,32.72,-117.16,Apr,20.8,10.4,14.8,17
+San Diego,USA,32.72,-117.16,May,23.0,12.0,16.6,8
+San Diego,USA,32.72,-117.16,Jun,26.0,13.6,19.1,14
+San Diego,USA,32.72,-117.16,Jul,29.5,16.8,22.5,4
+San Diego,USA,32.72,-117.16,Aug,30.2,17.7,23.1,4
+San Diego,USA,32.72,-117.16,Sep,29.3,17.5,22.5,6
+San Diego,USA,32.72,-117.16,Oct,25.5,14.9,19.2,15
+San Diego,USA,32.72,-117.16,Nov,21.5,11.7,15.6,25
+San Diego,USA,32.72,-117.16,Dec,17.5,8.6,12.2,51
+Seattle,USA,47.61,-122.33,Jan,7.4,2.0,4.4,173
+Seattle,USA,47.61,-122.33,Feb,8.4,1.6,4.6,108
+Seattle,USA,47.61,-122.33,Mar,10.6,3.2,6.7,138
+Seattle,USA,47.61,-122.33,Apr,13.4,4.9,9.0,95
+Seattle,USA,47.61,-122.33,May,17.4,8.1,12.8,70
+Seattle,USA,47.61,-122.33,Jun,19.7,10.5,15.2,51
+Seattle,USA,47.61,-122.33,Jul,23.1,13.0,18.2,19
+Seattle,USA,47.61,-122.33,Aug,23.5,13.3,18.3,29
+Seattle,USA,47.61,-122.33,Sep,20.7,11.0,15.4,58
+Seattle,USA,47.61,-122.33,Oct,15.2,7.4,10.8,125
+Seattle,USA,47.61,-122.33,Nov,10.1,4.0,6.7,188
+Seattle,USA,47.61,-122.33,Dec,6.7,1.6,3.8,175
+Anchorage,USA,61.22,-149.9,Jan,-6.3,-10.5,-8.3,53
+Anchorage,USA,61.22,-149.9,Feb,-4.0,-9.3,-6.5,51
+Anchorage,USA,61.22,-149.9,Mar,-2.5,-8.8,-5.6,39
+Anchorage,USA,61.22,-149.9,Apr,3.0,-2.6,0.4,38
+Anchorage,USA,61.22,-149.9,May,9.7,2.9,6.4,47
+Anchorage,USA,61.22,-149.9,Jun,14.3,7.5,11.1,59
+Anchorage,USA,61.22,-149.9,Jul,16.5,10.2,13.5,83
+Anchorage,USA,61.22,-149.9,Aug,15.6,9.7,12.7,110
+Anchorage,USA,61.22,-149.9,Sep,11.1,5.8,8.3,118
+Anchorage,USA,61.22,-149.9,Oct,4.3,0.1,2.0,87
+Anchorage,USA,61.22,-149.9,Nov,-3.3,-7.3,-5.2,71
+Anchorage,USA,61.22,-149.9,Dec,-5.1,-9.1,-7.0,64
+Honolulu,USA,21.31,-157.86,Jan,24.5,21.8,23.0,71
+Honolulu,USA,21.31,-157.86,Feb,24.2,21.4,22.7,82
+Honolulu,USA,21.31,-157.86,Mar,24.4,21.6,22.9,94
+Honolulu,USA,21.31,-157.86,Apr,25.2,22.3,23.6,54
+Honolulu,USA,21.31,-157.86,May,26.3,23.1,24.6,46
+Honolulu,USA,21.31,-157.86,Jun,27.0,24.0,25.4,37
+Honolulu,USA,21.31,-157.86,Jul,27.6,24.6,25.9,40
+Honolulu,USA,21.31,-157.86,Aug,28.0,25.0,26.3,44
+Honolulu,USA,21.31,-157.86,Sep,28.1,25.1,26.4,50
+Honolulu,USA,21.31,-157.86,Oct,27.5,24.7,25.9,74
+Honolulu,USA,21.31,-157.86,Nov,26.3,23.8,24.9,86
+Honolulu,USA,21.31,-157.86,Dec,25.1,22.6,23.7,93
+Chicago,USA,41.88,-87.63,Jan,-0.2,-5.0,-2.5,48
+Chicago,USA,41.88,-87.63,Feb,0.3,-5.1,-2.3,54
+Chicago,USA,41.88,-87.63,Mar,4.9,-0.7,2.0,62
+Chicago,USA,41.88,-87.63,Apr,10.1,3.8,6.9,94
+Chicago,USA,41.88,-87.63,May,15.0,8.6,11.8,117
+Chicago,USA,41.88,-87.63,Jun,21.1,15.1,18.1,102
+Chicago,USA,41.88,-87.63,Jul,25.1,19.8,22.5,95
+Chicago,USA,41.88,-87.63,Aug,25.1,20.0,22.6,105
+Chicago,USA,41.88,-87.63,Sep,21.9,16.4,19.1,86
+Chicago,USA,41.88,-87.63,Oct,15.2,9.6,12.4,99
+Chicago,USA,41.88,-87.63,Nov,8.6,3.5,6.0,61
+Chicago,USA,41.88,-87.63,Dec,2.6,-1.7,0.5,58
+Miami,USA,25.76,-80.19,Jan,22.7,19.5,21.2,44
+Miami,USA,25.76,-80.19,Feb,23.6,20.5,22.1,49
+Miami,USA,25.76,-80.19,Mar,24.5,21.4,23.0,56
+Miami,USA,25.76,-80.19,Apr,26.1,23.3,24.7,76
+Miami,USA,25.76,-80.19,May,27.5,25.1,26.3,136
+Miami,USA,25.76,-80.19,Jun,29.0,27.1,28.0,191
+Miami,USA,25.76,-80.19,Jul,29.7,27.9,28.7,165
+Miami,USA,25.76,-80.19,Aug,30.0,28.2,29.0,182
+Miami,USA,25.76,-80.19,Sep,29.2,27.5,28.3,189
+Miami,USA,25.76,-80.19,Oct,27.9,25.9,26.9,124
+Miami,USA,25.76,-80.19,Nov,25.6,23.2,24.4,64
+Miami,USA,25.76,-80.19,Dec,24.1,21.4,22.8,51
+Mexico City,Mexico,19.43,-99.13,Jan,19.1,4.1,10.5,9
+Mexico City,Mexico,19.43,-99.13,Feb,21.5,5.1,12.3,12
+Mexico City,Mexico,19.43,-99.13,Mar,23.7,6.4,14.1,15
+Mexico City,Mexico,19.43,-99.13,Apr,25.9,8.6,16.4,22
+Mexico City,Mexico,19.43,-99.13,May,25.8,10.1,17.2,55
+Mexico City,Mexico,19.43,-99.13,Jun,23.3,10.5,16.1,135
+Mexico City,Mexico,19.43,-99.13,Jul,21.3,10.0,15.0,154
+Mexico City,Mexico,19.43,-99.13,Aug,21.1,9.9,14.8,153
+Mexico City,Mexico,19.43,-99.13,Sep,20.2,9.6,14.1,148
+Mexico City,Mexico,19.43,-99.13,Oct,20.0,7.8,13.1,64
+Mexico City,Mexico,19.43,-99.13,Nov,19.5,5.7,11.6,19
+Mexico City,Mexico,19.43,-99.13,Dec,19.3,4.7,10.8,6
+Bogota,Colombia,4.71,-74.07,Jan,24.7,14.5,19.1,44
+Bogota,Colombia,4.71,-74.07,Feb,25.3,15.0,19.5,71
+Bogota,Colombia,4.71,-74.07,Mar,24.7,15.4,19.5,132
+Bogota,Colombia,4.71,-74.07,Apr,23.9,15.2,19.1,209
+Bogota,Colombia,4.71,-74.07,May,23.6,14.7,18.8,207
+Bogota,Colombia,4.71,-74.07,Jun,23.4,13.7,18.2,162
+Bogota,Colombia,4.71,-74.07,Jul,23.7,13.4,18.2,134
+Bogota,Colombia,4.71,-74.07,Aug,24.4,13.4,18.5,107
+Bogota,Colombia,4.71,-74.07,Sep,24.9,13.7,18.9,103
+Bogota,Colombia,4.71,-74.07,Oct,23.8,14.5,18.7,186
+Bogota,Colombia,4.71,-74.07,Nov,23.1,14.7,18.4,165
+Bogota,Colombia,4.71,-74.07,Dec,23.7,14.6,18.6,103
+Lima,Peru,-12.05,-77.04,Jan,23.3,16.6,19.4,3
+Lima,Peru,-12.05,-77.04,Feb,23.9,17.3,20.0,5
+Lima,Peru,-12.05,-77.04,Mar,24.1,17.3,20.1,4
+Lima,Peru,-12.05,-77.04,Apr,23.6,16.2,19.3,1
+Lima,Peru,-12.05,-77.04,May,22.8,14.7,18.1,1
+Lima,Peru,-12.05,-77.04,Jun,22.1,13.5,17.2,1
+Lima,Peru,-12.05,-77.04,Jul,21.7,12.9,16.7,1
+Lima,Peru,-12.05,-77.04,Aug,21.8,13.1,16.9,1
+Lima,Peru,-12.05,-77.04,Sep,22.0,13.7,17.3,1
+Lima,Peru,-12.05,-77.04,Oct,21.9,14.0,17.5,1
+Lima,Peru,-12.05,-77.04,Nov,22.0,14.6,17.8,2
+Lima,Peru,-12.05,-77.04,Dec,22.4,15.6,18.5,3
+Manaus,Brazil,-3.12,-60.02,Jan,28.9,24.5,26.5,225
+Manaus,Brazil,-3.12,-60.02,Feb,28.6,24.3,26.2,236
+Manaus,Brazil,-3.12,-60.02,Mar,28.5,24.4,26.2,268
+Manaus,Brazil,-3.12,-60.02,Apr,28.3,24.4,26.1,262
+Manaus,Brazil,-3.12,-60.02,May,28.3,24.5,26.2,205
+Manaus,Brazil,-3.12,-60.02,Jun,28.3,24.0,26.0,119
+Manaus,Brazil,-3.12,-60.02,Jul,28.9,24.0,26.3,75
+Manaus,Brazil,-3.12,-60.02,Aug,30.8,24.7,27.5,50
+Manaus,Brazil,-3.12,-60.02,Sep,32.9,25.6,29.0,68
+Manaus,Brazil,-3.12,-60.02,Oct,32.9,26.0,29.2,103
+Manaus,Brazil,-3.12,-60.02,Nov,31.6,25.7,28.4,135
+Manaus,Brazil,-3.12,-60.02,Dec,29.7,24.9,27.1,213
+Rio de Janeiro,Brazil,-22.91,-43.17,Jan,28.6,23.6,25.7,208
+Rio de Janeiro,Brazil,-22.91,-43.17,Feb,28.8,23.6,25.8,153
+Rio de Janeiro,Brazil,-22.91,-43.17,Mar,28.1,23.4,25.4,173
+Rio de Janeiro,Brazil,-22.91,-43.17,Apr,27.0,22.4,24.3,101
+Rio de Janeiro,Brazil,-22.91,-43.17,May,25.1,20.2,22.3,71
+Rio de Janeiro,Brazil,-22.91,-43.17,Jun,24.8,19.1,21.5,49
+Rio de Janeiro,Brazil,-22.91,-43.17,Jul,24.5,18.3,20.9,45
+Rio de Janeiro,Brazil,-22.91,-43.17,Aug,25.2,18.4,21.2,42
+Rio de Janeiro,Brazil,-22.91,-43.17,Sep,26.0,19.2,22.0,69
+Rio de Janeiro,Brazil,-22.91,-43.17,Oct,26.6,20.4,22.9,108
+Rio de Janeiro,Brazil,-22.91,-43.17,Nov,26.5,21.2,23.4,220
+Rio de Janeiro,Brazil,-22.91,-43.17,Dec,27.7,22.6,24.7,232
+Buenos Aires,Argentina,-34.6,-58.38,Jan,27.7,21.7,24.8,104
+Buenos Aires,Argentina,-34.6,-58.38,Feb,26.7,21.3,24.1,121
+Buenos Aires,Argentina,-34.6,-58.38,Mar,24.6,19.4,22.1,123
+Buenos Aires,Argentina,-34.6,-58.38,Apr,21.3,16.4,18.8,98
+Buenos Aires,Argentina,-34.6,-58.38,May,17.4,13.1,15.2,74
+Buenos Aires,Argentina,-34.6,-58.38,Jun,14.5,10.1,12.2,54
+Buenos Aires,Argentina,-34.6,-58.38,Jul,13.4,8.9,11.1,72
+Buenos Aires,Argentina,-34.6,-58.38,Aug,15.1,10.0,12.5,71
+Buenos Aires,Argentina,-34.6,-58.38,Sep,17.1,11.7,14.4,83
+Buenos Aires,Argentina,-34.6,-58.38,Oct,20.2,14.5,17.4,110
+Buenos Aires,Argentina,-34.6,-58.38,Nov,23.5,17.4,20.6,100
+Buenos Aires,Argentina,-34.6,-58.38,Dec,26.1,19.8,23.1,94
+Reykjavik,Iceland,64.15,-21.94,Jan,1.7,-1.7,0.0,169
+Reykjavik,Iceland,64.15,-21.94,Feb,1.8,-1.9,0.0,152
+Reykjavik,Iceland,64.15,-21.94,Mar,2.5,-1.2,0.8,153
+Reykjavik,Iceland,64.15,-21.94,Apr,5.1,0.9,3.1,119
+Reykjavik,Iceland,64.15,-21.94,May,8.1,3.2,5.8,93
+Reykjavik,Iceland,64.15,-21.94,Jun,11.7,6.7,9.3,83
+Reykjavik,Iceland,64.15,-21.94,Jul,13.4,8.6,11.1,99
+Reykjavik,Iceland,64.15,-21.94,Aug,12.9,8.2,10.5,121
+Reykjavik,Iceland,64.15,-21.94,Sep,9.8,5.9,7.9,181
+Reykjavik,Iceland,64.15,-21.94,Oct,5.9,2.5,4.2,147
+Reykjavik,Iceland,64.15,-21.94,Nov,3.3,0.1,1.7,149
+Reykjavik,Iceland,64.15,-21.94,Dec,2.0,-1.5,0.3,172
+London,UK,51.51,-0.13,Jan,6.9,1.6,4.1,65
+London,UK,51.51,-0.13,Feb,7.7,1.4,4.3,54
+London,UK,51.51,-0.13,Mar,10.4,2.5,6.1,50
+London,UK,51.51,-0.13,Apr,13.9,4.4,9.0,42
+London,UK,51.51,-0.13,May,17.0,7.3,12.3,55
+London,UK,51.51,-0.13,Jun,20.2,10.3,15.5,56
+London,UK,51.51,-0.13,Jul,22.5,12.5,17.6,60
+London,UK,51.51,-0.13,Aug,22.3,12.5,17.3,66
+London,UK,51.51,-0.13,Sep,19.7,10.1,14.6,44
+London,UK,51.51,-0.13,Oct,15.4,7.7,11.3,73
+London,UK,51.51,-0.13,Nov,10.5,4.5,7.3,74
+London,UK,51.51,-0.13,Dec,7.4,2.5,4.8,71
+Moscow,Russia,55.76,37.62,Jan,-7.7,-14.2,-10.7,48
+Moscow,Russia,55.76,37.62,Feb,-6.0,-13.6,-9.6,42
+Moscow,Russia,55.76,37.62,Mar,-0.5,-8.2,-4.1,42
+Moscow,Russia,55.76,37.62,Apr,8.7,-0.5,4.2,49
+Moscow,Russia,55.76,37.62,May,17.3,7.0,12.6,86
+Moscow,Russia,55.76,37.62,Jun,20.2,10.8,16.0,86
+Moscow,Russia,55.76,37.62,Jul,23.1,14.1,19.0,93
+Moscow,Russia,55.76,37.62,Aug,21.8,12.2,17.2,75
+Moscow,Russia,55.76,37.62,Sep,16.1,7.3,11.5,64
+Moscow,Russia,55.76,37.62,Oct,7.7,1.2,4.2,69
+Moscow,Russia,55.76,37.62,Nov,0.2,-4.6,-2.2,58
+Moscow,Russia,55.76,37.62,Dec,-5.2,-10.7,-7.7,52
+Cairo,Egypt,30.04,31.24,Jan,19.0,6.8,12.1,8
+Cairo,Egypt,30.04,31.24,Feb,21.2,7.8,13.7,7
+Cairo,Egypt,30.04,31.24,Mar,25.5,10.0,17.1,7
+Cairo,Egypt,30.04,31.24,Apr,29.6,13.0,20.9,9
+Cairo,Egypt,30.04,31.24,May,34.1,17.0,25.3,0
+Cairo,Egypt,30.04,31.24,Jun,37.3,19.8,28.5,0
+Cairo,Egypt,30.04,31.24,Jul,38.6,21.5,30.0,0
+Cairo,Egypt,30.04,31.24,Aug,38.4,22.0,29.9,0
+Cairo,Egypt,30.04,31.24,Sep,35.8,20.2,27.5,0
+Cairo,Egypt,30.04,31.24,Oct,31.2,17.5,23.7,5
+Cairo,Egypt,30.04,31.24,Nov,25.7,13.2,18.7,17
+Cairo,Egypt,30.04,31.24,Dec,20.8,9.1,14.0,7
+Lagos,Nigeria,6.52,3.38,Jan,29.3,23.5,26.2,25
+Lagos,Nigeria,6.52,3.38,Feb,29.9,25.2,27.3,32
+Lagos,Nigeria,6.52,3.38,Mar,29.7,26.0,27.6,71
+Lagos,Nigeria,6.52,3.38,Apr,29.4,26.1,27.5,125
+Lagos,Nigeria,6.52,3.38,May,28.9,25.8,27.1,189
+Lagos,Nigeria,6.52,3.38,Jun,27.8,24.8,26.1,243
+Lagos,Nigeria,6.52,3.38,Jul,27.1,23.8,25.1,205
+Lagos,Nigeria,6.52,3.38,Aug,27.0,23.2,24.7,114
+Lagos,Nigeria,6.52,3.38,Sep,27.4,23.9,25.3,245
+Lagos,Nigeria,6.52,3.38,Oct,28.1,24.6,26.1,202
+Lagos,Nigeria,6.52,3.38,Nov,29.0,25.1,26.8,71
+Lagos,Nigeria,6.52,3.38,Dec,29.5,24.2,26.7,25
+Nairobi,Kenya,-1.29,36.82,Jan,28.1,14.4,20.5,39
+Nairobi,Kenya,-1.29,36.82,Feb,29.4,14.7,21.4,29
+Nairobi,Kenya,-1.29,36.82,Mar,29.3,15.5,21.6,64
+Nairobi,Kenya,-1.29,36.82,Apr,27.4,15.6,20.5,114
+Nairobi,Kenya,-1.29,36.82,May,26.1,14.2,19.3,73
+Nairobi,Kenya,-1.29,36.82,Jun,25.9,13.2,18.7,25
+Nairobi,Kenya,-1.29,36.82,Jul,26.2,12.6,18.7,17
+Nairobi,Kenya,-1.29,36.82,Aug,27.1,12.9,19.2,22
+Nairobi,Kenya,-1.29,36.82,Sep,28.6,13.7,20.3,20
+Nairobi,Kenya,-1.29,36.82,Oct,28.9,14.6,20.8,53
+Nairobi,Kenya,-1.29,36.82,Nov,27.0,15.3,20.2,81
+Nairobi,Kenya,-1.29,36.82,Dec,26.8,14.9,20.0,65
+Johannesburg,South Africa,-26.2,28.05,Jan,28.4,15.3,21.6,123
+Johannesburg,South Africa,-26.2,28.05,Feb,28.3,15.0,21.4,82
+Johannesburg,South Africa,-26.2,28.05,Mar,27.2,13.4,19.9,73
+Johannesburg,South Africa,-26.2,28.05,Apr,24.3,10.4,16.7,43
+Johannesburg,South Africa,-26.2,28.05,May,21.9,6.6,13.3,16
+Johannesburg,South Africa,-26.2,28.05,Jun,18.9,3.5,10.0,7
+Johannesburg,South Africa,-26.2,28.05,Jul,19.0,2.9,9.9,3
+Johannesburg,South Africa,-26.2,28.05,Aug,22.5,5.5,13.1,7
+Johannesburg,South Africa,-26.2,28.05,Sep,26.9,9.1,17.3,16
+Johannesburg,South Africa,-26.2,28.05,Oct,28.5,12.0,19.9,57
+Johannesburg,South Africa,-26.2,28.05,Nov,28.5,13.5,20.7,89
+Johannesburg,South Africa,-26.2,28.05,Dec,28.3,15.0,21.4,127
+Cape Town,South Africa,-33.92,18.42,Jan,21.8,18.5,20.0,14
+Cape Town,South Africa,-33.92,18.42,Feb,22.1,18.7,20.3,9
+Cape Town,South Africa,-33.92,18.42,Mar,21.1,17.8,19.3,17
+Cape Town,South Africa,-33.92,18.42,Apr,19.6,16.2,17.7,37
+Cape Town,South Africa,-33.92,18.42,May,18.1,15.2,16.5,51
+Cape Town,South Africa,-33.92,18.42,Jun,16.5,13.8,15.1,91
+Cape Town,South Africa,-33.92,18.42,Jul,15.9,13.1,14.4,81
+Cape Town,South Africa,-33.92,18.42,Aug,15.7,13.0,14.3,76
+Cape Town,South Africa,-33.92,18.42,Sep,16.5,13.6,15.0,40
+Cape Town,South Africa,-33.92,18.42,Oct,17.9,14.7,16.2,31
+Cape Town,South Africa,-33.92,18.42,Nov,19.2,15.8,17.4,30
+Cape Town,South Africa,-33.92,18.42,Dec,20.8,17.5,19.1,12
+Dubai,UAE,25.2,55.27,Jan,23.1,17.7,20.1,17
+Dubai,UAE,25.2,55.27,Feb,24.4,18.0,20.8,7
+Dubai,UAE,25.2,55.27,Mar,27.3,20.1,23.3,16
+Dubai,UAE,25.2,55.27,Apr,31.1,23.4,26.8,9
+Dubai,UAE,25.2,55.27,May,35.3,26.9,30.7,4
+Dubai,UAE,25.2,55.27,Jun,37.7,29.3,33.1,4
+Dubai,UAE,25.2,55.27,Jul,39.3,31.5,35.0,1
+Dubai,UAE,25.2,55.27,Aug,39.7,32.0,35.4,1
+Dubai,UAE,25.2,55.27,Sep,37.7,30.2,33.5,3
+Dubai,UAE,25.2,55.27,Oct,34.5,27.7,30.7,1
+Dubai,UAE,25.2,55.27,Nov,29.7,24.1,26.5,8
+Dubai,UAE,25.2,55.27,Dec,25.5,20.2,22.5,14
+Mumbai,India,19.08,72.88,Jan,32.1,16.6,23.2,0
+Mumbai,India,19.08,72.88,Feb,34.9,18.7,25.7,2
+Mumbai,India,19.08,72.88,Mar,37.9,21.7,28.7,5
+Mumbai,India,19.08,72.88,Apr,39.4,24.1,30.7,3
+Mumbai,India,19.08,72.88,May,38.0,26.4,31.2,22
+Mumbai,India,19.08,72.88,Jun,32.0,26.4,28.7,535
+Mumbai,India,19.08,72.88,Jul,28.7,25.2,26.6,834
+Mumbai,India,19.08,72.88,Aug,28.3,24.5,26.0,606
+Mumbai,India,19.08,72.88,Sep,29.2,24.0,26.2,376
+Mumbai,India,19.08,72.88,Oct,31.4,22.1,26.2,104
+Mumbai,India,19.08,72.88,Nov,31.3,19.3,24.6,17
+Mumbai,India,19.08,72.88,Dec,31.3,17.3,23.3,5
+Delhi,India,28.61,77.21,Jan,22.4,6.9,13.6,16
+Delhi,India,28.61,77.21,Feb,26.5,10.0,17.4,22
+Delhi,India,28.61,77.21,Mar,32.9,15.4,23.6,18
+Delhi,India,28.61,77.21,Apr,39.2,22.0,30.4,15
+Delhi,India,28.61,77.21,May,42.7,27.2,35.0,33
+Delhi,India,28.61,77.21,Jun,42.0,29.6,35.9,80
+Delhi,India,28.61,77.21,Jul,36.9,28.0,32.3,217
+Delhi,India,28.61,77.21,Aug,33.9,26.0,29.8,203
+Delhi,India,28.61,77.21,Sep,33.7,23.5,28.3,121
+Delhi,India,28.61,77.21,Oct,32.8,18.8,25.2,13
+Delhi,India,28.61,77.21,Nov,28.5,13.6,20.1,4
+Delhi,India,28.61,77.21,Dec,23.9,8.7,15.2,8
+Yakutsk,Russia,62.03,129.73,Jan,-34.3,-40.6,-37.4,11
+Yakutsk,Russia,62.03,129.73,Feb,-30.0,-38.1,-34.2,9
+Yakutsk,Russia,62.03,129.73,Mar,-14.0,-24.5,-19.1,13
+Yakutsk,Russia,62.03,129.73,Apr,-1.3,-10.9,-5.6,25
+Yakutsk,Russia,62.03,129.73,May,11.9,0.9,6.7,52
+Yakutsk,Russia,62.03,129.73,Jun,21.5,9.9,16.2,48
+Yakutsk,Russia,62.03,129.73,Jul,25.4,13.5,19.8,61
+Yakutsk,Russia,62.03,129.73,Aug,21.4,10.3,15.8,62
+Yakutsk,Russia,62.03,129.73,Sep,11.0,1.9,6.1,52
+Yakutsk,Russia,62.03,129.73,Oct,-4.4,-10.5,-7.6,31
+Yakutsk,Russia,62.03,129.73,Nov,-23.1,-28.9,-25.9,21
+Yakutsk,Russia,62.03,129.73,Dec,-34.4,-39.9,-37.1,11
+Ulaanbaatar,Mongolia,47.89,106.91,Jan,-15.2,-24.8,-20.9,3
+Ulaanbaatar,Mongolia,47.89,106.91,Feb,-11.4,-23.0,-17.9,4
+Ulaanbaatar,Mongolia,47.89,106.91,Mar,-2.4,-15.1,-8.9,6
+Ulaanbaatar,Mongolia,47.89,106.91,Apr,7.0,-5.9,0.5,10
+Ulaanbaatar,Mongolia,47.89,106.91,May,14.5,-0.5,7.3,29
+Ulaanbaatar,Mongolia,47.89,106.91,Jun,21.7,7.2,14.8,48
+Ulaanbaatar,Mongolia,47.89,106.91,Jul,24.0,10.4,17.3,68
+Ulaanbaatar,Mongolia,47.89,106.91,Aug,21.5,8.1,14.7,61
+Ulaanbaatar,Mongolia,47.89,106.91,Sep,15.0,1.2,7.8,25
+Ulaanbaatar,Mongolia,47.89,106.91,Oct,4.8,-6.1,-1.3,11
+Ulaanbaatar,Mongolia,47.89,106.91,Nov,-5.9,-15.7,-11.5,7
+Ulaanbaatar,Mongolia,47.89,106.91,Dec,-13.9,-22.5,-19.0,4
+Beijing,China,39.9,116.41,Jan,1.5,-10.2,-5.2,2
+Beijing,China,39.9,116.41,Feb,5.2,-7.0,-1.8,6
+Beijing,China,39.9,116.41,Mar,13.4,-1.7,5.1,9
+Beijing,China,39.9,116.41,Apr,21.7,5.2,13.2,24
+Beijing,China,39.9,116.41,May,28.7,12.5,20.5,38
+Beijing,China,39.9,116.41,Jun,31.9,17.9,24.8,84
+Beijing,China,39.9,116.41,Jul,32.5,21.0,26.6,151
+Beijing,China,39.9,116.41,Aug,30.8,19.6,25.0,108
+Beijing,China,39.9,116.41,Sep,26.6,13.7,19.7,64
+Beijing,China,39.9,116.41,Oct,19.4,5.7,11.8,30
+Beijing,China,39.9,116.41,Nov,9.9,-2.1,2.9,14
+Beijing,China,39.9,116.41,Dec,2.3,-8.5,-4.0,2
+Tokyo,Japan,35.68,139.69,Jan,9.0,0.9,4.7,80
+Tokyo,Japan,35.68,139.69,Feb,10.1,1.4,5.6,75
+Tokyo,Japan,35.68,139.69,Mar,13.4,4.1,8.8,124
+Tokyo,Japan,35.68,139.69,Apr,18.2,8.8,13.5,135
+Tokyo,Japan,35.68,139.69,May,22.8,14.0,18.2,148
+Tokyo,Japan,35.68,139.69,Jun,25.8,18.3,21.8,185
+Tokyo,Japan,35.68,139.69,Jul,29.5,22.4,25.5,152
+Tokyo,Japan,35.68,139.69,Aug,31.1,23.7,26.9,134
+Tokyo,Japan,35.68,139.69,Sep,27.6,20.5,23.6,211
+Tokyo,Japan,35.68,139.69,Oct,22.1,14.8,18.1,246
+Tokyo,Japan,35.68,139.69,Nov,16.8,8.9,12.7,120
+Tokyo,Japan,35.68,139.69,Dec,11.6,3.5,7.3,83
+Singapore,Singapore,1.35,103.82,Jan,28.5,24.1,25.9,235
+Singapore,Singapore,1.35,103.82,Feb,29.2,24.0,26.2,102
+Singapore,Singapore,1.35,103.82,Mar,29.9,24.8,27.0,168
+Singapore,Singapore,1.35,103.82,Apr,30.4,25.8,27.8,193
+Singapore,Singapore,1.35,103.82,May,30.3,26.3,28.1,199
+Singapore,Singapore,1.35,103.82,Jun,29.7,25.9,27.6,164
+Singapore,Singapore,1.35,103.82,Jul,29.2,25.5,27.1,174
+Singapore,Singapore,1.35,103.82,Aug,29.3,25.4,27.1,173
+Singapore,Singapore,1.35,103.82,Sep,29.5,25.3,27.1,167
+Singapore,Singapore,1.35,103.82,Oct,29.7,25.4,27.3,210
+Singapore,Singapore,1.35,103.82,Nov,29.1,25.2,26.9,283
+Singapore,Singapore,1.35,103.82,Dec,28.4,24.7,26.3,301
+Perth,Australia,-31.95,115.86,Jan,26.5,19.5,22.8,18
+Perth,Australia,-31.95,115.86,Feb,27.0,20.1,23.4,17
+Perth,Australia,-31.95,115.86,Mar,26.0,19.3,22.5,20
+Perth,Australia,-31.95,115.86,Apr,23.3,17.7,20.4,34
+Perth,Australia,-31.95,115.86,May,21.0,16.0,18.4,84
+Perth,Australia,-31.95,115.86,Jun,19.0,14.6,16.7,113
+Perth,Australia,-31.95,115.86,Jul,17.7,13.7,15.7,128
+Perth,Australia,-31.95,115.86,Aug,17.7,13.5,15.6,106
+Perth,Australia,-31.95,115.86,Sep,18.1,13.5,15.8,70
+Perth,Australia,-31.95,115.86,Oct,20.1,14.6,17.2,32
+Perth,Australia,-31.95,115.86,Nov,22.5,16.3,19.3,25
+Perth,Australia,-31.95,115.86,Dec,24.7,18.0,21.2,12
+Sydney,Australia,-33.87,151.21,Jan,25.9,20.5,22.9,83
+Sydney,Australia,-33.87,151.21,Feb,25.2,20.8,22.7,135
+Sydney,Australia,-33.87,151.21,Mar,24.2,19.9,21.8,104
+Sydney,Australia,-33.87,151.21,Apr,22.2,17.7,19.8,73
+Sydney,Australia,-33.87,151.21,May,19.6,14.9,17.1,54
+Sydney,Australia,-33.87,151.21,Jun,17.2,13.1,15.0,87
+Sydney,Australia,-33.87,151.21,Jul,16.6,11.7,14.0,44
+Sydney,Australia,-33.87,151.21,Aug,17.4,11.8,14.5,46
+Sydney,Australia,-33.87,151.21,Sep,19.7,13.7,16.5,43
+Sydney,Australia,-33.87,151.21,Oct,21.7,15.5,18.4,64
+Sydney,Australia,-33.87,151.21,Nov,23.0,17.3,19.9,83
+Sydney,Australia,-33.87,151.21,Dec,24.5,18.8,21.4,72
+Auckland,New Zealand,-36.85,174.76,Jan,23.1,16.7,19.8,58
+Auckland,New Zealand,-36.85,174.76,Feb,23.7,17.5,20.4,64
+Auckland,New Zealand,-36.85,174.76,Mar,22.3,16.3,19.1,72
+Auckland,New Zealand,-36.85,174.76,Apr,19.9,14.6,17.0,84
+Auckland,New Zealand,-36.85,174.76,May,17.2,12.6,14.7,118
+Auckland,New Zealand,-36.85,174.76,Jun,14.9,10.6,12.6,106
+Auckland,New Zealand,-36.85,174.76,Jul,13.8,9.3,11.4,115
+Auckland,New Zealand,-36.85,174.76,Aug,14.2,9.6,11.8,100
+Auckland,New Zealand,-36.85,174.76,Sep,15.6,10.5,12.9,85
+Auckland,New Zealand,-36.85,174.76,Oct,17.0,11.6,14.2,80
+Auckland,New Zealand,-36.85,174.76,Nov,19.1,13.2,16.0,52
+Auckland,New Zealand,-36.85,174.76,Dec,21.3,15.4,18.2,81
