@@ -3,6 +3,10 @@
 One command does the whole chain that used to be done by hand — which is how
 the previous release shipped as ``GlyphViz20260729.zip`` on 2026-07-26:
 
+  0. Stamp __version__           -> glyphviz_core/__init__.py, the release
+                                    date in PEP 440 form (20260927 ->
+                                    2026.9.27), which the macOS/Linux CI
+                                    builds name their artifacts from
   1. PyInstaller build           -> dist\\GlyphViz\\
   2. Zip it                      -> GlyphViz<YYYYMMDD>.zip  (contents at the
                                     archive's top level: GlyphViz.exe +
@@ -115,6 +119,38 @@ APP_SIZE_RE = re.compile(
     r'( MB extracted · build )\d{4}-\d{2}-\d{2}')
 # "*~212 MB download, ~340 MB extracted*"
 EXAMPLES_SIZE_RE = re.compile(r'(~)\d+( MB download, ~)\d+( MB extracted\*)')
+
+# The package version: `__version__ = "2026.8.30"`. It is the release date in
+# PEP 440 form, and it is what the macOS and Linux CI builds name their
+# artifacts from (build-macos.yml / build-linux.yml), plus `--version` and
+# `--check`. It used to be edited by hand and was never touched by this script,
+# so it sat at 2026.8.30 through five Windows releases -- the platform that
+# ships most often did not read it, and the ones that did would have reused an
+# August name for September code. Step 0 now stamps it from --date.
+VERSION_FILE = REPO / 'glyphviz_core' / '__init__.py'
+VERSION_RE = re.compile(r'^(__version__ = ")[^"]*(")$', re.MULTILINE)
+
+
+def pep440_version(d: date) -> str:
+    """20260806 -> '2026.8.6': the dated stamp with leading zeros dropped,
+    which PEP 440 requires (it normalizes '2026.08.06' to the same thing)."""
+    return f"{d.year}.{d.month}.{d.day}"
+
+
+def stamp_version(d: date, dry_run: bool, path: Path = VERSION_FILE):
+    """Rewrite __version__ in `path` to the release date. Returns
+    (old, new), or None if the line is not there -- the release should stop
+    rather than ship a build whose version and zip name disagree."""
+    text = path.read_text(encoding='utf-8')
+    m = VERSION_RE.search(text)
+    if m is None:
+        return None
+    old = text[m.end(1):m.start(2)]
+    new = pep440_version(d)
+    if not dry_run and old != new:
+        path.write_text(VERSION_RE.sub(rf'\g<1>{new}\g<2>', text, count=1),
+                        encoding='utf-8', newline='\n')
+    return old, new
 
 
 # ----------------------------------------------------------------- helpers
@@ -330,6 +366,25 @@ def main() -> int:
         log("  DRY RUN — nothing will be built, written, or published.")
     log()
 
+    # --- 0. version ------------------------------------------------------
+    # Before the build, so the frozen app reports the date its zip carries.
+    # Only for an app release: an examples-only cut ships no code.
+    if 'app' in wanted:
+        stamped = stamp_version(stamp_date, args.dry_run)
+        if stamped is None:
+            log(f"ERROR: no `__version__ = \"...\"` line in {VERSION_FILE}.")
+            log("       Fix the pattern in tools/release.py (or the file) "
+                "and re-run.")
+            return 1
+        old, new = stamped
+        verb = 'would stamp' if args.dry_run else 'stamped'
+        log(f"[0] __version__ {old} -> {new}"
+            + (f" ({verb})" if old != new else " (already current)"))
+        if args.skip_build and old != new:
+            log("    NOTE: --skip-build re-zips the existing dist/, built "
+                f"before this stamp; its --version will not say {new}.")
+        log()
+
     # --- 1. build -------------------------------------------------------
     if 'app' in wanted and not args.skip_build:
         log("[1] Building the Windows app (PyInstaller)...")
@@ -451,7 +506,8 @@ def main() -> int:
         log(" Done. Everything to upload is in one folder:")
         log(f"   {out_root}")
         log("       -> https://iluvdata.org/glyphviz/")
-        log("   (then commit the docs change)")
+        log("   (then commit the docs change"
+            + (" and the __version__ stamp)" if 'app' in wanted else ")"))
     else:
         log(" Done. To publish:")
         for key in wanted:
@@ -460,6 +516,8 @@ def main() -> int:
             log(f"       -> https://iluvdata.org/glyphviz/{spec['subdir']}/")
         if not args.no_docs:
             log("   commit the docs change, rebuild the site, upload it")
+        if 'app' in wanted:
+            log("   commit the __version__ stamp in glyphviz_core/__init__.py")
     log('=' * 62)
     return 0
 
