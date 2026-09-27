@@ -114,6 +114,16 @@ class Shot:
     gesture: Callable | None = None   # f(u) -> dict (see _draw_gesture)
     summary: Sequence[str] = ()       # bullet card (end of lesson)
     scene: str | None = None          # cut to this node CSV at shot start
+    # Channels playback speed from this shot on, in animation frames per
+    # second of video (0 pauses; None keeps the previous shot's). Needs a
+    # use_window lesson, whose MainWindow loaded the channel files.
+    ch_rate: float | None = None
+    ch_frame: float | None = None     # jump the animation here at shot start
+    # Play the animation from frame A to frame B across this shot (linear in
+    # shot time). Chain shots A->B, B->C so playback never skips. Or give
+    # ((u, frame), ...) pairs to play piecewise, e.g. arrive and then hold.
+    ch_span: tuple | None = None
+    card: Callable | None = None      # f(overlay, draw, u): a custom full-frame card
     min_dur: float = 0.0
     tail: float = 0.45                # silence after the narration, seconds
 
@@ -136,12 +146,30 @@ class Lesson:
     scene_csv: str | None = None
     voice: str = "af_heart"           # Kokoro voice id (render_lesson --voice overrides)
     speed: float = 1.0                # Kokoro speaking speed
+    # Called once before rendering, e.g. to write a lesson's own copy of a
+    # scene. Returns nothing; may set scene_csv.
+    prepare: Callable | None = None
+    ch_loop: bool = True              # wrap the Channels clock at the end
     # Filled in at render time:
     vp: object = None
     win: object = None
+    ch_rate: float = 0.0
+    ch_frame: float = 0.0
 
     def node(self, node_id):
         return self.vp._scene.node_by_id(node_id)
+
+    def show_ch_frame(self, frame: float):
+        """Put the Channels animation on `frame`, through the same method the
+        app's play timer and frame slider call."""
+        w = self.win
+        if w is None or w._ch_engine is None:
+            return
+        n = w._ch_engine.frame_count
+        f = int(frame) % n if self.ch_loop else min(int(frame), n - 1)
+        self.ch_frame = float(frame)
+        w._ch_frame = f
+        w._ch_apply_and_show_frame(f)
 
 
 # ------------------------------------------------------------------ easing
@@ -236,6 +264,18 @@ class CameraTrack:
         cam = dict(az=az, el=el, dist=dist, target=target, eye=None)
         self.cam = dict(b)
         return cam
+
+
+def span_frame(span, u: float) -> float:
+    """The animation frame at shot fraction u for a Shot.ch_span."""
+    if not isinstance(span[0], (tuple, list)):
+        span = ((0.0, span[0]), (1.0, span[1]))
+    if u <= span[0][0]:
+        return float(span[0][1])
+    for (u0, f0), (u1, f1) in zip(span, span[1:]):
+        if u <= u1:
+            return f0 + (f1 - f0) * ((u - u0) / (u1 - u0) if u1 > u0 else 1.0)
+    return float(span[-1][1])
 
 
 # ------------------------------------------------------------------ overlays
@@ -544,10 +584,16 @@ def _window_viewport(lesson: Lesson, width, height):
     vp.show_axes = lesson.show_axes
     vp.resize(width, height)
     vp.grabFramebuffer()            # create the GL context (see export_frame)
+    lesson.win = win
+    if lesson.scene_csv:
+        # File > Open's own path: tags, media/, meshes/ and the Channels
+        # companion files all load exactly as they do for a user.
+        if not win._load_csv_path(str(lesson.scene_csv)):
+            raise RuntimeError(win.statusBar().currentMessage())
+        return vp
     win.nodes = list(lesson.nodes)
     vp.set_nodes(win.nodes)
     win._table.set_nodes(win.nodes)
-    lesson.win = win
     return vp
 
 
@@ -560,6 +606,8 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
     out_dir.mkdir(parents=True, exist_ok=True)
     scene_dir = out_dir / "scene"
     scene_dir.mkdir(exist_ok=True)
+    if lesson.prepare:
+        lesson.prepare(lesson, scene_dir)
     if lesson.scene_csv:
         csv_path = Path(lesson.scene_csv)
     else:
@@ -611,14 +659,25 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
             shot = lesson.shots[shot_i]
             if shot.scene and shot.scene != current_scene:
                 # A cut to another scene file, loaded as the app opens one.
-                from glyphviz_core.csv_reader import load_node_csv
-                vp.set_nodes(load_node_csv(shot.scene))
+                if lesson.win is not None:
+                    lesson.win._load_csv_path(str(shot.scene))
+                    lesson.ch_frame = 0.0
+                else:
+                    from glyphviz_core.csv_reader import load_node_csv
+                    vp.set_nodes(load_node_csv(shot.scene))
                 vp.selected_node_ids = set()
                 current_scene = shot.scene
             if shot.select is not None:
-                vp.selected_node_ids = set(shot.select)
+                if lesson.win is not None:
+                    lesson.win._table.select_by_ids(set(shot.select))
+                else:
+                    vp.selected_node_ids = set(shot.select)
             for k, v in shot.state.items():
                 setattr(vp, k, v)
+            if shot.ch_rate is not None:
+                lesson.ch_rate = shot.ch_rate
+            if shot.ch_frame is not None:
+                lesson.show_ch_frame(shot.ch_frame)
             keys = track.shot_keys(shot)
             fired = set()
             vp.tags_touch()
@@ -638,6 +697,12 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
                     else:
                         setattr(vp, k, v)
                 vp.tags_touch()
+        if shot.ch_span and lesson.win is not None:
+            lesson.show_ch_frame(span_frame(shot.ch_span, u))
+        elif lesson.ch_rate and lesson.win is not None:
+            # The animation clock runs on VIDEO time, not the app's QTimer, so
+            # a frame that is slow to render can't make the playback stutter.
+            lesson.show_ch_frame(lesson.ch_frame + lesson.ch_rate / fps)
         if shot.animate:
             shot.animate(lesson, u)
             vp.scene_invalidate()
@@ -672,9 +737,11 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
         # Full-screen cards, then captions, each on its own layer: PIL draws
         # REPLACE alpha within one layer, so a fading full-screen card drawn
         # into the same layer erased everything under it.
-        if shot.title or shot.summary:
+        if shot.title or shot.summary or shot.card:
             card = Image.new("RGBA", img.size, (0, 0, 0, 0))
             dc = ImageDraw.Draw(card, "RGBA")
+            if shot.card:
+                shot.card(ov, dc, u)
             if shot.title:
                 # Title holds for the first ~35% then fades.
                 a = 1.0 if u < 0.35 else max(0.0, 1 - (u - 0.35) / 0.15)
@@ -700,8 +767,10 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
         if ff.wait() != 0:
             raise RuntimeError("ffmpeg failed encoding frames")
 
-    if lesson.use_window:
-        # The scene the viewer should open is the one the lesson BUILT.
+    if lesson.use_window and not lesson.scene_csv:
+        # The scene the viewer should open is the one the lesson BUILT. (Never
+        # for a filmed scene_csv: that path is a shipped example, and the
+        # channel engine has left the last frame's values in its nodes.)
         save_node_csv(lesson.win.nodes, str(csv_path))
     written["timing"] = timing
     written["total"] = total

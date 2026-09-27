@@ -28,8 +28,12 @@ means every video can be re-rendered after a UI or rendering change.
 | `camera_mode` | feature: Camera Mode flight | ~32 s |
 | `torus` | feature: Torus topology | ~37 s |
 | `building_glyphviz` | **example explainer**: the Building GlyphViz gallery scene | ~138 s |
+| `channels_sine` | Channels 1/3: tracks, map, Channel In, on a lesson copy of Sine Wave | ~102 s |
+| `channels_hike_race` | Channels 2/3: GPS data, the Multi-Hike Ghost Race | ~97 s |
+| `channels_river_pulse` | Channels 3/3: at scale, The Pulse (70,809 nodes) | ~103 s |
+| `climate_rings` | **workflow**: a spreadsheet, a prompt, a drop: City Climate Rings | ~106 s |
 
-All five are narrated in `af_heart`, Jeff's pick of the Kokoro voices.
+All nine are narrated in `af_heart`, Jeff's pick of the Kokoro voices.
 
 ## Example explainers
 
@@ -112,6 +116,40 @@ curl.exe -L -o "$k\voices-v1.0.bin" "$r/voices-v1.0.bin"
 
 `--engine sapi` falls back to Windows' built-in voices (robotic, but needs no
 setup).
+
+## Channels lessons
+
+A `use_window` lesson with `scene_csv` opens the scene through File > Open's
+own path (`MainWindow._load_csv_path`), so its ch-map/ch-tracks, tags, media/
+and meshes/ all load as they do for a user. The animation then runs on a
+clock driven by **video time**, not the app's QTimer, through the same
+`_ch_apply_and_show_frame` the play timer calls:
+
+| Shot field | what it does |
+| --- | --- |
+| `ch_rate` | frames per second of video from this shot on (0 pauses) |
+| `ch_frame` | jump the animation to this frame at the shot's start |
+| `ch_span` | play frame A -> B across the shot, or `((u, frame), ...)` to arrive and hold; chain shots A->B, B->C so playback never skips |
+| `card` | `f(overlay, draw, u)`: a custom full-frame card (tables, prompts) |
+
+`Lesson(prepare=...)` runs before rendering, e.g. to write a lesson's own copy
+of a scene into `out/` (`channels_sine` adds pulse, colour and ripple channels
+to a copy of Sine Wave; the shipped example is never touched). A lesson that
+films a `scene_csv` never saves back over it.
+
+Channel In changes go through the Properties panel's own spin box
+(`MainWindow._insp_ch_in`); the readout prints that spin box and its hint.
+
+## The workflow lesson's data
+
+`examples/City_Climate_Rings_Example/` (a gallery example) holds everything
+`climate_rings` shows: `city_climate.csv` (NASA POWER daily data 2001-2020,
+averaged by month; `fetch_climate.py` rebuilds it), `prompt.md` (the prompt),
+and `build_climate_rings.py` (the generator for that prompt, which verifies
+its own geometry through GlyphViz's engine before writing). The lesson writes the
+scene into `out/` and drops the folder on a real MainWindow through
+`MainWindow.apply_drop`. To film a ring with its bars upright, the lesson
+turns the globe (an ordinary rotatable node) to bring each city to the top.
 
 ## Lessons that act like a user
 
