@@ -2,6 +2,11 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-09-30
+
+- **[Building GlyphViz](examples/building-glyphviz.md#watch-it-explained) now carries a narrated video**, about two minutes long and rendered straight from GlyphViz. It covers how the scene is laid out and how to read one session's column, and what the record shows about how the collaboration changed.
+- **You can now draw your own Claude Code sessions the same way.** The Building GlyphViz download includes a `Make_Your_Own` folder with the scripts that built the scene, rewritten to work on anyone's transcripts, from the terminal or the VS Code extension. Point it at your project, run three scripts, and open the scenes they write; a `--public` option builds a copy with your paths and user name scrubbed, for sharing. See [Make your own](examples/building-glyphviz.md#make-your-own).
+
 ## 2026-09-27
 
 - **[City Climate Rings](examples/city-climate-rings.md) joined the Examples Gallery**, under *Maps & terrain*. Thirty-one cities sit on a globe, each wearing a clock face of its twelve months: beads coloured by mean temperature, a bar from the average low to the average high, and a rainfall column. Mumbai's monsoon, Singapore's unchanging year, Yakutsk's 57 °C swing and the seasons flipping across the equator all read at a glance. The data is NASA POWER's daily record for 2001–2020, averaged by month.
