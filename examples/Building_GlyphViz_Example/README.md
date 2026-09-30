@@ -50,3 +50,13 @@ pedestals have tool calls and prompts but no timing or thinking.
 
 For publication, local file paths in the labels were shortened to `~`.
 Prompt labels show the first line of each prompt, up to 160 characters.
+
+## Make your own
+
+`Make_Your_Own/` holds the scripts that built this scene, rewritten to work on
+anyone's Claude Code transcripts (Python standard library only). Put your
+transcript folder into `Make_Your_Own/config.py` and run the three scripts;
+its README has the details, including `--public` for a copy you can share.
+
+A narrated two-minute tour of this scene is on its gallery page:
+https://www.iluvdata.org/glyphviz/examples/building-glyphviz/

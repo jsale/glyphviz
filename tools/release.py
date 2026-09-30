@@ -89,6 +89,11 @@ def archive_name(spec: dict, stamp: str) -> str:
 EXCLUDE_DIRS = {'__pycache__', '.ipynb_checkpoints', '.git', '_notes'}
 EXCLUDE_FILES = {'Thumbs.db', '.DS_Store'}
 EXCLUDE_SUFFIXES = {'.pyc', '.pyo'}
+# Folders a script writes beside itself when someone runs it, holding
+# that person's own data: the Building GlyphViz kit's extracted
+# transcripts and scenes. Ignored by git, and must not ship either.
+EXCLUDE_GENERATED = {Path('Building_GlyphViz_Example/Make_Your_Own/data'),
+                     Path('Building_GlyphViz_Example/Make_Your_Own/out')}
 
 # Docs files that carry a release stamp. Rewrites are applied to all of them;
 # a pattern that matches nothing anywhere is reported as doc drift rather
@@ -211,7 +216,9 @@ def publish_site(site: Path, dest: Path) -> int:
 def walk_files(root: Path):
     """Every shippable file under root, as (absolute path, archive name)."""
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(d for d in dirnames if d not in EXCLUDE_DIRS)
+        dirnames[:] = sorted(d for d in dirnames if d not in EXCLUDE_DIRS
+                             and (Path(dirpath) / d).relative_to(root)
+                             not in EXCLUDE_GENERATED)
         for name in sorted(filenames):
             if name in EXCLUDE_FILES or Path(name).suffix.lower() in EXCLUDE_SUFFIXES:
                 continue

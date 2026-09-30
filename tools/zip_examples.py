@@ -73,6 +73,11 @@ EXAMPLES = REPO / 'examples'
 EXCLUDE_DIRS = {'__pycache__', '.ipynb_checkpoints', '.git', '_notes'}
 EXCLUDE_FILES = {'Thumbs.db', '.DS_Store'}
 EXCLUDE_SUFFIXES = {'.pyc', '.pyo', '.zip'}
+# Folders a script writes beside itself when someone runs it, holding
+# that person's own data: the Building GlyphViz kit's extracted
+# transcripts and scenes. Ignored by git, and must not ship either.
+EXCLUDE_GENERATED = {Path('Building_GlyphViz_Example/Make_Your_Own/data'),
+                     Path('Building_GlyphViz_Example/Make_Your_Own/out')}
 
 NODE_CSV_RE = re.compile(r'_gv_node\.csv$', re.IGNORECASE)
 
@@ -161,6 +166,9 @@ def walk_files(root: Path, skip_dirs=()):
                                  if d not in EXCLUDE_DIRS and d not in skip)
         else:
             dirnames[:] = sorted(d for d in dirnames if d not in EXCLUDE_DIRS)
+        dirnames[:] = [d for d in dirnames
+                       if (Path(dirpath) / d).relative_to(EXAMPLES)
+                       not in EXCLUDE_GENERATED]
         for name in sorted(filenames):
             if name in EXCLUDE_FILES or Path(name).suffix.lower() in EXCLUDE_SUFFIXES:
                 continue

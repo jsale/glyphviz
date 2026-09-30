@@ -80,6 +80,10 @@ examples/San_Diego_Fire_History_Example/Burn_Record/
 # It is built outside the repo (session_lab/, untracked: its private build holds
 # unscrubbed paths) with build_corpus_scene.py --public, then copied here.
 examples/Building_GlyphViz_Example/building_glyphviz_gv_node.csv
+# Its public Make_Your_Own/ kit writes data/ and out/ beside itself when run;
+# those hold whoever ran it's own transcripts, so they never ship.
+examples/Building_GlyphViz_Example/Make_Your_Own/data/
+examples/Building_GlyphViz_Example/Make_Your_Own/out/
 # ...and never commit the ~330 MB raw archive that --download fetches; the
 # 3.9 MB data/ibtracs_tidy.csv.gz snapshot beside it is what rebuilds offline.
 examples/Tropical_Cyclone_Example/data/ibtracs.ALL.raw.csv
