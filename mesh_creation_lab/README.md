@@ -1,6 +1,6 @@
 # Mesh Creation Lab
 
-Six GlyphViz scenes built from procedurally generated 3D models, and the small
+Seven GlyphViz scenes built from procedurally generated 3D models, and the small
 toolkit that makes them. This is a **lab, not part of the official examples
 collection** — nothing here is in the gallery, the per-example zips or
 `GlyphViz_Examples.zip`. It exists to show what the mesh pipeline can do and to
@@ -14,6 +14,7 @@ exercise it.
 | [`Whale/`](Whale/) | ~2,200 | Smooth organic lofting from a lines plan |
 | [`Jet/`](Jet/) | 2,716 | Six materials on one model; hard and smooth surfaces |
 | [`Starship/`](Starship/) | ~21,500 | Procedural greebling; a dense mesh as a capacity check |
+| [`Banyan_Tree/`](Banyan_Tree/) | 125 files | A whole community built from three hand drawings: a school traced from its floor plan, furnished, on 11 acres of terrain |
 
 Open any scene's `*_gv_node.csv` in GlyphViz. The `meshes/` and `media/`
 folders beside it load automatically.
