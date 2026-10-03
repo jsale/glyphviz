@@ -42,8 +42,18 @@ means every video can be re-rendered after a UI or rendering change.
 | `climate_rings` | **workflow**: a spreadsheet, a prompt, a drop: City Climate Rings | ~106 s |
 | `ai_observatory_gpt2` | **example explainer**: Inside GPT-2, with the scene's own sound | ~183 s |
 | `ai_observatory_gemma` | **example explainer**: Inside Gemma, the lens check, its sound | ~191 s |
+| `trust_network` | **example explainer**: Trust and Betrayal, the glyph and five years of the marketplace growing | ~233 s |
+| `vehicle_auction_field` | **example explainer**: Raw Auction Field, the legend and its queries run through Select By | ~212 s |
 
-All eleven are narrated in `af_heart`, Jeff's pick of the Kokoro voices.
+All thirteen are narrated in `af_heart`, Jeff's pick of the Kokoro voices.
+
+Both of the last two film very large scenes (31,214 and 100,083 nodes), so
+they render at roughly a tenth of real time. Two tricks they share:
+viewer-side visibility changes (pinned labels, the Trust scene's rating links
+and guides) made only while the animation is paused, so the next Channels
+frame or a final Show All restores the scene; and queries run through the
+app's own Select By and Show Only Selected handlers, never by setting hide
+flags directly.
 
 ## Example explainers
 
