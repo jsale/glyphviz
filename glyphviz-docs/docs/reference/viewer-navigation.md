@@ -97,6 +97,10 @@ always anchored to a target — to get a fresh angle you pan away, re-orient,
 pan again. Camera Mode drops the anchor so you can simply fly to the shot,
 which is what it exists for: composing screen-capture angles.
 
+A 30-second video of flight: **C** to take off from where you are, left-drag up to fly forward (the farther you move, the faster you fly), a little to the side to turn at a constant height, right-drag to look around, the wheel, and **C** again to go back to orbiting.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/camera_mode.mp4"></video>
+
 | Action | Binding | Source |
 |---|---|---|
 | Fly forward / back (hold above / below the press point) | Left-click + hold, cursor above/below the click | `_apply_fly_drag` |

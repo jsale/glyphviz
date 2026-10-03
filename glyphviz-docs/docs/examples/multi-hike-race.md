@@ -8,6 +8,12 @@ A ghost race: six real GPS hike recordings — the three fastest and three slowe
 
 [:material-download: Download this example (267 KB)](https://iluvdata.org/glyphviz/zips/Multi_Hike_Race_Example.zip){ .md-button }
 
+## Watch it explained
+
+A narrated tour of the race, about a minute and a half, rendered from GlyphViz itself: GPS tracks driving each pin over the real terrain, the fast hikes turning at the summit while the slow ones are still climbing, the dashboards whose needles run on the same clock as their climbers, and how to replay a recorded track of your own.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/channels_hike_race.mp4"></video>
+
 ---
 
 *A full write-up of this example is coming soon.*

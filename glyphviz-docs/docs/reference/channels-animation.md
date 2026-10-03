@@ -7,6 +7,14 @@ silently ignored. Clamps below come from `_FIELD_RANGE`
 (`channel_engine.py:105-118`), and the transform/non-transform split from
 `_TRANSFORM_FIELDS` (`channel_engine.py:81-90`).
 
+## Watch it explained
+
+New to Channels? This narrated video, under two minutes, covers the ideas behind the rest of this page on the [Sine Wave](../examples/sine-wave.md) scene: the tracks and map files, binding a node with **Channel In**, how a bound parent carries its children, and a wave built from staggered channels.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/channels_sine.mp4"></video>
+
+Two more narrated videos show Channels on real recorded data: the [Multi-Hike Ghost Race](../examples/multi-hike-race.md#watch-it-explained), where GPS tracks drive position, and [The Pulse](../examples/sd-river-pulse.md#watch-it-explained), where 772 tracks play a century of the San Diego River.
+
 ## The three files
 
 | File | Role | What is actually read |

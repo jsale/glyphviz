@@ -37,6 +37,12 @@ Viewer (`_on_insp_*` handlers, e.g. `_on_insp_pos_changed` at
 
 Source: `main_window.py:321-376`.
 
+### Watch: tag labels
+
+A 35-second video of the tag controls in use: labels following the selection, clearing **Show Tag Labels of Selected** to show them all, **T** to hide and show every label, pinning one label with **Always Show Text** (in [Selected Node](#selected-node)), and **Tag Text Size**.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/tags.mp4"></video>
+
 ## Global Scale
 
 A slider, range 1–100 (displayed as 0.1–10.0), default value 10
@@ -117,6 +123,12 @@ Save As also writes a companion tag CSV. The **K**-key quick-save always
 writes both regardless of this checkbox. Source: `main_window.py:478-497`.
 
 ## Create
+
+### Watch: parents and children
+
+A 74-second video building a family with these controls: **N** for a new node, **New Object Defaults** to choose what the children look like, **Shift+N** to add children around the parent (a new ring starts after each lap), grandchildren, and a parent's topology re-arranging its whole family.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/parent_children.mp4"></video>
 
 Two buttons — **New Node** (**N** key) and **New Child** (**Shift+N**, requires
 exactly one node selected) — plus a **New Object Defaults** sub-form applied

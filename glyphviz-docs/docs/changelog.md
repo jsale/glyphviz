@@ -2,6 +2,13 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-10-03
+
+- **Eight more narrated videos are in the docs**, each rendered straight from GlyphViz.
+    - On their gallery pages: [City Climate Rings](examples/city-climate-rings.md#watch-it-explained) (from a spreadsheet to a scene with the Claude Skill), [Sine Wave Channels](examples/sine-wave.md#watch-it-explained) (how Channels and Channel In work), the [Multi-Hike Ghost Race](examples/multi-hike-race.md#watch-it-explained) and [The Pulse](examples/sd-river-pulse.md#watch-it-explained).
+    - In the reference: parents and children and tag labels in the [Properties Panel](reference/properties-panel.md#watch-parents-and-children), [Camera Mode](reference/viewer-navigation.md#camera-mode-free-flight), and the [Torus topology](reference/topologies.md#watch-the-torus-topology).
+    - The [Channels Animation](reference/channels-animation.md#watch-it-explained) page opens with the Sine Wave video, and the [Claude Skill](getting-started/installation.md#claude-skill) section now shows the City Climate Rings video as a worked example.
+
 ## 2026-09-30
 
 - **[Building GlyphViz](examples/building-glyphviz.md#watch-it-explained) now carries a narrated video**, about two minutes long and rendered straight from GlyphViz. It covers how the scene is laid out and how to read one session's column, and what the record shows about how the collaboration changed.

@@ -8,6 +8,12 @@ A year of climate for 31 cities, drawn as a ring of months around each city on a
 
 [:material-download: Download this example (1.6 MB)](https://iluvdata.org/glyphviz/zips/City_Climate_Rings_Example.zip){ .md-button }
 
+## Watch it explained
+
+A narrated walk-through, under two minutes, rendered from GlyphViz itself: the spreadsheet this scene started as, the plain-words request to Claude, the folder dropped onto the window, and then the rings read city by city, from Moscow's wide year and Singapore's unchanging one to Mumbai's monsoon and the seasons flipping across the equator.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/climate_rings.mp4"></video>
+
 ## Reading a ring
 
 ![Mumbai's monsoon: rain columns towering from June to September](../assets/examples/city-climate-rings-mumbai.png)
@@ -29,7 +35,7 @@ A year of climate for 31 cities, drawn as a ring of months around each city on a
 
 ## From a spreadsheet to a scene
 
-This example is the one the **Your Data in GlyphViz** lesson video walks through, and everything in that walk-through ships in the folder:
+This example is the one the **Your Data in GlyphViz** video [above](#watch-it-explained) walks through, and everything in that walk-through ships in the folder:
 
 1. **`city_climate.csv`**, the data: 372 rows with columns `city`, `country`, `lat`, `lon`, `month`, `high_c`, `low_c`, `mean_c` and `precip_mm`.
 2. **`prompt.md`**, the request, in plain words: put each city on a globe, draw a clock face of months around it coloured by temperature, and stand a temperature bar and a rainfall column on each month.

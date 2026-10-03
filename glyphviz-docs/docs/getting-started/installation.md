@@ -195,6 +195,14 @@ Download **[glyphviz-skill.zip](https://www.iluvdata.org/glyphviz/skills/glyphvi
 
 Once installed, just ask: *"Use the GlyphViz skill to visualize this CSV as a sphere of clustered categories"* — Claude reads the spec, writes the node (and tag/Channels) CSVs, and validates them before handing the file back.
 
+### Try it yourself: from a spreadsheet to a scene
+
+This narrated video, under two minutes, follows that workflow from start to finish: a spreadsheet of monthly climate for 31 cities, a plain-words description of the picture, the scene Claude writes, and the folder dropped onto GlyphViz.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/climate_rings.mp4"></video>
+
+Everything in the video ships with the [City Climate Rings](../examples/city-climate-rings.md#from-a-spreadsheet-to-a-scene) example: the spreadsheet, the prompt, and the generator Claude wrote. Compare them with your own data and request.
+
 The skill is native to GlyphViz's own `gv_` CSV format (not the legacy 94-column ANTz/GaiaViz dialect), so it produces scenes that open cleanly in either the desktop app or [GlyphViz Web](https://www.iluvdata.org/glyphvizweb/).
 
 ---

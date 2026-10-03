@@ -10,6 +10,12 @@ It's the second scene of the **San Diego River Watershed Atlas**. It's built on 
 
 [:material-download: Download this example (6 MB)](https://iluvdata.org/glyphviz/zips/San_Diego_River_Pulse_Example.zip){ .md-button }
 
+## Watch it explained
+
+A narrated tour of the century, under two minutes, rendered from GlyphViz itself: rain over the mountains, the river's ribbons swelling each winter, the record months of January 1916 and February 1927, the dams flattening the river's swings, and why even the running date is a Channels effect.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/channels_river_pulse.mp4"></video>
+
 ## What moves
 
 **The river.** Each of the three USGS stream gauges drives a ribbon laid over the stretch of river it measures: Mast Road to Fashion Valley, Fashion Valley to the sea, and Los Coches Creek from its gauge down to the river.

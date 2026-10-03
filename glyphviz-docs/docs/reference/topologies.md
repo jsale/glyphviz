@@ -51,6 +51,14 @@ are all plain Cartesian, so `topo08_grid_probe` is the animation for all of
 them. (A Video plate is separately shown *in use* in
 `06_sphere_probe_with_screen`.)
 
+## Watch: the Torus topology
+
+A 36-second video of how one topology reads its children's three translate fields, using Torus: `translate_x` is the angle around the ring, `translate_y` the angle around the tube (0 outside, 90 on top, 180 inside), and `translate_z` lifts a child straight out from the tube. Filled in, it becomes a grid that wraps both ways: hour of the day around the ring, weekday around the tube.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/torus.mp4"></video>
+
+Every topology in the table gives the same three fields its own meaning. The [animation series](#topology-animations-a-downloadable-instructional-series) below sweeps them one at a time for each.
+
 ## Colouring a surface (topology 17)
 
 A Surface parent draws a lit quad mesh through its children, and there are two
