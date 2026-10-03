@@ -10,6 +10,12 @@ This scene exists to show what a GlyphViz graph node can be that a conventional 
 
 [:material-download: Bitcoin_Trust (2 MB)](https://iluvdata.org/glyphviz/zips/Trust_Network_Example_Bitcoin_Trust.zip){ .md-button }
 
+## Watch it explained
+
+A narrated tour, just under four minutes, rendered from GlyphViz itself: how to read one trader's glyph on the scene's labelled specimen, what the colours mean, and how ratings and accusations are drawn. Then the part that's easy to miss: playback isn't a layout settling, it's the marketplace itself growing from November 2010 to January 2016, as reputations sour and the distrusted accounts gather on one side of the cloud.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/trust_network.mp4"></video>
+
 ## The glyph
 
 ```text

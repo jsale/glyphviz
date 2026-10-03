@@ -4,6 +4,7 @@ GlyphViz doesn't cut numbered releases yet — development moves in daily commit
 
 ## 2026-10-03
 
+- **Two more gallery examples now carry a narrated video**: [Trust and Betrayal](examples/trust-network.md#watch-it-explained), which reads one trader's glyph and then shows that playback is the Bitcoin OTC marketplace growing over five years, and [Vehicle Sales: Raw Auction Field](examples/vehicle-raw-auction-field.md#watch-it-explained), which runs the page's tag queries through Select By and Show Only Selected.
 - **Eight more narrated videos are in the docs**, each rendered straight from GlyphViz.
     - On their gallery pages: [City Climate Rings](examples/city-climate-rings.md#watch-it-explained) (from a spreadsheet to a scene with the Claude Skill), [Sine Wave Channels](examples/sine-wave.md#watch-it-explained) (how Channels and Channel In work), the [Multi-Hike Ghost Race](examples/multi-hike-race.md#watch-it-explained) and [The Pulse](examples/sd-river-pulse.md#watch-it-explained).
     - In the reference: parents and children and tag labels in the [Properties Panel](reference/properties-panel.md#watch-parents-and-children), [Camera Mode](reference/viewer-navigation.md#camera-mode-free-flight), and the [Torus topology](reference/topologies.md#watch-the-torus-topology).

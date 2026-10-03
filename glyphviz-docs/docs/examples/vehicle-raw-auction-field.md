@@ -10,6 +10,12 @@ No aggregation. A seeded sample of 20,000 used-vehicle auction sales, one five-p
 
 [:material-download: Download this example (2 MB)](https://iluvdata.org/glyphviz/zips/Vehicle_Sales_Example_Raw_Auction_Field.zip){ .md-button }
 
+## Watch it explained
+
+A narrated tour, about three and a half minutes, rendered from GlyphViz itself: the axes, the scene's own legend read part by part, and the tag queries run through **Select By** and **Show Only Selected**, with the two results the field shows and the one it can't.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/vehicle_auction_field.mp4"></video>
+
 ---
 
 ## Reading one glyph
