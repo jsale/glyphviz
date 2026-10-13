@@ -4,7 +4,7 @@ Every scene below ships in the GlyphViz examples set — download it once and ev
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~354 MB download, ~756 MB extracted*
+*~358 MB download, ~780 MB extracted*
 
 You can also take just one. Every page below has its own download button, and the examples that hold several scenes offer one zip per scene — most are a few megabytes. Each single-example zip contains that scene's files at its top level: extract it and you have one self-contained folder, or drag the zip onto the GlyphViz window and it extracts beside itself and loads.
 
@@ -106,6 +106,10 @@ Three scenes built from live CelesTrak element sets, each animating a different 
 - **[The Breathing Century](breathing-century.md)** — a century of hockey growing season by season
 - **[The Century Swarm](century-swarm.md)** — 29,140 player-seasons in scoring phase space
 - **[Duel of Dynasties](duel-of-dynasties.md)** — three careers as animated orreries
+
+## Baseball history
+
+- **[MLB Batting History, 1876–2025](mlb-batting-history.md)** — 40,342 player-seasons, every one a sphere with four shapes around it; a large dataset built from a MySQL database, with the scripts to remake it
 
 ## Networks & graphs
 

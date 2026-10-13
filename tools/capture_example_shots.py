@@ -134,6 +134,12 @@ MANIFEST = [
     ("city-climate-rings", EX / "City_Climate_Rings_Example", None),
     ("city-climate-rings-mumbai", EX / "City_Climate_Rings_Example", None),
     ("city-climate-rings-moscow", EX / "City_Climate_Rings_Example", None),
+    # MLB Batting History: the bird's-eye view the original ANTz screenshots
+    # were taken from, the labelled example glyph, and a close look at one
+    # stretch of columns.
+    ("mlb-batting-history", EX / "MLB_Batting_History_Example", None),
+    ("mlb-batting-history-glyph", EX / "MLB_Batting_History_Example", None),
+    ("mlb-batting-history-columns", EX / "MLB_Batting_History_Example", None),
     ("building-glyphviz", EX / "Building_GlyphViz_Example", None),
     ("building-glyphviz-gap", EX / "Building_GlyphViz_Example", None),
     ("building-glyphviz-spiral", EX / "Building_GlyphViz_Example", None),
@@ -268,6 +274,15 @@ CAMERA = {
     "city-climate-rings-moscow": {"globe_to": (55.76, 37.62),
                                   "target": (0, 0, 180), "distance": 58,
                                   "azimuth": 8, "elevation": 34},
+    # MLB Batting History. Azimuth 270 at elevation 89 puts +x (players) to the
+    # right and +y (teams) up, so the American League sits left of the National
+    # League exactly as in the original ANTz bird's-eye view.
+    "mlb-batting-history": {"target": (326, 35, 0), "distance": 800,
+                            "azimuth": 270, "elevation": 89},
+    "mlb-batting-history-glyph": {"target": (297, -372, 40), "distance": 330,
+                                  "azimuth": 270, "elevation": 89},
+    "mlb-batting-history-columns": {"target": (-60, -60, 100), "distance": 60,
+                                    "azimuth": 300, "elevation": 20},
     "building-glyphviz": {"target": (0, 120, 10), "distance": 230,
                           "azimuth": 270, "elevation": 20},
     # Standing in the 30-unit gap: desktop rising left, web right.

@@ -142,6 +142,8 @@ nav:
           - "The Breathing Century": examples/breathing-century.md
           - "The Century Swarm": examples/century-swarm.md
           - "Duel of Dynasties": examples/duel-of-dynasties.md
+      - Baseball history:
+          - "MLB Batting History, 1876–2025": examples/mlb-batting-history.md
       - Networks & graphs:
           - "Collaboration Networks": examples/collaboration-networks.md
           - "Trust and Betrayal": examples/trust-network.md

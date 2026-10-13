@@ -2,6 +2,12 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-10-13
+
+- **[MLB Batting History, 1876–2025](examples/mlb-batting-history.md) joined the Examples Gallery**, in a new *Baseball history* section. Every American and National League player-season since 1876 is one hyperglyph: 40,342 of them, 187,530 nodes, built from the SABR Lahman Baseball Database. A sphere shows batting average by size and gray, and four shapes around it show doubles (cyan icosahedron), triples (magenta octahedron), home runs (yellow cylinder) and RBI (orange dodecahedron). Players run along one axis, teams along another and years upward, with the two leagues side by side. It updates a favourite ANTz visualization, and the home-run boom and the fade of the triple are both visible at a glance.
+- **It is also a worked example of a large dataset in a database.** The folder ships the two scripts that built it: one loads the Lahman CSVs into MySQL, one reads the `batting` table and writes the scene, with options for the year range, the at-bat cutoff and the size of each shape.
+- **Each stat has its own geometry**, so one stat can be selected on its own with Select By > Geometry and resized with the Size handles while you look at the whole scene.
+
 ## 2026-10-03
 
 - **Two more gallery examples now carry a narrated video**: [Trust and Betrayal](examples/trust-network.md#watch-it-explained), which reads one trader's glyph and then shows that playback is the Bitcoin OTC marketplace growing over five years, and [Vehicle Sales: Raw Auction Field](examples/vehicle-raw-auction-field.md#watch-it-explained), which runs the page's tag queries through Select By and Show Only Selected.
