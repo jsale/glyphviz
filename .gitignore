@@ -107,3 +107,7 @@ twitter_lab/demo_archives/TUT_demo_*/
 
 # Lesson-video renders (MP4/WAV/stills/TTS cache) -- regenerate with video_lessons/render_lesson.py
 video_lessons/out/
+
+# MLB Batting History: the 25 MB scene ships in the example's zip (4 MB);
+# regenerate it with examples/MLB_Batting_History_Example/lahman_batting_to_glyphviz.py
+examples/MLB_Batting_History_Example/MLB_Batting_History_gv_node.csv
