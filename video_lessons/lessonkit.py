@@ -57,6 +57,17 @@ CHALK = (236, 240, 255)
 
 # ------------------------------------------------------------------ script
 
+class Sec(float):
+    """A time in SECONDS from the start of its shot, accepted wherever a shot
+    fraction `u` is (events, pointer scripts, strokes). A shot's length comes
+    from its narration, so seconds are the easier thing to author against."""
+
+
+def as_u(t, dur: float) -> float:
+    """Shot fraction for `t`, a plain fraction or a Sec."""
+    return float(t) / dur if isinstance(t, Sec) else float(t)
+
+
 @dataclass
 class Key:
     """One camera keyframe, at fraction `u` (0..1) of its shot.
@@ -98,6 +109,45 @@ class Callout:
 
 
 @dataclass
+class Panel:
+    """A real app window composited into the frame, drawn like a desktop
+    window (title bar, shadow). `x, y` is where the window's CONTENT starts in
+    frame pixels (the title bar sits above it); `scale` shrinks or enlarges
+    the grab. Helpers map a child widget to frame coordinates, which is how
+    the pointer and highlight ring find what the "user" is touching."""
+    widget: object
+    x: float
+    y: float
+    scale: float = 1.0
+    title: str = ""
+    alpha: float = 1.0
+    # Show only this part of the widget, (x0, y0, x1, y1) in widget pixels:
+    # lets a lesson film one stretch of a tall panel.
+    crop: tuple | None = None
+
+    def _origin(self):
+        return (self.crop[0], self.crop[1]) if self.crop else (0, 0)
+
+    def point(self, w) -> tuple:
+        """Frame position of the centre of child widget `w`."""
+        from PySide6.QtCore import QPoint
+        p = w.mapTo(self.widget, QPoint(w.width() // 2, w.height() // 2))
+        ox, oy = self._origin()
+        return (self.x + (p.x() - ox) * self.scale,
+                self.y + (p.y() - oy) * self.scale)
+
+    def rect(self, w, pad=4) -> tuple:
+        """Frame rectangle (x0, y0, x1, y1) around child widget `w`."""
+        from PySide6.QtCore import QPoint
+        p = w.mapTo(self.widget, QPoint(0, 0))
+        s = self.scale
+        ox, oy = self._origin()
+        return (self.x + (p.x() - ox) * s - pad, self.y + (p.y() - oy) * s - pad,
+                self.x + (p.x() + w.width() - ox) * s + pad,
+                self.y + (p.y() + w.height() - oy) * s + pad)
+
+
+@dataclass
 class Shot:
     say: str
     keys: Sequence[Key] = ()
@@ -124,6 +174,13 @@ class Shot:
     # ((u, frame), ...) pairs to play piecewise, e.g. arrive and then hold.
     ch_span: tuple | None = None
     card: Callable | None = None      # f(overlay, draw, u): a custom full-frame card
+    # A real app window (a QDialog) filmed beside the 3D view: f(lesson, u) ->
+    # Panel | None. The widget is grabbed through Qt every frame, so the
+    # dialog shows exactly what the app's own code draws.
+    panel: Callable | None = None
+    # A mouse pointer + highlight ring over the frame: f(lesson, u) -> dict
+    # (x, y, click, ring, alpha) | None. See lessons/_ui.py's Script.
+    cursor: Callable | None = None
     # Play a stretch of the scene's OWN soundtrack, in sync with its Channels
     # animation, once the narration line has finished:
     #   dict(path=<audio file>, frames=(f0, f1), fps=30, gain=1.0)
@@ -158,11 +215,22 @@ class Lesson:
     # scene. Returns nothing; may set scene_csv.
     prepare: Callable | None = None
     ch_loop: bool = True              # wrap the Channels clock at the end
+    # Render size when the command line doesn't say (None = 1280x720). A
+    # lesson that films app dialogs uses 1920x1080 so their text stays legible.
+    size: tuple | None = None
+    # Called once the window/viewport exist and before the first frame, to
+    # open dialogs and the like: f(lesson).
+    on_ready: Callable | None = None
+    # Advance *_rate animation (idle spin) by exactly one video frame per
+    # rendered frame, not by however long the offline render took.
+    rate_clock: bool = False
     # Filled in at render time:
     vp: object = None
     win: object = None
     ch_rate: float = 0.0
     ch_frame: float = 0.0
+    cur_dur: float = 1.0              # seconds in the shot being rendered
+    fps: int = 30
 
     def node(self, node_id):
         return self.vp._scene.node_by_id(node_id)
@@ -500,6 +568,32 @@ class Overlay:
             d.text((ax - tw / 2, ay + 40 * s), g["label"], font=self.f_note,
                    fill=self._a(CHALK, alpha))
 
+    def pointer(self, d, c: dict):
+        """A mouse pointer, a click ripple, and an optional highlight ring
+        around the widget being used."""
+        s = self.s
+        a = c.get("alpha", 1.0)
+        ring = c.get("ring")
+        if ring and a > 0:
+            x0, y0, x1, y1 = ring
+            d.rounded_rectangle((x0, y0, x1, y1), radius=int(6 * s),
+                                outline=self._a(AMBER, a), width=max(2, int(3 * s)))
+        click = c.get("click")
+        x, y = c["x"], c["y"]
+        if click is not None and 0 <= click <= 1:
+            r = (10 + 34 * click) * s
+            d.ellipse((x - r, y - r, x + r, y + r),
+                      outline=self._a(AMBER, (1 - click) * a),
+                      width=max(2, int(3 * s)))
+        k = 1.5 * s
+        pts = [(0, 0), (0, 17), (4.2, 13.2), (7.2, 19.6), (9.6, 18.6),
+               (6.7, 12.4), (12.2, 12.2)]
+        poly = [(x + px * k, y + py * k) for px, py in pts]
+        d.polygon(poly, fill=self._a((255, 255, 255), a),
+                  outline=self._a((10, 10, 20), a))
+        d.line(poly + [poly[0]], fill=self._a((10, 10, 20), a),
+               width=max(1, int(1.6 * s)))
+
     def summary(self, d, title, bullets, alpha):
         if alpha <= 0 or not bullets:
             return
@@ -604,6 +698,70 @@ def grab_rgb(vp, w, h) -> np.ndarray:
     return arr[:, : w * 3].reshape(h, w, 3).copy()
 
 
+_SHADOWS: dict = {}
+
+
+def _shadow(size, blur):
+    """A soft drop shadow for a window of `size`, cached by size."""
+    from PIL import ImageFilter
+    key = (size, blur)
+    if key not in _SHADOWS:
+        pad = blur * 3
+        im = Image.new("RGBA", (size[0] + 2 * pad, size[1] + 2 * pad), (0, 0, 0, 0))
+        ImageDraw.Draw(im).rectangle((pad, pad, pad + size[0], pad + size[1]),
+                                     fill=(0, 0, 0, 170))
+        _SHADOWS[key] = im.filter(ImageFilter.GaussianBlur(blur))
+    return _SHADOWS[key]
+
+
+def _tick_viewports(widget, dt_ms):
+    """Make every Viewport under `widget` (a dialog's mini preview) advance
+    its rate animation by exactly dt_ms on its next paint."""
+    import time as _time
+    from glyphviz_gl.viewport import Viewport
+    for v in widget.findChildren(Viewport):
+        v._last_tex_tick = _time.perf_counter() - dt_ms / 1000.0
+
+
+def draw_panel(img: Image.Image, ov: Overlay, pn: Panel, dt_ms: float | None):
+    """Grab pn.widget through Qt and composite it onto `img` as a window."""
+    from PySide6.QtGui import QImage
+    if dt_ms is not None:
+        _tick_viewports(pn.widget, dt_ms)
+    qi = pn.widget.grab().toImage().convertToFormat(QImage.Format.Format_RGBA8888)
+    w, h = qi.width(), qi.height()
+    arr = np.frombuffer(qi.constBits(), np.uint8, count=qi.bytesPerLine() * h
+                        ).reshape(h, qi.bytesPerLine())[:, : w * 4].reshape(h, w, 4)
+    body = Image.fromarray(arr.copy(), "RGBA").convert("RGB")
+    if pn.crop:
+        body = body.crop(tuple(int(v) for v in pn.crop))
+        w, h = body.size
+    size = (max(1, round(w * pn.scale)), max(1, round(h * pn.scale)))
+    if size != body.size:
+        body = body.resize(size, Image.LANCZOS)
+    s = ov.s
+    bar = int(34 * s)
+    x0, y0 = int(pn.x), int(pn.y) - bar
+    win = Image.new("RGBA", (size[0], size[1] + bar), (36, 38, 54, 255))
+    d = ImageDraw.Draw(win)
+    d.text((14 * s, 5 * s), pn.title, font=ov.f_note, fill=(*CHALK, 235))
+    for i, col in enumerate(((255, 189, 46), (39, 201, 63), (255, 95, 86))):
+        cx = size[0] - (22 + 24 * i) * s
+        d.ellipse((cx - 6 * s, bar / 2 - 6 * s, cx + 6 * s, bar / 2 + 6 * s),
+                  fill=(*col, 255))
+    win.paste(body, (0, bar))
+    d.rectangle((0, 0, size[0] - 1, size[1] + bar - 1), outline=(88, 92, 120, 255))
+    blur = int(14 * s)
+    sh = _shadow(win.size, blur)
+    pad = blur * 3
+    # paste(..., mask) rather than alpha_composite: negative / clipped
+    # destinations are legal for it.
+    img.paste(sh, (x0 - pad, y0 - pad + int(8 * s)), sh)
+    if pn.alpha < 1:
+        win.putalpha(int(255 * pn.alpha))
+    img.paste(win, (x0, y0), win)
+
+
 def _node_screen(vp, node_id, w, h):
     """(x, y, radius_px) of a node as the engine last drew it."""
     from glyphviz_core import gizmo
@@ -679,6 +837,9 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
     lesson.vp = vp
     # Keep the real grab size fixed for the whole render.
     vp.resize(width, height)
+    lesson.fps = fps
+    if lesson.on_ready:
+        lesson.on_ready(lesson)
 
     timing = plan_timing(lesson, clips)
     total = timing[-1].start + timing[-1].dur
@@ -739,9 +900,10 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
         shot = lesson.shots[shot_i]
         tm = timing[shot_i]
         u = (t - tm.start) / tm.dur
+        lesson.cur_dur = tm.dur
 
         for i, (eu, changes) in enumerate(shot.events):
-            if u >= eu and i not in fired:
+            if u >= as_u(eu, tm.dur) and i not in fired:
                 fired.add(i)
                 if callable(changes):
                     changes(lesson)
@@ -768,9 +930,17 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
         cam = track.at(keys, u)
         vp.set_camera(azimuth=cam["az"], elevation=cam["el"],
                       distance=cam["dist"], target=tuple(cam["target"]))
+        dt_ms = 1000.0 / fps if lesson.rate_clock else None
+        if dt_ms is not None:
+            import time as _time
+            vp._last_tex_tick = _time.perf_counter() - dt_ms / 1000.0
         frame = grab_rgb(vp, width, height)
 
         img = Image.fromarray(frame).convert("RGBA")
+        if shot.panel:
+            pn = shot.panel(lesson, u)
+            if pn is not None:
+                draw_panel(img, ov, pn, dt_ms)
         layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
         d = ImageDraw.Draw(layer, "RGBA")   # blend shapes; plain Draw replaces pixels
         for c in shot.callouts:
@@ -778,6 +948,10 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
             if a > 0:
                 sx, sy, rp = _node_screen(vp, c.node, width, height)
                 ov.callout(d, sx, sy, rp, c, a)
+        if shot.cursor:
+            cur = shot.cursor(lesson, u)
+            if cur:
+                ov.pointer(d, cur)
         if shot.gesture:
             ov.gesture(d, shot.gesture(u), _fade(u, 0.03, 0.97, 0, tm.dur))
         if shot.readout:
@@ -797,6 +971,7 @@ def render(lesson: Lesson, out_dir: Path, clips: list, width=1280, height=720,
         if shot.title or shot.summary or shot.card:
             card = Image.new("RGBA", img.size, (0, 0, 0, 0))
             dc = ImageDraw.Draw(card, "RGBA")
+            dc.pil_image = card      # for cards that paste a picture (see _ui.image_card)
             if shot.card:
                 shot.card(ov, dc, u)
             if shot.title:

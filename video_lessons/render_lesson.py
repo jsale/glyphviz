@@ -42,11 +42,13 @@ def main() -> int:
     # 720p by default: tag labels are drawn at the app's real point size, so
     # at 1080p they shrink to a third of the frame height they have in the app
     # window a viewer will compare them against.
-    ap.add_argument("--width", type=int, default=1280)
-    ap.add_argument("--height", type=int, default=720)
+    # None = the lesson's own size (Lesson.size), else 1280x720.
+    ap.add_argument("--width", type=int, default=None)
+    ap.add_argument("--height", type=int, default=None)
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--draft", action="store_true",
-                    help="640x360 at 15 fps, for checking camera moves fast")
+                    help="a quarter-size frame at 15 fps (640x360 for a "
+                         "1280x720 lesson), for checking camera moves fast")
     ap.add_argument("--stills-only", action="store_true",
                     help="save one PNG per shot (at its midpoint); no video")
     ap.add_argument("--engine", choices=("kokoro", "sapi"), default="kokoro",
@@ -58,13 +60,16 @@ def main() -> int:
     ap.add_argument("--rate", type=float, default=None,
                     help="Kokoro speed multiplier (lesson default, usually "
                          "1.0) or SAPI rate -10..10 (default 1)")
+    ap.add_argument("--at", default=None,
+                    help="with --stills-only: comma-separated times (seconds) to "
+                         "save PNGs at, instead of two per shot")
     ap.add_argument("--no-tts", action="store_true",
                     help="silent; shots timed at a reading pace")
     ap.add_argument("--no-burn-captions", action="store_true",
                     help="leave captions to the .srt only")
     args = ap.parse_args()
     if args.draft:
-        args.width, args.height, args.fps = 640, 360, 15
+        args.fps = 15
 
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841
@@ -89,9 +94,15 @@ def main() -> int:
         stills = [tm.start + tm.dur * 0.5 for tm in timing]
         if args.stills_only:
             stills += [tm.start + tm.dur * 0.9 for tm in timing]
+        if args.at:
+            stills = [float(t) for t in args.at.split(",")]
 
+        w, h = lesson.size or (1280, 720)
+        if args.draft:
+            w, h = w // 2, h // 2
+        w, h = args.width or w, args.height or h
         res = lessonkit.render(
-            lesson, out_dir, clips, args.width, args.height, args.fps,
+            lesson, out_dir, clips, w, h, args.fps,
             stills=sorted(stills), video=not args.stills_only,
             burn_captions=not args.no_burn_captions)
 

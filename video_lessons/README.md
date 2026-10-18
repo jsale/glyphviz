@@ -45,7 +45,46 @@ means every video can be re-rendered after a UI or rendering change.
 | `trust_network` | **example explainer**: Trust and Betrayal, the glyph and five years of the marketplace growing | ~233 s |
 | `vehicle_auction_field` | **example explainer**: Raw Auction Field, the legend and its queries run through Select By | ~212 s |
 
-All thirteen are narrated in `af_heart`, Jeff's pick of the Kokoro voices.
+| `glyph_composer` | **tool tutorial** (Composer 1/2): build a glyph level by level, insert it, use it as a brush | ~108 s |
+| `glyph_composer_forest` | **tool tutorial** (Composer 2/2): import Tree Designer templates, paint a forest with two brushes | ~87 s |
+| `hyperglyph_generator` | **tool tutorial**: roll, lock a seed, insert, save, edit in the Composer, paint a flock | ~125 s |
+
+All sixteen are narrated in `af_heart`, Jeff's pick of the Kokoro voices.
+
+## Tool tutorials (filming real dialogs)
+
+The last three lessons film the app's own windows, not just the 3D view, at
+**1920x1080** (`Lesson.size`) so the dialogs stay legible. See
+`lessons/glyph_composer.py` and `lessons/_ui.py`.
+
+- `on_ready(L)` creates a real `GlyphComposerDialog` / `HyperglyphGeneratorDialog`
+  on the filmed MainWindow. `Shot.panel` returns a `Panel` (the dialog, a
+  position in frame fractions, a scale); each frame Qt `grab()`s it, so the
+  mini preview viewport and every widget are the app's own. Give the dialog a
+  size with `resize` (a never-shown window has not been laid out), and a
+  never-shown window's Properties groups need `setFixedWidth` + `layout().activate()`
+  before they can be cropped (`Panel.crop`).
+- Edits go through the widgets (`spin.setValue`, `combo.setCurrentIndex`,
+  `button.click()`), then `dlg._do_preview()` (Auto-preview's 350 ms timer never
+  fires without an event loop). `_ui.Script` is the pointer: it travels to a
+  widget, rings it and fires the action as the click lands.
+- File and colour choosers are answered with `_ui.answering(open_path=...,
+  save_path=..., color=...)`, so Load Template... / Save Recipe... / a colour
+  swatch run the app's own handler end to end. The pictured chooser
+  (`_ui.file_card`) stands in for the OS dialog.
+- Painting is real mouse events (`_ui.Stroke`) into the Viewport: Draw Mode turns
+  them into stamps. `_ui.ground()` lets a stroke be authored in world x/y on the
+  ground plane, so it lands where the glyphs should go. Stamping is O(scene
+  nodes) per node added, so a few thousand nodes of trees take minutes: that is
+  render time, not video time.
+- Times in a shot are seconds from its start (`Sec(4.2)`): a shot's length comes
+  from its narration. `rate_clock=True` advances Idle Motion by one video frame
+  per rendered frame (the viewport would otherwise integrate wall-clock time).
+- Tree templates: `node video_lessons/assets/make_trees.mjs` runs the Tree
+  Designer's own `buildRecipe()` and writes `assets/trees/*.json` (the same
+  files its Download button gives). The Hyperglyph lesson seeds Python's RNG
+  before each Regenerate (the dialog draws seeds from it) to film particular
+  designs; it writes its recipe to `out/hyperglyph_generator/`.
 
 Both of the last two film very large scenes (31,214 and 100,083 nodes), so
 they render at roughly a tenth of real time. Two tricks they share:
