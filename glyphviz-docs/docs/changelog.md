@@ -2,6 +2,13 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-10-17
+
+- **Every example in the gallery now has a full write-up.** Thirty-two pages that had only a one-line summary and a "coming soon" note now say what the scene is, how to read it, what to try, and how it is built: the audio scenes, the hockey and school-data scenes, the five Global Terrorism Database scenes, the starter demos, and the rest. If a scene's numbers surprised you, the page now says where they come from.
+- **Three audio examples were retired**: Cat Scan, Moby: Go and Violin in A Major. They were the same 64-band spectral array run on three recordings, and [Four Instruments in C Major](examples/audio-four-instruments.md) remains as the plain version of that idea. Their pages and downloads are gone from the site.
+- **[Cat Scan Synesthesia](examples/audio-cat-scan-synesthesia.md) now keeps its audio in its own folder.** It used to borrow the recording from the retired Cat Scan example, so its sound file now lives in the scene's own `media/` folder and the scene needs nothing from any other.
+- **The Event Cloud page now says about 210,000 incidents**, which is the real count (209,705).
+
 ## 2026-10-13
 
 - **[MLB Batting History, 1876–2025](examples/mlb-batting-history.md) joined the Examples Gallery**, in a new *Baseball history* section. Every American and National League player-season since 1876 is one hyperglyph: 40,342 of them, 187,530 nodes, built from the SABR Lahman Baseball Database. A sphere shows batting average by size and gray, and four shapes around it show doubles (cyan icosahedron), triples (magenta octahedron), home runs (yellow cylinder) and RBI (orange dodecahedron). Players run along one axis, teams along another and years upward, with the two leagues side by side. It updates a favourite ANTz visualization, and the home-run boom and the fade of the triple are both visible at a glance.
