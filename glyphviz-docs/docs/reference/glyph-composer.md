@@ -11,6 +11,14 @@ It is the hand-authoring counterpart to the
 random. Both write the same template `.json`, so a generated design can be
 opened here and edited level by level.
 
+## Watch: build a glyph
+
+A 108-second video of the Composer, from its default glyph to a painted meadow. It builds a small glyph one level at a time (a sphere, ten cones around it, and four stalked spheres on every cone), then drops it into the scene with **Insert into Scene** and turns it into a brush with **Use as Draw Brush**, with Stamp Spacing and the two jitter settings so no two stamps match.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/glyph_composer.mp4"></video>
+
+The second half of the story, importing templates from elsewhere and painting a forest with them, is [below](#watch-paint-a-forest-with-imported-templates).
+
 ## The model: one spec per level
 
 A recipe is a list of **levels**, not a list of nodes. Level 0 is the Root;
@@ -164,6 +172,14 @@ work impossible, so re-framing is explicit:
 
 Saving *scene* data is unchanged: once a glyph is inserted, File → Save writes
 node CSVs like any other content.
+
+## Watch: paint a forest with imported templates
+
+An 87-second video of the part of the Composer that makes it a painting tool. It loads a branching tree that the [Tree Designer](tree-designer.md) exported (a *Mighty Oak*, 486 nodes from a 5 KB file) with **Load Template…**, sends it to Draw Mode with **Use as Draw Brush**, and drags to stamp a row of oaks, each turned and sized a little differently by Heading Jitter and Scale Jitter. Then it loads a second template, a cherry tree, straight into the Stamp list with **Load…** and switches between the two brushes to mix them into one forest.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/glyph_composer_forest.mp4"></video>
+
+Any template works the same way, whether it came from the Tree Designer, the [Hyperglyph Generator](hyperglyph-generator.md) or **Save Template…** here. Loading a second one keeps both in the Stamp list, so a scene can alternate brushes as it is painted.
 
 ## Templates
 

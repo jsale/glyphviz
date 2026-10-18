@@ -10,6 +10,12 @@ can then drop into the scene or save as a template to edit by hand.
 It is the counterpart to the [Glyph Composer](glyph-composer.md): the Composer
 is where you *describe* a glyph, this is where you *discover* one.
 
+## Watch: discover a glyph
+
+A 122-second video of the dialog start to finish. It sets Max Nodes and Branch Levels, rolls three designs with **Regenerate**, then unchecks **Randomize** to lock the one it likes and shows that the same seed, Max Nodes and Branch Levels bring the identical design back. It inserts the design into the scene with its Idle Motion running, saves it with **Save Recipe…**, opens the file in the [Glyph Composer](glyph-composer.md) to recolor a level, and loads it into Draw Mode's Stamp list to paint a flock.
+
+<video controls preload="metadata" width="100%" src="https://iluvdata.org/glyphviz/videos/hyperglyph_generator.mp4"></video>
+
 ## What a hyperglyph is
 
 A hyperglyph is a deliberately designed hierarchy of nodes read as a single

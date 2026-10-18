@@ -2,6 +2,11 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-10-18
+
+- **Three narrated tutorials for the two glyph-design tools**, each under three minutes and filmed from the app's own dialogs. The [Glyph Composer](reference/glyph-composer.md#watch-build-a-glyph) has two: building a glyph level by level, inserting it and using it as a Draw Mode brush, and [painting a forest with templates imported from the Tree Designer](reference/glyph-composer.md#watch-paint-a-forest-with-imported-templates). The [Hyperglyph Generator](reference/hyperglyph-generator.md#watch-discover-a-glyph) has one: rolling designs, locking a seed, inserting, saving a recipe, editing it in the Composer and painting a flock with it.
+- **The Hyperglyph Generator's readout under Regenerate now shows its separators properly.** The node count, geometry family, palette and seed used to be joined by a literal `&nbsp;|&nbsp;`.
+
 ## 2026-10-17
 
 - **Every example in the gallery now has a full write-up.** Thirty-two pages that had only a one-line summary and a "coming soon" note now say what the scene is, how to read it, what to try, and how it is built: the audio scenes, the hockey and school-data scenes, the five Global Terrorism Database scenes, the starter demos, and the rest. If a scene's numbers surprised you, the page now says where they come from.
