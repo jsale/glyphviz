@@ -94,7 +94,7 @@ from audio_analysis import analyze   # vendored copy — see that file's docstri
 
 OUTPUT_DIR = Path(__file__).parent
 PREFIX     = "Cat_Scan_Synesthesia_Example"
-SOURCE_WAV = OUTPUT_DIR.parent / "Cat_Scan_Example" / "media" / "cat_scan_all_mono.wav"
+SOURCE_WAV = OUTPUT_DIR / "media" / "cat_scan_all_mono.wav"
 
 N_BANDS = 64
 FPS     = 30.0

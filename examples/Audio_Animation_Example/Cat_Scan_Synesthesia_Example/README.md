@@ -11,8 +11,8 @@ docstring and the companion notebook for the full design.
 **The source recording (Tangerine Dream, *Cat Scan*) is not included**
 (commercial copyright). All generated files are committed, so the animation
 plays fine; to also hear the music in sync, supply
-`../Cat_Scan_Example/media/cat_scan_all_mono.wav` (mono 16-bit PCM WAV —
-see `../Cat_Scan_Example/README.md`).
+`media/cat_scan_all_mono.wav` (mono 16-bit PCM WAV, made from your own copy of
+the track).
 
 Load: **File > Open Node CSV** → `Cat_Scan_Synesthesia_Example_gv_node.csv`,
 press Play in the Channels panel.

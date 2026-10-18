@@ -41,14 +41,10 @@ MANIFEST = [
     ("texture-animation", EX / "Texture_Animation_Example", None),
     ("mood-background", EX / "Mood_Background_Example", None),
     ("bird-song-surface", EX / "Bird_Song_Surface_Topology_Example", None),
-    ("audio-cat-scan", EX / "Audio_Animation_Example" / "Cat_Scan_Example", None),
     ("audio-cat-scan-synesthesia",
      EX / "Audio_Animation_Example" / "Cat_Scan_Synesthesia_Example", None),
     ("audio-four-instruments",
      EX / "Audio_Animation_Example" / "Four_Instruments_C_Major_Example", None),
-    ("audio-moby-go", EX / "Audio_Animation_Example" / "Moby_Go_Example", None),
-    ("audio-violin-a-major",
-     EX / "Audio_Animation_Example" / "Violin_A_Major_Example", None),
     # Unlike the scenes below whose static pose IS the hero, this one opens on
     # every root at its own peak presence — a state the playback never reaches,
     # under the near-black sky the piece starts at. Its hero is a frame, not

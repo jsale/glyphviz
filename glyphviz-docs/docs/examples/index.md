@@ -4,7 +4,7 @@ Every scene below ships in the GlyphViz examples set — download it once and ev
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~358 MB download, ~780 MB extracted*
+*~289 MB download, ~702 MB extracted*
 
 You can also take just one. Every page below has its own download button, and the examples that hold several scenes offer one zip per scene — most are a few megabytes. Each single-example zip contains that scene's files at its top level: extract it and you have one self-contained folder, or drag the zip onto the GlyphViz window and it extracts beside itself and loads.
 
@@ -55,11 +55,8 @@ One watershed, built up in phases: its terrain and river network first, then the
 ## Audio & music
 
 - **[Bird Song Spectrogram Surface](bird-song-surface.md)** — a birdsong spectrogram as animated terrain
-- **[Cat Scan — Audio Animation](audio-cat-scan.md)** — 64 frequency bands dancing to Tangerine Dream
 - **[Cat Scan Synesthesia](audio-cat-scan-synesthesia.md)** — a 4,529-node music-synesthesia sphere
 - **[Four Instruments in C Major](audio-four-instruments.md)** — four instruments, one spectral array
-- **[Moby — Go](audio-moby-go.md)** — the spectral array driven by a dance classic
-- **[Violin in A Major](audio-violin-a-major.md)** — a solo violin's harmonics made visible
 - **[Warm Winter: One Glyph per Instrument](audio-warm-winter.md)** — a seven-track session read one instrument at a time, as a column that blooms with the music
 
 ## Maps & terrain
@@ -90,7 +87,7 @@ Three scenes built from live CelesTrak element sets, each animating a different 
 ## Global Terrorism Database
 
 - **[GTD — Organization Profiles](gtdb-organization-profiles.md)** — a readable rosette per organization
-- **[GTD — Event Cloud](gtdb-event-cloud.md)** — ~205k incidents, one node each
+- **[GTD — Event Cloud](gtdb-event-cloud.md)** — about 210,000 incidents, one node each
 - **[GTD — Org–Event Network](gtdb-org-event-network.md)** — organizations linked to their events
 - **[GTD — Time Replay](gtdb-time-replay.md)** — fifty years replayed in sixty seconds
 - **[GTD — Campaign Pulse](gtdb-campaign-pulse.md)** — campaign intensity as breathing rosettes

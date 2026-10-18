@@ -59,7 +59,7 @@ from audio_analysis import analyze   # vendored copy — see that file's docstri
 # ===========================================================================
 
 OUTPUT_DIR = Path(__file__).parent
-PREFIX     = "Moby_Go_Example"
+PREFIX     = "Four_Instruments_C_Major_Example"
 MEDIA_DIR  = OUTPUT_DIR / "media"
 
 # Default source audio to analyze: a real major scale played by four
@@ -69,7 +69,7 @@ MEDIA_DIR  = OUTPUT_DIR / "media"
 # better ground truth: 5tones_100_200_300_400_800.wav has five equal-amplitude
 # tones (confirmed via FFT: each peaks within 0.01% of the others), so exactly
 # five band clusters should light up and nothing else --wav media/5tones_100_200_300_400_800.wav.
-SOURCE_WAV = MEDIA_DIR / "mobygo1_mono.wav"
+SOURCE_WAV = MEDIA_DIR / "4_instruments_c_major.wav"
 
 N_BANDS = 64
 FPS     = 30.0

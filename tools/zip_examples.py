@@ -49,10 +49,12 @@ collide by name with the scene's own files (Audio_Animation_Example and its
 scenes both carry ``audio_analysis.py``), the gallery page is the write-up
 anyway, and anyone who wants the generators has the full examples set.
 
-The one cross-scene reference in the tree is handled: Cat_Scan_Synesthesia's
-audio manifest points at ``../Cat_Scan_Example/media/cat_scan_all_mono.wav``,
-which would leave its standalone zip silent, so the WAV is pulled into the
-unit's own ``media/`` and the manifest rewritten to match *inside the zip only*.
+A cross-scene audio reference is handled generically (``external_audio_fix``):
+if a scene's audio manifest points outside its own folder, which would leave
+its standalone zip silent, the WAV is pulled into the unit's own ``media/`` and
+the manifest rewritten to match *inside the zip only*. No scene in the tree
+needs this today -- Cat_Scan_Synesthesia used to, until the Cat Scan Example it
+borrowed from was retired and the WAV moved into its own ``media/``.
 """
 
 import argparse
@@ -224,9 +226,9 @@ def external_audio_fix(folder: Path) -> tuple[list[tuple[Path, str]], dict[str, 
     """Pull in an audio file the unit's manifest points at from outside it.
 
     channel_loader.find_audio_file() resolves the one-line ``*_gv_audio.txt``
-    relative to the node CSV's folder. Cat_Scan_Synesthesia_Example reuses the
-    WAV sitting in Cat_Scan_Example/media/, which is fine inside the full
-    examples tree and silent in a standalone zip. Returns the extra entries and
+    relative to the node CSV's folder. A scene whose manifest reaches into a
+    sibling folder is fine inside the full examples tree and silent in a
+    standalone zip. Returns the extra entries and
     the rewritten manifest keyed by arcname; both empty for every other scene.
     """
     manifests = [p for p in shippable_files(folder) if p.name.endswith('_gv_audio.txt')]

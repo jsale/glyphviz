@@ -1,1 +1,1 @@
-../Cat_Scan_Example/media/cat_scan_all_mono.wav
+media/cat_scan_all_mono.wav
