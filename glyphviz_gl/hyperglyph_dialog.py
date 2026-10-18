@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import random
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox, QDialog, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
     QLabel, QMessageBox, QPushButton, QSizePolicy, QSpinBox, QVBoxLayout,
@@ -144,6 +145,10 @@ class HyperglyphGeneratorDialog(QDialog):
 
         self._info_label = QLabel("No hyperglyph generated yet — click Regenerate.")
         self._info_label.setWordWrap(True)
+        # The readout is built with &nbsp; separators. Qt only auto-detects
+        # rich text from a tag, and the common readout has none, so without
+        # this the entities showed literally ("389 nodes &nbsp;|&nbsp; ...").
+        self._info_label.setTextFormat(Qt.TextFormat.RichText)
         root.addWidget(self._info_label)
 
         root.addWidget(QLabel("<b>Preview</b>"))
