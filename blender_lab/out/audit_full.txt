@@ -1,0 +1,7 @@
+{
+  "status": "success",
+  "result": {
+    "executed": true,
+    "result": "frames tested: 360  (every 1)\nEXPECTED contacts seen: ['B0_stem/G3_wheel60', 'B1_stem/G3_wheel60', 'B2_stem/G3_wheel60', 'B3_stem/G3_wheel60', 'B4_stem/G3_wheel60', 'B5_stem/G3_wheel60', 'C1_cam/C2_follower', 'G2_gear15/P1_conrod', 'K1_pendulum/K3_anchor', 'M0_marble/R3_prism', 'M1_marble/R3_prism', 'M2_marble/R3_prism', 'M3_marble/R3_prism', 'M4_marble/R3_prism', 'M5_marble/R3_prism', 'P1_conrod/P2_piston']\nUNEXPECTED overlaps: 0 pairs\n"
+  }
+}

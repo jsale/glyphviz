@@ -1,0 +1,4 @@
+id,type,parent_id,branch_level,translate_x,translate_y,translate_z,rotate_x,rotate_y,rotate_z,scale_x,scale_y,scale_z,color_r,color_g,color_b,color_a,geometry,hide,topo,ratio,facet,mesh_id,rotation_mode,text,tag_color_r,tag_color_g,tag_color_b,ch_input_id
+0,0,0,0,0,0,0,0,0,0,1,1,1,10,12,20,255,0,0,0,0.1,1,0,0,,235,240,250,0
+1,5,0,0,0,0,0,0,0,0,13.060003,13.060003,13.060003,214,168,64,255,23,0,0,0.1,1,1,0,Gear A (24T),255,255,200,1
+2,5,0,0,18.150001,0,0,0,-164.999995,0,7.110737,7.110737,7.110737,96,170,220,255,23,0,0,0.1,1,2,0,Gear B (12T),255,255,200,2

@@ -111,3 +111,9 @@ video_lessons/out/
 # MLB Batting History: the 25 MB scene ships in the example's zip (4 MB);
 # regenerate it with examples/MLB_Batting_History_Example/lahman_batting_to_glyphviz.py
 examples/MLB_Batting_History_Example/MLB_Batting_History_gv_node.csv
+
+# blender_lab: the x3 repeat of the preview video, and the regenerable render sequences
+# (python blender_lab/gv_frames.py ... re-renders the 360 frames in ~15 s; Blender previews via blender_preview.py)
+blender_lab/out/video/clockwork_x3.mp4
+blender_lab/out/frames/seq/
+blender_lab/out/blender_frames/
