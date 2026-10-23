@@ -117,3 +117,7 @@ examples/MLB_Batting_History_Example/MLB_Batting_History_gv_node.csv
 blender_lab/out/video/clockwork_x3.mp4
 blender_lab/out/frames/seq/
 blender_lab/out/blender_frames/
+
+# Lorenz Synchronization (HCS demo): the 22 MB scene ships as Lorenz_Sync.zip (3.6 MB);
+# regenerate the folder with examples/Lorenz_Synchronization_Example/generate_lorenz_sync.py
+examples/Lorenz_Synchronization_Example/Lorenz_Sync/
