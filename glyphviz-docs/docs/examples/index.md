@@ -27,6 +27,10 @@ Scenes that are a *place* rather than a dataset — built to be flown through an
 
 - **[The Armillary World](armillary-world.md)** — a real armillary sphere, ringed by eight zones of mathematics
 
+## Mathematics
+
+- **[Two Lorenz Systems Falling into Sync](lorenz-synchronization.md)** — two chaotic systems, one six-dimensional state, drawn with the Hyperdimensional Coordinate System: five controllers side by side, each on three HCS tori and one 6-D hyperglyph, showing which ones lock the systems together and how often
+
 ## AI Observatory
 
 Scenes that look inside a language model while it reads: every feature it represents, placed by meaning, lit up token by token, with sound.

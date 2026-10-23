@@ -90,6 +90,8 @@ nav:
           - "Mood Background": examples/mood-background.md
       - Teaching worlds:
           - "The Armillary World": examples/armillary-world.md
+      - Mathematics:
+          - "Two Lorenz Systems Falling into Sync": examples/lorenz-synchronization.md
       - AI Observatory:
           - "Inside GPT-2: Mary and John": examples/ai-observatory-gpt2.md
           - "Inside Gemma: Why It Says No": examples/ai-observatory-gemma.md
