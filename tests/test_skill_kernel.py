@@ -149,6 +149,58 @@ def test_gv_extents_runs_and_finds_planted_faults(tmp_path):
     assert text.isascii(), "the report must stay ASCII so it prints on any console"
 
 
+def test_gv_extents_seats_ring_children_on_the_tube(tmp_path):
+    """A torus or Flat Ring has a hole: children are measured from its tube.
+
+    Against the outer silhouette, a bead riding the tube (tube angle 90) read
+    as 97% of the way out of a solid disc. Found by Dave Warner, 2026-10-21.
+    """
+    hdr = ("id,type,parent_id,branch_level,translate_x,translate_y,translate_z,"
+           "rotate_x,rotate_y,rotate_z,scale_x,scale_y,scale_z,"
+           "color_r,color_g,color_b,color_a,geometry,hide,topo,ratio,rotation_mode")
+    bead = "{id},5,{p},1,{tx},{ty},{tz},0,0,0,0.05,0.05,0.05,200,200,200,255,3,0,0,0.1,0"
+    rows = []
+    for parent, geo in ((1, 7), (10, 33)):            # Torus, Flat Ring
+        rows.append(f"{parent},5,0,0,{parent * 20},0,0,0,0,0,3,3,3,"
+                    f"200,200,200,255,{geo},0,3,0.1,0")
+        rows += [
+            bead.format(id=parent + 1, p=parent, tx=0, ty=90, tz=0.2),   # clears the tube
+            bead.format(id=parent + 2, p=parent, tx=45, ty=0, tz=-0.1),  # on its centreline
+            bead.format(id=parent + 3, p=parent, tx=0, ty=180, tz=0.8),  # in the hole
+        ]
+    p = tmp_path / "rings_gv_node.csv"
+    p.write_text(hdr + "\r\n" + "\r\n".join(rows) + "\r\n", encoding="utf-8", newline="")
+
+    gx = _load("gv_extents_rings", CODE / "gv_extents.py")
+    r = gx.analyse(str(p), 1.0)
+    assert sorted((b[0].id, b[5]) for b in r["buried"]) == [
+        (3, "swallowed"), (12, "swallowed")]
+    assert all("tube" in b[6] for b in r["buried"])
+
+
+def test_gv_extents_root_sweep_matches_all_pairs():
+    """The x-sweep over root spheres must find exactly what all-pairs finds."""
+    gx = _load("gv_extents_sweep", CODE / "gv_extents.py")
+    rng = np.random.default_rng(7)
+    n = 300
+    centres = rng.uniform(-40, 40, size=(n, 3))
+    radii = rng.uniform(0.2, 6.0, size=n)
+    spheres = [(i, centres[i], float(radii[i]), 1) for i in range(n)]
+
+    want, want_touch = [], 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            gap = float(np.linalg.norm(centres[i] - centres[j])) - radii[i] - radii[j]
+            if gap < -min(radii[i], radii[j]):
+                want.append((i, j, gap))
+            elif gap < 0:
+                want_touch += 1
+    got, got_touch = gx._root_contacts(spheres)
+    assert got_touch == want_touch
+    assert sorted((a, b) for a, b, _ in got) == sorted((a, b) for a, b, _ in want)
+    assert want, "the random scene should contain some overlaps to compare"
+
+
 def test_gv_extents_is_quiet_on_curated_examples():
     """A curated scene must not trip the checker, or the signal is worthless."""
     gx = _load("gv_extents_quiet", CODE / "gv_extents.py")

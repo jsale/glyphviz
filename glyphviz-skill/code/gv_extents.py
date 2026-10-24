@@ -42,7 +42,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gv_kernel import (  # noqa: E402
     load_node_csv, compute_world_transforms, Scene, node_world_matrix,
     TOPO_NAMES, GEO_NAMES, DEFAULT_SCALE_FLOOR, NO_SCALE_FLOOR,
-    NODE_TYPE_GRID, NODE_TYPE_LINK, NON_VISUAL_TYPES,
+    NODE_TYPE_GRID, NODE_TYPE_LINK, NON_VISUAL_TYPES, torus_radii, ring_dims,
 )
 
 # A big translate is only suspicious under a plainly Cartesian parent. Plot,
@@ -128,6 +128,10 @@ LOCAL_BOX = {
 }
 # These two carry their z half-extent in the node's own `ratio` instead.
 RATIO_SHAPED = {6, 7, 33, 34}
+# A torus or Flat Ring has a hole, so its outer silhouette is the wrong thing to
+# seat a child against: a bead riding the tube (tube angle 90) reads as 93% of
+# the way out of a solid disc. Children of these are measured from the tube.
+TUBE_SHAPED = {6, 7, 33, 34}
 # A flat glyph has no thickness at all; give it a sliver so a support width of
 # exactly zero never divides into anything.
 FLAT_EPS = 1e-6
@@ -187,6 +191,43 @@ def _radius(cols, half):
     return float(np.linalg.norm(cols * half[None, :], axis=0).max())
 
 
+def _tube_seat(parent, cc, pc, pcols):
+    """(distance, unit, reach) of a child centre measured from a ring's tube.
+
+    The nearest point on the tube's centreline is found in the parent's local
+    frame and carried into world space through the parent's own basis, so a
+    stretched ring is measured stretched. A torus tube is a circle of radius
+    `ratio` (`torus_radii`); a Flat Ring's is a rectangle (`ring_dims`).
+    None when the parent's basis is degenerate.
+    """
+    try:
+        lp = np.linalg.solve(pcols, cc - pc)
+    except np.linalg.LinAlgError:
+        return None
+    phi = math.atan2(lp[1], lp[0])
+    e_r = np.array([math.cos(phi), math.sin(phi), 0.0])
+    e_t = np.array([-math.sin(phi), math.cos(phi), 0.0])
+    if parent.geometry in (6, 7):
+        centre_r, tube = torus_radii(parent.ratio)
+        half = np.array([max(tube, FLAT_EPS), FLAT_EPS, max(tube, FLAT_EPS)])
+        form = None                               # ellipsoid support: a round tube
+    else:
+        r_out, r_in, half_h = ring_dims(parent.ratio)
+        centre_r = (r_out + r_in) / 2.0
+        half = np.array([max((r_out - r_in) / 2.0, FLAT_EPS), FLAT_EPS,
+                         max(half_h, FLAT_EPS)])
+        form = parent.geometry                    # box support: a square tube
+    # The tube's cross-section axes (radial, along-the-tube, axial) in world.
+    basis = pcols @ np.column_stack([e_r, e_t, [0.0, 0.0, 1.0]])
+    v = cc - (pc + pcols @ (centre_r * e_r))
+    d = float(np.linalg.norm(v))
+    if d > 1e-12:
+        u = v / d
+    else:
+        u = basis[:, 0] / max(float(np.linalg.norm(basis[:, 0])), 1e-12)
+    return d, u, _support(basis, half, u, form)
+
+
 def _placed_aim(nodes, base_scale, rotated):
     """World +Z each of `rotated` would have if its own rotate_* were 0.
 
@@ -212,6 +253,36 @@ def _placed_aim(nodes, base_scale, rotated):
         if nz > 1e-12:
             out[n.id] = z / nz
     return out
+
+
+def _root_contacts(spheres):
+    """(interpenetrating root pairs, count of merely touching pairs).
+
+    Two bounding spheres can only meet if their x-intervals do, so the roots
+    are swept in order of their low x edge and each is compared, vectorised,
+    against only those whose interval starts before its own ends. Exact, and
+    near-linear for a spread-out scene: the all-pairs loop this replaced took
+    minutes on a 4,096-cell grid whose cells are all roots.
+    """
+    if len(spheres) < 2:
+        return [], 0
+    c = np.array([s[1] for s in spheres], dtype=float)
+    rad = np.array([s[2] for s in spheres], dtype=float)
+    hi = c[:, 0] + rad
+    order = np.argsort(c[:, 0] - rad, kind="stable")
+    lo_sorted = (c[:, 0] - rad)[order]
+    overlaps, touching = [], 0
+    for k, i in enumerate(order):
+        js = order[k + 1:np.searchsorted(lo_sorted, hi[i], side="right")]
+        if not js.size:
+            continue
+        gap = np.linalg.norm(c[js] - c[i], axis=1) - rad[i] - rad[js]
+        deep = gap < -np.minimum(rad[i], rad[js])
+        touching += int(((gap < 0) & ~deep).sum())
+        for j, g in zip(js[deep], gap[deep]):
+            a, b = (i, j) if i < j else (j, i)
+            overlaps.append((spheres[a][0], spheres[b][0], float(g)))
+    return overlaps, touching
 
 
 # --------------------------------------------------------------------- checks
@@ -242,19 +313,27 @@ def analyse(path, base_scale=1.0):
         d = float(np.linalg.norm(cc - pc))
         prad = _radius(pcols, phalf)
         sib_dist[p.id].append(d)
-        if d > 1e-12 and p.topo in SEATED_TOPOS:
-            u = (cc - pc) / d
-            reach = _support(pcols, phalf, u, p.geometry)
+        seat = None
+        if p.topo in SEATED_TOPOS:
+            if p.geometry in TUBE_SHAPED:
+                seat = _tube_seat(p, cc, pc, pcols)
+                where = " (measured from its tube)"
+            elif d > 1e-12:
+                u = (cc - pc) / d
+                seat = d, u, _support(pcols, phalf, u, p.geometry)
+                where = ""
+        if seat is not None:
+            sd, u, reach = seat
             creach = _support(ccols, chalf, u, n.geometry)
             crad = _radius(ccols, chalf)
             if crad < 1e-6:
                 pass          # a zero-size node is absent, not buried
-            elif d + crad <= reach:
-                buried.append((n, p, d, reach, creach, "swallowed"))
-            elif d < reach:
-                buried.append((n, p, d, reach, creach, "centre"))
-            elif d < reach + creach:
-                buried.append((n, p, d, reach, creach, "surface"))
+            elif sd + crad <= reach:
+                buried.append((n, p, sd, reach, creach, "swallowed", where))
+            elif sd < reach:
+                buried.append((n, p, sd, reach, creach, "centre", where))
+            elif sd < reach + creach:
+                buried.append((n, p, sd, reach, creach, "surface", where))
         if (p.topo in CARTESIAN_TOPOS and prad > 1e-12
                 and d / prad > FLUNG_RATIO):
             cand.append((n, p, d, prad))
@@ -430,19 +509,10 @@ def analyse(path, base_scale=1.0):
                     stack.append(k)
         spheres.append((root, centre, rad, len(seen)))
     r["root_spheres"] = spheres
-    overlaps, touching_roots = [], []
-    for i in range(len(spheres)):
-        for j in range(i + 1, len(spheres)):
-            _, c1, r1, _ = spheres[i]
-            _, c2, r2, _ = spheres[j]
-            gap = float(np.linalg.norm(c1 - c2)) - r1 - r2
-            if gap < -min(r1, r2):
-                overlaps.append((spheres[i][0], spheres[j][0], gap))
-            elif gap < 0:
-                touching_roots.append(1)
+    overlaps, touching = _root_contacts(spheres)
     overlaps.sort(key=lambda o: o[2])
     r["root_overlaps"] = overlaps
-    r["root_envelope_touch"] = len(touching_roots)
+    r["root_envelope_touch"] = touching
 
     # rendered size per hierarchy level
     per_level = defaultdict(list)
@@ -569,14 +639,14 @@ def report(r, show_all=False):
           "child is completely inside its parent and cannot be seen",
           "children are completely inside their parent and cannot be seen",
           lambda b: (f"id {b[0].id} ({GEO_NAMES.get(b[0].geometry, b[0].geometry)}) "
-                     f"is {b[2]:.3f} from parent {b[1].id}, whose surface that way is "
+                     f"is {b[2]:.3f} from parent {b[1].id}{b[6]}, whose surface that way is "
                      f"at {b[3]:.3f} -- {b[2] / max(b[3], 1e-9):.0%} of the way out; "
                      f"clear it at {b[3] + b[4]:.3f}"))
     block(sorted(inside, key=lambda b: b[2] / max(b[3], 1e-9)),
           "child has its centre inside its parent, so only the part that pokes out shows",
           "children have their centre inside their parent, so only the part that pokes out shows",
           lambda b: (f"id {b[0].id} ({GEO_NAMES.get(b[0].geometry, b[0].geometry)}) "
-                     f"is {b[2]:.3f} from parent {b[1].id}, whose surface that way is "
+                     f"is {b[2]:.3f} from parent {b[1].id}{b[6]}, whose surface that way is "
                      f"at {b[3]:.3f} -- {b[2] / max(b[3], 1e-9):.0%} of the way out; "
                      f"clear it at {b[3] + b[4]:.3f}"))
     block(sorted(r["flung"], key=lambda f: -f[2] / max(f[3], 1e-9)),
