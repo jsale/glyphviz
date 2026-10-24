@@ -10,4 +10,4 @@ stamps it from its --date on every app release, so don't hand-edit it for a
 Windows build; the macOS and Linux CI builds name their artifacts from it.
 """
 
-__version__ = "2026.9.27"
+__version__ = "2026.10.24"

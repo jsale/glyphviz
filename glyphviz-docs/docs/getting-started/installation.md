@@ -52,14 +52,14 @@ GlyphViz can be installed several ways. Most users should start with the native 
 
 GlyphViz for Windows is a **portable build** — there's no installer and nothing is written to the registry. Download the archive, extract it, and run the executable.
 
-[:material-download: Download GlyphViz for Windows (GlyphViz20260919.zip)](https://iluvdata.org/glyphviz/versions/GlyphViz20260919.zip){ .md-button .md-button--primary }
+[:material-download: Download GlyphViz for Windows (GlyphViz20261024.zip)](https://iluvdata.org/glyphviz/versions/GlyphViz20261024.zip){ .md-button .md-button--primary }
 
-*Windows 10/11, 64-bit · ~168 MB download, ~412 MB extracted · build 2026-09-19*
+*Windows 10/11, 64-bit · ~168 MB download, ~412 MB extracted · build 2026-10-24*
 
 ### Install and run
 
-1. Download **[GlyphViz20260919.zip](https://iluvdata.org/glyphviz/versions/GlyphViz20260919.zip)**.
-2. Right-click the file → **Extract All…**, and extract it into **its own folder** — Windows suggests `GlyphViz20260919`, which is exactly right. The archive holds `GlyphViz.exe` plus an `_internal` folder at its top level, so "extract here" into your Downloads folder would scatter them.
+1. Download **[GlyphViz20261024.zip](https://iluvdata.org/glyphviz/versions/GlyphViz20261024.zip)**.
+2. Right-click the file → **Extract All…**, and extract it into **its own folder** — Windows suggests `GlyphViz20261024`, which is exactly right. The archive holds `GlyphViz.exe` plus an `_internal` folder at its top level, so "extract here" into your Downloads folder would scatter them.
 3. Open the extracted folder and run **`GlyphViz.exe`**.
 
     !!! tip "Keep the folder together"
