@@ -137,7 +137,7 @@ to every node created either way:
 | Field | Type | Default |
 |---|---|---|
 | Geometry | combo, every `GEO_*` value | **Octahedron** (`GEO_OCTA`) |
-| Topology | combo, all 18 `TOPO_*` values | **Point** (`TOPO_POINT`) |
+| Topology | combo, all 19 `TOPO_*` values | **Point** (`TOPO_POINT`) |
 | Scale (X, Y, Z) | 3 spin boxes, 0.001–10,000 | 1.0 / 1.0 / 1.0 |
 | Lock X/Y/Z together | checkbox | checked |
 | Color | color-picker button | RGBA (200, 200, 200, 255) |
@@ -238,7 +238,7 @@ Topology, Ratio, and Color apply the same absolute value to all of them
 | *(Lock X/Y/Z together)* | — | checkbox | Ties the three Scale spin boxes together |
 | Geometry | `geometry` | combo, every value | See [Geometries](geometries.md) |
 | *(End caps)* | `geometry` | checkbox | Only live on **Cylinder (Interior)** / **Cylinder (Interior, Open)**, and disabled on every other shape. Not a field of its own — the two states *are* those two geometry ids, and the checkbox swaps between them, so the choice saves and loads like any other geometry. Off = an open tube, on = closed at both ends. On a mixed selection it touches only the interior cylinders. See [Interior geometries](geometries.md#interior-geometries-seen-from-within) |
-| Topology | `topo` | combo, all 18 values | See [Topologies](topologies.md) |
+| Topology | `topo` | combo, all 19 values | See [Topologies](topologies.md) |
 | Topo Scale | `topo_scale` | spin box (6 decimals) + log slider, 0.0001–100, plus **1:1** and **ANTz** preset buttons | How far one unit of a **child's** translate reaches, for the axes this node's topology reads as a *distance* rather than an angle. Angular axes (lon/lat, orbital and tube angles) are never scaled, so it cannot distort a circular layout. `1.0` = one translate unit is one world unit (default); `1/180 ≈ 0.005556` = the ANTz convention, where a cube facet is 360 units across. Turn it down when children authored in degrees fly off after a switch to a linear topology — see [Topologies](topologies.md) |
 | Facet | `subspace` | combo, 6 named faces (`0: +X` … `5: -Z`) | Only meaningful when this node's **parent** uses Cube or Zcube topology |
 | Ratio | `ratio` | spin box, 0.01–10.0, 3 decimals | Torus minor/major radius proportion, and on a **Flat Ring** the same number read as the band's radial width, with `scale_z` as its height ([Geometries](geometries.md#the-flat-ring)); also doubles as Point sprite size and Plot line width (`ratio × 20` px). On a **Link** it is the connector's thickness whatever geometry the link carries — pixels for Line, world-space half-width on both cross-axes for Prism or any stretched glyph ([Geometries](geometries.md#geometry-on-a-link-node)). Values above 1.0 only mean anything there; a torus ratio above 1.0 is degenerate, and a ring ratio of 0.5 or more closes the hole into a solid wheel |

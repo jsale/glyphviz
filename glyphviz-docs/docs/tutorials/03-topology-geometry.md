@@ -86,6 +86,6 @@ Read back over everything you just did. Root cycled through Cartesian, Torus, Sp
 
 You've now hand-authored every core piece of a GlyphViz scene: hierarchy, tags, and topology. From here:
 
-- The [Topologies reference](../reference/topologies.md) has the exact placement math for all 18 topologies (you've only tried 4), plus a **downloadable animation set** that sweeps a probe glyph through every axis of every topology — the same kind of exploration you just did by hand, already built for you to load and watch.
+- The [Topologies reference](../reference/topologies.md) has the exact placement math for all 19 topologies (you've only tried 4), plus a **downloadable animation set** that sweeps a probe glyph through every axis of every topology — the same kind of exploration you just did by hand, already built for you to load and watch.
 - The [Examples Gallery](../examples/index.md) has 36 real scenes using this same model at real-data scale — a good next stop now that the small hand-typed version isn't a mystery anymore.
 - For anything past a handful of hand-typed rows, the [Claude Skill](../getting-started/installation.md#claude-skill) generates and validates real scene CSVs from a description of your data — and everything it writes is exactly the format you've been typing yourself all tutorial.

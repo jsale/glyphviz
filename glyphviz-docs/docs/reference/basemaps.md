@@ -51,8 +51,9 @@ numbering. Refetching for the same grid overwrites the same file in place.
   Shape to Flat Rectangle first. (A globe still takes any whole-earth
   equirectangular image the ordinary way, via `texture_id`.)
 - **Aspect ratio**: the fetched image has square pixels in degree space. For a
-  locally true-to-shape map, set the grid's `scale_y ≈ cos(mean latitude) ×
-  scale_x`, as usual.
+  locally true-to-shape map, set the grid's `scale_x ≈ cos(mean latitude) ×
+  scale_y`, as usual: a degree of longitude is the shorter one, by that
+  factor (about 0.83 at San Diego's 34°).
 - Regions crossing the antimeridian (±180°) aren't supported yet.
 - The fetch logic lives in `glyphviz_core/basemap.py`, separate from the Qt
   dialog, and is tested offline with a mocked tile server

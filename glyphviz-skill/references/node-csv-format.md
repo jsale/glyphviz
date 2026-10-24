@@ -52,7 +52,7 @@ All 20: `id`, `type`, `parent_id`, `branch_level`, `translate_x/y/z`,
 | `rotate_x/y/z` | float | Orientation in degrees, interpreted per `rotation_mode` (see optional columns). |
 | `scale_x/y/z` | float | Per-axis scale, rendered exactly as authored. A node's **rendered** half-extent is this × every ancestor's scale × Global Scale, and the geometry itself fits inside **radius 1** before scale — which is not the same as spanning −1…+1 per axis: a cube's faces are 0.577 out, a Pin is a needle 0.1 wide spanning 0…1.1, a flat square 0.707 (SKILL.md rule 2 has the measured table). So `scale_z = 4` on a cube is a glyph 4.6 units tall with half of it below its own position — not four units standing on it. **An optional viewer setting (View → Enforce Minimum Glyph Size, off by default) lifts a node's own `scale × Global Scale` to 0.2 per axis** — its *own*, not the cumulative value, so it does not protect a small glyph under a large parent and it *will* distort a child deliberately counter-scaled to stay round under a stretched one. Keep the **rendered** size of anything the user should see or click near 0.2 or more, so the scene reads the same with the setting either way; a small *authored* number under a large parent is not an error. |
 | `color_r/g/b/a` | int | 0–255. Alpha blends per the World node's `render_mode`. |
-| `geometry` | int | Shape id 0–28 (see Geometry ids). |
+| `geometry` | int | Shape id 0–34 (see Geometry ids). |
 | `hide` | int | 1 = do not render this node. |
 | `topo` | int | Topology id 0–18 controlling how **children** of this node are placed (see Topology ids). |
 
@@ -189,6 +189,12 @@ across a load/save round-trip.
   would round the ANTz preset (1/180) to four. Reading is unaffected — the
   loader parses either spelling — so hand-authored files may pad if they like.
 - The loader reads columns **by header name**, order-independent, via pandas.
+- **Reading your own CSVs back in a generator:** pandas' default float parser
+  is not exact at full precision (`92.16666666666667` comes back as
+  `…69`). That is invisible in the app, but it breaks byte-identical
+  regeneration from a file you read back. Pass
+  `pd.read_csv(..., float_precision="round_trip")`. Files GlyphViz saves
+  (6 dp) are not affected.
 
 ## GaiaViz `np_` dialect (read-side interop)
 

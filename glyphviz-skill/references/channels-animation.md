@@ -43,7 +43,7 @@ are restored to their CSV values.
 | Velocities | `translate_rate_x/y/z`, `rotate_rate_x/y/z`, `scale_rate_x/y/z` | the channel sets the *speed*; the viewport integrates it at ~60 cycles/s. The integrated position/rotation persists after Stop (only the rate itself resets) |
 | Color | `color_r/g/b/a` | literal values, rounded and clamped 0–255 |
 | Palette color | `palette_id`, `color_index` | resolved to literal `color_r/g/b` **every frame** — the one place palette resolution happens automatically instead of on a `=`/`-`/`Alt+=` keypress. `palette_id` clamps to 0–25, `color_index` wraps within the palette's own size (20 or 128), `color_a` is never touched. See `color-palettes.md` |
-| Shape | `ratio`, `topo`, `topo_scale`, `geometry`, `mesh_id` | morph a glyph's *form*, not just its size. `topo` clamps 0–17, `geometry` 0–28, `mesh_id` floors at 0; `topo_scale` is a plain float multiplier, unclamped. All of `ratio`/`topo`/`topo_scale`/`geometry` re-place a node's **children** as well (see below) |
+| Shape | `ratio`, `topo`, `topo_scale`, `geometry`, `mesh_id` | morph a glyph's *form*, not just its size. `topo` clamps 0–18, `geometry` 0–34 (`TOPO_COUNT − 1`, `GEO_COUNT − 1`, so Point Cloud, the interiors and Flat Rings are all reachable), `mesh_id` floors at 0; `topo_scale` is a plain float multiplier, unclamped. All of `ratio`/`topo`/`topo_scale`/`geometry` re-place a node's **children** as well (see below) |
 | Texture | `texture_id` | flip-book texture switching by `media/` index (see `textures-and-media.md`) |
 | Visibility | `hide`, `show_text` | flags — any positive track value reads as on, `0` as off. `hide` blanks the glyph without disturbing anything else; `show_text` pins/unpins its tag label |
 | Scene settings (World node only) | `render_mode`, `fog_enabled`, `fog_start`, `fog_end`, `tag_font_size` | read only off the **World row (type=0)** — give that row a `ch_input_id` like any other node. `render_mode` clamps 0–6, `fog_enabled` is a flag, the two fog distances are plain floats, `tag_font_size` clamps 6–36. Inert on any other node type. The World row's own `color_r/g/b` is the scene **background color**, animated through the ordinary Color binding above |
@@ -122,6 +122,11 @@ supported way to sync animation to sound; video-texture audio cannot sync
 - Validate the three-way join: every animated node's `ch_input_id` appears
   as a `channel_id` in the map; every map row's `track_id` has a `ch<id>`
   tracks column; every map row's `attribute` is in the table above.
+- **One track per (channel, attribute).** Bind the same attribute to several
+  tracks in one channel and the **last ch-map row wins** every frame; the
+  others are silently overwritten, with no warning. Check for duplicate
+  `(channel_id, attribute)` pairs — a generated scene once carried 23 alpha
+  bindings per channel without anyone noticing.
 - All tracks share one clock — one row count for the whole scene. Encode
   "not yet born" as `color_a` 0 rather than giving nodes different clocks,
   and carry a value forward through gaps in the source data (a hole

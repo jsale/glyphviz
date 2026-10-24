@@ -29,7 +29,7 @@ the ring texture-aspect rule that is the expensive way to learn it.
 |---|---|
 | `SKILL.md` | **Done** — verified facts only; 11 hard rules, workflow, GaiaViz-myth list |
 | `references/node-csv-format.md` | **Done** — verified column-by-column against `glyphviz_core/csv_reader.py` |
-| `references/topologies.md` | **Done** — placement math for all 18 topologies plus `topo_scale`, and direction-relative branching (trees); 17 worked examples machine-verified through the real engine |
+| `references/topologies.md` | **Done** — placement math for all 19 topologies plus `topo_scale`, and direction-relative branching (trees); 17 worked examples machine-verified through the real engine |
 | `references/links-and-edges.md` | **Done** (2026-08-15, extended 2026-08-23) — the Link row, the three drawing modes, `ratio` as thickness, edge recipes, and laying a graph out in 3-D; endpoint/thickness math verified through `link_geometry`, layout claims against `graph.py`/`graph_layout.py` |
 | `references/color-palettes.md` | **Done** — 26 palettes, resolution semantics, ramp recipes; samples machine-verified via `resolve_palette_color` |
 | `references/textures-and-media.md` | **Done** (extended 2026-08-13/28) — `texture_id`→`media/` mapping, which geometries render a texture (incl. the interiors and the Flat Ring), generating a texture at a ring's own aspect ratio, GIF/video textures, Solo Audio to Selection |

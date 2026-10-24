@@ -93,8 +93,9 @@ basis). `scale_x = 2` doubles the longitude spread; every glyph stays the
 same size, and each glyph's own children keep their spacing — engine
 check: on a scale-2 grid, a child's own child at `(0, 0, 7)` sits 7 units
 above it, not 14. Use grid scale freely for zoom and aspect ratio
-(`scale_y` ≈ cos(mean latitude) × `scale_x` approximates a locally
-conformal map). This exemption is the grid's own scale only — a plain
+(`scale_x` ≈ cos(mean latitude) × `scale_y` approximates a locally
+conformal map — a degree of longitude is the shorter one, so it is the
+longitude axis that shrinks). This exemption is the grid's own scale only — a plain
 `topo` = Plane parent still scales its children fully.
 
 `scale_z` re-spaces elevations the same way — a cheap vertical

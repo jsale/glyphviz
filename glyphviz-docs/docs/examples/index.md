@@ -12,7 +12,7 @@ Install notes and good first scenes: [Installation → Example scenes](../gettin
 
 ## Starter demos
 
-- **[Topology Tour](topology.md)** — all 18 topologies side by side
+- **[Topology Tour](topology.md)** — 18 of the 19 topologies side by side (Point Cloud has its own page, [LIDAR Import](lidar-import.md))
 - **[Topology Animations](../reference/topologies.md#topology-animations-a-downloadable-instructional-series)** — twelve animated scenes that sweep each topology's placement axes one at a time
 - **[Channel Parameters](channel-parameters.md)** — one station per Channels-bindable attribute
 - **[Color Palettes](palette.md)** — the 26 built-in palettes, ready to recolor live

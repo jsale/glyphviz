@@ -1,6 +1,6 @@
 # Topology Tour
 
-One labeled station per topology — all 18 types — each showing how that topology arranges the same children in space. The scene the [Guided Tour](../getting-started/guided-tour.md) ends on, and the companion to the [Topologies reference](../reference/topologies.md).
+One labeled station per topology — the first 18 types; Point Cloud, added later, is shown in [LIDAR Import](lidar-import.md) — each showing how that topology arranges the same children in space. The scene the [Guided Tour](../getting-started/guided-tour.md) ends on, and the companion to the [Topologies reference](../reference/topologies.md).
 
 ![Topology Tour loaded in GlyphViz](../assets/examples/topology.png)
 

@@ -114,6 +114,16 @@ glyph is drawn at that minimum instead.
 The same applies to the children of a Plot: the line is drawn through them
 either way.
 
+!!! warning "Hiding the parent hides the whole overlay"
+    A Plot's line, a Surface's mesh and a Point Cloud's points all belong to
+    the **parent**, so `hide = 1` on a Plot, Surface or Point Cloud parent
+    erases the entire line, mesh or cloud, not just the parent's own glyph.
+    Elsewhere `hide = 1` is the usual way to make an invisible carrier node;
+    on these three it is the off switch. Leave the parent visible, and don't
+    scale it to 0 either, because its children inherit that scale. Driving
+    the parent's `hide` from a channel is a perfectly good way to reveal or
+    remove the whole overlay at once.
+
 ## Point clouds (topology 18)
 
 Point Cloud is the one topology that **replaces** how its children draw

@@ -75,13 +75,21 @@ result = forceatlas2_3d(graph, iterations=900, positions=start,
 pos    = fit_to_radius(result.positions, radius=200.0)
 ```
 
+!!! warning "A bare call gives you the 2D algorithm"
+    `forceatlas2_3d`'s defaults are Gephi's own — `repulsion_falloff=1.0`,
+    `gravity=1.0` — kept so that a default run reproduces the published
+    algorithm. In three dimensions that is the hairball described above.
+    Always pass `repulsion_falloff=2.0` and raise `gravity` with it, as the
+    example does. Likewise `fit_to_radius` defaults to `radius=100`; the 200
+    here is a choice for a large graph, not the default.
+
 ### `forceatlas2_3d(graph, ...)`
 
 ForceAtlas2 ported against Gephi's own implementation, swing/traction speed controller included. Mass is `degree + 1`, exactly as Gephi has it, and the forces are vector quantities so they carry into 3D untouched.
 
 | Parameter | Notes |
 |---|---|
-| `repulsion_falloff` | **See above.** Pass 2.0 in three dimensions. |
+| `repulsion_falloff` | **See above.** Default 1.0 (Gephi's 2D law); pass 2.0 in three dimensions. |
 | `iterations`, `tolerance` | Stops early once mean per-node motion falls below `tolerance` × the layout's own radius, so a converged graph doesn't burn the rest. |
 | `scaling`, `gravity`, `strong_gravity` | Gephi's, unchanged. A steeper falloff wants more gravity to hold the cloud together — 15 against the default 1 in the shipped examples. |
 | `positions` | Seeds the run. Pass `pivot_mds_3d(graph)` for a globally sane start; omit for Gephi's random cloud. |
@@ -102,7 +110,7 @@ ForceAtlas2 ported against Gephi's own implementation, swing/traction speed cont
 
 ### Finishing
 
-- **`fit_to_radius(positions, radius=200.0)`** centres the layout on the origin and scales it into a world-unit sphere. A force layout's absolute scale is an artifact of its force constants, not of the data, so it always needs this before it becomes `translate_x/y/z`. The radius is matched at the 98th percentile rather than the maximum — force layouts routinely fling one weakly-attached node far past the rest, and matching the true maximum would shrink the whole structure to accommodate it.
+- **`fit_to_radius(positions, radius=100.0)`** centres the layout on the origin and scales it into a world-unit sphere. A force layout's absolute scale is an artifact of its force constants, not of the data, so it always needs this before it becomes `translate_x/y/z`. The radius is matched at the 98th percentile rather than the maximum — force layouts routinely fling one weakly-attached node far past the rest, and matching the true maximum would shrink the whole structure to accommodate it.
 
     If you are animating a *growing* graph, compute one fit transform from the final frame and apply it to every frame. Re-fitting each frame renormalises the cloud, so a network that is actually expanding appears to stand still.
 

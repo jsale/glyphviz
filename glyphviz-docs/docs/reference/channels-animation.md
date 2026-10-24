@@ -31,13 +31,18 @@ each** matches (`channel_loader.py:7-14`) — so one Channels scene per folder.
 
 Values are **absolute, not deltas**, and there is **no interpolation between
 frames** — `apply_frame` reads the exact row at that index
-(`channel_engine.py:214-227`). Any smooth fade must be precomputed at
+(`channel_engine.py:273-286`). Any smooth fade must be precomputed at
 generation time. All tracks share one clock, so one row count covers the whole
 scene. Frame indices clamp to `[0, frames − 1]`. Stop (Shift+Space) restores
-every touched attribute to its CSV value (`channel_engine.py:240-248`).
+every touched attribute to its CSV value (`channel_engine.py:299-307`).
 
 Integer-valued attributes are rounded and clamped to their own valid range;
 float attributes are applied exactly as written, negatives included.
+
+**One track per attribute.** If a channel binds the same attribute to several
+tracks, every frame writes them all in ch-map row order and the **last one
+wins**; the others are silently overwritten. Nothing warns about it, so check
+for duplicate `(channel_id, attribute)` pairs when a generator builds the map.
 
 ## Drivable attributes
 
@@ -75,7 +80,7 @@ category) rather than a color.
 
 ### Shape
 
-`ratio`, `topo` (clamped 0–17), `topo_scale`, `geometry` (clamped 0–28),
+`ratio`, `topo` (clamped 0–18), `topo_scale`, `geometry` (clamped 0–34),
 `mesh_id` — morph a glyph's form, not just its size. `mesh_id` selects among
 meshes imported at runtime via *File → Import Mesh*. `topo_scale` is a plain
 float multiplier, unclamped.

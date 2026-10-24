@@ -292,6 +292,14 @@ assumed.
   of the glyphs; a Point Cloud parent's children draw no glyphs at all. Use
   for unstructured scan data — LIDAR, photogrammetry, particle sets. See the
   dedicated section below.
+- **A hidden Plot, Surface or Point Cloud PARENT erases its whole line, mesh
+  or cloud.** The overlay belongs to the parent, so `hide = 1` on it skips
+  the overlay entirely, not just the parent's own glyph. Everywhere else
+  `hide = 1` is the normal invisible-carrier idiom; here it is the off
+  switch. Leave the parent visible and keep its own glyph unobtrusive
+  instead (do not scale it to 0: its children inherit that scale and the
+  overlay collapses with them). A channel that drives the parent's `hide`
+  shows and hides the whole overlay, which is a legitimate reveal.
 
 Example (all six): `child (1.5, -2, 0.5) → world (1.5, -2, 0.5)`.
 
