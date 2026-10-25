@@ -8,6 +8,29 @@ building on Isenberg & Maxwell's conformal method for Lagrangian matter,
 **Open:** `Conformal_Star/Conformal_Star_gv_node.csv`, then press **Space** to play
 (23 s at 30 fps). The file opens on frame 0, where answer 2 is at its deepest.
 
+## About this lab
+
+This is one of four learning labs Jeff Sale built while preparing for the
+Contributed Papers session of the **AMS 2026 Fall Western Sectional Meeting**
+(Arizona State University, Tempe; Durham Hall L1-16, November 7, 2026), where
+he presents the Hyperdimensional Coordinate System. Each lab turns the abstract
+of a fellow presenter in that session into a GlyphViz scene, as a way to
+understand the talk before hearing it.
+
+| Lab | Talk |
+| --- | --- |
+| [`lorenz_sync_lab/`](../lorenz_sync_lab/) | Yan Wu, *Synchronizability between two coupled Lorenz systems* |
+| [`lsa_transition_lab/`](../lsa_transition_lab/) | Borgwardt & Semyonov, *An Iteration-Reducing Approach for Transitions Between Least-Squares Assignments* |
+| [`conformal_fluid_lab/`](../conformal_fluid_lab/) (this lab) | Paul T. Allen, *Specifying initial perfect fluid distributions in general relativity* |
+| [`qudit_synthesis_lab/`](../qudit_synthesis_lab/) | Nguyen, Bregman & Nema, *Synthesis of Single-Qudit Circuits in Dimensions 3 and 5* |
+
+The labs are study aids, not reproductions of the speakers' work. Each is built
+from a short abstract alone: the models, simulations and numbers are the lab's
+own, and where a lab has to guess at something the abstract doesn't give, its
+README says so. Any errors are the lab's, not the speakers'. The labs live
+here in the repository, not in the GlyphViz Examples Gallery, until the
+speakers have given their talks.
+
 ## The setup
 
 A uniform ball of dust, **momentarily at rest**, in general relativity. Before Einstein's
@@ -88,3 +111,17 @@ mechanism: a conformally invariant matter variable gives the matter term a good 
   length (worst 0.02%), that the rings and meridians meet, that A's sheets vanish exactly
   past the fold, and that the throat ring sits at the analytic throat.
   `--bake-dir DIR --frames ...` writes static frames for `tools/export_frame.py`.
+
+## Credits
+
+- **The talk:** Paul T. Allen (University of New Mexico–Taos), *Specifying
+  initial perfect fluid distributions in general relativity*, joint work with
+  David Maxwell, AMS 2026 Fall Western Sectional Meeting.
+- **The conformal method for matter it builds on:** James Isenberg and David
+  Maxwell, [arXiv:2106.15027](https://arxiv.org/abs/2106.15027). Sheet C is
+  the lab's toy in that spirit, for dust at rest, not their perfect-fluid
+  system.
+- **The Lichnerowicz equation:** André Lichnerowicz (1944), the conformal
+  form of the Hamiltonian constraint used for all four sheets.
+- **"Bag of gold":** John Archibald Wheeler's name for the closed-universe
+  answer that hangs off a Schwarzschild funnel.

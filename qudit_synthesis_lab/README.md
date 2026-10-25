@@ -19,6 +19,29 @@ cost scales that way.
 
 Press **Space** to play. Both open zoomed out; scroll in on the panel you are reading.
 
+## About this lab
+
+This is one of four learning labs Jeff Sale built while preparing for the
+Contributed Papers session of the **AMS 2026 Fall Western Sectional Meeting**
+(Arizona State University, Tempe; Durham Hall L1-16, November 7, 2026), where
+he presents the Hyperdimensional Coordinate System. Each lab turns the abstract
+of a fellow presenter in that session into a GlyphViz scene, as a way to
+understand the talk before hearing it.
+
+| Lab | Talk |
+| --- | --- |
+| [`lorenz_sync_lab/`](../lorenz_sync_lab/) | Yan Wu, *Synchronizability between two coupled Lorenz systems* |
+| [`lsa_transition_lab/`](../lsa_transition_lab/) | Borgwardt & Semyonov, *An Iteration-Reducing Approach for Transitions Between Least-Squares Assignments* |
+| [`conformal_fluid_lab/`](../conformal_fluid_lab/) | Paul T. Allen, *Specifying initial perfect fluid distributions in general relativity* |
+| [`qudit_synthesis_lab/`](../qudit_synthesis_lab/) (this lab) | Nguyen, Bregman & Nema, *Synthesis of Single-Qudit Circuits in Dimensions 3 and 5* |
+
+The labs are study aids, not reproductions of the speakers' work. Each is built
+from a short abstract alone: the models, simulations and numbers are the lab's
+own, and where a lab has to guess at something the abstract doesn't give, its
+README says so. Any errors are the lab's, not the speakers'. The labs live
+here in the repository, not in the GlyphViz Examples Gallery, until the
+speakers have given their talks.
+
 ## 1. Cyclotomic Search
 
 ### The idea
@@ -105,7 +128,8 @@ the simpler cousin of what the talk compiles: gates live in SU(3), 8-dimensional
 
   With depth = 1 - p₀, uniformly random qutrit states fill the tube's cross-section
   uniformly, so an even net looks even. The two phases form the same torus as the 2-D HCS
-  torus of the Lorenz scene; phases are angles already. Up to 4 R gates (88,572 states).
+  torus of the Lorenz lab ([`../lorenz_sync_lab/`](../lorenz_sync_lab/)); phases are
+  angles already. Up to 4 R gates (88,572 states).
   Layer 0 shows the structure: |0⟩ on the core, 9 states on a 3 × 3 grid of phases, and
   |1⟩, |2⟩ together at the seam (no |0⟩ part, so no phase relative to it).
 - **Each panel** shows a target star with a line to its nearest reachable state, jumping as
@@ -136,3 +160,17 @@ the simpler cousin of what the talk compiles: gates live in SU(3), 8-dimensional
   - nearest-state markers at every stage
 
   `--bake-dir DIR --frames ...` writes static frames for `tools/export_frame.py`.
+
+## Credits
+
+- **The talk:** Nguyen, Bregman & Nema, *Synthesis of Single-Qudit Circuits
+  in Dimensions 3 and 5*, AMS 2026 Fall Western Sectional Meeting.
+- **The qutrit Clifford+R synthesis they start from:** Gustafson et al.,
+  *Synthesis of Single Qutrit Circuits from Clifford+R*,
+  [arXiv:2503.20203](https://arxiv.org/abs/2503.20203).
+- **The qubit version of the lattice search (gridsynth):** Neil J. Ross and
+  Peter Selinger, "Optimal ancilla-free Clifford+T approximation of
+  z-rotations," [arXiv:1403.2975](https://arxiv.org/abs/1403.2975).
+- **Sums of three squares in ℚ(√5):** Hans Maass (1941).
+- **The HCS height map r/(1+r):** Jeff Sale's Hyperdimensional Coordinate
+  System, after Dr. Art Springer's construction.

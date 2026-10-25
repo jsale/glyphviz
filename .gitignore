@@ -118,6 +118,6 @@ blender_lab/out/video/clockwork_x3.mp4
 blender_lab/out/frames/seq/
 blender_lab/out/blender_frames/
 
-# Lorenz Synchronization (HCS demo): the 22 MB scene ships as Lorenz_Sync.zip (3.6 MB);
-# regenerate the folder with examples/Lorenz_Synchronization_Example/generate_lorenz_sync.py
-examples/Lorenz_Synchronization_Example/Lorenz_Sync/
+# Lorenz Synchronization lab (HCS demo): the 22 MB scene ships as Lorenz_Sync.zip (3.6 MB);
+# regenerate the folder with lorenz_sync_lab/generate_lorenz_sync.py
+lorenz_sync_lab/Lorenz_Sync/

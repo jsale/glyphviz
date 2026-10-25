@@ -15,6 +15,35 @@ The HCS math here is a port of **hyperdims**, Jeff's interactive HCS
 plotter, and the scene's checks hold GlyphViz to it; "hyperdims'" below
 refers to that code.
 
+![Five controllers, one row each: Lorenz space, three HCS tori, the 6-D HCS hyperglyph and the Lyapunov function](images/lorenz-synchronization.png)
+
+## About this lab
+
+This is one of four learning labs Jeff Sale built while preparing for the
+Contributed Papers session of the **AMS 2026 Fall Western Sectional Meeting**
+(Arizona State University, Tempe; Durham Hall L1-16, November 7, 2026), where
+he presents the Hyperdimensional Coordinate System. Each lab turns the abstract
+of a fellow presenter in that session into a GlyphViz scene, as a way to
+understand the talk before hearing it.
+
+| Lab | Talk |
+| --- | --- |
+| [`lorenz_sync_lab/`](../lorenz_sync_lab/) (this lab) | Yan Wu, *Synchronizability between two coupled Lorenz systems* |
+| [`lsa_transition_lab/`](../lsa_transition_lab/) | Borgwardt & Semyonov, *An Iteration-Reducing Approach for Transitions Between Least-Squares Assignments* |
+| [`conformal_fluid_lab/`](../conformal_fluid_lab/) | Paul T. Allen, *Specifying initial perfect fluid distributions in general relativity* |
+| [`qudit_synthesis_lab/`](../qudit_synthesis_lab/) | Nguyen, Bregman & Nema, *Synthesis of Single-Qudit Circuits in Dimensions 3 and 5* |
+
+The labs are study aids, not reproductions of the speakers' work. Each is built
+from a short abstract alone: the models, simulations and numbers are the lab's
+own, and where a lab has to guess at something the abstract doesn't give, its
+README says so. Any errors are the lab's, not the speakers'. The labs live
+here in the repository, not in the GlyphViz Examples Gallery, until the
+speakers have given their talks.
+
+This lab is also the one with a direct HCS connection: a torus *is* a
+two-dimensional HCS, so synchronizing a pair of variables becomes landing on
+the torus's diagonal loop.
+
 ## Open it
 
 Drag `Lorenz_Sync.zip` onto the GlyphViz window; it extracts beside itself
@@ -23,7 +52,8 @@ folder, and open `Lorenz_Sync/Lorenz_Sync_gv_node.csv`.) It's a large scene,
 about 217,000 nodes, and takes a few seconds to load. The Channels panel
 appears; press **Space** to play. The run is 2,400 frames (24 Lorenz time
 units, 80 s at 30 fps) and loops. The opening camera looks straight at the
-wall. Zoom into one row to read the tori.
+wall. For the cleanest view, turn off **View > Show Grid**, then zoom into
+one row to read the tori.
 
 ## What you're looking at
 
@@ -47,6 +77,8 @@ checks that every trail point is exactly where GlyphViz's own Torus topology
 would seat a child at translate (θ1, θ2). The angles in the geometry are
 literally HCS angles.
 
+![The x-coupled row (k = 10) at the end of the run, locked: every torus trail on its white loop, and the 6-D leaf's teal trail riding the ghost](images/lorenz-synchronization-locked.png)
+
 **The 6-D hyperglyph** orders its dimensions x1, x2, y1, y2, z1, z2, so circles
 1–2 are the same x torus as the 2-D glyph beside it, 3–4 the y torus, and 5–6
 the z torus. In 6-D, synchronization isn't a single diagonal; it's a 3-D slice.
@@ -59,6 +91,8 @@ spinner's rim with `rotate_x = 90`, which is hyperdims' cross-section plane.
 against a literal port of hyperdims' `geometry.ts` (worst error 6e-15). The
 radius ratio is 0.7 rather than hyperdims' default 0.4, which would leave
 circle 6 at 1% of circle 1. That's the same as moving its radius-ratio slider.
+
+![The 6-D hyperglyph of the unlocked weak-x row: six nested circles, the leaf, the ghost and the long error cone between them](images/lorenz-synchronization-6d.png)
 
 ## The five rows, and how often each one locks
 
@@ -119,7 +153,9 @@ What the simulations suggest, and the questions they leave open:
 | `ensemble_lorenz_sync.py` | the 200-start lock rates behind the captions |
 | `pick_switch_time.py` | finds a switch-on time where each row shows its typical outcome |
 | `time_playback.py` | headless playback timing through the real Viewport |
-| `Lorenz_Sync/` | the generated scene (~19 MB node CSV, ~4 MB tracks) |
+| `Lorenz_Sync.zip` | the scene, zipped (3.6 MB); drag it onto GlyphViz |
+| `Lorenz_Sync/` | the generated scene (~19 MB node CSV, ~4 MB tracks); not committed, so unzip or regenerate it |
+| `images/` | the three screenshots in this README |
 
 ## Performance notes (measured)
 
@@ -140,3 +176,19 @@ traps on the way there:
 - Trails are densified with the integrator's true in-between states where
   samples are far apart. Otherwise fast stretches draw straight chords that
   cut through the torus and off the diagonal they are meant to follow.
+
+## Credits
+
+- **The talk:** Yan Wu (Georgia Southern University), *Synchronizability
+  between two coupled Lorenz systems*, AMS 2026 Fall Western Sectional
+  Meeting. The question this lab plays with is the talk's. The simulations,
+  controller forms and lock rates here are the lab's own and aren't drawn
+  from that work.
+- **The Hyperdimensional Coordinate System:** Jeff Sale, built on Dr. Art
+  Springer's subsegment-ratio construction. The HCS geometry is ported from
+  Jeff's **hyperdims** plotter.
+- **The Lorenz system:** Edward N. Lorenz, "Deterministic Nonperiodic Flow,"
+  *Journal of the Atmospheric Sciences* 20 (1963).
+- **Synchronized chaos:** the classic reference for coupling two chaotic
+  systems into identical motion is Louis M. Pecora and Thomas L. Carroll,
+  "Synchronization in Chaotic Systems," *Physical Review Letters* 64 (1990).

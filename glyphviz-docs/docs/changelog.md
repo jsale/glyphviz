@@ -2,11 +2,6 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
-## 2026-10-23
-
-- **[Two Lorenz Systems Falling into Sync](examples/lorenz-synchronization.md) joined the Examples Gallery**, in a new *Mathematics* section, as a demonstration of the **Hyperdimensional Coordinate System (HCS)**. Two coupled Lorenz systems make one six-dimensional state, and the scene shows five controllers trying to lock them together, each in Lorenz space, on three HCS tori (one per variable pair, where synchronization is the torus's diagonal loop), as one 6-D HCS hyperglyph of six nested circles, and as a Lyapunov function over time. Each controller's caption gives how often it locks across 200 independent starts.
-- **The 6-D hyperglyph is a real GlyphViz node chain**: one circle and one channel-driven spinner per dimension, checked against the HCS reference geometry to within 10⁻¹⁴.
-
 ## 2026-10-18
 
 - **Three narrated tutorials for the two glyph-design tools**, each under three minutes and filmed from the app's own dialogs. The [Glyph Composer](reference/glyph-composer.md#watch-build-a-glyph) has two: building a glyph level by level, inserting it and using it as a Draw Mode brush, and [painting a forest with templates imported from the Tree Designer](reference/glyph-composer.md#watch-paint-a-forest-with-imported-templates). The [Hyperglyph Generator](reference/hyperglyph-generator.md#watch-discover-a-glyph) has one: rolling designs, locking a seed, inserting, saving a recipe, editing it in the Composer and painting a flock with it.

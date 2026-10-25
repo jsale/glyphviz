@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[1]          # examples/<this folder>/ -> repo root
+REPO = HERE.parent
 sys.path.insert(0, str(REPO))
 
 from glyphviz_core.csv_reader import load_node_csv, save_node_csv  # noqa: E402

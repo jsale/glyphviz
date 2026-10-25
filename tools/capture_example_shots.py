@@ -141,14 +141,6 @@ MANIFEST = [
     ("building-glyphviz-spiral", EX / "Building_GlyphViz_Example", None),
     ("building-glyphviz-archetypes",
      EX / "Building_GlyphViz_Example" / "Five_Archetypes", None),
-    # Lorenz Synchronization: the scene folder is generated (gitignored);
-    # run generate_lorenz_sync.py or unzip Lorenz_Sync.zip first.
-    ("lorenz-synchronization",
-     EX / "Lorenz_Synchronization_Example" / "Lorenz_Sync", None),
-    ("lorenz-synchronization-locked",
-     EX / "Lorenz_Synchronization_Example" / "Lorenz_Sync", None),
-    ("lorenz-synchronization-6d",
-     EX / "Lorenz_Synchronization_Example" / "Lorenz_Sync", None),
 ]
 
 
@@ -161,13 +153,6 @@ FRAME = {
     # 1:53 at 30 fps — the climax the whole piece is built around, all seven
     # instruments in, and the sky at its warmest.
     "audio-warm-winter": 3390,
-    # Lorenz Synchronization: frame 0 is two systems a hair apart, before any
-    # controller acts. t = 15 is when the five rows have visibly parted ways;
-    # the last frame shows the x-coupled row locked; t = 13 catches the
-    # unlocked weak-x row with its leaf and ghost far apart.
-    "lorenz-synchronization": 1500,
-    "lorenz-synchronization-locked": 2399,
-    "lorenz-synchronization-6d": 1300,
 }
 
 # Auto-framing fits the bounding box of everything in the scene, title and
@@ -306,19 +291,6 @@ CAMERA = {
                                  "azimuth": 0, "elevation": 89},
     "building-glyphviz-archetypes": {"target": (0, 0, 9), "distance": 58,
                                      "azimuth": 92, "elevation": 10},
-    # The wall is turned and leaned back to face the default camera (azimuth
-    # 45, elevation 25), so these keep that angle and only re-aim. Targets are
-    # world positions read off the engine: row 1's three tori + 6-D glyph, and
-    # row 0's 6-D glyph.
-    # Seen from the default camera's 25 deg elevation the ground grid shows
-    # through every gap in the wall, so these are shot with it off (the page
-    # suggests the same).
-    "lorenz-synchronization": {"target": (-7.15, 14.77, 23.44), "distance": 46,
-                               "hide_grid": True},
-    "lorenz-synchronization-locked": {"target": (-8.65, 12.84, 28.66),
-                                      "distance": 12, "hide_grid": True},
-    "lorenz-synchronization-6d": {"target": (-15.13, 15.13, 35.0), "distance": 6.5,
-                                  "hide_grid": True},
 }
 
 
