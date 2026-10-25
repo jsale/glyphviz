@@ -121,3 +121,8 @@ blender_lab/out/blender_frames/
 # Lorenz Synchronization lab (HCS demo): the 22 MB scene ships as Lorenz_Sync.zip (3.6 MB);
 # regenerate the folder with lorenz_sync_lab/generate_lorenz_sync.py
 lorenz_sync_lab/Lorenz_Sync/
+
+# 5-D Lorenz feedback lab (Shen 2014): both scenes regenerate in ~20 s each with
+# lorenz5d_feedback_lab/generate_convection_cells.py and generate_r_sweep_tower.py
+lorenz5d_feedback_lab/Convection_Cells/
+lorenz5d_feedback_lab/R_Sweep_Tower/
