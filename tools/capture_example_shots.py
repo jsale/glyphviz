@@ -29,6 +29,9 @@ from capture_tour_shots import Capture, pump   # noqa: E402  (same folder)
 
 OUT_DIR = REPO_ROOT / "glyphviz-docs" / "docs" / "assets" / "examples"
 EX = REPO_ROOT / "examples"
+# The 5-D Lorenz scenes live in their lab folder, not under examples/; their
+# scene folders are gitignored and regenerate with the lab's generate_*.py.
+L5 = REPO_ROOT / "lorenz5d_feedback_lab"
 
 # (slug, scene folder, explicit file or None). None -> the folder's single
 # *node*.csv. A .pdb file goes through the PDB import path instead.
@@ -141,6 +144,18 @@ MANIFEST = [
     ("building-glyphviz-spiral", EX / "Building_GlyphViz_Example", None),
     ("building-glyphviz-archetypes",
      EX / "Building_GlyphViz_Example" / "Five_Archetypes", None),
+    # Nonlinear Feedback in a 5-D Lorenz Model: four scenes on one page, each
+    # with a whole view and a close-up. All four boards are centred on world
+    # (0, 0, 30), facing the default camera (azimuth 45, elevation 25).
+    ("lorenz5d-loop", L5 / "Feedback_Loop", None),
+    ("lorenz5d-loop-hcs", L5 / "Feedback_Loop", None),
+    ("lorenz5d-cells", L5 / "Convection_Cells", None),
+    ("lorenz5d-cells-close", L5 / "Convection_Cells", None),
+    ("lorenz5d-tower", L5 / "R_Sweep_Tower", None),
+    ("lorenz5d-tower-orbit", L5 / "R_Sweep_Tower", None),
+    ("lorenz5d-landscape", L5 / "Stability_Landscape", None),
+    ("lorenz5d-fig10a", L5 / "Stability_Landscape", None),
+    ("lorenz5d-landscape-close", L5 / "Stability_Landscape", None),
 ]
 
 
@@ -153,6 +168,16 @@ FRAME = {
     # 1:53 at 30 fps — the climax the whole piece is built around, all seven
     # instruments in, and the sky at its warmest.
     "audio-warm-winter": 3390,
+    # 5-D Lorenz: tau = 17.5 has the 4DLM escaped, the 5DLM at r = 25 parked on
+    # its quarter turns and both chaotic rows mid-flight; tau = 30 has the 3DLM
+    # rolls mid-reversal beside the settled 5DLM cells and every tower bead
+    # where its slice ends up.
+    "lorenz5d-loop": 700,
+    "lorenz5d-loop-hcs": 700,
+    "lorenz5d-cells": 1200,
+    "lorenz5d-cells-close": 1200,
+    "lorenz5d-tower": 1200,
+    "lorenz5d-tower-orbit": 1200,
 }
 
 # Auto-framing fits the bounding box of everything in the scene, title and
@@ -291,6 +316,35 @@ CAMERA = {
                                  "azimuth": 0, "elevation": 89},
     "building-glyphviz-archetypes": {"target": (0, 0, 9), "distance": 58,
                                      "azimuth": 92, "elevation": 10},
+    # 5-D Lorenz. Every board faces azimuth 45 / elevation 25, so the square-on
+    # shots pass those explicitly (the auto-fit's own angles skew the board).
+    # The capture window is short and wide, and tag text is a fixed pixel
+    # size, so each square-on shot frames the part of the board that tells
+    # its story rather than the whole board. Targets measured through the
+    # engine from the generated scenes.
+    # The 4DLM and steady 5DLM rows: the loop on the left, the HCS on the right.
+    "lorenz5d-loop": {"target": (-2.23, 1.58, 30.98), "distance": 23,
+                      "azimuth": 45, "elevation": 25, "hide_grid": True},
+    # The same two hyperglyphs up close: the 4DLM at infinity, the 5DLM parked.
+    "lorenz5d-loop-hcs": {"target": (-10.0, 9.35, 30.98), "distance": 16,
+                          "azimuth": 35, "elevation": 22, "hide_grid": True},
+    # The r = 25 group: both cells, their budgets and the shared phase panel.
+    "lorenz5d-cells": {"target": (-3.01, -3.01, 39.13), "distance": 24,
+                       "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "lorenz5d-cells-close": {"target": (8.95, -12.47, 35.34), "distance": 12,
+                             "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "lorenz5d-tower": {"target": (0, 0, 31), "distance": 38,
+                       "azimuth": 45, "elevation": 25, "hide_grid": True},
+    # Down onto the 5DLM tower: the needle, the transient cone, the bloom.
+    "lorenz5d-tower-orbit": {"target": (-8.74, 11.62, 36.97), "distance": 26,
+                             "azimuth": 10, "elevation": 55, "hide_grid": True},
+    # The three relief panels, then the flat Fig. 10a panel on its own.
+    "lorenz5d-landscape": {"target": (-4.2, -2.6, 40.33), "distance": 34,
+                           "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "lorenz5d-fig10a": {"target": (2.22, 1.37, 24.56), "distance": 17,
+                        "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "lorenz5d-landscape-close": {"target": (-21.33, 8.37, 37.11), "distance": 26,
+                                 "azimuth": 30, "elevation": 35, "hide_grid": True},
 }
 
 

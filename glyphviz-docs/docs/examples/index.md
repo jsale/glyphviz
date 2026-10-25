@@ -27,6 +27,10 @@ Scenes that are a *place* rather than a dataset — built to be flown through an
 
 - **[The Armillary World](armillary-world.md)** — a real armillary sphere, ringed by eight zones of mathematics
 
+## Mathematics
+
+- **[Nonlinear Feedback in a Five-Dimensional Lorenz Model](lorenz-5d-feedback.md)** — four scenes from one research paper on why adding detail to Lorenz's butterfly makes it calmer: the convecting fluid itself, a tower of phase portraits showing where chaos begins, the paper's feedback loop running live beside the five-dimensional state drawn with the Hyperdimensional Coordinate System, and a landscape of stability across both parameters
+
 ## AI Observatory
 
 Scenes that look inside a language model while it reads: every feature it represents, placed by meaning, lit up token by token, with sound.

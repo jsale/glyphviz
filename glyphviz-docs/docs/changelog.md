@@ -2,6 +2,15 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-10-25
+
+- **[Nonlinear Feedback in a Five-Dimensional Lorenz Model](examples/lorenz-5d-feedback.md) joined the Examples Gallery**, in a new *Mathematics* section: four scenes built from one research paper, Bo-Wen Shen's 2014 study of why adding two finer temperature patterns to Lorenz's model of convection makes it calmer rather than more chaotic.
+    - **Two Convection Cells** draws the fluid itself, rebuilt from the model's numbers: every lobe switch of the butterfly is the rolls reversing.
+    - **The r-Sweep Tower** stacks 61 phase portraits per model into a bifurcation diagram you can orbit.
+    - **Inside the Feedback Loop** runs the paper's feedback diagram live beside the five-dimensional state drawn as a **Hyperdimensional Coordinate System** hyperglyph. Every steady state lands at a quarter turn on every circle, and a half-built model's escape toward infinity becomes a place on the chart.
+    - **The Stability Landscape** shows where the steady rolls hold across both of the paper's parameters.
+- **The page reports one finding of its own**: at every Prandtl number and for all three models, there is a window of heating where a stable steady roll and chaos coexist. That window explains a gap the paper leaves between its two measures of where chaos begins.
+
 ## 2026-10-18
 
 - **Three narrated tutorials for the two glyph-design tools**, each under three minutes and filmed from the app's own dialogs. The [Glyph Composer](reference/glyph-composer.md#watch-build-a-glyph) has two: building a glyph level by level, inserting it and using it as a Draw Mode brush, and [painting a forest with templates imported from the Tree Designer](reference/glyph-composer.md#watch-paint-a-forest-with-imported-templates). The [Hyperglyph Generator](reference/hyperglyph-generator.md#watch-discover-a-glyph) has one: rolling designs, locking a seed, inserting, saving a recipe, editing it in the Composer and painting a flock with it.
