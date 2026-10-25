@@ -8,7 +8,7 @@ One state layout for all three models, s = (X, Y, Z, Y1, Z1):
     3DLMP   the 3DLM with -XY1 "parameterized" as -q X^2, eqs. (15), (16), (18).
     4DLM    eqs. (10)-(13) with Z1 dropped (section 2d): M5 without M6. It has
             no real nontrivial critical point for r > d_o + 1 and does not
-            conserve energy; from the paper's start it runs away to infinity.
+            conserve energy; from the paper's start it runs away toward infinity.
     5DLM    eqs. (10)-(14).
 
 and the physical fields they are a truncation of, eqs. (5)-(9), so a scene can

@@ -105,7 +105,7 @@ Four rows, all started from Y = 1:
 | Row | Loop | Outcome |
 | --- | --- | --- |
 | 3DLM, r = 25 | the trunk only (M2 ↔ M3) | chaotic |
-| 4DLM, r = 25 | M5 without M6: half a branch | runs away to infinity |
+| 4DLM, r = 25 | M5 without M6: half a branch | runs away toward infinity |
 | 5DLM, r = 25 | the full loop | steady |
 | 5DLM, r = 43.5 | the full loop, heated harder | chaotic again |
 

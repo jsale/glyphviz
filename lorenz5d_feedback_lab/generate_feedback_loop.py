@@ -5,7 +5,7 @@ state drawn as one HCS hyperglyph, after Shen (2014).
 Four rows, every one started from the paper's Y = 1:
 
     3DLM  r = 25     the trunk loop only (M2 <-> M3)           chaotic
-    4DLM  r = 25     M5 added WITHOUT M6: half a branch        runs away to infinity
+    4DLM  r = 25     M5 added WITHOUT M6: half a branch        runs away toward infinity
     5DLM  r = 25     the full loop (M3 <-> M5 <-> M6)          steady
     5DLM  r = 43.5   the full loop, heated harder               chaotic again
 
@@ -52,7 +52,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 ROWS = (("3DLM", 25.0), ("4DLM", 25.0), ("5DLM", 25.0), ("5DLM", 43.5))
 VERDICT = {("3DLM", 25.0): "the trunk loop only: chaotic",
-           ("4DLM", 25.0): "M5 without M6, half a branch: runs away to infinity",
+           ("4DLM", 25.0): "M5 without M6, half a branch: runs away toward infinity",
            ("5DLM", 25.0): "the full loop: steady",
            ("5DLM", 43.5): "the full loop, heated harder: chaotic again"}
 T_END = 40.0
@@ -95,7 +95,7 @@ ARC_H = 0.95                     # arc apex above / below the tile centre line
 BAR_Y, BAR_HALF = -0.48, 0.75
 SINK_Y = -1.85                   # below the upscale arcs' labels
 HG_X, HG_R1, HG_RATIO = 16.6, 1.45, 0.62
-HG_ROT = (20.0, 35.0, 0.0)       # the glyph frame turned so nested circles are not edge-on
+HG_ROT = (25.0, 25.0, 0.0)       # the glyph frame turned so nested circles are not edge-on
 LIFT = 30.0
 BOARD_SCALE = 1.8
 BOARD_CENTRE = (9.0, -7.2)
@@ -306,17 +306,20 @@ def hyperglyph(sc, bd, k, model, r, fine, comets):
                     text=f"{var} now: the centre of the {MODES[i + 1][2]} circle")
         parent, radius = spin, radius * HG_RATIO
     # Ghosts: the two steady rolls, or for the 4DLM the all-infinite point.
+    # Their labels are pinned where they tell the row's story: the 4DLM's
+    # infinity, and the steady 5DLM's two quarter-turn states.
     if model == "4DLM":
         g = hcs.chain(np.full((1, d), 180.0), HG_R1, HG_RATIO)[0]
-        sc.node(frame, pos=tuple(g), scale=0.09, color=(*INF, 200),
-                text="every variable at +/- infinity (no steady state exists)")
+        sc.node(frame, pos=tuple(g), scale=0.11, color=(*INF, 220), show_text=1,
+                text="every variable at +/- infinity")
     else:
+        pin = 1 if (model, r) == ("5DLM", 25.0) else 0
         for sgn, turn in ((1, "clockwise"), (-1, "counterclockwise")):
             c = sm.critical_point(r, model, sign=sgn)[:d]
             g = hcs.chain(hcs.angle(c, sc_[:d])[None, :], HG_R1, HG_RATIO)[0]
             sc.node(frame, pos=tuple(g), scale=0.09, color=(215, 215, 255, 150),
-                    text=f"steady roll (left roll turning {turn}): every circle at a "
-                         "quarter turn")
+                    show_text=pin,
+                    text=f"steady roll, {turn}: every circle at a quarter turn")
     fine_leaf = hcs.chain(angles(fine, model, r), HG_R1, HG_RATIO)
     comets.trail(frame, fine_leaf, SUB, ROW_COLOR[model],
                  f"leaf trail (last 4 tau)  [{model}, r = {r:g}]", max_step=0.05)
@@ -369,7 +372,7 @@ def build(out_dir):
             "the last; the leaf is the state. Ghosts: the steady rolls.",
             "HCS: Jeff Sale's Hyperdimensional Coordinate System (after Art Springer). "
             "Infinity is a point on every circle,",
-            "which is how the 4DLM's escape to infinity can be drawn at all.")):
+            "which is how the 4DLM's escape toward infinity can be drawn at all.")):
         sc.node(bd, pos=(-0.2, legend - 0.42 * i, 0.05), scale=0.04, geometry=kit.GEO_CIRCLE,
                 color=(200, 200, 220, 255), show_text=1, text=txt)
 
