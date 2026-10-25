@@ -6,6 +6,9 @@ One state layout for all three models, s = (X, Y, Z, Y1, Z1):
 
     3DLM    Lorenz (1963), eqs. (15)-(17). Y1 and Z1 stay 0.
     3DLMP   the 3DLM with -XY1 "parameterized" as -q X^2, eqs. (15), (16), (18).
+    4DLM    eqs. (10)-(13) with Z1 dropped (section 2d): M5 without M6. It has
+            no real nontrivial critical point for r > d_o + 1 and does not
+            conserve energy; from the paper's start it runs away to infinity.
     5DLM    eqs. (10)-(14).
 
 and the physical fields they are a truncation of, eqs. (5)-(9), so a scene can
@@ -51,6 +54,10 @@ def rhs(s, r, model="5DLM", q=Q_PAPER, sigma=SIGMA):
         out[..., 2] = X * Y - X * Y1 - B * Z
         out[..., 3] = X * Z - 2 * X * Z1 - D_O * Y1
         out[..., 4] = 2 * X * Y1 - 4 * B * Z1
+    elif model == "4DLM":
+        out[..., 2] = X * Y - X * Y1 - B * Z
+        out[..., 3] = X * Z - D_O * Y1
+        out[..., 4] = 0.0
     else:
         out[..., 2] = X * Y - (q * X * X if model == "3DLMP" else 0.0) - B * Z
         out[..., 3] = 0.0
@@ -69,6 +76,10 @@ def tangent(s, v, r, model="5DLM", q=Q_PAPER, sigma=SIGMA):
         out[..., 2] = (Y - Y1) * dX + X * dY - B * dZ - X * dY1
         out[..., 3] = (Z - 2 * Z1) * dX + X * dZ - D_O * dY1 - 2 * X * dZ1
         out[..., 4] = 2 * Y1 * dX + 2 * X * dY1 - 4 * B * dZ1
+    elif model == "4DLM":
+        out[..., 2] = (Y - Y1) * dX + X * dY - B * dZ - X * dY1
+        out[..., 3] = Z * dX + X * dZ - D_O * dY1
+        out[..., 4] = 0.0
     else:
         qq = q if model == "3DLMP" else 0.0
         out[..., 2] = (Y - 2 * qq * X) * dX + X * dY - B * dZ
@@ -99,6 +110,8 @@ def integrate(s0, dt, steps, r, model="5DLM", q=Q_PAPER):
 def critical_point(r, model="5DLM", q=Q_PAPER, sign=1.0):
     """The nontrivial critical point (X, Y, Z, Y1, Z1): eqs. (19), (21), (22).
     sign picks the +/- branch of X = Y."""
+    if model == "4DLM":
+        raise ValueError("the 4DLM has no real nontrivial critical point for r > d_o + 1")
     Zc = r - 1.0
     if model == "5DLM":
         Z1c = (-D_O + np.sqrt(D_O ** 2 + 4 * Zc ** 2)) / 4.0
@@ -120,7 +133,7 @@ def normalization(r, model="5DLM"):
 
 def jacobian(s, r, model="5DLM", q=Q_PAPER, sigma=SIGMA):
     """Full Jacobian matrix at s (appendix C's A matrices at a critical point)."""
-    n = 5 if model == "5DLM" else 3
+    n = {"5DLM": 5, "4DLM": 4}.get(model, 3)
     J = np.empty((n, n))
     for j in range(n):
         e = np.zeros(5)
@@ -183,5 +196,17 @@ def z_budget(s, model="5DLM", q=Q_PAPER):
     """The terms of dZ/dtau as plotted in Fig. 6: (XY, bZ, XY1 or qX^2).
     dZ/dtau = XY - bZ - third."""
     X, Y, Z, Y1, _Z1 = np.moveaxis(np.asarray(s), -1, 0)
-    third = X * Y1 if model == "5DLM" else (q * X * X if model == "3DLMP" else 0.0 * X)
+    third = (X * Y1 if model in ("5DLM", "4DLM")
+             else (q * X * X if model == "3DLMP" else 0.0 * X))
     return X * Y, B * Z, third
+
+
+def linear_rc(model="5DLM", q=Q_PAPER, sigma=SIGMA, lo=1.5, hi=200.0):
+    """r at which the nontrivial critical point loses stability (Re lambda = 0),
+    by bisection; None if it is still stable at hi."""
+    if linear_growth(hi, model, q, sigma) < 0:
+        return None
+    for _ in range(60):
+        mid = 0.5 * (lo + hi)
+        lo, hi = (mid, hi) if linear_growth(mid, model, q, sigma) < 0 else (lo, mid)
+    return 0.5 * (lo + hi)

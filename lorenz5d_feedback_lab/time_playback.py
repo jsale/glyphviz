@@ -3,7 +3,7 @@ Time Channels playback of this lab's scenes through the real Viewport,
 headless: each step is what MainWindow does per tick (apply_frame +
 channel_frame_update) plus a full paint via grabFramebuffer().
 
-    python time_playback.py [--scene cells|tower] [--frames 120]
+    python time_playback.py [--scene cells|tower|loop] [--frames 120]
 
 An offscreen paint is a proxy, not the app's on-screen frame rate, but it
 exercises the same draw code (the four animated heat-map Surfaces re-emitted
@@ -27,7 +27,8 @@ from glyphviz_core.channel_loader import (find_channel_files, load_ch_map,  # no
                                           load_ch_tracks)
 
 SCENES = {"cells": HERE / "Convection_Cells" / "Convection_Cells_gv_node.csv",
-          "tower": HERE / "R_Sweep_Tower" / "R_Sweep_Tower_gv_node.csv"}
+          "tower": HERE / "R_Sweep_Tower" / "R_Sweep_Tower_gv_node.csv",
+          "loop": HERE / "Feedback_Loop" / "Feedback_Loop_gv_node.csv"}
 
 
 def main():

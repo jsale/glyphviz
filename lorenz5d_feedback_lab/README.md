@@ -16,7 +16,15 @@ this extending the model's nonlinear feedback loop. It also shows that replacing
 −XY1 with an eddy-damping term −qX² (the "3DLMP") reproduces most of the effect,
 which is what weather models call a parameterization.
 
-The lab has two scenes, one for the fluid and one for the onset of chaos.
+The lab has four scenes:
+
+1. **Two Convection Cells:** the fluid itself.
+2. **The r-Sweep Tower:** where each model turns chaotic.
+3. **Inside the Feedback Loop:** the paper's Fig. 1 as a live graph, beside the
+   whole state drawn as one Hyperdimensional Coordinate System (HCS)
+   hyperglyph.
+4. **The Stability Landscape:** where the steady roll holds, over the whole
+   (σ, r) plane.
 
 ## About this lab
 
@@ -33,19 +41,23 @@ errors are the lab's, not the author's.
 
 ## Open it
 
-Run the ensemble once, then the two generators (about 20 s each):
+The two ensemble results are tracked in the repo, so the generators run
+straight away (about 20 s each). Re-run the ensembles only to change them:
 
-```
-python ensemble_shen.py              # ~70 s; writes ensemble_shen.json (tracked)
-python generate_convection_cells.py  # writes Convection_Cells/
-python generate_r_sweep_tower.py     # writes R_Sweep_Tower/
-python verify_shen_lab.py            # optional: every check below
+```bash
+python ensemble_shen.py                  # ~70 s  -> ensemble_shen.json
+python ensemble_shen.py --sigma-sweep    # ~3 min -> ensemble_sigma.json
+python generate_convection_cells.py      # -> Convection_Cells/
+python generate_r_sweep_tower.py         # -> R_Sweep_Tower/
+python generate_feedback_loop.py         # -> Feedback_Loop/
+python generate_stability_landscape.py   # -> Stability_Landscape/
+python verify_shen_lab.py                # optional: every check below
 ```
 
-Open `Convection_Cells/Convection_Cells_gv_node.csv` or
-`R_Sweep_Tower/R_Sweep_Tower_gv_node.csv`. The Channels panel appears; press
-**Space** to play. Both runs are 1,600 frames (40 time units, about 53 s at 30
-fps) and loop. Turn off **View > Show Grid** for the cleanest view.
+Open the `*_gv_node.csv` in any of the four folders. For the three animated
+scenes, the Channels panel appears; press **Space** to play. Each run is 1,600
+frames (40 time units, about 53 s at 30 fps) and loops. The Stability
+Landscape is static. Turn off **View > Show Grid** for the cleanest view.
 
 ## Scene 1: Two Convection Cells
 
@@ -86,6 +98,77 @@ The 3DLMP is normalized by the 3DLM's critical point, as in the paper, so its
 steady rolls sit at ±1.098 (Fig. 9a). The parameterization buys the 5DLM's
 stability at the price of a roughly 10% shift in the steady state.
 
+## Scene 3: Inside the Feedback Loop
+
+Four rows, all started from Y = 1:
+
+| Row | Loop | Outcome |
+| --- | --- | --- |
+| 3DLM, r = 25 | the trunk only (M2 ↔ M3) | chaotic |
+| 4DLM, r = 25 | M5 without M6: half a branch | runs away to infinity |
+| 5DLM, r = 25 | the full loop | steady |
+| 5DLM, r = 43.5 | the full loop, heated harder | chaotic again |
+
+**The loop (left).** Each mode is a tile of its spatial pattern, ordered coarse
+to fine. A downscale transfer runs rightward along an arc above the tiles, and
+an upscale transfer runs leftward along an arc below. These are the paper's
+Fig. 1 arrows, and each arc is one nonlinear term of the model. The linear heat
+engine, rX and σY, joins M1 and M2. The stub under each tile is that mode's
+damping.
+
+A bead on every arc and stub is a live meter:
+
+- **Size** is the term's magnitude.
+- **Colour** is what the term does to the mode it feeds: warm if it amplifies
+  that mode (the term and the amplitude share a sign), cool if it damps it.
+
+The paper's negative feedback is the −XY1 bead running cool. The bar under each
+tile is the mode's amplitude, compressed with the HCS map: its tick is the
+steady value and its end is infinity.
+
+**The state, as one HCS hyperglyph (right).** A 5-D model's state at any
+instant is one point (X, Y, Z, Y1, Z1) in phase space. The hyperglyph draws that
+point as nested circles, one per variable, ordered coarse to fine like the
+cascade itself. The colours are R G B C M for X Y Z Y1 Z1, and the leaf is the
+state. Each variable is scaled by its own critical value (the paper's
+normalization), and the HCS map θ = 180·u/(1+|u|) puts u = ±1 at exactly ±90°.
+So **a steady roll is every circle parked at a quarter turn**. The 5DLM at
+r = 25 settles at exactly (−90°, −90°, 90°, −90°, 90°), and the ghost leaves
+mark the two steady rolls. A 3-D model is visibly a glyph with two fewer
+circles.
+
+**Where the HCS earns its keep: the 4DLM.** The paper notes in passing that the
+4DLM (M5 added, M6 not) has no real steady state for r > d_o + 1 and doesn't
+conserve energy. Run from the paper's start, it runs away: |state| passes 1,000
+by τ = 1.19 at r = 25, a time that holds steady as the step size shrinks. An
+ordinary plot can't draw a state heading to infinity. On the HCS, infinity is
+the point at 180° on every circle, so the leaf flies out to the red "all
+infinite" ghost and the bars hit their ends. The run is held once |state|
+passes 10⁴, because past that the integration is stiff and the numbers mean
+nothing. This row turns the paper's remark into something you can watch:
+adding half of a feedback loop is worse than adding none.
+
+## Scene 4: The Stability Landscape
+
+For each model (3DLM, 3DLMP, 5DLM), the steady roll is linearized (the paper's
+appendix C), and its largest Re(λ) is drawn as relief over σ = 5…25 (the
+Prandtl number) and r = 20…55. Blue valleys are where the roll is stable, red
+where it isn't. The panels lie back like terrain, with σ across and r running
+away from the viewer. Each panel shows:
+
+- a **gold line** where Re(λ) = 0, the linear r_c(σ) curve of Fig. 10a;
+- **white dots** for the ensemble onset at the paper's σ values (Fig. 10a's
+  solid circles), from `ensemble_shen.py --sigma-sweep`;
+- on the 3DLM panel, **crosses** at Lorenz's own closed form,
+  r_c = σ(σ + b + 3)/(σ − b − 1), as a check;
+- a faint line at σ = 10, the value the other scenes use.
+
+Below the panels, Fig. 10a itself: all three r_c(σ) curves with their dots on
+one flat panel. The curves reproduce the paper's: the 5DLM's r_c bottoms out at
+38.06 near σ = 16.5, and the 3DLMP's at 40.40 near σ = 13. Every dot sits on
+the stable side of its gold line, which is the coexistence window below,
+present at every σ.
+
 ## What the ensemble found
 
 `ensemble_shen.py` measures the leading Lyapunov exponent for 64 random starts
@@ -104,6 +187,20 @@ yet nearly every random start falls onto the chaotic attractor instead. This is
 the classic Lorenz picture (24.06–24.74 for the 3DLM), and it explains why the
 paper's ensemble r_c for the 5DLM (42.9) sits below its linear r_c (45.94).
 
+The σ sweep (32 starts per r) repeats this at the paper's other Prandtl numbers.
+The onsets match Fig. 10a's dots. The window appears at every σ for all three
+models, with the steady roll holding a 10⁻³ kick throughout it, and it widens
+as σ grows:
+
+| σ | 3DLM onset / linear r_c | 3DLMP | 5DLM |
+| --- | --- | --- | --- |
+| 10 | 24.0 / 24.74 | 42.0 / 43.54 | 43.0 / 45.94 |
+| 13 | 25.5 / 26.00 | 40.0 / 40.42 | 37.5 / 39.37 |
+| 16 | 27.0 / 28.11 | 40.0 / 41.26 | 36.0 / 38.08 |
+| 19 | 28.5 / 30.57 | 40.0 / 43.40 | 36.0 / 38.43 |
+| 22 | 30.0 / 33.20 | 40.5 / 46.15 | 36.5 / 39.50 |
+| 25 | 31.5 / 35.94 | 42.0 / 49.20 | 37.5 / 40.93 |
+
 ## Checks (`verify_shen_lab.py`)
 
 - **Model against the paper:** the critical points solve the equations and the
@@ -120,7 +217,13 @@ paper's ensemble r_c for the 5DLM (42.9) sits below its linear r_c (45.94).
   - each vertex's colour is within 1/255 of conduction plus the mode sum at
     sampled frames;
   - the 72 beads stay on their streamlines (|M1| drift 2e-4);
-  - sampled tower slices match their model's normalized trajectory to 5e-5.
+  - sampled tower slices match their model's normalized trajectory to 5e-5;
+  - the vectorized HCS chain equals a literal port of hyperdims' geometry.ts,
+    and each channel-driven hyperglyph leaf lands on it (1.4e-6);
+  - the 4DLM's escape time is the same at two step sizes;
+  - landscape heights equal Re(λ), the gold contour has |Re(λ)| ≤ 7e-15, the
+    eigenvalue r_c equals Lorenz's closed form to 1e-13, and every ensemble
+    dot lies below its linear r_c.
 
 ## Assumptions and differences from the paper
 
@@ -138,11 +241,14 @@ paper's ensemble r_c for the 5DLM (42.9) sits below its linear r_c (45.94).
 
 | File | Role |
 | --- | --- |
-| `shen_model.py` | The 3DLM / 3DLMP / 5DLM equations, critical points, Jacobians, spatial modes and fields |
-| `ensemble_shen.py` → `ensemble_shen.json` | Lyapunov exponents and the coexistence probe |
+| `shen_model.py` | The 3DLM / 3DLMP / 4DLM / 5DLM equations, critical points, Jacobians, linear r_c, spatial modes and fields |
+| `ensemble_shen.py` → `ensemble_shen.json`, `ensemble_sigma.json` | Lyapunov exponents and the coexistence probe, at σ = 10 and across the paper's σ values |
+| `hcs.py` | The HCS map and nested-circle chain, ported from hyperdims |
 | `scene_kit.py` | Node/channel writer, comet trails, board frame |
 | `generate_convection_cells.py` | Scene 1 |
 | `generate_r_sweep_tower.py` | Scene 2 |
+| `generate_feedback_loop.py` | Scene 3 |
+| `generate_stability_landscape.py` | Scene 4 (static) |
 | `verify_shen_lab.py` | The checks above; `--bake-dir/--frames` writes static frames for `tools/export_frame.py` |
 | `time_playback.py` | Headless playback timing |
 
@@ -152,6 +258,8 @@ paper's ensemble r_c for the 5DLM (42.9) sits below its linear r_c (45.94).
 | --- | --- | --- |
 | Convection Cells | 35k nodes, 2,805 tracks (17 MB) | ~31 fps |
 | r-Sweep Tower | 152k nodes, 549 tracks | ~81 fps |
+| Feedback Loop | 46k nodes, 504 tracks | ~43 fps |
+| Stability Landscape | 9k nodes, static | n/a |
 
 The cells' cost is the four channel-bound heat-map Surfaces, which re-emit every
 frame rather than replaying a display list. The temperature field is
@@ -167,3 +275,6 @@ hundreds of vertices on one point.
   points, normalizations and the figures the scenes re-draw are all from it.
 - **The Lorenz system:** Edward N. Lorenz, "Deterministic Nonperiodic Flow,"
   *J. Atmos. Sci.* 20 (1963), after B. Saltzman (1962).
+- **The Hyperdimensional Coordinate System:** Jeff Sale, built on Dr. Art
+  Springer's subsegment-ratio construction. The HCS geometry is ported from
+  Jeff's **hyperdims** plotter.

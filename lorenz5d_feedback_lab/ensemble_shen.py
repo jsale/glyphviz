@@ -21,6 +21,7 @@ for the gap between the paper's ensemble r_c (42.9) and its linear r_c
 (45.94).
 
     python ensemble_shen.py [--n 64] [--out ensemble_shen.json]
+    python ensemble_shen.py --sigma-sweep      # -> ensemble_sigma.json (Fig. 10a dots)
 """
 import argparse
 import json
@@ -39,7 +40,7 @@ AVERAGE = 200.0
 CHAOS_LE = 0.02
 
 
-def leading_le(s, r, model, dt=DT, transient=TRANSIENT, average=AVERAGE):
+def leading_le(s, r, model, dt=DT, transient=TRANSIENT, average=AVERAGE, sigma=sm.SIGMA):
     """Leading LE of every start. s: (n_r, n, 5); r: (n_r, 1).
     -> (LEs (n_r, n), final states (n_r, n, 5))."""
     v = np.zeros_like(s)
@@ -49,7 +50,8 @@ def leading_le(s, r, model, dt=DT, transient=TRANSIENT, average=AVERAGE):
     n_tr, n_av = int(round(transient / dt)), int(round(average / dt))
 
     def f(state, tv):
-        return sm.rhs(state, r, model), sm.tangent(state, tv, r, model)
+        return (sm.rhs(state, r, model, sigma=sigma),
+                sm.tangent(state, tv, r, model, sigma=sigma))
 
     for i in range(n_tr + n_av):
         k1s, k1v = f(s, v)
@@ -71,12 +73,66 @@ def onset(rs, frac, level=0.5):
     return float(rs[hit[0]]) if len(hit) else None
 
 
+SIGMAS = (10.0, 13.0, 16.0, 19.0, 22.0, 25.0)      # the paper's eLE sigmas (Fig. 10a)
+R_SWEEP = np.round(np.arange(20.0, 56.0 + 1e-9, 0.5), 2)
+SWEEP_MODELS = ("3DLM", "3DLMP", "5DLM")
+
+
+def sigma_sweep(n, seed, out):
+    """Ensemble onset of chaos at each of the paper's sigmas (its Fig. 10a
+    dots), with the near-critical probe, and the linear r_c beside it. Half the
+    averaging time and starts of the main run: only the onset is wanted."""
+    rng = np.random.default_rng(seed)
+    r = R_SWEEP[:, None]
+    result = {"r": R_SWEEP.tolist(), "n": n, "dt": DT, "transient": TRANSIENT,
+              "average": AVERAGE / 2, "chaos_le": CHAOS_LE, "sigmas": list(SIGMAS),
+              "models": {m: {"onset": [], "linear_rc": [], "window_near_steady": []}
+                         for m in SWEEP_MODELS}}
+    for sigma in SIGMAS:
+        for model in SWEEP_MODELS:
+            t0 = time.perf_counter()
+            noise = rng.standard_normal((len(R_SWEEP), n, 5))
+            if model != "5DLM":
+                noise[..., 3:] = 0.0
+            le, _ = leading_le(noise, r, model, average=AVERAGE / 2, sigma=sigma)
+            on = onset(R_SWEEP, le.mean(axis=1) > 0, 1.0)
+            rc = sm.linear_rc(model, sigma=sigma)
+            # Inside [onset, linear r_c) the steady roll must hold a 1e-3 kick.
+            win = R_SWEEP[(R_SWEEP >= (on if on is not None else np.inf))
+                          & (R_SWEEP < (rc if rc is not None else np.inf))]
+            steady = True
+            if len(win):
+                crit = np.stack([[sm.critical_point(rv, model, sign=sg) for sg in (1.0, -1.0)]
+                                 for rv in win])
+                kick = 1e-3 * rng.standard_normal(crit.shape)
+                if model != "5DLM":
+                    kick[..., 3:] = 0.0
+                le_near, _ = leading_le(crit + kick, win[:, None], model,
+                                        average=AVERAGE / 2, sigma=sigma)
+                steady = bool(np.all(le_near < CHAOS_LE))
+            m = result["models"][model]
+            m["onset"].append(on)
+            m["linear_rc"].append(None if rc is None else round(rc, 3))
+            m["window_near_steady"].append(steady)
+            print(f"sigma {sigma:4.1f} {model:6s} onset r = {on}   linear r_c = "
+                  f"{'-' if rc is None else f'{rc:.2f}'}   near-critical starts in the "
+                  f"window stay steady: {steady}   ({time.perf_counter() - t0:.0f} s)")
+    with open(out, "w", encoding="utf-8") as fh:
+        json.dump(result, fh, indent=1)
+    print(f"-> {out}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=64, help="random starts per r")
     ap.add_argument("--seed", type=int, default=2014)
     ap.add_argument("--out", default=os.path.join(HERE, "ensemble_shen.json"))
+    ap.add_argument("--sigma-sweep", action="store_true",
+                    help="instead: onset vs sigma (Fig. 10a) -> ensemble_sigma.json, 32 starts")
     args = ap.parse_args()
+    if args.sigma_sweep:
+        sigma_sweep(32, args.seed, os.path.join(HERE, "ensemble_sigma.json"))
+        return
 
     rng = np.random.default_rng(args.seed)
     r = R_GRID[:, None]

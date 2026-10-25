@@ -126,3 +126,5 @@ lorenz_sync_lab/Lorenz_Sync/
 # lorenz5d_feedback_lab/generate_convection_cells.py and generate_r_sweep_tower.py
 lorenz5d_feedback_lab/Convection_Cells/
 lorenz5d_feedback_lab/R_Sweep_Tower/
+lorenz5d_feedback_lab/Feedback_Loop/
+lorenz5d_feedback_lab/Stability_Landscape/

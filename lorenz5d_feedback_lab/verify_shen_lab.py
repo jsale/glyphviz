@@ -215,6 +215,100 @@ def check_tower(nodes):
           f"trajectory to {worst:.1e}")
 
 
+# --------------------------------------------------------------------------
+# Feedback Loop
+# --------------------------------------------------------------------------
+
+def check_loop(nodes, eng):
+    import generate_feedback_loop as gen
+    import hcs
+    rng = np.random.default_rng(3)
+    for row in rng.uniform(-179, 179, size=(20, 5)):
+        a = hcs.chain(row[None, :], gen.HG_R1, gen.HG_RATIO)[0]
+        b = hcs.ts_leaf(row, gen.HG_R1, gen.HG_RATIO)
+        assert np.abs(a - b).max() < 1e-12, (a, b)
+    # The 4DLM escape is real and converged in the time step.
+    for dt in (1e-3, 2e-4):
+        s, t = gen.START.copy(), 0.0
+        while np.abs(s).max() < 1e3:
+            s = sm.rk4_step(s, dt, 25.0, "4DLM")
+            t += dt
+        assert abs(t - 1.187) < 0.002, (dt, t)
+    # Engine leaf vs hcs.chain of the generator's own angles, at sampled frames.
+    kids = children(nodes)
+    frames_ = [n for n in nodes if "HCS hyperglyph frame" in n.text]
+    glyphs = []
+    for fr in frames_:
+        tag = fr.text.split("[")[1].rstrip("]")
+        model, r = tag.split(", r = ")[0], float(tag.split("r = ")[1])
+        spins, leaf, stack = [], None, [fr]
+        while stack:
+            n = stack.pop()
+            for c in kids.get(n.id, []):
+                if "spinner" in c.text:
+                    spins.append(c)
+                if "-D leaf:" in c.text:
+                    leaf = c
+                stack.append(c)
+        spins.sort(key=lambda s_: s_.branch_level)
+        assert leaf is not None and len(spins) == gen.DIMS[model], (fr.text, len(spins))
+        fine, _ = gen.simulate(model, r)
+        glyphs.append((fr, leaf, gen.angles(fine[::gen.SUB][:gen.FRAMES], model, r)))
+    worst = 0.0
+    for f in (0, 50, 700, gen.FRAMES - 1):
+        eng.apply_frame(f)
+        st = compute_world_transforms(nodes, 1.0)
+        for fr, leaf, ang in glyphs:
+            row = st.row_of_id[fr.id]
+            B = st.world_basis[row]
+            local = np.linalg.solve(B, st.world_pos[st.row_of_id[leaf.id]] - st.world_pos[row])
+            want = hcs.chain(ang[f][None, :], gen.HG_R1, gen.HG_RATIO)[0]
+            worst = max(worst, np.abs(local - want).max())
+    eng.reset()
+    assert worst < 2e-4, worst
+    print(f"  loop: hcs.chain = hyperdims geometry.ts (20 random 5-D points); 4DLM passes "
+          f"|state| 1e3 at tau 1.187 for dt 1e-3 and 2e-4; {len(glyphs)} hyperglyphs, "
+          f"engine leaf vs HCS chain worst {worst:.1e}")
+
+
+# --------------------------------------------------------------------------
+# Stability Landscape
+# --------------------------------------------------------------------------
+
+def check_landscape(nodes):
+    import generate_stability_landscape as gen
+    kids = children(nodes)
+    rng = np.random.default_rng(9)
+    worst_h = 0.0
+    for model in gen.MODELS:
+        surf = next(n for n in nodes if n.text == f"{gen.TITLE[model]}: largest Re(lambda) "
+                                                  "over (sigma, r)")
+        verts = kids[surf.id]
+        assert len(verts) == len(gen.SIG) * len(gen.RS)
+        for v in rng.choice(verts, 40, replace=False):
+            s = gen.SIG[0] + v.translate_x / gen.SX
+            r = gen.RS[0] + v.translate_y / gen.SY
+            worst_h = max(worst_h, abs(v.translate_z - gen.height(gen.growth(model, s, r))))
+    assert worst_h < 2e-4, worst_h
+    # The contour is Re(lambda) = 0; the eigenvalue r_c is Lorenz's closed form.
+    worst_c = max(abs(sm.linear_growth(r, m, sigma=s))
+                  for m in gen.MODELS for s, r in gen.rc_curve(m, step=2.0))
+    worst_l = max(abs(sm.linear_rc("3DLM", sigma=float(s)) - gen.lorenz_rc(s))
+                  for s in range(5, 26))
+    assert worst_c < 1e-8 and worst_l < 1e-8, (worst_c, worst_l)
+    # Every ensemble onset lies on the stable side of its linear r_c.
+    sweep = gen.load_sweep()
+    for m in gen.MODELS:
+        sw = sweep["models"][m]
+        for s, on, rc, steady in zip(sweep["sigmas"], sw["onset"], sw["linear_rc"],
+                                     sw["window_near_steady"]):
+            assert on < rc and steady, (m, s, on, rc, steady)
+    print(f"  landscape: sampled heights = Re(lambda) (worst {worst_h:.1e}); contour "
+          f"|Re(lambda)| <= {worst_c:.0e}; eigenvalue r_c = Lorenz's closed form "
+          f"(worst {worst_l:.0e}); every ensemble onset below its linear r_c, the roll "
+          f"holding a 1e-3 kick in between")
+
+
 def bake(nodes, eng, out_dir, frames, stem):
     os.makedirs(out_dir, exist_ok=True)
     for f in frames:
@@ -226,25 +320,38 @@ def bake(nodes, eng, out_dir, frames, stem):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--scene", choices=("cells", "tower", "both"), default="both")
+    ap.add_argument("--scene", choices=("cells", "tower", "loop", "landscape", "all"),
+                    default="all")
     ap.add_argument("--bake-dir", default=None)
     ap.add_argument("--frames", type=int, nargs="*", default=[])
     args = ap.parse_args()
 
     check_model()
-    if args.scene in ("cells", "both"):
+    if args.scene in ("cells", "all"):
         nodes, eng = load_scene(HERE / "Convection_Cells" / "Convection_Cells_gv_node.csv")
         check_board(nodes)
         check_cells(nodes, eng)
         if args.bake_dir:
             bake(nodes, eng, args.bake_dir, args.frames, "cells")
-    if args.scene in ("tower", "both"):
+    if args.scene in ("tower", "all"):
         path = HERE / "R_Sweep_Tower" / "R_Sweep_Tower_gv_node.csv"
         nodes, eng = load_scene(path)
         check_board(nodes)
         check_tower(nodes)
         if args.bake_dir:
             bake(nodes, eng, args.bake_dir, args.frames, "tower")
+    if args.scene in ("loop", "all"):
+        nodes, eng = load_scene(HERE / "Feedback_Loop" / "Feedback_Loop_gv_node.csv")
+        check_board(nodes)
+        check_loop(nodes, eng)
+        if args.bake_dir:
+            bake(nodes, eng, args.bake_dir, args.frames, "loop")
+    if args.scene in ("landscape", "all"):
+        nodes = load_node_csv(str(HERE / "Stability_Landscape" /
+                                  "Stability_Landscape_gv_node.csv"))
+        print(f"Stability_Landscape_gv_node.csv: {len(nodes)} nodes (static)")
+        check_board(nodes)
+        check_landscape(nodes)
 
 
 if __name__ == "__main__":
