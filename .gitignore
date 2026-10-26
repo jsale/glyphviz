@@ -128,3 +128,9 @@ lorenz5d_feedback_lab/Convection_Cells/
 lorenz5d_feedback_lab/R_Sweep_Tower/
 lorenz5d_feedback_lab/Feedback_Loop/
 lorenz5d_feedback_lab/Stability_Landscape/
+
+# Tensor lab: the three scenes regenerate in seconds with tensor_lab/generate_*.py
+# and ship as Tensors_*.zip (tensor_lab/zip_scenes.py)
+tensor_lab/Vectors_and_Bases/
+tensor_lab/Vector_to_Tensor/
+tensor_lab/Spinning_Book/
