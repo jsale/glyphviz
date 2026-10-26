@@ -92,6 +92,7 @@ nav:
           - "The Armillary World": examples/armillary-world.md
       - Mathematics:
           - "Feedback in a 5-D Lorenz Model": examples/lorenz-5d-feedback.md
+          - "Tensors, from the Arrow Up": examples/tensors.md
       - AI Observatory:
           - "Inside GPT-2: Mary and John": examples/ai-observatory-gpt2.md
           - "Inside Gemma: Why It Says No": examples/ai-observatory-gemma.md

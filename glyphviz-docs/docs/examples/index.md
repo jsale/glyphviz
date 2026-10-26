@@ -30,6 +30,7 @@ Scenes that are a *place* rather than a dataset — built to be flown through an
 ## Mathematics
 
 - **[Nonlinear Feedback in a Five-Dimensional Lorenz Model](lorenz-5d-feedback.md)** — four scenes from one research paper on why adding detail to Lorenz's butterfly makes it calmer: the convecting fluid itself, a tower of phase portraits showing where chaos begins, the paper's feedback loop running live beside the five-dimensional state drawn with the Hyperdimensional Coordinate System, and a landscape of stability across both parameters
+- **[Tensors, from the Arrow Up](tensors.md)** — three scenes that build the idea of a tensor from scratch: a vector's components as shadows cast by a turning basis, a rank-2 tensor as a machine whose outputs paint an ellipsoid and whose nine numbers dance while it holds still, and the inertia tensor at work in a spinning book that flips about its middle axis
 
 ## AI Observatory
 

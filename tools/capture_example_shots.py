@@ -32,6 +32,8 @@ EX = REPO_ROOT / "examples"
 # The 5-D Lorenz scenes live in their lab folder, not under examples/; their
 # scene folders are gitignored and regenerate with the lab's generate_*.py.
 L5 = REPO_ROOT / "lorenz5d_feedback_lab"
+# Likewise the tensor lab (regenerate with tensor_lab/generate_*.py).
+TL = REPO_ROOT / "tensor_lab"
 
 # (slug, scene folder, explicit file or None). None -> the folder's single
 # *node*.csv. A .pdb file goes through the PDB import path instead.
@@ -156,6 +158,16 @@ MANIFEST = [
     ("lorenz5d-landscape", L5 / "Stability_Landscape", None),
     ("lorenz5d-fig10a", L5 / "Stability_Landscape", None),
     ("lorenz5d-landscape-close", L5 / "Stability_Landscape", None),
+    # Tensors, from the Arrow Up: three scenes on one page.
+    ("tensors-vectors", TL / "Vectors_and_Bases", None),
+    ("tensors-vectors-stage", TL / "Vectors_and_Bases", None),
+    ("tensors-machine", TL / "Vector_to_Tensor", None),
+    ("tensors-grid", TL / "Vector_to_Tensor", None),
+    ("tensors-scope", TL / "Vector_to_Tensor", None),
+    ("tensors-principal", TL / "Vector_to_Tensor", None),
+    ("tensors-book", TL / "Spinning_Book", None),
+    ("tensors-book-flip", TL / "Spinning_Book", None),
+    ("tensors-lsphere", TL / "Spinning_Book", None),
 ]
 
 
@@ -178,6 +190,19 @@ FRAME = {
     "lorenz5d-cells-close": 1200,
     "lorenz5d-tower": 1200,
     "lorenz5d-tower-orbit": 1200,
+    # Tensors: Act 2 of the basis tour; the end of Act 1 (every leg and
+    # shadow drawn); the probe's painted ellipsoid; the tour in Scene 2; the
+    # Act 4 turn; Act 5 settled on the principal axes; book 2 mid-flip
+    # (5.2 s, its first crossing); the L-sphere with nearly a minute of trails.
+    "tensors-vectors": 900,
+    "tensors-vectors-stage": 300,
+    "tensors-machine": 420,
+    "tensors-grid": 1300,
+    "tensors-scope": 2200,
+    "tensors-principal": 3100,
+    "tensors-book": 157,
+    "tensors-book-flip": 157,
+    "tensors-lsphere": 1790,
 }
 
 # Auto-framing fits the bounding box of everything in the scene, title and
@@ -345,6 +370,26 @@ CAMERA = {
                         "azimuth": 45, "elevation": 25, "hide_grid": True},
     "lorenz5d-landscape-close": {"target": (-21.33, 8.37, 37.11), "distance": 26,
                                  "azimuth": 30, "elevation": 35, "hide_grid": True},
+    # Tensors. Same wall-board convention (azimuth 45 / elevation 25); targets
+    # measured through the engine from the generated scenes.
+    "tensors-vectors": {"target": (1.75, -0.85, 9.5), "distance": 34,
+                        "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-vectors-stage": {"target": (7.4, -7.4, 8.3), "distance": 21,
+                              "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-machine": {"target": (8.48, -8.48, 9.0), "distance": 24,
+                        "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-grid": {"target": (3.09, -0.88, 10.0), "distance": 37,
+                     "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-scope": {"target": (-1.6, 2.6, 7.0), "distance": 28,
+                      "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-principal": {"target": (5.0, -5.0, 10.5), "distance": 30,
+                          "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-book": {"target": (-0.5, 0.1, 8.0), "distance": 46,
+                     "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-book-flip": {"target": (5.66, -5.66, 7.5), "distance": 17,
+                          "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-lsphere": {"target": (-13.8, 13.8, 7.0), "distance": 17,
+                        "azimuth": 45, "elevation": 25, "hide_grid": True},
 }
 
 

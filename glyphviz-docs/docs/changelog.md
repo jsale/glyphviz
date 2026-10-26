@@ -2,6 +2,13 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-10-26
+
+- **[Tensors, from the Arrow Up](examples/tensors.md) joined the Examples Gallery's *Mathematics* section**: three animated scenes that build the idea of a tensor one step at a time, for anyone comfortable with vectors who never made the step up.
+    - **One Arrow, Many Shadows**: a fixed arrow and a turning basis. The components change, the arrow and its length don't, and turning the arrow instead of the basis replays the same numbers exactly.
+    - **From Vector to Tensor**: a rank-2 tensor as a machine whose outputs paint an ellipsoid. Its nine components each need two basis vectors. A scope shows rank as frequency: a scalar never waves, a vector component waves once per turn, a tensor component twice. Turning onto the ellipsoid's own axes makes the off-diagonal numbers vanish.
+    - **The Spinning Book**: the inertia tensor at work. Three books spun about each principal axis; the middle one flips (the tennis-racket theorem), while L = I ω holds fixed even as I and ω both swing.
+
 ## 2026-10-25
 
 - **[Nonlinear Feedback in a Five-Dimensional Lorenz Model](examples/lorenz-5d-feedback.md) joined the Examples Gallery**, in a new *Mathematics* section: four scenes built from one research paper, Bo-Wen Shen's 2014 study of why adding two finer temperature patterns to Lorenz's model of convection makes it calmer rather than more chaotic.
