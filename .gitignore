@@ -138,3 +138,10 @@ tensor_lab/Current_Across_the_Grain/
 tensor_lab/Slanted_Rulers/
 tensor_lab/The_Cut/
 tensor_lab/A_Field_of_Machines/
+
+# String labs: the scenes regenerate in seconds with the generate_*.py scripts;
+# 10d_superstring_lab/data/ is downloaded by landscape_data.py
+bosonic_string_lab/Leech_Kissing/
+bosonic_string_lab/String_Tower/
+10d_superstring_lab/Superstring_Landscape/
+10d_superstring_lab/data/
