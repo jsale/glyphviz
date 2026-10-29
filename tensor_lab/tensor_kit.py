@@ -157,8 +157,12 @@ def tour(s):
 # --------------------------------------------------------------------------
 
 class Scene:
-    def __init__(self, frames):
+    def __init__(self, frames, dedupe=False):
+        """dedupe: identical tracks (after rounding) share one column, so a
+        hide window or a constant used by many channels is written once."""
         self.frames = frames
+        self.dedupe = dedupe
+        self._seen = {}
         self.rows = []
         self.level = {0: -1}
         self.tracks = []          # (values, decimals); track id = index + 1
@@ -183,6 +187,12 @@ class Scene:
     def track(self, values, dp=4):
         values = np.asarray(values, dtype=float)
         assert values.shape == (self.frames,), (values.shape, self.frames)
+        if self.dedupe:
+            key = (dp, np.round(values, dp).tobytes())
+            if key not in self._seen:
+                self.tracks.append((values, dp))
+                self._seen[key] = len(self.tracks)
+            return self._seen[key]
         self.tracks.append((values, dp))
         return len(self.tracks)
 
@@ -443,6 +453,51 @@ def signed_bar(sc, bd, x, y, values, color, label, *, unit=1.0, width=0.35, dept
                    scale=(s, abs(h[0]) / (2 * CUBE_FACE), sd) if on[0] else 0.0,
                    color=(*c0, 255), geometry=GEO_CUBE, ch=sc.channel(binds), hide=hide,
                    text=label)
+
+
+def vspan(sc, bd, x, lo, hi, color, label, *, width=0.35, depth=0.12, visible=None, z=0.0):
+    """A box from height lo to hi at board x (either may be above the other).
+    lo, hi: floats or (frames,) arrays. visible: optional (frames,) 0/1."""
+    lo = np.broadcast_to(np.asarray(lo, float), (sc.frames,))
+    hi = np.broadcast_to(np.asarray(hi, float), (sc.frames,))
+    h = np.abs(hi - lo)
+    mid = 0.5 * (lo + hi)
+    s = width / (2 * CUBE_FACE)
+    sd = depth / (2 * CUBE_FACE)
+    on = h > 1e-9
+    vis = np.ones(sc.frames) if visible is None else np.asarray(visible, float)
+    static = np.ptp(lo) == 0 and np.ptp(hi) == 0
+    scale0 = (s, h[0] / (2 * CUBE_FACE), sd) if on[0] else 0.0
+    if static:
+        ch = 0 if visible is None else hide_channel(sc, vis)
+        return sc.node(bd, pos=(x, mid[0], z), scale=scale0, color=(*color, 255),
+                       geometry=GEO_CUBE, ch=ch, hide=int(not vis[0]), text=label)
+    binds = [(sc.track(mid), "translate_y"), (sc.track(h / (2 * CUBE_FACE)), "scale_y"),
+             (sc.track(np.where(on, s, 0.0)), "scale_x"),
+             (sc.track(np.where(on, sd, 0.0)), "scale_z")]
+    if visible is not None:
+        binds.append((sc.track(np.where(vis > 0, 0, 1)), "hide"))
+    return sc.node(bd, pos=(x, mid[0], z), scale=scale0, color=(*color, 255),
+                   geometry=GEO_CUBE, ch=sc.channel(binds), hide=int(not vis[0]), text=label)
+
+
+def waterfall(sc, bd, x, y, pieces, colors, labels, total_label, *, unit=1.0, dx=0.45,
+              width=0.4, visible=None, total_color=GOLD):
+    """A sum drawn as a staircase: piece j rises (or falls) from where piece
+    j-1 ended, one step to the right, and a gold tick marks the total.
+    pieces: (frames, n) or (n,). Returns the total tick's node id."""
+    P = np.asarray(pieces, float)
+    if P.ndim == 1:
+        P = np.broadcast_to(P, (sc.frames, len(P)))
+    cum = np.concatenate([np.zeros((sc.frames, 1)), np.cumsum(P, axis=1)], axis=1)
+    n = P.shape[1]
+    for j in range(n):
+        vspan(sc, bd, x + j * dx, y + unit * cum[:, j], y + unit * cum[:, j + 1], colors[j],
+              labels[j], width=width, visible=visible)
+    total = y + unit * cum[:, n]
+    wid = (n - 1) * dx + width + 0.2
+    return vspan(sc, bd, x + 0.5 * (n - 1) * dx, total - 0.04, total + 0.04, total_color,
+                 total_label, width=wid, depth=0.16, visible=visible)
 
 
 def sign_colors(values, pos=WARM, neg=COOL):

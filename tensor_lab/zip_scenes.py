@@ -1,12 +1,15 @@
 """
-Zip this lab's three scenes for the docs site's per-example downloads, then
+Zip this lab's scenes for the docs site's per-example downloads, then
 check every zip the way a user's drop would read it.
 
 The lab lives outside examples/, so tools/zip_examples.py does not see it;
 this writes the same kind of zip: one per scene, contents-first (the scene's
 files at the zip root, no wrapper folder), deflated.
 
-    python zip_scenes.py [--dest DIR]
+    python zip_scenes.py [--dest DIR] [SCENE ...]
+
+Name scenes to zip only those (e.g. a new round, so the zips already
+uploaded keep their bytes); with none, every scene is zipped.
 
 Default destination: the live mirror's zips/ folder,
 $GLYPHVIZ_WEB_ROOT/glyphviz/zips. Regenerate the scenes first (the
@@ -26,7 +29,8 @@ from glyphviz_core.csv_reader import load_node_csv  # noqa: E402
 from glyphviz_core.drop_router import resolve_drop  # noqa: E402
 from glyphviz_core.channel_loader import find_channel_files  # noqa: E402
 
-SCENES = ("Vectors_and_Bases", "Vector_to_Tensor", "Spinning_Book")
+SCENES = ("Vectors_and_Bases", "Vector_to_Tensor", "Spinning_Book",
+          "Current_Across_the_Grain", "Slanted_Rulers", "The_Cut", "A_Field_of_Machines")
 PREFIX = "Tensors_"
 
 
@@ -75,9 +79,13 @@ def main():
     root = os.environ.get("GLYPHVIZ_WEB_ROOT", r"C:\Jeff\iluvdata\public_html")
     ap = argparse.ArgumentParser()
     ap.add_argument("--dest", type=Path, default=Path(root) / "glyphviz" / "zips")
+    ap.add_argument("scenes", nargs="*", metavar="SCENE")
     args = ap.parse_args()
+    unknown = set(args.scenes) - set(SCENES)
+    if unknown:
+        ap.error(f"unknown scene(s) {sorted(unknown)}; choose from {SCENES}")
     args.dest.mkdir(parents=True, exist_ok=True)
-    for scene in SCENES:
+    for scene in args.scenes or SCENES:
         out = build(scene, args.dest)
         mb = out.stat().st_size / 2 ** 20
         print(f"  {out.name:<42} {mb:5.1f} MB  {check(out)}")

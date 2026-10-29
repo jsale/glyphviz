@@ -5,7 +5,7 @@ followed by a paint, saved as a PNG. The camera is the one the app opens
 with (auto-framed, azimuth 45, elevation 25) unless overridden.
 
     python render_frames.py SCENE_NODE_CSV --frames 0 400 900 --out DIR
-        [--width 1600 --height 1000] [--azimuth A --elevation E --distance D]
+        [--width 1600 --height 1000] [--azimuth A --elevation E --distance D --target X Y Z]
     python render_frames.py SCENE_NODE_CSV --time 120      # playback timing only
 
 An offscreen paint is a proxy for the app's on-screen frame rate, but it runs
@@ -40,6 +40,7 @@ def main():
     ap.add_argument("--azimuth", type=float)
     ap.add_argument("--elevation", type=float)
     ap.add_argument("--distance", type=float)
+    ap.add_argument("--target", type=float, nargs=3)
     args = ap.parse_args()
 
     app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841
@@ -51,6 +52,8 @@ def main():
         vp._cam_elevation = args.elevation
     if args.distance is not None:
         vp._cam_distance = args.distance
+    if args.target is not None:
+        vp._cam_target = list(args.target)
     vp._snap_camera_goal()
     map_path, tracks_path = find_channel_files(args.csv)
     eng = ChannelEngine()
