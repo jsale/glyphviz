@@ -78,7 +78,7 @@ The example scenes are a separate download — 72 ready-to-open GlyphViz scenes 
 
 [:material-download: Download the examples (GlyphViz_Examples.zip)](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip){ .md-button }
 
-*~289 MB download, ~702 MB extracted*
+*~301 MB download, ~733 MB extracted*
 
 1. Download **[GlyphViz_Examples.zip](https://iluvdata.org/glyphviz/examples/GlyphViz_Examples.zip)**.
 2. Extract it into its own folder — the archive puts each example at its top level, each one self-contained. Keep each example's folder structure intact so its scene finds its own data and media.
@@ -88,7 +88,7 @@ Good first ones: `Topology_Example` (every topology side by side), `Palette_Exam
 
 #### One example at a time
 
-You don't have to take all 255 MB. Every page in the [Examples Gallery](../examples/index.md) carries its own download button, and the larger examples offer one zip per scene — so the wind rose is a 2 MB download rather than the whole set.
+You don't have to take all 301 MB. Every page in the [Examples Gallery](../examples/index.md) carries its own download button, and the larger examples offer one zip per scene — so the wind rose is a 2 MB download rather than the whole set.
 
 A single-example zip holds that one scene's files at its top level, so extracting it gives you one folder, ready to open. You can also drag the zip straight onto the GlyphViz window: it extracts beside itself and loads. Because the scene's folder is the whole archive, the file path is shorter than the one each gallery page quotes — that path is where the file sits in the full examples set.
 

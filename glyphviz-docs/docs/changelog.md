@@ -2,6 +2,14 @@
 
 GlyphViz doesn't cut numbered releases yet — development moves in daily commits rather than versions, so this changelog is organized by date, newest first, generated from the project's git history. Windows app builds are separately dated (`GlyphViz<YYYYMMDD>.zip`, see [Installation](getting-started/installation.md)); the dates below track everything that shipped into the codebase, which is more granular than the app builds themselves. Purely internal housekeeping (gitignore tweaks, dev-environment notes) is omitted.
 
+## 2026-10-29
+
+- **[Tensors, from the Arrow Up](examples/tensors.md) grew from three scenes to seven**, putting the tensor to work in four physical jobs:
+    - **Current Across the Grain**: the conductivity tensor of a crystal. Current leans toward the crystal's easy directions instead of following the field, and the scene climbs from a 2-D sheet to a 3-D crystal to the shadow of a 4-D "hypercrystal", counting the tensor's numbers in each.
+    - **Slanted Rulers**: a basis that stretches and slants splits a vector's components into upper and lower indices. The metric tensor converts between them, and the dual basis turns out to be a crystal's reciprocal lattice.
+    - **The Cut**: the stress tensor, where the word *tensor* comes from. Turning a cut through a loaded solid sends its point around Mohr's circle at twice the speed, and in 3-D every cut lands between Mohr's three circles.
+    - **A Field of Machines**: a diffusion tensor at every point of a synthetic slice of brain tissue, as in diffusion MRI. A drop of dye fills the predicted ellipsoid, two scalar maps see the fibres differently, and tractography follows the bundles until a crossing sends it the wrong way.
+
 ## 2026-10-26
 
 - **[Tensors, from the Arrow Up](examples/tensors.md) joined the Examples Gallery's *Mathematics* section**: three animated scenes that build the idea of a tensor one step at a time, for anyone comfortable with vectors who never made the step up.

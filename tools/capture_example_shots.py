@@ -168,6 +168,15 @@ MANIFEST = [
     ("tensors-book", TL / "Spinning_Book", None),
     ("tensors-book-flip", TL / "Spinning_Book", None),
     ("tensors-lsphere", TL / "Spinning_Book", None),
+    ("tensors-crystal-2d", TL / "Current_Across_the_Grain", None),
+    ("tensors-crystal-3d", TL / "Current_Across_the_Grain", None),
+    ("tensors-crystal-4d", TL / "Current_Across_the_Grain", None),
+    ("tensors-metric-stretch", TL / "Slanted_Rulers", None),
+    ("tensors-metric-dual", TL / "Slanted_Rulers", None),
+    ("tensors-cut-mohr", TL / "The_Cut", None),
+    ("tensors-cut-arbelos", TL / "The_Cut", None),
+    ("tensors-field-dye", TL / "A_Field_of_Machines", None),
+    ("tensors-field-tracks", TL / "A_Field_of_Machines", None),
 ]
 
 
@@ -203,6 +212,20 @@ FRAME = {
     "tensors-book": 157,
     "tensors-book-flip": 157,
     "tensors-lsphere": 1790,
+    # Tensors, round 2: the 2-D sweep with J's ellipse half drawn; E along y
+    # filling the 3x3 grid's middle column; the 4-D hypercrystal and the
+    # N-ladder; e1 stretched; the dual basis; the 2-D cut at 138 deg, where its
+    # four tip labels sit furthest apart; the 3-D arbelos filling; the dye
+    # drop at full spread; the tracks, one taking its wrong turn.
+    "tensors-crystal-2d": 500,
+    "tensors-crystal-3d": 1200,
+    "tensors-crystal-4d": 2300,
+    "tensors-metric-stretch": 700,
+    "tensors-metric-dual": 2900,
+    "tensors-cut-mohr": 940,
+    "tensors-cut-arbelos": 2200,
+    "tensors-field-dye": 560,
+    "tensors-field-tracks": 2700,
 }
 
 # Auto-framing fits the bounding box of everything in the scene, title and
@@ -390,6 +413,17 @@ CAMERA = {
                           "azimuth": 45, "elevation": 25, "hide_grid": True},
     "tensors-lsphere": {"target": (-13.8, 13.8, 7.0), "distance": 17,
                         "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-crystal-2d": {"zoom": 0.72, "hide_grid": True},
+    "tensors-crystal-3d": {"zoom": 0.72, "hide_grid": True},
+    "tensors-crystal-4d": {"zoom": 0.72, "hide_grid": True},
+    "tensors-metric-stretch": {"zoom": 0.72, "hide_grid": True},
+    "tensors-metric-dual": {"zoom": 0.72, "hide_grid": True},
+    "tensors-cut-mohr": {"target": (-1.0, 1.0, 10.3), "distance": 30,
+                         "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-cut-arbelos": {"zoom": 0.72, "hide_grid": True},
+    "tensors-field-dye": {"target": (7.7, -6.4, 8.6), "distance": 21,
+                          "azimuth": 45, "elevation": 25, "hide_grid": True},
+    "tensors-field-tracks": {"zoom": 0.72, "hide_grid": True},
 }
 
 
